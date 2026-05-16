@@ -1,0 +1,34 @@
+# Test profile — kích hoạt qua @ActiveProfiles("test") trong unit/integration tests.
+# Mục tiêu: tests phải hermetic (không phụ thuộc Eureka, Config Server, Docker Compose).
+
+spring:
+  # Testcontainers tự wire datasource qua @ServiceConnection — không cần Spring Boot Compose support.
+  docker:
+    compose:
+      enabled: false
+
+  # Config Server có thể không lên trong CI/test — fail-fast off để test tự đứng được.
+  cloud:
+    config:
+      enabled: false                      # skip Config Client hoàn toàn trong test
+      fail-fast: false
+
+  jpa:
+    show-sql: false                       # test log gọn
+
+management:
+  tracing:
+    sampling:
+      probability: 0.0                    # test không cần trace
+
+# Test KHÔNG register vào Eureka — tránh polluting registry, tránh wait timeout.
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+logging:
+  level:
+    root: WARN
+    com.mss301.petclinic: INFO            # vẫn thấy log app, ẩn nhiễu của framework

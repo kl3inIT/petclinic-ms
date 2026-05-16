@@ -1,0 +1,31 @@
+# Dev profile — local laptop, full observability, dev convenience.
+
+spring:
+  # Tự start Postgres từ compose.yaml ở rootDir khi bootRun. Container persist (`start-only`).
+  docker:
+    compose:
+      file: compose.yaml
+      profiles:
+        active: ["db"]
+      lifecycle-management: start-only
+
+management:
+  endpoint:
+    health:
+      show-details: when-authorized       # dev OK lộ details, prod sẽ override
+  tracing:
+    sampling:
+      probability: 1.0                    # 100% trace — debug dễ
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: INFO
+    # plain text + correlation pattern (inherit từ application.yml) — màu trong console dev

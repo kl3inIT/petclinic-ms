@@ -1,0 +1,13 @@
+# Customers dev — Spring Boot Docker Compose support inject datasource từ container.
+# Fallback URL dưới đây CHỈ áp khi compose support tắt (vd: chạy không qua bootRun).
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/petclinic?currentSchema=customers}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+logging:
+  level:
+    org.hibernate.SQL: INFO

@@ -1,6 +1,16 @@
 spring:
+  profiles:
+    active: test
+
   docker:
     compose:
       enabled: false
+
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+
   liquibase:
     enabled: true

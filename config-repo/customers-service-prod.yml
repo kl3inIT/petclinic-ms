@@ -1,0 +1,17 @@
+# Customers prod — datasource phải env-driven, không fallback.
+
+spring:
+  datasource:
+    url: ${DB_URL}                        # NO fallback — fail-fast nếu thiếu
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false                 # prod: SQL 1 dòng
+
+logging:
+  level:
+    org.hibernate.SQL: WARN

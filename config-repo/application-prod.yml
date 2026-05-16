@@ -1,0 +1,38 @@
+# Prod profile — k8s/cloud deployment. Infra tách hẳn (no Docker Compose), strict security/observability.
+# Kích hoạt: SPRING_PROFILES_ACTIVE=prod (env var trong deployment manifest).
+
+spring:
+  # Prod KHÔNG dùng Spring Boot Docker Compose — infra do k8s/terraform quản lý.
+  docker:
+    compose:
+      enabled: false
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false                 # SQL 1 dòng — log volume thấp
+
+# Structured JSON (ECS) — Loki/Elasticsearch/Datadog parse trực tiếp.
+logging:
+  structured:
+    format:
+      console: ecs
+  level:
+    root: INFO
+
+management:
+  endpoint:
+    health:
+      show-details: never                 # KHÔNG lộ DB/disk component cho anonymous
+  tracing:
+    sampling:
+      probability: 0.1                    # 10% — đủ debug, tiết kiệm storage Tempo
+
+# Prod Eureka — multi-instance, peer-aware. URL phải set qua env (k8s ConfigMap / Helm values).
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}          # NO fallback — fail-fast nếu deploy quên config
+    register-with-eureka: true
+    fetch-registry: true

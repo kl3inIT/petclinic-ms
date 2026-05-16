@@ -1,0 +1,16 @@
+# Customers — env-agnostic.
+# Datasource creds + URL khác env → customers-service-<profile>.yml.
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate                  # Liquibase quản lý schema, JPA chỉ validate mapping
+    properties:
+      hibernate:
+        default_schema: customers
+        format_sql: true                  # dev đọc dễ; prod override → false
+    open-in-view: false                   # 2026 best practice
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    # tracking ở `public` schema — xem CLAUDE.md (chicken-and-egg pattern)

@@ -1,0 +1,12 @@
+# Vets dev.
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/petclinic?currentSchema=vets}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+logging:
+  level:
+    org.hibernate.SQL: INFO

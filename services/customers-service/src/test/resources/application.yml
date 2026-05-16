@@ -1,7 +1,21 @@
-# Test profile — Postgres thật qua Testcontainers, KHÔNG cần docker compose support.
+# Test overrides — Postgres thật qua Testcontainers @ServiceConnection.
+# Profile `test` (kích hoạt qua @ActiveProfiles("test")) sẽ kéo thêm config-repo/application-test.yml
+# nếu test có chạy với Config Client active; nhưng mặc định test KHÔNG cần Config Server
+# (spring.cloud.config.enabled=false ở application-test.yml).
+
 spring:
+  profiles:
+    active: test
+
   docker:
     compose:
       enabled: false
+
+  cloud:
+    config:
+      enabled: false                        # test hermetic — không depend Config Server
+      import-check:
+        enabled: false                      # không fail khi `spring.config.import` không resolve
+
   liquibase:
-    enabled: true
+    enabled: true                           # vẫn validate migration là phần của test

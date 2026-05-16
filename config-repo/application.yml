@@ -1,0 +1,56 @@
+# Shared base — truly env-agnostic. Áp cho MỌI service, MỌI profile.
+# Env-specific (eureka URL, logging format, tracing rate, docker compose) → application-<profile>.yml.
+# Service-specific → <service-name>.yml hoặc <service-name>-<profile>.yml.
+#
+# Precedence (cao → thấp):
+#   local application[-profile].yml > config-repo/<service>-<profile>.yml >
+#   config-repo/application-<profile>.yml > config-repo/<service>.yml >
+#   config-repo/application.yml > Spring defaults
+#
+# KHÔNG đặt ở đây:
+# - `spring.application.name` — local file (Config Server cần biết tên để lookup)
+# - `server.port`, `management.server.port` — local file (định danh tài nguyên)
+# - `spring.config.import` — local file (pointer tới Config Server)
+
+spring:
+  threads:
+    virtual:
+      enabled: true                       # Java 25 — 1 VT/request, throughput cao
+
+  mvc:
+    problemdetails:
+      enabled: true                       # RFC 9457 — REQUIRED cho ExceptionTranslator
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  default-produces-media-type: application/json
+
+# Eureka instance metadata — instance config giống nhau mọi env (lease, IP).
+# Service-url (defaultZone) khác env → override ở application-<profile>.yml.
+eureka:
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+logging:
+  pattern:
+    correlation: "[%X{traceId:-},%X{spanId:-}] "
+    level: "%5p ${LOGGING_PATTERN_CORRELATION:-}"

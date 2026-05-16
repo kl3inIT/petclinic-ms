@@ -139,9 +139,41 @@ com.mss301.petclinic.<service>/
 
 ### Configuration files per service
 
-- `application.yml` — **dev defaults**: plain logs with `[traceId,spanId]` correlation pattern, virtual threads, graceful shutdown, springdoc, management on port `90<N>1`
-- `application-prod.yml` — production overrides: ECS JSON logs (`logging.structured.format.console=ecs`), `health show-details: never`, tracing sampling 0.1, `spring.docker.compose.enabled=false`
-- `src/test/resources/application.yml` — minimal Testcontainers overrides (disable docker-compose support, keep Liquibase enabled)
+Config lives in TWO places: local (per-service `application.yml`, minimal) + `config-repo/` at project root (env-split, served by Config Server).
+
+**Local `services/<name>/src/main/resources/application.yml`** — only what MUST be local. Under 20 lines:
+- `spring.application.name` (lookup key for Config Server)
+- `spring.profiles.active: ${SPRING_PROFILES_ACTIVE:dev}` — default `dev` for local bootRun, overridden by env in CI/prod
+- `spring.config.import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}` — `optional:` so app boots when Config Server is down
+- `server.port` + `management.server.port`
+
+**`config-repo/` (at project root, served by `config-server` on port 8888) — env-split layout:**
+
+| File | Scope | Examples |
+|---|---|---|
+| `application.yml` | shared, all envs | virtual threads, problemdetails, eureka instance metadata, springdoc, logging pattern, management exposure |
+| `application-dev.yml` | dev only, all services | docker compose support, eureka URL localhost:8761, tracing 100%, plain text logs, `health show-details: when-authorized` |
+| `application-test.yml` | test only, all services | docker compose off, `spring.cloud.config.enabled: false`, eureka off, tracing 0% |
+| `application-prod.yml` | prod only, all services | docker compose off, structured ECS JSON logs, `health show-details: never`, tracing 0.1, `EUREKA_URL` env-driven (no fallback) |
+| `<service>.yml` | service-specific, all envs | JPA `default_schema`, `ddl-auto: validate`, liquibase changelog path |
+| `<service>-dev.yml` | service+dev | datasource fallback URL `localhost:5433/petclinic?currentSchema=<svc>` |
+| `<service>-prod.yml` | service+prod | datasource env-driven (`DB_URL`/`DB_USER`/`DB_PASSWORD`, no fallback), `format_sql: false`, `org.hibernate.SQL: WARN` |
+
+**Precedence** (high → low) — Spring Cloud Config returns sources in this order, first wins:
+1. local `application[-profile].yml`
+2. `config-repo/<service>-<profile>.yml`
+3. `config-repo/application-<profile>.yml`
+4. `config-repo/<service>.yml`
+5. `config-repo/application.yml`
+6. Spring defaults
+
+**Test resources** (`src/test/resources/application.yml`) — sets `spring.profiles.active: test`, disables Config Client (`spring.cloud.config.enabled: false` + `spring.cloud.config.import-check.enabled: false`), disables docker compose support, keeps Liquibase enabled. Tests are hermetic — no dependency on Config Server or Eureka being up.
+
+**Activating non-dev profiles:**
+- Test: `@ActiveProfiles("test")` on test classes (test/resources/application.yml also sets it as fallback)
+- Prod: env var `SPRING_PROFILES_ACTIVE=prod` in k8s/Helm/systemd
+
+**Discovery-server and config-server are NOT config clients** — they self-contain their config in local `application.yml`. Boot order: config-server and discovery start independently and in parallel; only domain services (customers, vets, …) depend on Config Server.
 
 ### Dev infrastructure
 
@@ -167,7 +199,7 @@ com.mss301.petclinic.<service>/
 
 5. **Precompiled script plugins (`build-logic/`)** — IntelliJ inspection often shows ERRORS in `*.gradle.kts` before Gradle sync runs (accessor types not yet generated). Run a Gradle sync — if Gradle build succeeds, the code is correct regardless of IDE squiggles.
 
-6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (adds N-N join + Set seed data) → `discovery-server` (Eureka registry). Recommended next: `config-server` → `api-gateway` → `auth-service`. Do NOT start with auth-service — it pulls Security + JPA + JWT + crypto + Mongo all at once, makes debugging miserable.
+6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (N-N join + Set seed data) → `discovery-server` (Eureka registry, port 8761) → `config-server` (Spring Cloud Config native filesystem, port 8888, reads `config-repo/`). Recommended next: `api-gateway` → `auth-service`. Do NOT start with auth-service — it pulls Security + JPA + JWT + crypto + Mongo all at once, makes debugging miserable.
 
 7. **Boot 4 Spring class lookups** — before importing a Spring class, verify it exists in Boot 4. Examples already encountered as broken:
    - `AutoConfigureDataMongo` — removed

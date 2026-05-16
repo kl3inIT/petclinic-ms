@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: config-server
+
+  threads:
+    virtual:
+      enabled: true
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  # Profile `native` → đọc config từ local filesystem thay vì Git.
+  # Learning project: native đơn giản hơn — sửa file là phản ánh ngay.
+  # Production: chuyển sang Git backend (xóa profile native, set spring.cloud.config.server.git.uri).
+  profiles:
+    active: native
+
+  cloud:
+    config:
+      server:
+        native:
+          # `file:./config-repo/` resolve theo bootRun.workingDir = project rootDir (set ở convention plugin).
+          # KHÔNG dùng classpath: vì sửa file phải rebuild — mất nghĩa của externalized config.
+          search-locations: file:./config-repo/
+
+server:
+  port: 8888                  # Spring Cloud convention — clients mặc định gọi localhost:8888
+  shutdown: graceful
+
+management:
+  server:
+    port: 9888
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  pattern:
+    correlation: "[%X{traceId:-},%X{spanId:-}] "
+    level: "%5p ${LOGGING_PATTERN_CORRELATION:-}"
