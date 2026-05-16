@@ -20,22 +20,10 @@ spring:
         webmvc:
           enabled: true                   # explicit — đảm bảo gateway MVC autoconfig active
 
-          # TODO(circuitbreaker): default-filters CircuitBreaker/Retry không apply trong WebMVC 5.0.x
-          # khi declare ở đây (YAML shortcut format khác với WebFlux). Cần wire bằng functional
-          # builder `RouterFunctions.route(...).filter(CircuitBreakerFilterFunctions.circuitBreaker(...))`
-          # qua @Bean RouterFunction. Tạm thời /fallback endpoint vẫn reachable trực tiếp.
-          # Tham khảo: spring-cloud-gateway-server-webmvc 5.x docs section "Filter Functions".
-
-          routes:
-            - id: customers-service
-              uri: lb://customers-service # lb:// → Spring Cloud LoadBalancer resolve qua Eureka registry
-              predicates:
-                - Path=/api/v1/owners/**,/api/v1/pets/**
-
-            - id: vets-service
-              uri: lb://vets-service
-              predicates:
-                - Path=/api/v1/vets/**,/api/v1/specialties/**
+# Routes định nghĩa qua @Bean RouterFunction trong GatewayRoutesConfig.java (functional API —
+# canonical cho WebMVC variant). Lý do KHÔNG dùng YAML `spring.cloud.gateway.server.webmvc.routes`:
+# YAML hỗ trợ predicates/uri OK nhưng filter shortcut `CircuitBreaker=...` không wire đúng trong
+# 5.0.x. Functional builder gói CB filter trực tiếp vào HandlerFilterFunction chain.
 
 # CircuitBreaker config — Resilience4j servlet stack (KHÔNG phải reactor).
 # Mở circuit khi 50% requests trong 10 lần gần nhất fail; mở 5s → half-open thử 3 request.

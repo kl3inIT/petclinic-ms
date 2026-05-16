@@ -207,6 +207,8 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
    - `spring-cloud-starter-gateway-server-webmvc` ← what this project uses (consistent with MVC stack + virtual threads)
    - `spring-cloud-starter-gateway-server-webflux` ← reactive variant, kept in `libs.versions.toml` as alternative
 
+   **Routes definition: prefer functional `@Bean RouterFunction<ServerResponse>`** (canonical for WebMVC variant). YAML `spring.cloud.gateway.server.webmvc.routes` supports predicates + uri OK, but filter shortcuts like `CircuitBreaker=...` / `Retry=...` don't wire through the HandlerFilterFunction chain in 5.0.x. Functional API wraps filters correctly — see `services/api-gateway/.../GatewayRoutesConfig.java`. Static imports: `GatewayRouterFunctions.route`, `HandlerFunctions.http`, `GatewayRequestPredicates.path`, `LoadBalancerFilterFunctions.lb`, `CircuitBreakerFilterFunctions.circuitBreaker`, `RetryFilterFunctions.retry`.
+
 9. **Shared module `@ConditionalOnClass` on a `@Bean` method is unsafe** — Spring still introspects the method signature (return type, parameter types). If the conditional class is missing on classpath (vd: api-gateway doesn't have springdoc), `NoClassDefFoundError` at autoconfig load. **Fix**: put `@ConditionalOnClass` on a nested `@Configuration` static class (Spring skips the entire class before introspection). Already applied in `PetClinicWebAutoConfiguration.OpenApiConfig`. Same reason `DataExceptionTranslator` (uses `ConcurrencyFailureException` from spring-tx) lives in `shared/common-jpa` not `shared/common-web` — gateway has no JPA = no spring-tx.
 
 10. **Boot 4 Spring class lookups** — before importing a Spring class, verify it exists in Boot 4. Examples already encountered as broken:
