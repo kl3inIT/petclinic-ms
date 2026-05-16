@@ -1,0 +1,23 @@
+# Auth-service — env-agnostic config.
+# Datasource creds + JWT secret theo env → auth-service-<profile>.yml.
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: auth
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+# JWT config riêng cho auth-service (Iter 1 — HMAC HS256).
+# Iter 3 sẽ chuyển sang RSA: thêm petclinic.auth.jwt.algorithm=RS256 + keypair.
+petclinic:
+  auth:
+    jwt:
+      access-token-ttl: PT15M               # 15 phút — đủ ngắn để minimize impact nếu leak
+      # `secret` phải >= 32 bytes (256 bits) cho HS256 — đặt ở per-env file

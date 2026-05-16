@@ -1,0 +1,14 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 002-001-add-audit-columns-users
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: auth
+            tableName: users
+            columns:
+              - column: { name: created_by,         type: VARCHAR(50) }
+              - column: { name: created_date,       type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: last_modified_by,   type: VARCHAR(50) }
+              - column: { name: last_modified_date, type: TIMESTAMP WITH TIME ZONE }

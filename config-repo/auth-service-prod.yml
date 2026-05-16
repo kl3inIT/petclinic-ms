@@ -1,0 +1,25 @@
+# Auth-service prod — env-driven creds + JWT secret PHẢI từ env.
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+# JWT_SECRET phải set qua env var (k8s Secret / Vault). KHÔNG có fallback.
+# Iter 3 chuyển sang RSA → JWT_SECRET sẽ được thay bằng JWT_PRIVATE_KEY_PEM.
+petclinic:
+  auth:
+    jwt:
+      secret: ${JWT_SECRET}
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.springframework.security: INFO

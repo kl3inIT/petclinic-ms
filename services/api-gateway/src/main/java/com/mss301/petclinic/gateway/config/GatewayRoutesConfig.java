@@ -55,4 +55,13 @@ public class GatewayRoutesConfig {
                 .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
+
+    @Bean
+    public RouterFunction<ServerResponse> authServiceRoute() {
+        return route("auth-service")
+                .route(path("/api/v1/auth/**"), http())
+                .filter(lb("auth-service"))
+                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
 }

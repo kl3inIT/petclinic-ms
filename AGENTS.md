@@ -199,7 +199,7 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
 
 5. **Precompiled script plugins (`build-logic/`)** — IntelliJ inspection often shows ERRORS in `*.gradle.kts` before Gradle sync runs (accessor types not yet generated). Run a Gradle sync — if Gradle build succeeds, the code is correct regardless of IDE squiggles.
 
-6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (N-N join + Set seed data) → `discovery-server` (Eureka registry, port 8761) → `config-server` (Spring Cloud Config native filesystem, port 8888, reads `config-repo/`) → `api-gateway` (Spring Cloud Gateway 5.x **WebMVC variant**, port 8080, lb:// routes via Eureka). Recommended next: `auth-service`. Do NOT start with auth-service — it pulls Security + JPA + JWT + crypto + Mongo all at once, makes debugging miserable.
+6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (N-N join + Set seed data) → `discovery-server` (Eureka registry, port 8761) → `config-server` (Spring Cloud Config native filesystem, port 8888, reads `config-repo/`) → `api-gateway` (Spring Cloud Gateway 5.x **WebMVC variant**, port 8080, lb:// routes via Eureka) → `auth-service` Iter 1 (port 8183, register/login/me, HMAC HS256 JWT, Spring Security 7 lambda DSL). Iter 2-4 of security roadmap: defense-in-depth (gateway + downstream validate), RSA + JWKS, service-to-service token forward + rate limit + audit. See `docs/security-flow.html`.
 
 7. **Spring Cloud Gateway 5.x property prefix** — Cloud 5.0+ (Boot 4 / Cloud 2025.x) renamed property prefix from `spring.cloud.gateway.mvc.*` (older docs / Cloud 4.x) to **`spring.cloud.gateway.server.webmvc.*`**. Cross-check via `/actuator/configprops` — bean `gatewayMvcProperties` shows the true prefix. Many web examples and even some context7 doc excerpts still use the old prefix; ignore them.
 
@@ -211,7 +211,16 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
 
 9. **Shared module `@ConditionalOnClass` on a `@Bean` method is unsafe** — Spring still introspects the method signature (return type, parameter types). If the conditional class is missing on classpath (vd: api-gateway doesn't have springdoc), `NoClassDefFoundError` at autoconfig load. **Fix**: put `@ConditionalOnClass` on a nested `@Configuration` static class (Spring skips the entire class before introspection). Already applied in `PetClinicWebAutoConfiguration.OpenApiConfig`. Same reason `DataExceptionTranslator` (uses `ConcurrencyFailureException` from spring-tx) lives in `shared/common-jpa` not `shared/common-web` — gateway has no JPA = no spring-tx.
 
-10. **Boot 4 Spring class lookups** — before importing a Spring class, verify it exists in Boot 4. Examples already encountered as broken:
+10. **Spring Security 7 (Boot 4) DSL** — heavy breaking changes from Security 6.x. All removed in 7:
+    - `and()` → use lambda style exclusively (`.csrf(c -> ...).sessionManagement(s -> ...)`)
+    - `authorizeRequests()` → `authorizeHttpRequests()`
+    - `MvcRequestMatcher` / `AntPathRequestMatcher` → just pass String pattern (uses `PathPatternRequestMatcher` under the hood)
+    - OAuth2 password grant removed
+    - `AuthorizationManager#check` → `AuthorizationManager#authorize`
+
+    For JWT issuer+resource server pattern (auth-service): use `NimbusJwtEncoder` with `ImmutableSecret<>` (HS256, Iter 1-2) or `ImmutableJWKSet<>(new JWKSet(rsaJwk))` (RS256, Iter 3). `NimbusJwtDecoder.withSecretKey(...)` for HMAC or `NimbusJwtDecoder.withJwkSetUri(...)` for JWKS. Map JWT `roles` claim → `ROLE_*` authorities via `JwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("roles")` + `setAuthorityPrefix("ROLE_")`.
+
+11. **Boot 4 Spring class lookups** — before importing a Spring class, verify it exists in Boot 4. Examples already encountered as broken:
    - `AutoConfigureDataMongo` — removed
    - `WebExchangeBindException` vs `MethodArgumentNotValidException` — MVC stack uses the latter, WebFlux the former
    - `LiquibaseProperties` — moved to `org.springframework.boot.liquibase.autoconfigure`

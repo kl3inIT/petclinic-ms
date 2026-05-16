@@ -1,0 +1,20 @@
+# Auth-service dev — datasource fallback + JWT dev secret.
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/petclinic?currentSchema=auth}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+# Dev secret hardcoded — OK cho local. Prod PHẢI override qua env.
+# 64-char (512 bit) — vượt min 256 bit cho HS256.
+petclinic:
+  auth:
+    jwt:
+      secret: "dev-only-petclinic-ms-jwt-secret-do-not-use-in-production-xx"
+
+logging:
+  level:
+    org.hibernate.SQL: INFO
+    org.springframework.security: DEBUG   # dev: verbose security log để debug filter chain
