@@ -20,7 +20,10 @@ java {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.compilerArgs.add("-parameters") // cần cho Spring lấy tên tham số (DI, @PathVariable…)
+    options.compilerArgs.addAll(listOf(
+        "-parameters",                              // cần cho Spring lấy tên tham số (DI, @PathVariable…)
+        "-Xlint:unchecked,deprecation,rawtypes",    // surface warnings — fail-fast trên code smells
+    ))
 }
 
 dependencies {

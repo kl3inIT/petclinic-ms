@@ -28,7 +28,7 @@ public class RefreshTokenService {
 
     public RefreshTokenService(RefreshTokenRepository repo, AuthProperties authProps) {
         this.repo = repo;
-        this.ttl = authProps.getRefreshTokenTtl();
+        this.ttl = authProps.refreshTokenTtl();
     }
 
     @Transactional

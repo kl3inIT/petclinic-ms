@@ -47,20 +47,31 @@ public class PetClinicSecurityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JwtDecoder jwtDecoder(PetClinicJwtProperties props) {
-        if (props.getJwkSetUri() == null || props.getJwkSetUri().isBlank()) {
+        if (props.jwkSetUri() == null || props.jwkSetUri().isBlank()) {
             throw new IllegalStateException(
                     "petclinic.auth.jwt.jwk-set-uri is required when common-security is on classpath. " +
                     "Set it in config-repo (vd: http://localhost:8183/.well-known/jwks.json)."
             );
         }
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(props.getJwkSetUri()).build();
-        OAuth2TokenValidator<Jwt> validators = JwtValidators.createDefaultWithValidators(
-                new JwtTimestampValidator(),
-                new JwtClaimValidator<String>("iss", props.getIssuer()::equals),
-                new JwtClaimValidator<List<String>>("aud", aud -> aud != null && aud.contains(props.getAudience()))
-        );
-        decoder.setJwtValidator(validators);
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(props.jwkSetUri()).build();
+        decoder.setJwtValidator(buildValidators(props));
         return decoder;
+    }
+
+    /**
+     * Build composite validator: signature + timestamp (default) + issuer + audience.
+     * Tách method để cô lập {@code @SuppressWarnings} — varargs của
+     * {@link JwtValidators#createDefaultWithValidators(OAuth2TokenValidator[])}
+     * tạo generic array, không thể tránh unchecked warning theo type system Java.
+     */
+    @SuppressWarnings("unchecked")
+    private static OAuth2TokenValidator<Jwt> buildValidators(PetClinicJwtProperties props) {
+        return JwtValidators.createDefaultWithValidators(
+                new JwtTimestampValidator(),
+                new JwtClaimValidator<String>("iss", props.issuer()::equals),
+                new JwtClaimValidator<List<String>>("aud",
+                        aud -> aud != null && aud.contains(props.audience()))
+        );
     }
 
     @Bean

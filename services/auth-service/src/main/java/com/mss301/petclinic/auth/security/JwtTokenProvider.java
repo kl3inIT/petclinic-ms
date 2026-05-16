@@ -46,7 +46,7 @@ public class JwtTokenProvider {
         this.jwtEncoder = jwtEncoder;
         this.rsaJwk = rsaJwk;
         this.jwtProps = jwtProps;
-        this.accessTokenTtl = authProps.getAccessTokenTtl();
+        this.accessTokenTtl = authProps.accessTokenTtl();
     }
 
     public IssuedToken issueAccessToken(User user) {
@@ -54,8 +54,8 @@ public class JwtTokenProvider {
         Instant expiresAt = now.plus(accessTokenTtl);
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer(jwtProps.getIssuer())
-                .audience(List.of(jwtProps.getAudience()))
+                .issuer(jwtProps.issuer())
+                .audience(List.of(jwtProps.audience()))
                 .subject(user.getId().toString())
                 .issuedAt(now)
                 .expiresAt(expiresAt)

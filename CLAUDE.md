@@ -109,41 +109,54 @@ com.mss301.petclinic.<service>/
 
 ### Configuration binding pattern
 
-**Use `@ConfigurationProperties` for any config with more than 1 related key, or when the same key is read by multiple beans. `@Value` only for one-off, single-bean reads.**
+**Use `@ConfigurationProperties` records for any config with more than 1 related key, or when the same key is read by multiple beans. `@Value` only for one-off, single-bean reads.**
 
 Template — two files in a `config/` package:
 
 ```java
-// AuthProperties.java — POJO, no Spring annotations besides @ConfigurationProperties
+// AuthProperties.java — immutable record + @DefaultValue cho defaults
 @ConfigurationProperties(prefix = "petclinic.auth")
-public class AuthProperties {
-    private Duration accessTokenTtl = Duration.ofMinutes(15);   // defaults inline
-    private Duration refreshTokenTtl = Duration.ofDays(7);
+public record AuthProperties(
+        @DefaultValue("PT15M") Duration accessTokenTtl,
+        @DefaultValue("P7D")   Duration refreshTokenTtl
+) {}
 
-    public Duration getAccessTokenTtl() { return accessTokenTtl; }
-    public void setAccessTokenTtl(Duration accessTokenTtl) { this.accessTokenTtl = accessTokenTtl; }
-    // ...
-}
-
-// AuthPropertiesConfiguration.java — activates binding
+// AuthPropertiesConfiguration.java — activator
 @Configuration
 @EnableConfigurationProperties(AuthProperties.class)
-public class AuthPropertiesConfiguration {
+public class AuthPropertiesConfiguration {}
+```
+
+Inject + access:
+```java
+public JwtTokenProvider(JwtEncoder enc, AuthProperties props) {
+    this.accessTokenTtl = props.accessTokenTtl();   // record accessor — KHÔNG phải getAccessTokenTtl()
 }
 ```
 
-Inject as constructor dep: `public JwtTokenProvider(JwtEncoder enc, AuthProperties auth) { ... }`.
+**Why records:**
+- Immutable — config không bị mutate runtime
+- Zero boilerplate (no getters/setters)
+- Spring Boot 3+ tự pick canonical constructor để bind
+- `@DefaultValue` trên parameter — defaults visible inline tại declaration
+- IntelliJ autocomplete tốt hơn
 
 **Why split POJO + activator:**
-- POJO has zero Spring annotations beyond `@ConfigurationProperties` → easy to test, easy to import from other modules without dragging Spring lifecycle
-- Activator gives one explicit place to see "this service binds these properties"
-- Avoids circular `@Bean` order issues if multiple `@Configuration` classes need the same properties
+- Record có zero Spring annotations beyond `@ConfigurationProperties` → easy test, easy import từ module khác
+- Activator là 1 chỗ rõ ràng "service này bind properties này"
+- Avoids circular `@Bean` order issues
 
-**Gradle:** Add `annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")` so IntelliJ shows autocomplete + javadoc when typing `petclinic.auth.*` in YAML.
+**Gradle:** Add `annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")` để IntelliJ show autocomplete + javadoc khi gõ `petclinic.auth.*` trong YAML.
 
-**Shared properties (used by multiple services):** put POJO in `shared/common-<x>/jwt/`, activate via the shared module's `@AutoConfiguration`. See `PetClinicJwtProperties` + `PetClinicSecurityAutoConfiguration`.
+**Shared properties (multiple services):** record ở `shared/common-<x>/jwt/`, activate qua shared module's `@AutoConfiguration` (vd: `@EnableConfigurationProperties(PetClinicJwtProperties.class)` trên `PetClinicSecurityAutoConfiguration`).
 
-**Validation:** add `@Validated` on the POJO + `jakarta.validation` annotations on fields (`@NotBlank`, `@DurationMin`, etc.) for fail-fast startup checks.
+**Validation:** thêm `@Validated` trên record + `jakarta.validation` annotations trên parameters (`@NotBlank`, `@DurationMin`, etc.) cho fail-fast startup checks.
+
+**Why we don't use `@Value`:**
+- Type-unsafe (string typo → runtime NPE)
+- Defaults scattered (`${key:default}`) — hard to grep
+- Mixes config with logic
+- No IDE autocomplete on key name
 
 ### Hard rules (no exceptions)
 
