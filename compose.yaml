@@ -1,0 +1,40 @@
+# Dev infrastructure cho petclinic-ms.
+# Spring Boot Docker Compose support tự start/stop khi bootRun.
+# Chạy thủ công: docker compose up -d
+#
+# Profiles cho phép start subset tài nguyên:
+#   docker compose --profile db up -d    # chỉ Postgres
+#   docker compose up -d                  # tất cả không filter profile = chỉ service không có profile
+
+services:
+
+  postgres:
+    image: postgres:18-alpine
+    container_name: petclinic-postgres
+    profiles: ["db"]
+    environment:
+      POSTGRES_DB: petclinic
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # Tiếng UTF-8 + ICU collation cho text-heavy domain
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale-provider=icu --icu-locale=en"
+    ports:
+      - "5433:5432"     # host:5433 → container:5432 (5432 host đã bị Postgres khác chiếm)
+    volumes:
+      # Postgres 18+ đổi layout: major-version-specific directory inside /var/lib/postgresql
+      # (vd /var/lib/postgresql/18/main). Mount parent dir thay vì /data như trước.
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d petclinic"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    # Spring Boot Docker Compose support đọc label này để map sang spring.datasource.*
+    labels:
+      org.springframework.boot.service-connection: postgres
+
+volumes:
+  postgres_data:
+    name: petclinic-postgres-data

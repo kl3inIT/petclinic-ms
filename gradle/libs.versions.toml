@@ -1,0 +1,64 @@
+# Gradle Version Catalog — nguồn duy nhất cho mọi dependency version.
+# Tham chiếu trong build script bằng `libs.spring.boot.starter.web` (dots → camelCase tự sinh).
+
+[versions]
+# Core (verified May 2026)
+java               = "25"
+springBoot         = "4.0.6"            # latest stable
+springDepMgmt      = "1.1.7"
+springCloud        = "2025.1.1"         # Oakwood — tương thích Boot 4.0.x
+
+# DB / Migration
+postgresql         = "42.7.4"
+testcontainers     = "2.0.5"            # 2.x đổi artifactId pattern `testcontainers-*`
+# Liquibase version managed by spring-boot-dependencies BOM — không pin tại đây.
+
+# API docs
+springdoc          = "3.0.3"            # OpenAPI/Swagger UI — version riêng cho Spring Boot 4
+
+# Test
+junit              = "6.0.0"
+
+[libraries]
+# --- Spring Boot starters (Spring MVC stack, blocking) ---
+spring-boot-starter-web                = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-webflux            = { module = "org.springframework.boot:spring-boot-starter-webflux" }   # giữ cho gateway sau này
+spring-boot-starter-actuator           = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-validation         = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-data-jpa           = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-security           = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-boot-starter-test               = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-liquibase          = { module = "org.springframework.boot:spring-boot-starter-liquibase" }
+spring-boot-docker-compose             = { module = "org.springframework.boot:spring-boot-docker-compose" }
+
+# --- Observability ---
+micrometer-tracing-bridge-otel         = { module = "io.micrometer:micrometer-tracing-bridge-otel" }   # version từ BOM
+# Note: chưa add OTLP exporter — chưa có Tempo backend. TraceId vẫn được generate vào MDC để log.
+
+# --- API docs ---
+springdoc-openapi-starter-webmvc-ui    = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+
+# --- DB ---
+postgresql                             = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+
+# --- Testcontainers 2.x (artifactId đã đổi sang `testcontainers-*` từ tháng 4/2026) ---
+spring-boot-testcontainers             = { module = "org.springframework.boot:spring-boot-testcontainers" }  # version từ Boot BOM
+testcontainers-postgresql              = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
+testcontainers-junit-jupiter           = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+
+# --- Spring Cloud (BOM controls these — không cần version) ---
+spring-cloud-starter-gateway           = { module = "org.springframework.cloud:spring-cloud-starter-gateway" }
+spring-cloud-starter-netflix-eureka-client = { module = "org.springframework.cloud:spring-cloud-starter-netflix-eureka-client" }
+spring-cloud-starter-netflix-eureka-server = { module = "org.springframework.cloud:spring-cloud-starter-netflix-eureka-server" }
+spring-cloud-starter-config            = { module = "org.springframework.cloud:spring-cloud-starter-config" }
+spring-cloud-config-server             = { module = "org.springframework.cloud:spring-cloud-config-server" }
+spring-cloud-starter-circuitbreaker-resilience4j = { module = "org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j" }
+
+# --- Plugin artifacts (dùng trong build-logic) ---
+spring-boot-gradle-plugin              = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
+spring-dep-management-plugin           = { module = "io.spring.gradle:dependency-management-plugin", version.ref = "springDepMgmt" }
+
+# --- Test ---
+junit-bom                              = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter                          = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher                = { module = "org.junit.platform:junit-platform-launcher" }

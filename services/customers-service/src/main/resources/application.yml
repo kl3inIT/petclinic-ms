@@ -1,0 +1,90 @@
+spring:
+  application:
+    name: customers-service
+
+  # Java 25 virtual threads — mỗi request 1 VT, MVC blocking nhưng throughput cao.
+  threads:
+    virtual:
+      enabled: true
+
+  # Spring Boot 4 native: tự convert Spring built-in exception thành ProblemDetail (RFC 9457).
+  mvc:
+    problemdetails:
+      enabled: true
+
+  # Graceful shutdown — drain in-flight requests trước khi exit (zero-downtime deploy).
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  # Dev convenience: bootRun tự start Postgres từ compose.yaml ở root project.
+  # Path resolve theo working dir của process (= root project khi chạy qua IntelliJ/Gradle).
+  docker:
+    compose:
+      file: compose.yaml
+      profiles:
+        active: ["db"]
+      lifecycle-management: start-only      # KHÔNG stop container khi app shutdown — share với service khác
+
+  datasource:
+    # Fallback URL khi KHÔNG dùng docker-compose support (vd: prod). Port 5433 vì 5432 dev local bị chiếm.
+    # Khi `spring-boot-docker-compose` active, URL này bị override hoàn toàn bởi container.
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/petclinic?currentSchema=customers}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate                    # Liquibase quản lý schema, JPA chỉ validate mapping
+    properties:
+      hibernate:
+        default_schema: customers
+        format_sql: true
+    show-sql: false
+    open-in-view: false                     # 2026 best practice — không giữ Hibernate session ngoài @Transactional
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    # KHÔNG set default-schema/liquibase-schema = `customers`. Lý do:
+    # - Liquibase cần access DATABASECHANGELOG ngay khi start, NHƯNG schema customers chưa tồn tại lúc đó
+    # - Để tracking table ở `public` (Postgres default — luôn tồn tại)
+    # - Changeset 001 sẽ CREATE SCHEMA customers, các bảng app dùng `schemaName: customers` explicit
+
+server:
+  port: 8081
+  shutdown: graceful
+
+# Actuator port riêng — KHÔNG expose qua public gateway. Chỉ Prometheus/k8s scrape.
+management:
+  server:
+    port: 9081
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized        # production-safe — hide details cho anonymous
+  tracing:
+    sampling:
+      probability: 1.0                     # dev: trace 100% request. Prod: 0.1 (10%)
+
+# Logging — DEFAULT plain text màu cho dev (human-readable).
+# Production override sang ECS JSON ở application-prod.yml.
+logging:
+  level:
+    org.hibernate.SQL: INFO
+  pattern:
+    # Thêm traceId/spanId vào log line — Micrometer Tracing tự inject vào MDC.
+    correlation: "[%X{traceId:-},%X{spanId:-}] "
+    level: "%5p ${LOGGING_PATTERN_CORRELATION:-}"
+
+# Springdoc / Swagger UI
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  default-produces-media-type: application/json

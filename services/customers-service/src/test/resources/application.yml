@@ -1,0 +1,7 @@
+# Test profile — Postgres thật qua Testcontainers, KHÔNG cần docker compose support.
+spring:
+  docker:
+    compose:
+      enabled: false
+  liquibase:
+    enabled: true

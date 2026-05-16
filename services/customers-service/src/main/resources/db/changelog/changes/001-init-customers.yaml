@@ -1,0 +1,80 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-schema-customers
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS customers
+            dbms: postgresql
+
+  - changeSet:
+      id: 002-create-table-owners
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: customers
+            tableName: owners
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: first_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: address
+                  type: VARCHAR(255)
+              - column:
+                  name: city
+                  type: VARCHAR(100)
+              - column:
+                  name: telephone
+                  type: VARCHAR(20)
+
+  - changeSet:
+      id: 003-create-table-pets
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: customers
+            tableName: pets
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+              - column:
+                  name: birth_date
+                  type: DATE
+              - column:
+                  name: type
+                  type: VARCHAR(50)
+              - column:
+                  name: owner_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_pets_owner
+                    references: customers.owners(id)
+        - createIndex:
+            schemaName: customers
+            tableName: pets
+            indexName: idx_pets_owner_id
+            columns:
+              - column:
+                  name: owner_id

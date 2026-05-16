@@ -1,0 +1,80 @@
+# Dependabot — auto PR khi có dependency update.
+# open-pull-requests-limit cao (99) = effectively unlimited.
+# Schedule daily để nhận update sớm; có thể đổi sang `weekly` nếu PR nhiều quá.
+
+version: 2
+
+updates:
+  # ─────────────────────────────────────────────────────────
+  # Gradle — version catalog ở gradle/libs.versions.toml, plus
+  # build script ở root, mỗi service, và included build build-logic/
+  # ─────────────────────────────────────────────────────────
+
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 99
+    labels:
+      - "dependencies"
+      - "gradle"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*:*"
+          - "org.springdoc:*"
+          - "io.micrometer:*"
+      testing:
+        patterns:
+          - "org.junit*:*"
+          - "org.testcontainers:*"
+          - "org.mockito:*"
+      database:
+        patterns:
+          - "org.postgresql:*"
+          - "org.liquibase:*"
+          - "com.h2database:*"
+
+  - package-ecosystem: "gradle"
+    directory: "/build-logic"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 99
+    labels:
+      - "dependencies"
+      - "build-logic"
+    commit-message:
+      prefix: "deps(build-logic)"
+
+  # ─────────────────────────────────────────────────────────
+  # Docker — compose.yaml ở root (Postgres image)
+  # ─────────────────────────────────────────────────────────
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 99
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "deps(docker)"
+
+  # ─────────────────────────────────────────────────────────
+  # GitHub Actions — sẽ áp dụng khi có workflow trong .github/workflows/
+  # ─────────────────────────────────────────────────────────
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 99
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "deps(actions)"
