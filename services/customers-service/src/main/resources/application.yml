@@ -51,13 +51,13 @@ spring:
     # - Changeset 001 sẽ CREATE SCHEMA customers, các bảng app dùng `schemaName: customers` explicit
 
 server:
-  port: 8081
+  port: 8181
   shutdown: graceful
 
 # Actuator port riêng — KHÔNG expose qua public gateway. Chỉ Prometheus/k8s scrape.
 management:
   server:
-    port: 9081
+    port: 9181
   endpoints:
     web:
       exposure:

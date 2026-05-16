@@ -1,0 +1,27 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 002-001-add-audit-columns-owners
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: customers
+            tableName: owners
+            columns:
+              - column: { name: created_by,         type: VARCHAR(50) }
+              - column: { name: created_date,       type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: last_modified_by,   type: VARCHAR(50) }
+              - column: { name: last_modified_date, type: TIMESTAMP WITH TIME ZONE }
+
+  - changeSet:
+      id: 002-002-add-audit-columns-pets
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: customers
+            tableName: pets
+            columns:
+              - column: { name: created_by,         type: VARCHAR(50) }
+              - column: { name: created_date,       type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: last_modified_by,   type: VARCHAR(50) }
+              - column: { name: last_modified_date, type: TIMESTAMP WITH TIME ZONE }

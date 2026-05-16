@@ -1,10 +1,10 @@
-package com.mss301.petclinic.customers.exception;
+package com.mss301.petclinic.common.web.exception;
 
 import java.net.URI;
 
 /**
- * Type URIs cho RFC 9457 (RFC 7807 updated) ProblemDetail.
- * Client phân biệt loại lỗi bằng cách so sánh `type`, không phải parse message.
+ * RFC 9457 ProblemDetail `type` URIs. Client phân biệt loại lỗi bằng cách so sánh `type`,
+ * không phải parse message string.
  */
 public final class ErrorConstants {
 

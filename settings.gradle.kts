@@ -20,4 +20,7 @@ dependencyResolutionManagement {
 // Mọi `id("petclinic.xxx")` trong subproject đều resolve từ đây.
 includeBuild("build-logic")
 
+include(":shared:common-web")
+include(":shared:common-jpa")
 include(":services:customers-service")
+include(":services:vets-service")

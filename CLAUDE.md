@@ -60,37 +60,63 @@ In IntelliJ, prefer the committed run configs in `.run/`:
 ### Build organization
 
 - `gradle/libs.versions.toml` — **single source of truth** for every dependency version. Never pin versions in service `build.gradle.kts`.
-- `build-logic/` — included build with two convention plugins:
+- `build-logic/` — included build with three convention plugins:
   - `petclinic.java-conventions` — Java 25 toolchain, JUnit 5 BOM, JaCoCo, UTF-8, `-parameters`
   - `petclinic.spring-boot-service` — applies java-conventions + Spring Boot plugin + dep-management + Spring Cloud BOM + Actuator + `buildInfo()` + sets `bootRun.workingDir = rootDir`
-- `services/<name>/build.gradle.kts` — must stay ~10 lines, only `id("petclinic.spring-boot-service")` plus service-specific deps. Never re-declare Spring Boot/Cloud versions here.
+  - `petclinic.shared-library` — applies java-conventions + `java-library` + dep-management + Spring Boot BOM. For modules under `shared/` (NOT Spring Boot apps — no `bootJar`).
+- `shared/<name>/build.gradle.kts` — apply `id("petclinic.shared-library")` plus deps (mostly `compileOnly` so services bring runtime).
+- `services/<name>/build.gradle.kts` — must stay short, only `id("petclinic.spring-boot-service")` + `implementation(project(":shared:common-web"))` + `implementation(project(":shared:common-jpa"))` + service-specific deps. Never re-declare Spring Boot/Cloud versions here.
 - `compose.yaml` — root-level dev infra; uses profiles (`db`, future: `cache`, `messaging`) so each service only starts what it needs
+
+### Shared modules (Spring Boot auto-config — no copy-paste between services)
+
+Cross-cutting code lives in `shared/`. Services depend via `implementation(project(":shared:<name>"))` — beans wire automatically via `@AutoConfiguration`. **Never re-create these in a service.**
+
+- **`shared/common-web`** — REST/MVC layer cross-cutting:
+  - `ExceptionTranslator` (`@RestControllerAdvice extends ResponseEntityExceptionHandler`) — RFC 9457 ProblemDetail for everything (domain `ResourceNotFoundException` subclasses, `BadRequestAlertException`, validation errors, all Spring built-ins). Handles base `ResourceNotFoundException` — catches every subclass automatically.
+  - `ResourceNotFoundException` (abstract) — services subclass: `class OwnerNotFoundException extends ResourceNotFoundException { OwnerNotFoundException(String id) { super("Owner", id); } }`.
+  - `BadRequestAlertException` — throw directly for business validation. Response includes `X-PetClinic-Alert` header.
+  - `ErrorConstants` — URI type constants for ProblemDetail.
+  - `PetClinicOpenApiCustomizer` — auto-populates OpenAPI info from `spring.application.name`. Service can override by declaring its own `@Bean OpenAPI`.
+
+- **`shared/common-jpa`** — JPA layer cross-cutting:
+  - `AbstractAuditingEntity` (`@MappedSuperclass + @EntityListeners(AuditingEntityListener)`) — provides `created_by`, `created_date`, `last_modified_by`, `last_modified_date`. Entities extend this. Liquibase changeset must add the four columns to each table.
+  - `SystemAuditorAware` — default `AuditorAware<String>` returning `"system"`. Services with Spring Security override by declaring their own bean.
+  - `IdentifiedEnum` — interface for enums needing stable persistence ID + i18n key. `id()` is the contract with DB/FE; override it when renaming `name()` to keep DB compatibility. `labelKey()` uses `getDeclaringClass()` (not `getClass()`) to avoid the anonymous-subclass-when-enum-has-body bug.
+  - `OrderedEnum` extends `IdentifiedEnum` — adds `weight()`. Convention: use gaps (10/20/30) so future inserts don't break forward-only invariants on persisted higher-weight values.
+  - `IdentifiedEnums` — `byId`, `findById`, `sortedByWeight` utility methods.
+
+**Auto-config descriptor:** Each shared module ships `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` (Spring Boot 3+ replacement for legacy `spring.factories`). All beans use `@ConditionalOnMissingBean` so services can override.
+
+**Rule: cross-cutting yes, domain no.** Never put entities, repositories, or business services in `shared/`. Each service owns its domain.
 
 ### Service package structure (mandatory)
 
 ```
 com.mss301.petclinic.<service>/
 ├── <Service>Application.java
-├── config/                  — @Configuration classes (OpenApiConfig, etc.)
+├── config/                  — @Configuration classes (service-specific only — shared OpenAPI handled by common-web)
 ├── controller/              — @RestController, returns Page<>/ResponseEntity/DTO
 ├── service/                 — interface
 │   └── impl/                — @Service + @Transactional implementation
 ├── repository/              — JpaRepository
-├── model/                   — JPA entity (plain class, NOT record — Hibernate needs no-arg ctor)
+├── model/                   — JPA entity (plain class, extends AbstractAuditingEntity)
 ├── dto/
 │   ├── req/                 — request records with @NotBlank etc., `toEntity()` instance method
 │   └── res/                 — response records, `from(Entity)` static method
-└── exception/               — ExceptionTranslator + ErrorConstants + custom exceptions
+└── exception/               — domain-specific subclasses ONLY (<Entity>NotFoundException extends ResourceNotFoundException). ExceptionTranslator + ErrorConstants + BadRequestAlertException are in shared/common-web — NEVER duplicate them per service.
 ```
 
 ### Hard rules (no exceptions)
 
 - **NO Lombok.** Java 25 records cover DTOs; entities write plain getters/setters manually.
 - **NO mapper layer.** Conversion lives as static `from()` / `toEntity()` on the record itself. Do NOT add MapStruct/ModelMapper.
-- **DTOs are records, entities are classes** — these are different. Don't try to unify.
+- **NO duplicate cross-cutting code.** Anything in `shared/common-web` or `shared/common-jpa` (ExceptionTranslator, ErrorConstants, BadRequestAlertException, AbstractAuditingEntity, OpenApi customizer, IdentifiedEnum, ...) must NEVER be re-defined per service.
+- **DTOs are records, entities are classes** — entities extend `AbstractAuditingEntity` from `shared/common-jpa` (4 audit columns wired by Spring Data Auditing).
 - **Layered package by feature**, not by type at top level. Inside a service, `controller`/`service`/`repository` are the top-level subpackages.
 - **Service interface + impl split** in `service/` + `service/impl/`. Controllers depend on the interface.
 - **API versioning** in path: `/api/v1/<resource>`. Never break v1; add v2 alongside.
+- **Enums needing DB persistence implement `IdentifiedEnum`** (or `OrderedEnum` for sortable). Use `id()` for DB, never raw `Enum.name()` directly.
 
 ### Database strategy
 
@@ -100,13 +126,14 @@ com.mss301.petclinic.<service>/
 - `spring.jpa.hibernate.ddl-auto=validate` always. Liquibase owns the schema.
 - **Liquibase tracking tables live in `public`** — do NOT set `spring.liquibase.liquibase-schema` to the service schema. Service schema doesn't exist yet when Liquibase boots, so tracking would fail (chicken-and-egg).
 - Changeset 001 creates the service schema with `CREATE SCHEMA IF NOT EXISTS`; subsequent changesets specify `schemaName: <service>` explicitly.
+- Every table backed by an entity extending `AbstractAuditingEntity` must have a `00X-add-auditing-columns.yaml` changeset with `created_by VARCHAR(50)`, `created_date TIMESTAMP WITH TIME ZONE`, `last_modified_by VARCHAR(50)`, `last_modified_date TIMESTAMP WITH TIME ZONE`. Spring Data JPA Auditing fills these automatically; `SystemAuditorAware` in `shared/common-jpa` returns `"system"` until Spring Security is wired.
 
 ### Exception handling (JHipster + Spring Boot 4 native)
 
-- Class is `ExceptionTranslator` (NOT `GlobalExceptionHandler`) — JHipster naming.
-- Extends `ResponseEntityExceptionHandler`, annotated `@RestControllerAdvice`. Extending the base class means Spring's built-in exceptions (404, 405, 415, validation) also return `ProblemDetail` JSON instead of HTML.
-- `exception/ErrorConstants.java` — URI type constants for the RFC 9457 `type` field.
-- `exception/BadRequestAlertException.java` — business validation errors carry `entityName` + `errorKey`. Response includes header `X-PetClinic-Alert` for FE to render i18n toast without parsing the message string.
+- **Lives in `shared/common-web`** — services do NOT define `ExceptionTranslator`/`ErrorConstants`/`BadRequestAlertException` themselves.
+- `ExceptionTranslator` is `@RestControllerAdvice extends ResponseEntityExceptionHandler` (extends base class so Spring's built-in exceptions — 404, 405, 415, validation — also return `ProblemDetail` JSON).
+- Services only add domain-specific subclasses: `class OwnerNotFoundException extends ResourceNotFoundException { super("Owner", id); }`. The handler in shared catches the base, so subclasses work automatically.
+- `BadRequestAlertException` carries `entityName` + `errorKey`. Response includes header `X-PetClinic-Alert` for FE i18n toast without parsing the message string.
 - `application.yml`: `spring.mvc.problemdetails.enabled=true` so Spring auto-handles built-in exceptions.
 
 ### Configuration files per service

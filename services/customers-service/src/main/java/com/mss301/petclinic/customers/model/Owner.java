@@ -1,5 +1,6 @@
 package com.mss301.petclinic.customers.model;
 
+import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +17,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "owners")
-public class Owner {
+public class Owner extends AbstractAuditingEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

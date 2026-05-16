@@ -1,5 +1,6 @@
 package com.mss301.petclinic.customers.model;
 
+import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,7 +11,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "pets")
-public class Pet {
+public class Pet extends AbstractAuditingEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

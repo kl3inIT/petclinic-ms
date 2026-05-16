@@ -1,0 +1,75 @@
+spring:
+  application:
+    name: vets-service
+
+  threads:
+    virtual:
+      enabled: true
+
+  mvc:
+    problemdetails:
+      enabled: true
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  docker:
+    compose:
+      file: compose.yaml
+      profiles:
+        active: ["db"]
+      lifecycle-management: start-only
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/petclinic?currentSchema=vets}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: vets
+        format_sql: true
+    show-sql: false
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    # Tracking ở public (xem CLAUDE.md — chicken-and-egg pattern)
+
+server:
+  port: 8182
+  shutdown: graceful
+
+management:
+  server:
+    port: 9182
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  level:
+    org.hibernate.SQL: INFO
+  pattern:
+    correlation: "[%X{traceId:-},%X{spanId:-}] "
+    level: "%5p ${LOGGING_PATTERN_CORRELATION:-}"
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+  default-produces-media-type: application/json

@@ -1,0 +1,109 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 001-create-schema-vets
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS vets
+            dbms: postgresql
+
+  - changeSet:
+      id: 002-create-table-vets
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: vets
+            tableName: vets
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: first_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 003-create-table-specialties
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: vets
+            tableName: specialties
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_specialties_name
+
+  - changeSet:
+      id: 004-create-table-vet-specialties
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: vets
+            tableName: vet_specialties
+            columns:
+              - column:
+                  name: vet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_vet_specialties_vet
+                    references: vets.vets(id)
+              - column:
+                  name: specialty_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_vet_specialties_specialty
+                    references: vets.specialties(id)
+        - addPrimaryKey:
+            schemaName: vets
+            tableName: vet_specialties
+            columnNames: vet_id, specialty_id
+            constraintName: pk_vet_specialties
+
+  - changeSet:
+      id: 005-seed-default-specialties
+      author: mss301
+      changes:
+        - insert:
+            schemaName: vets
+            tableName: specialties
+            columns:
+              - column: { name: name, value: radiology }
+        - insert:
+            schemaName: vets
+            tableName: specialties
+            columns:
+              - column: { name: name, value: surgery }
+        - insert:
+            schemaName: vets
+            tableName: specialties
+            columns:
+              - column: { name: name, value: dentistry }
+        - insert:
+            schemaName: vets
+            tableName: specialties
+            columns:
+              - column: { name: name, value: internal medicine }
