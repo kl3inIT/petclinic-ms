@@ -9,7 +9,7 @@ springDepMgmt      = "1.1.7"
 springCloud        = "2025.1.1"         # Oakwood — tương thích Boot 4.0.x
 
 # DB / Migration
-postgresql         = "42.7.4"
+postgresql         = "42.7.11"
 testcontainers     = "2.0.5"            # 2.x đổi artifactId pattern `testcontainers-*`
 # Liquibase version managed by spring-boot-dependencies BOM — không pin tại đây.
 
