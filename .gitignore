@@ -41,3 +41,30 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Node / pnpm / Turborepo ###
+node_modules/
+.pnpm-store/
+.turbo/
+.next/
+dist/
+.cache/
+*.log
+.env
+.env.local
+.env.*.local
+
+### Vite ###
+.vite/
+
+### TypeScript incremental build ###
+*.tsbuildinfo
+
+### TanStack Router auto-gen ###
+**/src/routeTree.gen.ts
+
+### Test outputs ###
+coverage/
+test-results/
+playwright-report/
+.playwright/

@@ -1,0 +1,8 @@
+dist
+node_modules
+src/routeTree.gen.ts
+src/lib/api/generated
+openapi
+coverage
+test-results
+playwright-report
