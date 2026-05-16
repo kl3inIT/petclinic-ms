@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="api-gateway" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="petclinic-ms.services.api-gateway.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.mss301.petclinic.gateway.ApiGatewayApplication" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+    <option name="ACTIVE_PROFILES" value="" />
+    <option name="UPDATE_ACTION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

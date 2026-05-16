@@ -21,6 +21,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/build-logic" />
             <option value="$PROJECT_DIR$/services" />
+            <option value="$PROJECT_DIR$/services/api-gateway" />
             <option value="$PROJECT_DIR$/services/config-server" />
             <option value="$PROJECT_DIR$/services/customers-service" />
             <option value="$PROJECT_DIR$/services/discovery-server" />

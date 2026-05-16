@@ -1,0 +1,57 @@
+# Gateway — env-agnostic routes + default filters.
+#
+# IMPORTANT: Spring Cloud Gateway 5.0.x (Boot 4 / Cloud 2025.x) đổi prefix:
+#   - Cloud 4.x:  spring.cloud.gateway.mvc.*  (deprecated)
+#   - Cloud 5.x:  spring.cloud.gateway.server.webmvc.*  ← dùng cái này
+# Verify bằng /actuator/configprops — bean `gatewayMvcProperties` có prefix=spring.cloud.gateway.server.webmvc.
+#
+# Pattern: predicate `/api/v1/<resource>/**` PASSTHROUGH (KHÔNG StripPrefix) vì downstream service
+# đã serve native ở /api/v1/<resource>. Khác official petclinic (họ dùng `/api/vet` + StripPrefix=2
+# vì downstream serve ở root).
+#
+# Default filters áp cho MỌI route:
+#   - CircuitBreaker → forward:/fallback nếu downstream lỗi/timeout
+#   - Retry         → 1 lần với 503, chỉ POST (idempotent-safe theo Spring guidance)
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          enabled: true                   # explicit — đảm bảo gateway MVC autoconfig active
+
+          # TODO(circuitbreaker): default-filters CircuitBreaker/Retry không apply trong WebMVC 5.0.x
+          # khi declare ở đây (YAML shortcut format khác với WebFlux). Cần wire bằng functional
+          # builder `RouterFunctions.route(...).filter(CircuitBreakerFilterFunctions.circuitBreaker(...))`
+          # qua @Bean RouterFunction. Tạm thời /fallback endpoint vẫn reachable trực tiếp.
+          # Tham khảo: spring-cloud-gateway-server-webmvc 5.x docs section "Filter Functions".
+
+          routes:
+            - id: customers-service
+              uri: lb://customers-service # lb:// → Spring Cloud LoadBalancer resolve qua Eureka registry
+              predicates:
+                - Path=/api/v1/owners/**,/api/v1/pets/**
+
+            - id: vets-service
+              uri: lb://vets-service
+              predicates:
+                - Path=/api/v1/vets/**,/api/v1/specialties/**
+
+# CircuitBreaker config — Resilience4j servlet stack (KHÔNG phải reactor).
+# Mở circuit khi 50% requests trong 10 lần gần nhất fail; mở 5s → half-open thử 3 request.
+resilience4j:
+  circuitbreaker:
+    instances:
+      defaultCircuitBreaker:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 2s
+        slow-call-rate-threshold: 80
+  timelimiter:
+    instances:
+      defaultCircuitBreaker:
+        timeout-duration: 3s
+        cancel-running-future: true

@@ -1,0 +1,27 @@
+# Gateway dev — CORS allow tất cả origin (FE dev chạy ở mọi port), bật trace log gateway routing.
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          # CORS global cho gateway WebMVC — áp cho mọi route, response Access-Control-* headers.
+          # Dev OK với "*", prod sẽ whitelist.
+          cors-configurations:
+            '[/**]':
+              allowedOriginPatterns: "*"
+              allowedMethods: GET, POST, PUT, DELETE, PATCH, OPTIONS
+              allowedHeaders: "*"
+              allowCredentials: true
+              maxAge: 3600
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"                      # dev — expose mọi endpoint để debug
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.servlet.function: DEBUG

@@ -2,7 +2,6 @@ package com.mss301.petclinic.common.web.exception;
 
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -57,14 +56,6 @@ public class ExceptionTranslator {
                 .header(ALERT_HEADER, "error." + ex.getErrorKey())
                 .header(PARAMS_HEADER, ex.getEntityName())
                 .body(pd);
-    }
-
-    @ExceptionHandler(ConcurrencyFailureException.class)
-    public ResponseEntity<ProblemDetail> handleConcurrency(ConcurrencyFailureException ex) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-        pd.setType(ErrorConstants.CONCURRENCY_TYPE);
-        pd.setTitle("Concurrency conflict");
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(pd);
     }
 
     /**

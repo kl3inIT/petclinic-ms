@@ -16,6 +16,7 @@ public final class ErrorConstants {
     public static final URI BAD_REQUEST_TYPE      = URI.create(BASE + "bad-request");
     public static final URI CONCURRENCY_TYPE      = URI.create(BASE + "concurrency-failure");
     public static final URI ACCESS_DENIED_TYPE    = URI.create(BASE + "access-denied");
+    public static final URI SERVICE_UNAVAILABLE_TYPE = URI.create(BASE + "service-unavailable");
 
     private ErrorConstants() {}
 }

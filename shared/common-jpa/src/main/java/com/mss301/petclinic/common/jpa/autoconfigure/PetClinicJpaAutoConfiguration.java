@@ -1,6 +1,7 @@
 package com.mss301.petclinic.common.jpa.autoconfigure;
 
 import com.mss301.petclinic.common.jpa.audit.SystemAuditorAware;
+import com.mss301.petclinic.common.jpa.exception.DataExceptionTranslator;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -22,5 +23,11 @@ public class PetClinicJpaAutoConfiguration {
     @ConditionalOnMissingBean(AuditorAware.class)
     public AuditorAware<String> petclinicAuditorAware() {
         return new SystemAuditorAware();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public DataExceptionTranslator petclinicDataExceptionTranslator() {
+        return new DataExceptionTranslator();
     }
 }

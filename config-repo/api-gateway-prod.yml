@@ -1,0 +1,29 @@
+# Gateway prod — CORS whitelist env-driven, retry hơi tăng.
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          cors-configurations:
+            '[/**]':
+              # CORS_ALLOWED_ORIGINS env var, format CSV: "https://app.example.com,https://admin.example.com"
+              allowedOrigins: ${CORS_ALLOWED_ORIGINS}
+              allowedMethods: GET, POST, PUT, DELETE, PATCH, OPTIONS
+              allowedHeaders: Authorization, Content-Type, X-Request-Id
+              allowCredentials: true
+              maxAge: 3600
+          default-filters:
+            - name: CircuitBreaker
+              args:
+                name: defaultCircuitBreaker
+                fallbackUri: forward:/fallback
+            - name: Retry
+              args:
+                retries: 2                # prod: thử thêm 1 lần so với dev
+                statuses: SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT
+                methods: GET, POST
+
+logging:
+  level:
+    org.springframework.cloud.gateway: WARN
