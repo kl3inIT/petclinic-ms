@@ -207,10 +207,6 @@ Use for: Spring Boot 4 APIs, Spring Cloud Netflix Eureka, springdoc OpenAPI, Liq
 
 Not used yet (no frontend module). When `frontend/` is added: `browser_navigate`, `browser_snapshot`, `browser_console_messages` to verify pages render + no console errors after changes. Take screenshots before reporting visual work done.
 
-### 4. Postman MCP — API readiness audits (occasional)
-
-For when OpenAPI specs grow. `postman:API Readiness Analyzer` scans the served `/v3/api-docs` for AI-agent compatibility (8 pillars, 48 checks). Run before publishing a service externally.
-
 ### Bash / Gradle CLI fallback
 
 JetBrains MCP doesn't have a "run gradle task" verb (use `mcp__jetbrains__execute_terminal_command` if needed). For curl probes, port kills, and one-shot scripts, plain Bash/PowerShell is fine. Prefer JetBrains build over `./gradlew build` for compile-check (faster — incremental + uses warm daemon).
