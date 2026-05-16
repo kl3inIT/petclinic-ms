@@ -90,6 +90,7 @@ public class RefreshTokenService {
     public record IssuedRefresh(String token, long expiresInSeconds) {}
 
     public static class InvalidRefreshTokenException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
         public InvalidRefreshTokenException() { super("Invalid or expired refresh token"); }
     }
 }

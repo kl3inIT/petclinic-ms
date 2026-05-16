@@ -10,78 +10,110 @@ import java.util.UUID;
 /**
  * Structured audit log cho mọi auth event (ECS schema — Loki/Elasticsearch parse trực tiếp).
  *
- * <p>Field names follow Elastic Common Schema (ECS):</p>
- * <ul>
- *   <li>{@code event.action} — vd: {@code authentication.login.success}</li>
- *   <li>{@code event.outcome} — {@code success}/{@code failure}</li>
- *   <li>{@code user.id}, {@code user.name}</li>
- *   <li>{@code client.ip} (Iter sau khi có request context)</li>
- * </ul>
+ * <p>Field names follow Elastic Common Schema (ECS).
+ * Prod profile dùng structured-logging ECS format — JSON lines parse-friendly.
+ * Dev plain text + MDC fields hiển thị qua correlation pattern.</p>
  *
- * <p>Prod profile dùng structured-logging ECS format — JSON lines parsed-friendly.
- * Dev plain text + MDC fields hiển thị trong correlation pattern.</p>
+ * <p>Mỗi method dùng {@code try/finally} (KHÔNG try-with-resources) — tránh javac {@code [try]}
+ * warning khi resource không reference trong body.</p>
  */
 @Component
 public class AuthAuditLogger {
 
     private static final Logger log = LoggerFactory.getLogger("petclinic.auth.audit");
 
+    // ECS field keys
+    private static final String K_ACTION  = "event.action";
+    private static final String K_OUTCOME = "event.outcome";
+    private static final String K_REASON  = "event.reason";
+    private static final String K_USER_ID = "user.id";
+    private static final String K_USER    = "user.name";
+
+    // ECS outcome values
+    private static final String OUTCOME_SUCCESS = "success";
+    private static final String OUTCOME_FAILURE = "failure";
+
+    // Action constants
+    private static final String ACTION_LOGIN_SUCCESS    = "authentication.login.success";
+    private static final String ACTION_LOGIN_FAILURE    = "authentication.login.failure";
+    private static final String ACTION_REGISTER_SUCCESS = "authentication.register.success";
+    private static final String ACTION_REFRESH_SUCCESS  = "authentication.token.refresh.success";
+    private static final String ACTION_REFRESH_FAILURE  = "authentication.token.refresh.failure";
+    private static final String ACTION_LOGOUT_SUCCESS   = "authentication.logout.success";
+
     public void loginSuccess(UUID userId, String username) {
-        try (MdcContext ctx = mdc("authentication.login.success", "success", userId, username)) {
+        try {
+            putBase(ACTION_LOGIN_SUCCESS, OUTCOME_SUCCESS);
+            MDC.put(K_USER_ID, userId.toString());
+            MDC.put(K_USER, username);
             log.info("Login success");
+        } finally {
+            clearAll();
         }
     }
 
     public void loginFailure(String username, String reason) {
-        try (MdcContext ctx = mdc("authentication.login.failure", "failure", null, username)) {
-            MDC.put("event.reason", reason);
+        try {
+            putBase(ACTION_LOGIN_FAILURE, OUTCOME_FAILURE);
+            if (username != null) MDC.put(K_USER, username);
+            MDC.put(K_REASON, reason);
             log.warn("Login failure");
-            MDC.remove("event.reason");
+        } finally {
+            clearAll();
         }
     }
 
     public void registerSuccess(UUID userId, String username) {
-        try (MdcContext ctx = mdc("authentication.register.success", "success", userId, username)) {
+        try {
+            putBase(ACTION_REGISTER_SUCCESS, OUTCOME_SUCCESS);
+            MDC.put(K_USER_ID, userId.toString());
+            MDC.put(K_USER, username);
             log.info("Register success");
+        } finally {
+            clearAll();
         }
     }
 
     public void refreshSuccess(UUID userId) {
-        try (MdcContext ctx = mdc("authentication.token.refresh.success", "success", userId, null)) {
+        try {
+            putBase(ACTION_REFRESH_SUCCESS, OUTCOME_SUCCESS);
+            MDC.put(K_USER_ID, userId.toString());
             log.info("Refresh token rotated");
+        } finally {
+            clearAll();
         }
     }
 
     public void refreshFailure(String reason) {
-        try (MdcContext ctx = mdc("authentication.token.refresh.failure", "failure", null, null)) {
-            MDC.put("event.reason", reason);
+        try {
+            putBase(ACTION_REFRESH_FAILURE, OUTCOME_FAILURE);
+            MDC.put(K_REASON, reason);
             log.warn("Refresh token failure");
-            MDC.remove("event.reason");
+        } finally {
+            clearAll();
         }
     }
 
     public void logoutSuccess(UUID userId) {
-        try (MdcContext ctx = mdc("authentication.logout.success", "success", userId, null)) {
+        try {
+            putBase(ACTION_LOGOUT_SUCCESS, OUTCOME_SUCCESS);
+            MDC.put(K_USER_ID, userId.toString());
             log.info("Logout success");
+        } finally {
+            clearAll();
         }
     }
 
-    private static MdcContext mdc(String action, String outcome, UUID userId, String username) {
-        MDC.put("event.action", action);
-        MDC.put("event.outcome", outcome);
-        if (userId != null) MDC.put("user.id", userId.toString());
-        if (username != null) MDC.put("user.name", username);
-        return MdcContext.INSTANCE;
+    private static void putBase(String action, String outcome) {
+        MDC.put(K_ACTION, action);
+        MDC.put(K_OUTCOME, outcome);
     }
 
-    /** AutoCloseable cleanup MDC sau log call. */
-    private enum MdcContext implements AutoCloseable {
-        INSTANCE;
-        @Override public void close() {
-            MDC.remove("event.action");
-            MDC.remove("event.outcome");
-            MDC.remove("user.id");
-            MDC.remove("user.name");
-        }
+    private static void clearAll() {
+        MDC.remove(K_ACTION);
+        MDC.remove(K_OUTCOME);
+        MDC.remove(K_REASON);
+        MDC.remove(K_USER_ID);
+        MDC.remove(K_USER);
     }
 }

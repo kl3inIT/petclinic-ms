@@ -7,6 +7,8 @@ package com.mss301.petclinic.common.web.exception;
  */
 public class BadRequestAlertException extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
+
     private final String entityName;
     private final String errorKey;
 

@@ -9,7 +9,6 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.io.Serializable;
 import java.time.Instant;
 
 /**
@@ -20,10 +19,13 @@ import java.time.Instant;
  * <p>Subclass tự define {@code @Id} của riêng — base KHÔNG ép kiểu ID (cho phép Long, UUID, String).
  *
  * <p>Audit timestamp dùng {@link Instant} (UTC) — KHÔNG dùng {@code LocalDateTime} để tránh timezone bug.
+ *
+ * <p>KHÔNG implement {@code Serializable} — JPA không bắt buộc, ta không cache entity qua wire
+ * (Hazelcast/Redis...). Bỏ giúp giảm [serial] warnings ở mọi subclass entity.</p>
  */
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
-public abstract class AbstractAuditingEntity implements Serializable {
+public abstract class AbstractAuditingEntity {
 
     @CreatedBy
     @Column(name = "created_by", length = 50, updatable = false)

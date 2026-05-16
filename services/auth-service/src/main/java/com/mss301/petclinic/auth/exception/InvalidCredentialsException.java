@@ -7,6 +7,8 @@ import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
  */
 public class InvalidCredentialsException extends BadRequestAlertException {
 
+    private static final long serialVersionUID = 1L;
+
     public InvalidCredentialsException() {
         super("Invalid username or password", "User", "invalid-credentials");
     }

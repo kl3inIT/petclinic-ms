@@ -112,6 +112,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private static class UserNotFoundException extends ResourceNotFoundException {
+        private static final long serialVersionUID = 1L;
         UserNotFoundException(String id) { super("User", id); }
     }
 }
