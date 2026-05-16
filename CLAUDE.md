@@ -73,7 +73,7 @@ In IntelliJ, prefer the committed run configs in `.run/`:
 Cross-cutting code lives in `shared/`. Services depend via `implementation(project(":shared:<name>"))` — beans wire automatically via `@AutoConfiguration`. **Never re-create these in a service.**
 
 - **`shared/common-web`** — REST/MVC layer cross-cutting:
-  - `ExceptionTranslator` (`@RestControllerAdvice extends ResponseEntityExceptionHandler`) — RFC 9457 ProblemDetail for everything (domain `ResourceNotFoundException` subclasses, `BadRequestAlertException`, validation errors, all Spring built-ins). Handles base `ResourceNotFoundException` — catches every subclass automatically.
+  - `ExceptionTranslator` (`@RestControllerAdvice` + `@Order(HIGHEST_PRECEDENCE)`, does NOT extend `ResponseEntityExceptionHandler`) — RFC 9457 ProblemDetail. Direct `@ExceptionHandler` methods for domain (`ResourceNotFoundException`, `BadRequestAlertException`), concurrency, and validation (`MethodArgumentNotValidException` → `fieldErrors[]`). Spring Boot 4's `spring.mvc.problemdetails.enabled=true` auto-handles built-in exceptions (404/405/415) as ProblemDetail — extending parent class causes ambiguous mapping. Handles base `ResourceNotFoundException` — catches every subclass automatically.
   - `ResourceNotFoundException` (abstract) — services subclass: `class OwnerNotFoundException extends ResourceNotFoundException { OwnerNotFoundException(String id) { super("Owner", id); } }`.
   - `BadRequestAlertException` — throw directly for business validation. Response includes `X-PetClinic-Alert` header.
   - `ErrorConstants` — URI type constants for ProblemDetail.
@@ -131,10 +131,11 @@ com.mss301.petclinic.<service>/
 ### Exception handling (JHipster + Spring Boot 4 native)
 
 - **Lives in `shared/common-web`** — services do NOT define `ExceptionTranslator`/`ErrorConstants`/`BadRequestAlertException` themselves.
-- `ExceptionTranslator` is `@RestControllerAdvice extends ResponseEntityExceptionHandler` (extends base class so Spring's built-in exceptions — 404, 405, 415, validation — also return `ProblemDetail` JSON).
-- Services only add domain-specific subclasses: `class OwnerNotFoundException extends ResourceNotFoundException { super("Owner", id); }`. The handler in shared catches the base, so subclasses work automatically.
+- `ExceptionTranslator` is `@RestControllerAdvice` + `@Order(Ordered.HIGHEST_PRECEDENCE)` — does NOT extend `ResponseEntityExceptionHandler`. Spring Boot 4 with `spring.mvc.problemdetails.enabled=true` already converts built-in exceptions (404, 405, 415, `HttpMessageNotReadable`, ...) to `ProblemDetail`; extending parent class causes "Ambiguous @ExceptionHandler method mapped" on `MethodArgumentNotValidException`.
+- Direct `@ExceptionHandler` methods for: domain `ResourceNotFoundException` (catches every subclass), `BadRequestAlertException`, `ConcurrencyFailureException`, `MethodArgumentNotValidException` (returns `fieldErrors[]` with field/code/message).
+- Services only add domain-specific subclasses: `class OwnerNotFoundException extends ResourceNotFoundException { super("Owner", id); }`.
 - `BadRequestAlertException` carries `entityName` + `errorKey`. Response includes header `X-PetClinic-Alert` for FE i18n toast without parsing the message string.
-- `application.yml`: `spring.mvc.problemdetails.enabled=true` so Spring auto-handles built-in exceptions.
+- `application.yml`: `spring.mvc.problemdetails.enabled=true` is REQUIRED so Spring auto-handles built-in exceptions.
 
 ### Configuration files per service
 
@@ -166,16 +167,55 @@ com.mss301.petclinic.<service>/
 
 5. **Precompiled script plugins (`build-logic/`)** — IntelliJ inspection often shows ERRORS in `*.gradle.kts` before Gradle sync runs (accessor types not yet generated). Run a Gradle sync — if Gradle build succeeds, the code is correct regardless of IDE squiggles.
 
-6. **Service ordering when scaffolding new services** — customers-service was first (smallest surface: WebMVC + JPA + Liquibase). Recommended next: `discovery-server` → `config-server` → `api-gateway` → `vets-service` → `auth-service`. Do NOT start with auth-service — it pulls Security + JPA + JWT + crypto + Mongo all at once, makes debugging miserable.
+6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (adds N-N join + Set seed data) → `discovery-server` (Eureka registry). Recommended next: `config-server` → `api-gateway` → `auth-service`. Do NOT start with auth-service — it pulls Security + JPA + JWT + crypto + Mongo all at once, makes debugging miserable.
 
 7. **Boot 4 Spring class lookups** — before importing a Spring class, verify it exists in Boot 4. Examples already encountered as broken:
    - `AutoConfigureDataMongo` — removed
    - `WebExchangeBindException` vs `MethodArgumentNotValidException` — MVC stack uses the latter, WebFlux the former
    - `LiquibaseProperties` — moved to `org.springframework.boot.liquibase.autoconfigure`
 
+## MCP and tooling
+
+This project assumes the agent has JetBrains MCP, context7 MCP, and Playwright MCP available. Use them in this priority order:
+
+### 1. JetBrains MCP — primary verification loop (mandatory)
+
+**Why first:** IntelliJ has full project model, Spring Boot YAML schema, Gradle accessor types, Hibernate validators, and live inspection. It catches issues the agent cannot see by reading source alone.
+
+| When | Tool | Why |
+|---|---|---|
+| After editing any `application.yml` / `application-*.yml` | `mcp__jetbrains__get_file_problems` | YAML typos fail silently at runtime. IntelliJ's Spring Boot inspector flags unknown keys, wrong types, deprecated properties. **Mandatory before bootRun.** |
+| After editing `*.gradle.kts`, `libs.versions.toml`, `*.java`, `*.kt` | `mcp__jetbrains__get_file_problems` | Inspection (errors + warnings) before commit. |
+| After structural changes (new module, new dep, plugin change, refactor) | `mcp__jetbrains__build_project` | End-to-end compile across all modules. Returns problems with paths + lines. |
+| When unsure what user is focused on | `mcp__jetbrains__get_all_open_file_paths`, `get_run_configurations` | See active editor + run configs without asking. |
+| To search project semantically | `mcp__jetbrains__search_symbol`, `search_in_files_by_text`, `search_regex` | Faster than Grep when symbols span modules. |
+
+**Rule:** Never report "fix complete" on a service config change without running `get_file_problems` on the modified YAML. YAML errors don't break the build — they break runtime.
+
+### 2. context7 MCP — library docs (mandatory for version-sensitive code)
+
+**Why:** Training data is stale. Spring Boot 4, Spring Cloud 2025.x, springdoc 3.x, Testcontainers 2.x all have breaking changes from the 3.x / 2024.x lines the model was trained on.
+
+```
+1. mcp__context7__resolve-library-id   — find /org/project (or /org/project/version)
+2. mcp__context7__query-docs           — full question, not single keywords
+```
+
+Use for: Spring Boot 4 APIs, Spring Cloud Netflix Eureka, springdoc OpenAPI, Liquibase YAML, Testcontainers, Hibernate 7, Postgres 18 features. **Don't use for** business logic, refactoring, or general Java.
+
+### 3. Playwright MCP — frontend & E2E (when UI exists)
+
+Not used yet (no frontend module). When `frontend/` is added: `browser_navigate`, `browser_snapshot`, `browser_console_messages` to verify pages render + no console errors after changes. Take screenshots before reporting visual work done.
+
+### 4. Postman MCP — API readiness audits (occasional)
+
+For when OpenAPI specs grow. `postman:API Readiness Analyzer` scans the served `/v3/api-docs` for AI-agent compatibility (8 pillars, 48 checks). Run before publishing a service externally.
+
+### Bash / Gradle CLI fallback
+
+JetBrains MCP doesn't have a "run gradle task" verb (use `mcp__jetbrains__execute_terminal_command` if needed). For curl probes, port kills, and one-shot scripts, plain Bash/PowerShell is fine. Prefer JetBrains build over `./gradlew build` for compile-check (faster — incremental + uses warm daemon).
+
 ## Working with this codebase
 
-- After editing `*.gradle.kts` / `*.toml` / `pom.xml` / Spring source, use JetBrains MCP `get_file_problems` and `build_project` to verify — IDE inspections often diverge from Gradle compile.
-- For library/framework questions (Spring, JPA, Spring Cloud, springdoc, …), use **context7 MCP** with version-pinned IDs like `/spring-projects/spring-boot/v4.0.6`. Do NOT trust Boot 3.x examples found online — verify each symbol.
 - When adding a new service, copy `services/customers-service/` and rename. Don't introduce alternative patterns. Update `settings.gradle.kts` `include(":services:<new-name>")` and add an entry to `.run/all-services.run.xml`.
 - Run configs in `.run/` ARE committed. IntelliJ workspace files (`.idea/workspace.xml`, etc.) are NOT.

@@ -22,6 +22,7 @@
             <option value="$PROJECT_DIR$/build-logic" />
             <option value="$PROJECT_DIR$/services" />
             <option value="$PROJECT_DIR$/services/customers-service" />
+            <option value="$PROJECT_DIR$/services/discovery-server" />
             <option value="$PROJECT_DIR$/services/vets-service" />
             <option value="$PROJECT_DIR$/shared" />
             <option value="$PROJECT_DIR$/shared/common-jpa" />

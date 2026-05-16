@@ -1,5 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="all-services" type="CompoundRunConfigurationType">
+    <toRun name="discovery-server" type="SpringBootApplicationConfigurationType" />
     <toRun name="customers-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="vets-service" type="SpringBootApplicationConfigurationType" />
     <method v="2" />

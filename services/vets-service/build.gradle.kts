@@ -10,6 +10,7 @@ dependencies {
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.liquibase)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
+    implementation(libs.spring.cloud.starter.netflix.eureka.client)
     implementation(libs.micrometer.tracing.bridge.otel)
     runtimeOnly(libs.postgresql)
 

@@ -22,5 +22,6 @@ includeBuild("build-logic")
 
 include(":shared:common-web")
 include(":shared:common-jpa")
+include(":services:discovery-server")
 include(":services:customers-service")
 include(":services:vets-service")

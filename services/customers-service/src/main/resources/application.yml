@@ -88,3 +88,17 @@ springdoc:
   api-docs:
     path: /v3/api-docs
   default-produces-media-type: application/json
+
+# Eureka client — đăng ký vào discovery-server tại 8761. Khi bootRun standalone (chưa start
+# discovery), client sẽ log WARN nhưng app vẫn lên — fail-fast tắt mặc định.
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    # heartbeat nhanh hơn default 30s — dev: phát hiện service down nhanh
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30

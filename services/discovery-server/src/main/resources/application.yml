@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: discovery-server
+
+  threads:
+    virtual:
+      enabled: true
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  port: 8761
+  shutdown: graceful
+
+# Standalone Eureka — không self-register, không fetch peer (single-node dev).
+# Prod cluster sẽ override defaultZone + bật register/fetch để peer replicate.
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    # Dev: tắt self-preservation để instance unhealthy bị evict ngay (debug dễ hơn).
+    # Prod: giữ default true để tránh evict hàng loạt khi network partition.
+    enable-self-preservation: false
+    eviction-interval-timer-in-ms: 15000
+
+management:
+  server:
+    port: 9761
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  pattern:
+    correlation: "[%X{traceId:-},%X{spanId:-}] "
+    level: "%5p ${LOGGING_PATTERN_CORRELATION:-}"
