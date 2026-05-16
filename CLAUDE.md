@@ -107,6 +107,44 @@ com.mss301.petclinic.<service>/
 └── exception/               — domain-specific subclasses ONLY (<Entity>NotFoundException extends ResourceNotFoundException). ExceptionTranslator + ErrorConstants + BadRequestAlertException are in shared/common-web — NEVER duplicate them per service.
 ```
 
+### Configuration binding pattern
+
+**Use `@ConfigurationProperties` for any config with more than 1 related key, or when the same key is read by multiple beans. `@Value` only for one-off, single-bean reads.**
+
+Template — two files in a `config/` package:
+
+```java
+// AuthProperties.java — POJO, no Spring annotations besides @ConfigurationProperties
+@ConfigurationProperties(prefix = "petclinic.auth")
+public class AuthProperties {
+    private Duration accessTokenTtl = Duration.ofMinutes(15);   // defaults inline
+    private Duration refreshTokenTtl = Duration.ofDays(7);
+
+    public Duration getAccessTokenTtl() { return accessTokenTtl; }
+    public void setAccessTokenTtl(Duration accessTokenTtl) { this.accessTokenTtl = accessTokenTtl; }
+    // ...
+}
+
+// AuthPropertiesConfiguration.java — activates binding
+@Configuration
+@EnableConfigurationProperties(AuthProperties.class)
+public class AuthPropertiesConfiguration {
+}
+```
+
+Inject as constructor dep: `public JwtTokenProvider(JwtEncoder enc, AuthProperties auth) { ... }`.
+
+**Why split POJO + activator:**
+- POJO has zero Spring annotations beyond `@ConfigurationProperties` → easy to test, easy to import from other modules without dragging Spring lifecycle
+- Activator gives one explicit place to see "this service binds these properties"
+- Avoids circular `@Bean` order issues if multiple `@Configuration` classes need the same properties
+
+**Gradle:** Add `annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")` so IntelliJ shows autocomplete + javadoc when typing `petclinic.auth.*` in YAML.
+
+**Shared properties (used by multiple services):** put POJO in `shared/common-<x>/jwt/`, activate via the shared module's `@AutoConfiguration`. See `PetClinicJwtProperties` + `PetClinicSecurityAutoConfiguration`.
+
+**Validation:** add `@Validated` on the POJO + `jakarta.validation` annotations on fields (`@NotBlank`, `@DurationMin`, etc.) for fail-fast startup checks.
+
 ### Hard rules (no exceptions)
 
 - **NO Lombok.** Java 25 records cover DTOs; entities write plain getters/setters manually.

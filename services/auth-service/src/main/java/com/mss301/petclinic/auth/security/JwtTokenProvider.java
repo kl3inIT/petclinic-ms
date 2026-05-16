@@ -1,9 +1,9 @@
 package com.mss301.petclinic.auth.security;
 
+import com.mss301.petclinic.auth.config.AuthProperties;
 import com.mss301.petclinic.auth.model.User;
 import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
 import com.nimbusds.jose.jwk.RSAKey;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -41,12 +41,12 @@ public class JwtTokenProvider {
             JwtEncoder jwtEncoder,
             RSAKey rsaJwk,
             PetClinicJwtProperties jwtProps,
-            @Value("${petclinic.auth.access-token-ttl:PT15M}") Duration accessTokenTtl
+            AuthProperties authProps
     ) {
         this.jwtEncoder = jwtEncoder;
         this.rsaJwk = rsaJwk;
         this.jwtProps = jwtProps;
-        this.accessTokenTtl = accessTokenTtl;
+        this.accessTokenTtl = authProps.getAccessTokenTtl();
     }
 
     public IssuedToken issueAccessToken(User user) {

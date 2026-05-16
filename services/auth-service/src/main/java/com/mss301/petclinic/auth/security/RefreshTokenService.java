@@ -1,8 +1,8 @@
 package com.mss301.petclinic.auth.security;
 
+import com.mss301.petclinic.auth.config.AuthProperties;
 import com.mss301.petclinic.auth.model.RefreshToken;
 import com.mss301.petclinic.auth.repository.RefreshTokenRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,12 +26,9 @@ public class RefreshTokenService {
     private final Duration ttl;
     private final SecureRandom random = new SecureRandom();
 
-    public RefreshTokenService(
-            RefreshTokenRepository repo,
-            @Value("${petclinic.auth.refresh-token-ttl:P7D}") Duration ttl
-    ) {
+    public RefreshTokenService(RefreshTokenRepository repo, AuthProperties authProps) {
         this.repo = repo;
-        this.ttl = ttl;
+        this.ttl = authProps.getRefreshTokenTtl();
     }
 
     @Transactional
