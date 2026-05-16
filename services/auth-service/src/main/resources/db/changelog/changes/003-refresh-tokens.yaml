@@ -1,0 +1,50 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 003-001-create-table-refresh-tokens
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: auth
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: token_hash
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_refresh_tokens_token_hash
+              - column:
+                  name: expires_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column: { name: created_by,         type: VARCHAR(50) }
+              - column: { name: created_date,       type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: last_modified_by,   type: VARCHAR(50) }
+              - column: { name: last_modified_date, type: TIMESTAMP WITH TIME ZONE }
+        - createIndex:
+            schemaName: auth
+            tableName: refresh_tokens
+            indexName: idx_refresh_tokens_user_id
+            columns:
+              - column:
+                  name: user_id

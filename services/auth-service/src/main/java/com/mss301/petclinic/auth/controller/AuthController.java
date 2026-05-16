@@ -1,6 +1,7 @@
 package com.mss301.petclinic.auth.controller;
 
 import com.mss301.petclinic.auth.dto.req.LoginRequest;
+import com.mss301.petclinic.auth.dto.req.RefreshRequest;
 import com.mss301.petclinic.auth.dto.req.RegisterRequest;
 import com.mss301.petclinic.auth.dto.res.AuthResponse;
 import com.mss301.petclinic.auth.dto.res.UserResponse;
@@ -22,7 +23,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Tag(name = "Authentication", description = "User registration, login, current user")
+@Tag(name = "Authentication", description = "Register, login, token refresh, current user, logout")
 public class AuthController {
 
     private final AuthService authService;
@@ -32,23 +33,33 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Create a new user account",
-            description = "Returns the created user (no token). Caller must POST /login to get an access token.")
+    @Operation(summary = "Create a new user account")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        UserResponse user = authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Authenticate and receive an access token",
-            description = "Returns JWT Bearer access token (15 min TTL). Refresh tokens added in Iter 3.")
+    @Operation(summary = "Authenticate; receive access token (15min) + refresh token (7d)")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    @PostMapping("/refresh")
+    @Operation(summary = "Exchange refresh token for new access+refresh pair (rotation)")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ResponseEntity.ok(authService.refresh(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Revoke ALL refresh tokens for current user")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        authService.logout(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/me")
-    @Operation(summary = "Current authenticated user",
-            description = "Requires Authorization: Bearer <jwt>. Returns user resolved from `sub` claim.")
+    @Operation(summary = "Current authenticated user from JWT sub claim")
     public ResponseEntity<UserResponse> me(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(authService.getCurrentUser(userId));

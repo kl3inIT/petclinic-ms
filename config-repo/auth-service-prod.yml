@@ -12,12 +12,7 @@ spring:
       hibernate:
         format_sql: false
 
-# JWT_SECRET phải set qua env var (k8s Secret / Vault). KHÔNG có fallback.
-# Iter 3 chuyển sang RSA → JWT_SECRET sẽ được thay bằng JWT_PRIVATE_KEY_PEM.
-petclinic:
-  auth:
-    jwt:
-      secret: ${JWT_SECRET}
+# JWT secret ở config-repo/application-prod.yml (shared).
 
 logging:
   level:

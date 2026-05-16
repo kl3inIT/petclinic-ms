@@ -218,9 +218,20 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
     - OAuth2 password grant removed
     - `AuthorizationManager#check` → `AuthorizationManager#authorize`
 
-    For JWT issuer+resource server pattern (auth-service): use `NimbusJwtEncoder` with `ImmutableSecret<>` (HS256, Iter 1-2) or `ImmutableJWKSet<>(new JWKSet(rsaJwk))` (RS256, Iter 3). `NimbusJwtDecoder.withSecretKey(...)` for HMAC or `NimbusJwtDecoder.withJwkSetUri(...)` for JWKS. Map JWT `roles` claim → `ROLE_*` authorities via `JwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("roles")` + `setAuthorityPrefix("ROLE_")`.
+    JWT pattern (production-grade, what auth-service does):
+    - Auth-service generates RSA-2048 keypair at startup (`KeyPairGenerator`), wraps as Nimbus `RSAKey` with random `kid`
+    - `JwtEncoder` = `NimbusJwtEncoder(new ImmutableJWKSet<>(jwkSet))` signs RS256
+    - Public keys exposed via `/.well-known/jwks.json` (use `jwkSet.toJSONObject(true)` to strip private params)
+    - Other services (customers/vets/gateway) validate via shared `common-security` autoconfig:
+      `NimbusJwtDecoder.withJwkSetUri(uri).build()` + token validators for `iss`+`aud`+`exp`
+    - Map JWT `roles` claim → `ROLE_*` authorities via `JwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("roles")` + `setAuthorityPrefix("ROLE_")`
+    - Refresh tokens stored in DB as SHA-256 hash (not raw), rotated single-use, detect-reuse revokes all user tokens
 
-11. **Boot 4 Spring class lookups** — before importing a Spring class, verify it exists in Boot 4. Examples already encountered as broken:
+11. **Defense-in-depth across the cluster** — gateway validates JWT and downstream services validate AGAIN (zero-trust). Both consume the same `shared/common-security` autoconfig — same JWKS URI, same decoder, same converter. Never trust gateway-forwarded headers (`X-User-Id`) blindly — always re-verify the bearer token.
+
+12. **Spring Cloud Gateway WebMVC 5.0.x has NO built-in rate limiter** (Reactive variant has `RequestRateLimiter` filter w/ Redis; WebMVC variant doesn't). Roll your own as `HandlerFilterFunction<ServerResponse, ServerResponse>` using `ConcurrentHashMap<String, Bucket>` keyed by `request.servletRequest().getRemoteAddr()`. See `api-gateway/.../PerIpRateLimit.java`. Multi-instance gateway → swap in Redis-backed store.
+
+13. **Boot 4 Spring class lookups** — before importing a Spring class, verify it exists in Boot 4. Examples already encountered as broken:
    - `AutoConfigureDataMongo` — removed
    - `WebExchangeBindException` vs `MethodArgumentNotValidException` — MVC stack uses the latter, WebFlux the former
    - `LiquibaseProperties` — moved to `org.springframework.boot.liquibase.autoconfigure`

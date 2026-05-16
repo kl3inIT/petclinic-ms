@@ -15,6 +15,7 @@ dependencies {
 
     // Shared ProblemDetail format cho /fallback consistency với services khác.
     implementation(project(":shared:common-web"))
+    implementation(project(":shared:common-security"))      // Iter 2: validate JWT trước khi forward
     implementation(libs.spring.boot.starter.web)
 
     implementation(libs.micrometer.tracing.bridge.otel)

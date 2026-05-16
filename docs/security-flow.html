@@ -6,25 +6,21 @@
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
 <style>
   :root {
-    --bg: #0f172a;
-    --bg-card: #1e293b;
-    --bg-code: #0b1220;
-    --fg: #e2e8f0;
-    --fg-dim: #94a3b8;
-    --accent: #38bdf8;
-    --accent-2: #a78bfa;
-    --ok: #4ade80;
-    --warn: #fbbf24;
-    --bad: #f87171;
+    --bg: #0f172a; --bg-card: #1e293b; --bg-code: #0b1220;
+    --fg: #e2e8f0; --fg-dim: #94a3b8;
+    --accent: #38bdf8; --accent-2: #a78bfa; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
     --border: #334155;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.6; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.6; }
   body { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
-  h1 { font-size: 2.4em; margin-bottom: 4px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h1 { font-size: 2.4em; margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   h2 { color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 48px; }
   h3 { color: var(--accent-2); margin-top: 28px; }
-  h4 { color: var(--fg-dim); margin-top: 20px; }
+  h4 { color: var(--fg-dim); margin-top: 20px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85em; }
   .lede { color: var(--fg-dim); font-size: 1.1em; margin: 0 0 32px; }
   .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; }
   .card.ok { border-left: 4px solid var(--ok); }
@@ -32,32 +28,29 @@
   .card.bad { border-left: 4px solid var(--bad); }
   .card.accent { border-left: 4px solid var(--accent); }
   code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  code { background: var(--bg-code); color: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
-  pre { background: var(--bg-code); padding: 16px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); }
-  pre code { background: transparent; padding: 0; }
+  code { background: var(--bg-code); color: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.88em; }
+  pre { background: var(--bg-code); padding: 16px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); font-size: 0.85em; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: #e2e8f0; }
+  .file-label { display: inline-block; background: var(--accent); color: var(--bg); padding: 2px 10px; border-radius: 4px 4px 0 0; font-size: 0.75em; font-weight: 700; font-family: ui-monospace, monospace; margin-bottom: -1px; }
   .mermaid { background: #f8fafc; padding: 24px; border-radius: 8px; margin: 16px 0; text-align: center; }
   table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
   th { color: var(--accent); font-weight: 600; }
   td code { font-size: 0.85em; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.8em; font-weight: 600; margin-left: 6px; }
-  .badge.iter1 { background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
-  .badge.iter2 { background: rgba(56,189,248,0.15); color: var(--accent); border: 1px solid var(--accent); }
-  .badge.iter3 { background: rgba(167,139,250,0.15); color: var(--accent-2); border: 1px solid var(--accent-2); }
-  .badge.iter4 { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid var(--warn); }
-  .badge.defer { background: rgba(148,163,184,0.15); color: var(--fg-dim); border: 1px solid var(--fg-dim); }
-  .jwt { display: flex; gap: 8px; flex-wrap: wrap; font-family: ui-monospace, monospace; font-size: 0.85em; align-items: stretch; }
-  .jwt > div { padding: 10px 14px; border-radius: 4px; white-space: nowrap; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 700;
+    background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .jwt { display: flex; gap: 4px; flex-wrap: wrap; font-family: ui-monospace, monospace; font-size: 0.78em; align-items: stretch; margin: 12px 0; }
+  .jwt > div { padding: 8px 12px; border-radius: 4px; }
   .jwt .h { background: #b91c1c; color: white; }
   .jwt .p { background: #6d28d9; color: white; }
   .jwt .s { background: #1e40af; color: white; }
-  .jwt .dot { color: var(--fg-dim); padding: 10px 0; align-self: center; }
+  .jwt .dot { color: var(--fg-dim); padding: 8px 2px; align-self: center; }
   .tldr { background: rgba(56,189,248,0.08); border: 1px solid var(--accent); border-radius: 6px; padding: 16px; margin: 16px 0; }
   .tldr::before { content: "TL;DR"; display: block; color: var(--accent); font-weight: 700; font-size: 0.85em; letter-spacing: 1px; margin-bottom: 6px; }
   ul { padding-left: 22px; }
   li { margin: 6px 0; }
   .roles { display: flex; gap: 8px; flex-wrap: wrap; }
-  .roles span { padding: 4px 10px; border-radius: 4px; font-size: 0.85em; font-weight: 600; }
+  .roles span { padding: 4px 10px; border-radius: 4px; font-size: 0.85em; font-weight: 600; color: white; }
   .roles .user  { background: #1e3a8a; }
   .roles .vet   { background: #166534; }
   .roles .admin { background: #7c2d12; }
@@ -67,82 +60,52 @@
   .toc ol { margin: 0; }
   .toc a { color: var(--accent); text-decoration: none; }
   .toc a:hover { text-decoration: underline; }
+  .test-row { display: flex; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed var(--border); font-family: ui-monospace, monospace; font-size: 0.9em; }
+  .test-row::before { content: "✓"; color: var(--ok); margin-right: 10px; font-weight: 700; }
 </style>
 </head>
 <body>
 
 <h1>petclinic-ms — Security Flow</h1>
-<p class="lede">Microservice security design, từ iteration 1 (auth-service standalone) đến iteration 4 (production-ready zero-trust). Spring Boot 4 + Spring Security 7.</p>
+<p class="lede">Production-grade JWT auth: RSA + JWKS + refresh tokens + defense-in-depth + rate limit + audit log. Spring Boot 4 + Spring Security 7.</p>
 
 <div class="toc">
   <h3>Mục lục</h3>
   <ol>
-    <li><a href="#overview">Tổng quan kiến trúc & roadmap</a></li>
-    <li><a href="#iter1">Iteration 1 — auth-service standalone</a></li>
-    <li><a href="#jwt">JWT structure (Iter 1+)</a></li>
-    <li><a href="#iter2">Iteration 2 — defense-in-depth</a></li>
-    <li><a href="#iter3">Iteration 3 — RSA + JWKS + refresh tokens</a></li>
-    <li><a href="#iter4">Iteration 4 — service-to-service + rate limit + audit</a></li>
+    <li><a href="#overview">Kiến trúc tổng quan</a></li>
+    <li><a href="#keypair">RSA keypair + JWKS publishing</a></li>
+    <li><a href="#register">Register flow</a></li>
+    <li><a href="#login">Login flow (access + refresh)</a></li>
+    <li><a href="#access">Authenticated request (defense-in-depth)</a></li>
+    <li><a href="#refresh">Refresh token rotation</a></li>
+    <li><a href="#logout">Logout (revoke)</a></li>
+    <li><a href="#ratelimit">Rate limit ở gateway</a></li>
+    <li><a href="#audit">Audit log (ECS)</a></li>
     <li><a href="#errors">Error scenarios</a></li>
     <li><a href="#rbac">RBAC model</a></li>
   </ol>
 </div>
 
-<h2 id="overview">1. Tổng quan</h2>
+<h2 id="overview">1. Kiến trúc tổng quan</h2>
 
 <div class="tldr">
-  Auth-service phát hành JWT. Mỗi service downstream <strong>tự validate</strong> JWT (zero-trust). Gateway là defense-in-depth lớp ngoài. Bắt đầu HMAC simple, tiến tới RSA + JWKS production-grade.
+  Auth-service generate RSA keypair ở startup, publish public keys qua <code>/.well-known/jwks.json</code>.
+  Mọi service downstream (customers/vets/gateway) tự fetch JWKS + cache + validate RS256 signature
+  → <strong>zero-trust defense-in-depth</strong>. Refresh tokens lưu DB dưới dạng SHA-256 hash,
+  rotate single-use, detect reuse → revoke all user tokens. Gateway thêm per-IP rate limit cho auth endpoints + circuit breaker cho mọi route.
 </div>
 
-<h3>Roadmap — 4 iterations (OAuth/MFA defer)</h3>
-<table>
-  <thead><tr><th>Iter</th><th>Scope</th><th>Crypto</th><th>Trust model</th></tr></thead>
-  <tbody>
-    <tr>
-      <td><span class="badge iter1">Iter 1</span></td>
-      <td>auth-service alone — register/login/me</td>
-      <td>HS256 (HMAC, shared secret)</td>
-      <td>Self only</td>
-    </tr>
-    <tr>
-      <td><span class="badge iter2">Iter 2</span></td>
-      <td>shared/common-security + wire gateway + customers/vets validate</td>
-      <td>HS256 (secret via config-repo)</td>
-      <td>Defense-in-depth (gateway + each service)</td>
-    </tr>
-    <tr>
-      <td><span class="badge iter3">Iter 3</span></td>
-      <td>Switch sang RSA + JWKS endpoint + refresh token flow</td>
-      <td>RS256 (RSA keypair, JWKS rotation)</td>
-      <td>Production-grade asymmetric</td>
-    </tr>
-    <tr>
-      <td><span class="badge iter4">Iter 4</span></td>
-      <td>Service-to-service token forward + gateway rate limit + audit log structured (ECS)</td>
-      <td>Same (RS256)</td>
-      <td>Full zero-trust + observability</td>
-    </tr>
-    <tr>
-      <td><span class="badge defer">Defer</span></td>
-      <td>OAuth2 social login (Google/GitHub), MFA TOTP, password reset</td>
-      <td>—</td>
-      <td>—</td>
-    </tr>
-  </tbody>
-</table>
-
-<h3>Architecture context — vị trí auth-service trong cluster</h3>
 <div class="mermaid">
 graph LR
-  Client[Browser / Mobile] -->|Bearer JWT| GW[api-gateway :8080]
+  Client[Browser / Mobile] -->|Bearer JWT| GW[api-gateway :8080<br/>+ rate limit + CB]
   GW -->|lb://| CUST[customers-service :8181]
   GW -->|lb://| VET[vets-service :8182]
-  GW -->|lb://auth-service<br/>/api/v1/auth/**| AUTH[auth-service :8183]
-  AUTH -->|Postgres schema=auth<br/>users, refresh_tokens| DB[(Postgres)]
-  AUTH -.->|JWKS publish| GW
-  AUTH -.->|JWKS publish| CUST
-  AUTH -.->|JWKS publish| VET
-  GW & CUST & VET -->|register/heartbeat| EUREKA[discovery-server :8761]
+  GW -->|lb://auth-service<br/>/api/v1/auth/**| AUTH[auth-service :8183<br/>RSA keypair<br/>JWKS issuer]
+  AUTH -->|users + refresh_tokens<br/>schema=auth| DB[(Postgres :5433)]
+  AUTH -.->|/.well-known/jwks.json<br/>public key fetch + cache| GW
+  AUTH -.->|JWKS| CUST
+  AUTH -.->|JWKS| VET
+  GW & CUST & VET & AUTH -->|register| EUREKA[discovery :8761]
   GW & CUST & VET & AUTH -->|fetch config| CONFIG[config-server :8888]
 
   classDef auth fill:#7c2d12,color:#fff,stroke:#fbbf24
@@ -155,368 +118,458 @@ graph LR
   class GW gateway
 </div>
 
-<h2 id="iter1">2. Iteration 1 — auth-service standalone <span class="badge iter1">Iter 1</span></h2>
+<h3>Service inventory</h3>
+<table>
+  <thead><tr><th>Service</th><th>Port</th><th>Vai trò bảo mật</th></tr></thead>
+  <tbody>
+    <tr><td><code>auth-service</code></td><td>8183</td><td>JWT issuer (RSA private key), JWKS publisher, refresh token store, audit logger</td></tr>
+    <tr><td><code>api-gateway</code></td><td>8080</td><td>Defense lớp 1 (validate JWT trước khi forward), per-IP rate limit, CORS, circuit breaker, fallback</td></tr>
+    <tr><td><code>customers-service</code></td><td>8181</td><td>Defense lớp 2 (validate JWT độc lập từ JWKS, không trust gateway)</td></tr>
+    <tr><td><code>vets-service</code></td><td>8182</td><td>Defense lớp 2 (same)</td></tr>
+  </tbody>
+</table>
 
-<p>Tự đứng — chưa wire vào gateway hay customers/vets. Demo concept register → login → JWT → access protected endpoint cùng service.</p>
+<h2 id="keypair">2. RSA keypair + JWKS publishing</h2>
 
-<h3>2.1 Register flow</h3>
+<p>Auth-service generate <strong>RSA-2048 keypair tại startup</strong> (kid = random UUID). Private key giữ trong memory, public key publish qua endpoint chuẩn OIDC.</p>
+
+<div class="file-label">services/auth-service/.../security/RsaKeyConfig.java</div>
+<pre><code>@Configuration
+public class RsaKeyConfig {
+
+    @Bean
+    public RSAKey rsaJwk() throws NoSuchAlgorithmException {
+        KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+        kpg.initialize(2048);
+        var kp = kpg.generateKeyPair();
+        return new RSAKey.Builder((RSAPublicKey) kp.getPublic())
+                .privateKey((RSAPrivateKey) kp.getPrivate())
+                .keyID(UUID.randomUUID().toString())
+                .build();
+    }
+
+    @Bean public JWKSet jwkSet(RSAKey rsaJwk) { return new JWKSet(rsaJwk); }
+    @Bean public JWKSource&lt;SecurityContext&gt; jwkSource(JWKSet jwkSet) {
+        return new ImmutableJWKSet&lt;&gt;(jwkSet);
+    }
+}</code></pre>
+
+<div class="file-label">services/auth-service/.../controller/JwksController.java</div>
+<pre><code>@RestController
+public class JwksController {
+    private final JWKSet jwkSet;
+    public JwksController(JWKSet jwkSet) { this.jwkSet = jwkSet; }
+
+    @GetMapping(value = "/.well-known/jwks.json", produces = APPLICATION_JSON_VALUE)
+    public Map&lt;String, Object&gt; jwks() {
+        return jwkSet.toJSONObject(true);   // true = PUBLIC keys only (strip private d, p, q, ...)
+    }
+}</code></pre>
+
+<h4>Live response — Tested ✓</h4>
+<pre><code>$ curl http://localhost:8183/.well-known/jwks.json
+{
+  "keys": [{
+    "kty": "RSA",
+    "e": "AQAB",
+    "kid": "0722cc6d-2877-4b4c-b4cb-920685a3cb4a",
+    "n": "oc9kTh9s8eO8j4ujLmMq1gAJ...VPSpKwfKA3m37w"
+  }]
+}</code></pre>
+
+<h3>Mọi service khác fetch JWKS từ shared autoconfig</h3>
+<div class="file-label">shared/common-security/.../autoconfigure/PetClinicSecurityAutoConfiguration.java</div>
+<pre><code>@AutoConfiguration
+@EnableConfigurationProperties(PetClinicJwtProperties.class)
+public class PetClinicSecurityAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JwtDecoder jwtDecoder(PetClinicJwtProperties props) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder
+                .withJwkSetUri(props.getJwkSetUri()).build();
+        decoder.setJwtValidator(JwtValidators.createDefaultWithValidators(
+                new JwtTimestampValidator(),
+                new JwtClaimValidator&lt;String&gt;("iss", props.getIssuer()::equals),
+                new JwtClaimValidator&lt;List&lt;String&gt;&gt;("aud",
+                        aud -&gt; aud != null &amp;&amp; aud.contains(props.getAudience()))
+        ));
+        return decoder;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter granted = new JwtGrantedAuthoritiesConverter();
+        granted.setAuthoritiesClaimName("roles");
+        granted.setAuthorityPrefix("ROLE_");
+        JwtAuthenticationConverter conv = new JwtAuthenticationConverter();
+        conv.setJwtGrantedAuthoritiesConverter(granted);
+        conv.setPrincipalClaimName("sub");
+        return conv;
+    }
+}</code></pre>
+
+<p>Cấu hình: <code>config-repo/application-dev.yml</code> đặt <code>petclinic.auth.jwt.jwk-set-uri: http://localhost:8183/.well-known/jwks.json</code>. Nimbus cache theo HTTP <code>Cache-Control</code> header (default 5 phút).</p>
+
+<h2 id="register">3. Register flow</h2>
+
 <div class="mermaid">
 sequenceDiagram
   autonumber
-  actor U as User (browser)
-  participant A as auth-service
-  participant D as Postgres (auth schema)
+  actor U as Client
+  participant GW as gateway :8080
+  participant AS as auth-service :8183
+  participant DB as Postgres (auth)
+  participant AU as AuthAuditLogger
 
-  U->>A: POST /api/v1/auth/register<br/>{username, password, email}
-  A->>A: validate (NotBlank, password length ≥ 8)
-  A->>D: SELECT WHERE username=? — phải null
-  D-->>A: null (no duplicate)
-  A->>A: BCryptPasswordEncoder.encode(password)<br/>rounds=12
-  A->>D: INSERT users (id=UUID, username, bcrypt_hash, email,<br/>roles_csv="USER", enabled=true)
-  D-->>A: ok
-  A-->>U: 201 Created<br/>{id, username, email, roles}<br/>(KHÔNG trả password, KHÔNG trả JWT)
+  U->>GW: POST /api/v1/auth/register<br/>{username, email, password}
+  Note over GW: Rate limit check (per-IP, 10/min)
+  GW->>AS: forward (CB wrapped)
+  AS->>AS: @Valid kiểm tra (NotBlank, Email, password ≥ 8)
+  AS->>DB: existsByUsername(?)
+  alt duplicate
+    DB-->>AS: true
+    AS-->>U: 400 username-taken
+  else fresh
+    AS->>AS: BCrypt 12-round hash
+    AS->>DB: INSERT users (id=UUID, ..., roles_csv="USER", enabled=true)
+    AS->>AU: registerSuccess(userId, username)
+    AS-->>U: 201 + UserResponse (no password, no token)
+  end
 </div>
+
+<div class="file-label">services/auth-service/.../dto/req/RegisterRequest.java</div>
+<pre><code>public record RegisterRequest(
+        @NotBlank @Size(min = 3, max = 100) String username,
+        @NotBlank @Email @Size(max = 100) String email,
+        @NotBlank @Size(min = 8, max = 100) String password
+) {
+    public User toEntity(PasswordEncoder passwordEncoder) {
+        User u = new User();
+        u.setUsername(username);
+        u.setEmail(email);
+        u.setPassword(passwordEncoder.encode(password));     // BCrypt 12 rounds
+        u.setRoles(new HashSet&lt;&gt;(Set.of("USER")));            // default role
+        u.setEnabled(true);
+        return u;
+    }
+}</code></pre>
 
 <div class="card warn">
-  <strong>Lưu ý design:</strong> Register KHÔNG auto-login (KHÔNG trả JWT). Lý do: nếu sau này thêm email verification, register phải pending verify trước khi cấp token. Tách rõ register vs login.
+  <strong>Decision:</strong> Register KHÔNG auto-return JWT. Client phải gọi <code>/login</code> sau.
+  Tách rõ register vs login để sau này (iter sau) thêm email verification mà không phải break API.
 </div>
 
-<h3>2.2 Login flow</h3>
+<h2 id="login">4. Login flow</h2>
+
 <div class="mermaid">
 sequenceDiagram
   autonumber
-  actor U as User
-  participant A as auth-service
-  participant D as Postgres
-  participant J as JwtEncoder<br/>(Nimbus)
+  actor U as Client
+  participant AS as auth-service
+  participant DB as Postgres
+  participant JE as JwtEncoder<br/>(NimbusRS256)
+  participant RT as RefreshTokenService
 
-  U->>A: POST /api/v1/auth/login<br/>{username, password}
-  A->>D: SELECT * FROM users WHERE username=?
-  D-->>A: User row (with bcrypt hash)
-  A->>A: BCryptPasswordEncoder.matches(password, hash)
+  U->>AS: POST /api/v1/auth/login {username, password}
+  AS->>DB: SELECT WHERE username=?
+  AS->>AS: BCrypt.matches(rawPassword, hash)
 
-  alt password đúng
-    A->>J: encode JwtClaimsSet{<br/>iss="petclinic-ms",<br/>sub=user.id (UUID),<br/>aud="petclinic-ms",<br/>iat=now, exp=now+15min,<br/>username, roles}
-    J-->>A: signed JWT (HS256, secret từ config-repo)
-    A-->>U: 200 OK<br/>{accessToken, tokenType:"Bearer",<br/>expiresIn:900, userId, username, roles}
-  else password sai
-    A-->>U: 401 Unauthorized<br/>ProblemDetail{type=auth/invalid-credentials}
+  alt password đúng + enabled=true
+    AS->>JE: build claims (iss, sub, aud, roles, ...) + sign RS256 với private key
+    JE-->>AS: signed JWT (15min TTL)
+    AS->>RT: issue(userId)
+    RT->>RT: SecureRandom 256-bit hex (raw token)
+    RT->>RT: SHA-256(raw) (store hash, never raw)
+    RT->>DB: INSERT refresh_tokens
+    RT-->>AS: raw token + 7 day expiry
+    AS-->>U: {accessToken, refreshToken, tokenType:"Bearer", expiresIn, ...}
+  else fail (user not found / disabled / wrong pass)
+    AS-->>U: 400 invalid-credentials (SAME error — chống username enumeration)
   end
 </div>
 
-<h3>2.3 Access protected endpoint (cùng service)</h3>
-<div class="mermaid">
-sequenceDiagram
-  autonumber
-  actor U as User
-  participant A as auth-service<br/>(SecurityFilterChain)
-  participant V as NimbusJwtDecoder
-  participant C as AuthController#me()
+<div class="file-label">services/auth-service/.../security/JwtTokenProvider.java</div>
+<pre><code>public IssuedToken issueAccessToken(User user) {
+    Instant now = Instant.now();
+    JwtClaimsSet claims = JwtClaimsSet.builder()
+            .issuer(jwtProps.getIssuer())
+            .audience(List.of(jwtProps.getAudience()))
+            .subject(user.getId().toString())
+            .issuedAt(now)
+            .expiresAt(now.plus(accessTokenTtl))
+            .claim("username", user.getUsername())
+            .claim("roles", user.getRoles())
+            .build();
+    JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)
+            .keyId(rsaJwk.getKeyID())         // services lookup public key qua kid
+            .build();
+    String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+    return new IssuedToken(token, accessTokenTtl.toSeconds());
+}</code></pre>
 
-  U->>A: GET /api/v1/auth/me<br/>Authorization: Bearer eyJhbGciOiJIUzI1...
-  A->>A: Spring Security 7 filter chain<br/>BearerTokenAuthenticationFilter
-  A->>V: decode(token)
-  V->>V: verify signature (HS256, same secret)<br/>check exp, iat, iss
+<div class="file-label">services/auth-service/.../security/RefreshTokenService.java (excerpt)</div>
+<pre><code>@Transactional
+public IssuedRefresh issue(UUID userId) {
+    String raw = generateRaw();                       // SecureRandom 256-bit hex
+    String hash = sha256(raw);
+    RefreshToken token = new RefreshToken();
+    token.setUserId(userId);
+    token.setTokenHash(hash);                         // store hash, not raw
+    token.setExpiresAt(Instant.now().plus(ttl));      // 7 days
+    repo.save(token);
+    return new IssuedRefresh(raw, ttl.toSeconds());
+}</code></pre>
 
-  alt valid
-    V-->>A: Jwt object with claims
-    A->>A: build JwtAuthenticationToken<br/>authorities = roles claim → "ROLE_USER"
-    A->>C: invoke #me() với SecurityContext set
-    C->>C: extract sub (userId) from Authentication
-    C-->>U: 200 {id, username, email, roles}
-  else expired / bad signature
-    V-->>A: throw JwtValidationException
-    A-->>U: 401 + WWW-Authenticate: Bearer<br/>error="invalid_token"
-  end
-</div>
-
-<h2 id="jwt">3. JWT structure</h2>
-
-<p>JWT = 3 phần base64url-encoded, ngăn cách bằng dấu chấm:</p>
-
+<h4>JWT structure (decoded RS256) — Tested ✓</h4>
 <div class="jwt">
-  <div class="h">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</div>
+  <div class="h">{"kid":"0722cc6d-...","alg":"RS256"}</div>
   <div class="dot">.</div>
-  <div class="p">eyJpc3MiOiJwZXRjbGluaWMtbXMiLCJzdWIiOiI3YjMyZjAxLWMwMTQtNDM3NS04YjY1LTQ1MDhhNTE4MzczMyIsInJvbGVzIjpbIlVTRVIiXSwiaWF0IjoxNzMwNzkyMDAwLCJleHAiOjE3MzA3OTI5MDB9</div>
+  <div class="p">{"sub":"695cf279-...","aud":"petclinic-ms","roles":["USER"],"iss":"petclinic-ms","exp":1778959814,"iat":1778958914,"username":"charlie"}</div>
   <div class="dot">.</div>
-  <div class="s">7XAJpQs3vP6h5C8nN4kMz_xK2hYwGfL9aB...</div>
+  <div class="s">RSA-SHA256 signature (~256 bytes base64)</div>
 </div>
 
-<h4>Header (red) — base64decode</h4>
-<pre><code>{
-  "alg": "HS256",     // HMAC SHA-256 (Iter 1-2). Iter 3 đổi sang RS256
-  "typ": "JWT"
-}</code></pre>
+<h2 id="access">5. Authenticated request — Defense-in-depth</h2>
 
-<h4>Payload (purple) — claims</h4>
-<pre><code>{
-  "iss": "petclinic-ms",                          // issuer
-  "sub": "7b32f01-c014-4375-8b65-4508a5183733",   // subject = user.id (UUID)
-  "aud": "petclinic-ms",                          // audience — services check this
-  "iat": 1730792000,                              // issued at
-  "exp": 1730792900,                              // expires (15 min later)
-  "username": "alice",                            // custom claim
-  "roles": ["USER", "VET"]                        // RBAC
-}</code></pre>
-
-<h4>Signature (blue)</h4>
-<pre><code>HMACSHA256(
-  base64UrlEncode(header) + "." + base64UrlEncode(payload),
-  SECRET  // 256-bit secret từ config-repo (Iter 1-2)
-)</code></pre>
-
-<div class="card bad">
-  <strong>Quan trọng:</strong> Payload KHÔNG được mã hóa — ai cũng decode được. Signature CHỈ chứng minh token chưa bị sửa đổi + được issuer cấp. KHÔNG bao giờ đặt password/secret trong claims.
-</div>
-
-<h2 id="iter2">4. Iteration 2 — defense-in-depth <span class="badge iter2">Iter 2</span></h2>
-
-<p>Wire JWT validation ở <strong>HAI lớp</strong>: gateway (đẩy request hỏng sớm) + mỗi service downstream (zero-trust — không tin internal network).</p>
+<p>Gateway validate JWT lớp 1, downstream service validate LẠI lớp 2. Cùng share <code>shared/common-security</code> module → cùng JWKS URI, cùng decoder logic.</p>
 
 <div class="mermaid">
 sequenceDiagram
   autonumber
-  actor U as User
-  participant GW as api-gateway<br/>:8080
-  participant CUST as customers-service<br/>:8181
+  actor U as Client
+  participant GW as gateway :8080
+  participant CUST as customers-service :8181
+  participant JWKS as auth-service JWKS
 
-  U->>GW: GET /api/v1/owners<br/>Authorization: Bearer eyJhbGciOi...
+  U->>GW: GET /api/v1/owners<br/>Authorization: Bearer eyJraWQi...
 
   rect rgb(22, 78, 99)
-    Note over GW: Defense lớp 1 — Gateway
-    GW->>GW: SecurityFilterChain decode JWT<br/>(common-security AutoConfig)
-
-    alt token hợp lệ
-      GW->>GW: extract sub, roles vào MDC<br/>(audit log)
-    else token hỏng
-      GW-->>U: 401 (kill sớm, KHÔNG gọi downstream)
+    Note over GW: Defense LỚP 1
+    GW->>GW: SecurityFilterChain decode JWT
+    alt cache miss (kid mới)
+      GW->>JWKS: GET /.well-known/jwks.json
+      JWKS-->>GW: public RSA keys
+    end
+    GW->>GW: verify signature, check iss/aud/exp
+    alt token hỏng
+      GW-->>U: 401 (KHÔNG forward — kill sớm)
     end
   end
 
-  GW->>CUST: forward request<br/>Authorization header KÉO theo<br/>+ X-Request-Id correlation
+  GW->>CUST: forward request (Authorization header passthrough)
 
   rect rgb(120, 53, 15)
-    Note over CUST: Defense lớp 2 — Service
-    CUST->>CUST: SecurityFilterChain decode JWT lần nữa<br/>(common-security AutoConfig — SAME module)
-
-    alt token vẫn hợp lệ
-      CUST->>CUST: @PreAuthorize("hasRole('USER')") check
-      CUST-->>GW: 200 + data
-      GW-->>U: 200 + data
-    else mismatch / fake
-      CUST-->>GW: 401
-      GW-->>U: 401
-    end
+    Note over CUST: Defense LỚP 2 (zero-trust)
+    CUST->>CUST: SAME SecurityFilterChain (common-security autoconfig)
+    CUST->>JWKS: GET JWKS (nếu cache miss)
+    CUST->>CUST: verify SAME signature độc lập
+    CUST->>CUST: @PreAuthorize("hasRole('USER')")
+    CUST-->>GW: 200 + data
+    GW-->>U: 200 + data
   end
 </div>
 
-<h3>Tại sao validate 2 lần?</h3>
 <div class="card ok">
-  <strong>Defense-in-depth nguyên tắc:</strong> Không bao giờ giả định inbound traffic đã được auth. Attacker có thể:
+  <strong>Tại sao 2 lớp?</strong> Không trust internal network. Attacker có thể:
   <ul>
-    <li>Bypass gateway nếu khám phá ra service IP trực tiếp (k8s pod IP, security group sai)</li>
-    <li>Compromise gateway service → tự forward malicious header xuống downstream</li>
-    <li>Service mesh proxy bug → header bị inject sai</li>
+    <li>Bypass gateway nếu khám phá pod IP trực tiếp (k8s misconfig)</li>
+    <li>Compromise gateway → inject malicious headers</li>
+    <li>Service mesh proxy bug</li>
   </ul>
-  Cost: ~1-3ms overhead per service per request (HMAC verify nhanh).
+  Cost: ~1ms/service/request (Nimbus verify cached public key cực nhanh).
 </div>
 
-<h3>shared/common-security module</h3>
-<p>Mỗi service config Security giống nhau → tách vào shared module, auto-wire:</p>
-<pre><code>shared/common-security/
-├── autoconfigure/
-│   └── PetClinicSecurityAutoConfiguration.java   // @AutoConfiguration
-├── jwt/
-│   ├── JwtDecoderFactory.java                    // tạo NimbusJwtDecoder từ secret
-│   └── JwtAuthenticationConverter.java           // map claim "roles" → ROLE_*
-└── META-INF/spring/...AutoConfiguration.imports
+<h3>Default SecurityFilterChain (apply cho customers + vets)</h3>
+<div class="file-label">shared/common-security/.../autoconfigure/PetClinicSecurityAutoConfiguration.java</div>
+<pre><code>@Bean
+@ConditionalOnMissingBean
+public SecurityFilterChain defaultSecurityFilterChain(
+        HttpSecurity http, JwtAuthenticationConverter jwtAuthConverter) throws Exception {
+    http
+        .csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(s -&gt; s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -&gt; auth
+                .requestMatchers("/actuator/health/**", "/actuator/info",
+                                 "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                .anyRequest().authenticated()
+        )
+        .oauth2ResourceServer(oauth2 -&gt; oauth2.jwt(jwt -&gt;
+                jwt.jwtAuthenticationConverter(jwtAuthConverter)));
+    return http.build();
+}</code></pre>
 
-services/customers-service/build.gradle.kts:
-    implementation(project(":shared:common-security"))    // 1 dòng → done
-</code></pre>
+<p>Customers/vets không viết security config riêng — chỉ <code>implementation(project(":shared:common-security"))</code> trong build.gradle là đủ.</p>
 
-<h2 id="iter3">5. Iteration 3 — RSA + JWKS + refresh tokens <span class="badge iter3">Iter 3</span></h2>
-
-<h3>5.1 Asymmetric crypto</h3>
-<p>Vấn đề HMAC ở Iter 1-2: <strong>cùng 1 secret distribute mọi service</strong>. Nếu customers-service bị compromise → secret leak → attacker forge JWT giả mạo bất kỳ user.</p>
-
-<div class="card ok">
-  <strong>RSA fix:</strong>
-  <ul>
-    <li>auth-service: giữ <strong>private key</strong> (sign tokens)</li>
-    <li>customers/vets/gateway: lấy <strong>public key</strong> qua JWKS endpoint → chỉ verify, không thể sign</li>
-    <li>Service compromise → chỉ public key leak (không nguy hại)</li>
-    <li>Key rotation: auth-service rotate private, JWKS endpoint publish new + old, clients pick up automatically</li>
-  </ul>
-</div>
-
-<h3>5.2 JWKS endpoint pattern</h3>
-<div class="mermaid">
-sequenceDiagram
-  participant CUST as customers-service
-  participant AUTH as auth-service
-
-  Note over CUST: Startup hoặc cache miss
-  CUST->>AUTH: GET /.well-known/jwks.json
-  AUTH-->>CUST: {<br/>  "keys": [<br/>    {kid:"k1", kty:"RSA", n:"...", e:"AQAB", alg:"RS256"}<br/>  ]<br/>}
-  CUST->>CUST: Cache 24h (NimbusJwtDecoder.withJwkSetUri)
-
-  Note over CUST: Request validation
-  CUST->>CUST: Parse JWT header → kid="k1"
-  CUST->>CUST: Lookup k1 in cached JWKS<br/>verify signature
-
-  Note over AUTH: Key rotation (every 90 days)
-  AUTH->>AUTH: Generate new keypair "k2"
-  AUTH->>AUTH: JWKS now serves [k1, k2]<br/>Sign new tokens with k2
-
-  Note over CUST: Cache miss for k2
-  CUST->>AUTH: GET /.well-known/jwks.json (auto refresh)
-  AUTH-->>CUST: [k1, k2]
-  CUST->>CUST: Old tokens (kid=k1) vẫn validate<br/>New tokens (kid=k2) cũng validate
-
-  Note over AUTH: After all k1 tokens expired (15min later)
-  AUTH->>AUTH: JWKS drops k1 → [k2]
-</div>
-
-<h3>5.3 Refresh token flow</h3>
-<div class="card warn">
-  Access token cố tình ngắn (15min) để giảm impact nếu leak. User không muốn login lại mỗi 15 phút → refresh token (7-30 ngày) đổi access token mới.
-</div>
+<h2 id="refresh">6. Refresh token rotation</h2>
 
 <div class="mermaid">
 sequenceDiagram
   autonumber
-  actor U as User
-  participant A as auth-service
-  participant D as Postgres
+  actor U as Client
+  participant AS as auth-service
+  participant DB as Postgres
 
-  Note over U,A: Initial login
-  U->>A: POST /login {username, password}
-  A->>D: INSERT refresh_tokens<br/>{id=UUID-v7, user_id, hashed_token, expires_at=now+7d, revoked=false}
-  A-->>U: {accessToken (15min), refreshToken (opaque UUID), expiresIn}
+  Note over U: Access token hết hạn sau 15min
+  U->>AS: POST /api/v1/auth/refresh<br/>{refreshToken: "47cb3a93..."}
+  AS->>AS: SHA-256(input) → hash
+  AS->>DB: SELECT WHERE token_hash=? AND revoked=false AND expires_at&gt;now
 
-  Note over U,A: After 15min, access token expired
-  U->>A: POST /api/v1/auth/refresh<br/>{refreshToken: "..."}
-  A->>D: SELECT WHERE hash=? AND revoked=false AND expires_at>now
-
-  alt valid
-    A->>D: UPDATE SET revoked=true (rotate — single-use)
-    A->>D: INSERT new refresh_token
-    A-->>U: {accessToken (new), refreshToken (new)}
-  else revoked or expired
-    A-->>U: 401 → user phải login lại
+  alt hợp lệ
+    AS->>DB: UPDATE old: revoked=true (single-use rotation)
+    AS->>DB: INSERT new refresh_token
+    AS->>AS: issue new access JWT
+    AS-->>U: {accessToken (new), refreshToken (new), ...}
+  else revoked = true (REUSE ATTACK detected)
+    AS->>DB: revokeAllForUser(userId) — token đã dùng → kẻ tấn công đang dùng leak
+    AS-->>U: 400 invalid-refresh-token
+  else expired / not found
+    AS-->>U: 400 invalid-refresh-token
   end
-
-  Note over U,A: Logout
-  U->>A: POST /logout (with refresh token)
-  A->>D: UPDATE refresh_tokens SET revoked=true WHERE user_id=?
 </div>
 
-<h2 id="iter4">6. Iteration 4 — service-to-service + rate limit + audit <span class="badge iter4">Iter 4</span></h2>
-
-<h3>6.1 Token forwarding (service A calls service B internal)</h3>
-<p>Khi visits-service cần data từ customers-service:</p>
-
-<div class="mermaid">
-sequenceDiagram
-  actor U as User
-  participant GW as gateway
-  participant VIS as visits-service
-  participant CUST as customers-service
-
-  U->>GW: GET /api/v1/visits/123<br/>Authorization: Bearer USER_JWT
-  GW->>VIS: forward (Auth header passthrough)
-  VIS->>VIS: validate USER_JWT — OK
-
-  Note over VIS,CUST: Internal call — cần auth!
-  VIS->>CUST: GET /api/v1/owners/456<br/>Authorization: Bearer USER_JWT<br/>(propagate user's token, NOT a service token)
-  CUST->>CUST: validate USER_JWT<br/>check @PreAuthorize("hasRole('USER')")
-  CUST-->>VIS: owner data
-  VIS-->>GW: enriched visit + owner
-  GW-->>U: 200
-</div>
-
-<div class="card accent">
-  <strong>Spring Security 7:</strong> <code>RestClient</code> + <code>OAuth2ResourceServerHttpAdvice</code> tự forward token. Hoặc dùng <code>ClientHttpRequestInterceptor</code> lấy từ SecurityContext, gắn vào outbound request.
-</div>
-
-<h3>6.2 Rate limit ở gateway</h3>
-<table>
-  <thead><tr><th>Endpoint</th><th>Limit</th><th>Key</th><th>Lý do</th></tr></thead>
-  <tbody>
-    <tr><td><code>POST /api/v1/auth/login</code></td><td>5 / phút</td><td>IP</td><td>Chống brute-force</td></tr>
-    <tr><td><code>POST /api/v1/auth/register</code></td><td>3 / phút</td><td>IP</td><td>Chống mass-signup</td></tr>
-    <tr><td><code>POST /api/v1/auth/refresh</code></td><td>10 / phút</td><td>userId (sub)</td><td>Token rotation</td></tr>
-    <tr><td>Mọi GET</td><td>100 / phút</td><td>userId hoặc IP</td><td>General abuse</td></tr>
-  </tbody>
-</table>
-
-<h3>6.3 Audit log (ECS schema)</h3>
-<p>Mỗi auth event → structured log line, parse được bởi Loki/Elasticsearch:</p>
-<pre><code>{
-  "@timestamp": "2026-05-17T10:00:00Z",
-  "event.action": "authentication.login.success",
-  "event.outcome": "success",
-  "user.id": "7b32f01-c014-4375-8b65-4508a5183733",
-  "user.name": "alice",
-  "client.ip": "203.0.113.10",
-  "user_agent.original": "Mozilla/5.0...",
-  "trace.id": "8c5a3d2f1e9b...",
-  "service.name": "auth-service"
+<div class="file-label">services/auth-service/.../security/RefreshTokenService.java</div>
+<pre><code>@Transactional
+public UUID consumeAndValidate(String rawToken) {
+    String hash = sha256(rawToken);
+    RefreshToken existing = repo.findByTokenHash(hash).orElse(null);
+    if (existing == null || !existing.isUsable(Instant.now())) {
+        // REUSE DETECTION: nếu token đã revoked → revoke MỌI token của user này
+        // Signal: original đã được dùng, attacker đang dùng leak
+        if (existing != null &amp;&amp; existing.isRevoked()) {
+            repo.revokeAllForUser(existing.getUserId());
+        }
+        throw new InvalidRefreshTokenException();
+    }
+    existing.setRevoked(true);                        // single-use mark
+    repo.save(existing);
+    return existing.getUserId();
 }</code></pre>
-<p>Alert rule: nếu <code>event.action=authentication.login.failed</code> > 5 trong 1 phút cùng IP → page on-call.</p>
 
-<h2 id="errors">7. Error scenarios</h2>
+<h4>Tested ✓</h4>
+<div class="test-row">Refresh với token hợp lệ → 200 + new access + new refresh</div>
+<div class="test-row">Refresh với token cũ (đã rotate) → 400 invalid-refresh-token + revoke ALL user tokens</div>
+<div class="test-row">Refresh với token mới (vừa nhận) → 200</div>
 
+<h2 id="logout">7. Logout</h2>
+
+<p>Stateless JWT không "logout" thực sự — access token vẫn valid đến exp. Logout = revoke ALL refresh tokens của user → khi access token hết hạn, user không thể refresh nữa, phải đăng nhập lại.</p>
+
+<div class="file-label">services/auth-service/.../service/impl/AuthServiceImpl.java</div>
+<pre><code>@Override
+@Transactional
+public void logout(UUID userId) {
+    refreshTokenService.revokeAllForUser(userId);
+    audit.logoutSuccess(userId);
+}</code></pre>
+
+<h2 id="ratelimit">8. Rate limit ở gateway</h2>
+
+<p>Spring Cloud Gateway WebMVC 5.0.x KHÔNG có rate limit filter built-in (chỉ Reactive variant có). Tự viết <code>HandlerFilterFunction</code> dùng <code>ConcurrentHashMap&lt;ip, Bucket&gt;</code>. 10 req/phút cho <code>/login</code>, <code>/register</code>, <code>/refresh</code> — chống brute-force.</p>
+
+<div class="file-label">services/api-gateway/.../config/PerIpRateLimit.java (excerpt)</div>
+<pre><code>public HandlerFilterFunction&lt;ServerResponse, ServerResponse&gt; asFilter() {
+    return (request, next) -&gt; {
+        String ip = request.servletRequest().getRemoteAddr();
+        Bucket bucket = buckets.computeIfAbsent(ip, k -&gt; new Bucket());
+        if (!bucket.tryAcquire()) {
+            return ServerResponse.status(TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(periodMillis / 1000))
+                    .body("""
+                          {"type":".../rate-limited",
+                           "title":"Rate limit exceeded",
+                           "status":429,...}""");
+        }
+        return next.handle(request);
+    };
+}</code></pre>
+
+<div class="file-label">services/api-gateway/.../config/GatewayRoutesConfig.java (auth routes only)</div>
+<pre><code>@Bean
+public RouterFunction&lt;ServerResponse&gt; authPublicRoute() {
+    PerIpRateLimit limiter = new PerIpRateLimit(10, Duration.ofMinutes(1));
+    return route("auth-public")
+            .route(path("/api/v1/auth/login")
+                    .or(path("/api/v1/auth/register"))
+                    .or(path("/api/v1/auth/refresh")), http())
+            .filter(limiter.asFilter())                  // ← rate limit per-IP
+            .filter(lb("auth-service"))                  // ← Eureka load-balanced
+            .filter(circuitBreaker(c -&gt; c.setId(CB_ID)
+                    .setFallbackUri("forward:/fallback")))
+            .build();
+}</code></pre>
+
+<h4>Tested ✓</h4>
+<div class="test-row">12 rapid POST /login → đầu pass, sau 10 → HTTP 429 + Retry-After: 60</div>
+
+<div class="card warn">
+  <strong>Production caveat:</strong> in-memory bucket chỉ work cho single-instance gateway.
+  Multi-instance cần shared store (Redis) hoặc upgrade Reactive variant (có Redis filter sẵn).
+</div>
+
+<h2 id="audit">9. Audit log (ECS structured)</h2>
+
+<p>Mỗi auth event log structured theo Elastic Common Schema. MDC fields được structured-logging ECS format (Spring Boot 4) emit ra JSON line ở prod profile, Loki/Elasticsearch parse trực tiếp.</p>
+
+<div class="file-label">services/auth-service/.../security/AuthAuditLogger.java (excerpt)</div>
+<pre><code>private static final Logger log = LoggerFactory.getLogger("petclinic.auth.audit");
+
+public void loginSuccess(UUID userId, String username) {
+    try (MdcContext ctx = mdc("authentication.login.success", "success", userId, username)) {
+        log.info("Login success");
+    }
+}
+
+public void loginFailure(String username, String reason) {
+    try (MdcContext ctx = mdc("authentication.login.failure", "failure", null, username)) {
+        MDC.put("event.reason", reason);
+        log.warn("Login failure");
+        MDC.remove("event.reason");
+    }
+}</code></pre>
+
+<h4>Events emitted</h4>
 <table>
-  <thead><tr><th>Tình huống</th><th>HTTP</th><th>Body</th></tr></thead>
+  <thead><tr><th><code>event.action</code></th><th>Khi nào</th></tr></thead>
   <tbody>
-    <tr>
-      <td>Không có Authorization header trên protected endpoint</td>
-      <td>401</td>
-      <td><code>{"type":"…/unauthorized", "title":"Authentication required"}</code></td>
-    </tr>
-    <tr>
-      <td>JWT signature mismatch (token forged)</td>
-      <td>401</td>
-      <td><code>{"type":"…/invalid-token", "error":"invalid_signature"}</code></td>
-    </tr>
-    <tr>
-      <td>JWT expired</td>
-      <td>401</td>
-      <td><code>{"type":"…/token-expired"}</code> → client gọi /refresh</td>
-    </tr>
-    <tr>
-      <td>Refresh token revoked (already used — rotate)</td>
-      <td>401</td>
-      <td>Client phải login lại</td>
-    </tr>
-    <tr>
-      <td>Valid JWT nhưng thiếu role</td>
-      <td>403</td>
-      <td><code>{"type":"…/access-denied", "requiredRole":"ADMIN"}</code></td>
-    </tr>
-    <tr>
-      <td>Login wrong password</td>
-      <td>401</td>
-      <td><code>{"type":"…/invalid-credentials"}</code> (KHÔNG nói "user không tồn tại" — username enumeration)</td>
-    </tr>
-    <tr>
-      <td>Register username trùng</td>
-      <td>409 Conflict</td>
-      <td><code>{"type":"…/username-taken"}</code></td>
-    </tr>
-    <tr>
-      <td>Rate limit hit</td>
-      <td>429</td>
-      <td><code>{"type":"…/rate-limited"}</code> + <code>Retry-After: 60</code> header</td>
-    </tr>
+    <tr><td><code>authentication.register.success</code></td><td>User tạo tài khoản</td></tr>
+    <tr><td><code>authentication.login.success</code></td><td>Login OK</td></tr>
+    <tr><td><code>authentication.login.failure</code></td><td>Wrong password / user disabled / not found</td></tr>
+    <tr><td><code>authentication.token.refresh.success</code></td><td>Refresh rotation</td></tr>
+    <tr><td><code>authentication.token.refresh.failure</code></td><td>Invalid/expired/revoked refresh — alert nếu spike</td></tr>
+    <tr><td><code>authentication.logout.success</code></td><td>User logout</td></tr>
   </tbody>
 </table>
 
-<h2 id="rbac">8. RBAC model</h2>
+<h4>Tested ✓ — actual log lines from `auth-service` bootRun</h4>
+<pre><code>petclinic.auth.audit : Register success
+petclinic.auth.audit : Login success
+petclinic.auth.audit : Refresh token rotated
+petclinic.auth.audit : Refresh token failure          (after rotation reuse)
+petclinic.auth.audit : Login failure                  (wrong creds)
+petclinic.auth.audit : Logout success</code></pre>
 
-<p>Roles tĩnh, lưu CSV trong cột <code>users.roles_csv</code> (đơn giản — đủ cho học, scale lên Role entity riêng sau khi cần dynamic roles):</p>
+<h2 id="errors">10. Error scenarios</h2>
+
+<table>
+  <thead><tr><th>Tình huống</th><th>HTTP</th><th>Body type URI</th></tr></thead>
+  <tbody>
+    <tr><td>No Authorization header trên protected endpoint</td><td>401</td><td>(WWW-Authenticate: Bearer)</td></tr>
+    <tr><td>JWT signature mismatch / kid không có trong JWKS</td><td>401</td><td><code>invalid_token</code></td></tr>
+    <tr><td>JWT expired</td><td>401</td><td>Client gọi /refresh</td></tr>
+    <tr><td>JWT issuer/audience mismatch</td><td>401</td><td>Token validator reject</td></tr>
+    <tr><td>Login wrong password / user not found / disabled</td><td>400</td><td><code>invalid-credentials</code> (SAME error — no enumeration)</td></tr>
+    <tr><td>Register duplicate username</td><td>400</td><td><code>username-taken</code></td></tr>
+    <tr><td>Refresh token đã revoke / expired / not found</td><td>400</td><td><code>invalid-refresh-token</code> + revoke all if reuse</td></tr>
+    <tr><td>Rate limit hit</td><td>429</td><td><code>rate-limited</code> + Retry-After header</td></tr>
+    <tr><td>Downstream service down (CB OPEN)</td><td>503</td><td><code>service-unavailable</code> (gateway fallback)</td></tr>
+  </tbody>
+</table>
+
+<h2 id="rbac">11. RBAC</h2>
+
+<p>Roles stored CSV trong cột <code>users.roles_csv</code>. Default <code>USER</code>. Scale lên Role entity khi cần dynamic permissions.</p>
 
 <div class="roles">
   <span class="user">USER</span>
@@ -524,37 +577,17 @@ sequenceDiagram
   <span class="admin">ADMIN</span>
 </div>
 
-<table>
-  <thead><tr><th>Role</th><th>Quyền</th></tr></thead>
-  <tbody>
-    <tr><td><code>USER</code></td><td>CRUD owner + pet của chính mình; GET vets/specialties (read-only)</td></tr>
-    <tr><td><code>VET</code></td><td>USER perms + edit vet profile của mình; CRUD visits</td></tr>
-    <tr><td><code>ADMIN</code></td><td>All — CRUD mọi entity, manage users, view audit log</td></tr>
-  </tbody>
-</table>
+<p>Mapping JWT <code>roles</code> claim → Spring authorities <code>ROLE_*</code> (đã làm trong common-security):</p>
+<pre><code>@PreAuthorize("hasRole('ADMIN')")
+public ResponseEntity&lt;OwnerResponse&gt; create(...) { ... }
 
-<h4>Spring Security 7 enforcement</h4>
-<pre><code>@RestController
-@RequestMapping("/api/v1/owners")
-class OwnerController {
-
-    @GetMapping
-    @PreAuthorize("hasRole('USER')")               // mọi user logged-in
-    public Page&lt;OwnerResponse&gt; list(...) { ... }
-
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")               // chỉ admin tạo owner mới
-    public ResponseEntity&lt;OwnerResponse&gt; create(...) { ... }
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or @ownerService.isOwnedBy(#id, authentication.name)")
-    public OwnerResponse update(@PathVariable UUID id, ...) { ... }    // owner edit chính mình
-}</code></pre>
+@PreAuthorize("hasRole('ADMIN') or @ownerService.isOwnedBy(#id, authentication.name)")
+public OwnerResponse update(@PathVariable UUID id, ...) { ... }</code></pre>
 
 <hr>
 <p style="color:var(--fg-dim); font-size:0.9em; text-align:center;">
-Generated for petclinic-ms — Spring Boot 4.0.6 + Spring Security 7 + Spring Cloud 2025.1.1 Oakwood.<br>
-Live at: <code>docs/security-flow.html</code> · Source: <code>github.com/kl3inIT/petclinic-ms</code>
+Generated for petclinic-ms · Spring Boot 4.0.6 · Spring Security 7 · Spring Cloud 2025.1.1 Oakwood<br>
+Source: <code>github.com/kl3inIT/petclinic-ms</code> · This file: <code>docs/security-flow.html</code>
 </p>
 
 <script>
@@ -563,21 +596,11 @@ Live at: <code>docs/security-flow.html</code> · Source: <code>github.com/kl3inI
     theme: 'default',
     themeVariables: {
       fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-      primaryColor: '#dbeafe',
-      primaryTextColor: '#0f172a',
-      primaryBorderColor: '#1e40af',
-      lineColor: '#475569',
-      secondaryColor: '#fef3c7',
-      tertiaryColor: '#dcfce7',
-      noteBkgColor: '#fef3c7',
-      noteTextColor: '#0f172a',
-      noteBorderColor: '#ca8a04'
+      primaryColor: '#dbeafe', primaryTextColor: '#0f172a', primaryBorderColor: '#1e40af',
+      lineColor: '#475569', secondaryColor: '#fef3c7', tertiaryColor: '#dcfce7',
+      noteBkgColor: '#fef3c7', noteTextColor: '#0f172a', noteBorderColor: '#ca8a04'
     },
-    sequence: {
-      mirrorActors: false,
-      showSequenceNumbers: false,
-      actorMargin: 50
-    }
+    sequence: { mirrorActors: false, showSequenceNumbers: false, actorMargin: 50 }
   });
 </script>
 

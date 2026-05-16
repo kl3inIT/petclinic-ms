@@ -1,56 +1,61 @@
 package com.mss301.petclinic.auth.security;
 
 import com.mss301.petclinic.auth.model.User;
+import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
+import com.nimbusds.jose.jwk.RSAKey;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 /**
- * Encode JWT access token.
+ * Encode RS256 JWT access tokens.
  *
  * <h4>Claims</h4>
  * <ul>
- *   <li>{@code iss} — "petclinic-ms" (constant). Services validate audience matches.</li>
- *   <li>{@code sub} — user UUID (string). Public-safe identifier.</li>
- *   <li>{@code username} — convenience claim cho UI hiển thị (KHÔNG là identity key).</li>
- *   <li>{@code roles} — array of "USER"/"VET"/"ADMIN". Spring Security JwtAuthenticationConverter
- *       sẽ map sang ROLE_USER/ROLE_VET/ROLE_ADMIN authorities.</li>
- *   <li>{@code iat}, {@code exp} — issued at + expires (15 min default).</li>
+ *   <li>{@code iss} = "petclinic-ms"</li>
+ *   <li>{@code aud} = "petclinic-ms" (single audience — Iter sau có thể per-service)</li>
+ *   <li>{@code sub} = user UUID</li>
+ *   <li>{@code username}, {@code roles}, {@code iat}, {@code exp}</li>
  * </ul>
  *
- * <h4>Crypto (Iter 1)</h4>
- * HS256 (HMAC SHA-256). Secret shared qua config-repo. Iter 3 chuyển sang RS256 + JWKS.
+ * <h4>Header</h4>
+ * {@code alg=RS256, kid=<rsa key id>} — services lookup public key qua kid trong JWKS.
  */
 @Component
 public class JwtTokenProvider {
 
-    public static final String ISSUER = "petclinic-ms";
-
     private final JwtEncoder jwtEncoder;
-    private final Duration tokenTtl;
+    private final RSAKey rsaJwk;
+    private final PetClinicJwtProperties jwtProps;
+    private final Duration accessTokenTtl;
 
     public JwtTokenProvider(
             JwtEncoder jwtEncoder,
-            @Value("${petclinic.auth.jwt.access-token-ttl:PT15M}") Duration tokenTtl
+            RSAKey rsaJwk,
+            PetClinicJwtProperties jwtProps,
+            @Value("${petclinic.auth.access-token-ttl:PT15M}") Duration accessTokenTtl
     ) {
         this.jwtEncoder = jwtEncoder;
-        this.tokenTtl = tokenTtl;
+        this.rsaJwk = rsaJwk;
+        this.jwtProps = jwtProps;
+        this.accessTokenTtl = accessTokenTtl;
     }
 
     public IssuedToken issueAccessToken(User user) {
         Instant now = Instant.now();
-        Instant expiresAt = now.plus(tokenTtl);
+        Instant expiresAt = now.plus(accessTokenTtl);
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer(ISSUER)
-                .audience(java.util.List.of(ISSUER))
+                .issuer(jwtProps.getIssuer())
+                .audience(List.of(jwtProps.getAudience()))
                 .subject(user.getId().toString())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
@@ -58,9 +63,11 @@ public class JwtTokenProvider {
                 .claim("roles", user.getRoles())
                 .build();
 
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+        JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)
+                .keyId(rsaJwk.getKeyID())
+                .build();
         String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
-        return new IssuedToken(token, tokenTtl.toSeconds());
+        return new IssuedToken(token, accessTokenTtl.toSeconds());
     }
 
     public record IssuedToken(String token, long expiresInSeconds) {}

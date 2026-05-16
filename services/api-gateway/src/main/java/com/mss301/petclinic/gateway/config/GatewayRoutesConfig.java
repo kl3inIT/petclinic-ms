@@ -6,6 +6,7 @@ import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import java.net.URI;
+import java.time.Duration;
 
 import static org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions.circuitBreaker;
 import static org.springframework.cloud.gateway.server.mvc.filter.LoadBalancerFilterFunctions.lb;
@@ -14,22 +15,17 @@ import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFuncti
 import static org.springframework.cloud.gateway.server.mvc.predicate.GatewayRequestPredicates.path;
 
 /**
- * Gateway routes — functional API (canonical pattern cho Spring Cloud Gateway 5.x WebMVC variant).
+ * Gateway routes — functional API (canonical pattern cho Spring Cloud Gateway 5.x WebMVC).
  *
- * <h4>Tại sao functional thay vì YAML?</h4>
- * <p>YAML {@code spring.cloud.gateway.server.webmvc.routes} hỗ trợ predicates + uri OK, nhưng
- * filter shortcut {@code CircuitBreaker=...} không apply chained inside CB wrapper trong 5.0.x.
- * Functional builder wires filter chain trực tiếp → CB thực sự gói call, count failures, mở khi
- * threshold đạt, forward sang /fallback.</p>
+ * <h4>Rate limit</h4>
+ * Auth public endpoints (/login, /register, /refresh) bị rate-limit per-IP:
+ * 10 req/phút. Chống brute-force credential stuffing + mass signup.
  *
- * <h4>Path predicates</h4>
- * Mỗi service có nhiều path → dùng {@code path(p1).or(path(p2))} gộp 1 route id.
- *
- * <h4>Filter chain (thứ tự áp dụng)</h4>
+ * <h4>Filter chain</h4>
  * <ol>
- *   <li>{@code lb("service-name")} — resolve `lb://` qua Spring Cloud LoadBalancer (Eureka registry)</li>
- *   <li>{@code circuitBreaker(...)} — gói downstream call; mở circuit nếu failure rate cao,
- *       forward sang `/fallback` thay vì lỗi 500</li>
+ *   <li>{@code rateLimit(...)} — per-IP token bucket (chỉ áp lên auth public routes)</li>
+ *   <li>{@code lb("service")} — Spring Cloud LoadBalancer resolve qua Eureka</li>
+ *   <li>{@code circuitBreaker(...)} — fallback nếu downstream lỗi</li>
  * </ol>
  */
 @Configuration
@@ -56,12 +52,46 @@ public class GatewayRoutesConfig {
                 .build();
     }
 
+    /**
+     * Auth PUBLIC endpoints — rate-limited per-IP (10 req/phút).
+     * Chống brute-force (login), mass signup (register), refresh-spam.
+     */
     @Bean
-    public RouterFunction<ServerResponse> authServiceRoute() {
-        return route("auth-service")
-                .route(path("/api/v1/auth/**"), http())
+    public RouterFunction<ServerResponse> authPublicRoute() {
+        PerIpRateLimit limiter = new PerIpRateLimit(10, Duration.ofMinutes(1));
+        return route("auth-public")
+                .route(path("/api/v1/auth/login")
+                        .or(path("/api/v1/auth/register"))
+                        .or(path("/api/v1/auth/refresh")), http())
+                .filter(limiter.asFilter())
                 .filter(lb("auth-service"))
-                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .filter(circuitBreaker(cb -> cb.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
+    /**
+     * Auth PROTECTED endpoints — yêu cầu JWT (validate ở gateway + auth-service zero-trust).
+     * Không rate-limit thêm (đã có chuẩn JWT-issued, ít abuse).
+     */
+    @Bean
+    public RouterFunction<ServerResponse> authProtectedRoute() {
+        return route("auth-protected")
+                .route(path("/api/v1/auth/me").or(path("/api/v1/auth/logout")), http())
+                .filter(lb("auth-service"))
+                .filter(circuitBreaker(cb -> cb.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
+    /**
+     * JWKS endpoint — public (clients lấy public key). Route qua gateway giúp services khác
+     * (customers/vets) fetch dễ hơn nếu DNS chỉ vào gateway. Không rate-limit.
+     */
+    @Bean
+    public RouterFunction<ServerResponse> jwksRoute() {
+        return route("jwks")
+                .route(path("/.well-known/jwks.json"), http())
+                .filter(lb("auth-service"))
+                .filter(circuitBreaker(cb -> cb.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 }

@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation(project(":shared:common-web"))
     implementation(project(":shared:common-jpa"))
+    implementation(project(":shared:common-security"))      // Iter 2: reuse JwtDecoder + JwtAuthConverter beans
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.data.jpa)

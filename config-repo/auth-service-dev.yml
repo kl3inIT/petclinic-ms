@@ -7,12 +7,8 @@ spring:
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
-# Dev secret hardcoded — OK cho local. Prod PHẢI override qua env.
-# 64-char (512 bit) — vượt min 256 bit cho HS256.
-petclinic:
-  auth:
-    jwt:
-      secret: "dev-only-petclinic-ms-jwt-secret-do-not-use-in-production-xx"
+# JWT secret moved to config-repo/application-dev.yml (Iter 2 — shared by mọi service).
+# Auth-service ttl + algorithm-specific config có thể ở đây nếu cần.
 
 logging:
   level:

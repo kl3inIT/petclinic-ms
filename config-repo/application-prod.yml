@@ -36,3 +36,12 @@ eureka:
       defaultZone: ${EUREKA_URL}          # NO fallback — fail-fast nếu deploy quên config
     register-with-eureka: true
     fetch-registry: true
+
+# Shared JWT validation — JWKS URI env-driven (k8s ConfigMap / Helm).
+# Vd: http://auth-service.platform.svc.cluster.local/.well-known/jwks.json
+petclinic:
+  auth:
+    jwt:
+      jwk-set-uri: ${JWKS_URI}
+      issuer: petclinic-ms
+      audience: petclinic-ms

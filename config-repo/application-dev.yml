@@ -29,3 +29,13 @@ logging:
     root: INFO
     org.hibernate.SQL: INFO
     # plain text + correlation pattern (inherit từ application.yml) — màu trong console dev
+
+# Shared JWT validation config — RSA + JWKS endpoint.
+# Auth-service publishes public keys ở /.well-known/jwks.json. Mọi service (gateway/customers/vets)
+# fetch + cache để verify RS256 signature. KHÔNG có shared secret — chỉ public key distribute.
+petclinic:
+  auth:
+    jwt:
+      jwk-set-uri: ${JWKS_URI:http://localhost:8183/.well-known/jwks.json}
+      issuer: petclinic-ms
+      audience: petclinic-ms
