@@ -17,7 +17,7 @@ testcontainers     = "2.0.5"            # 2.x đổi artifactId pattern `testcon
 springdoc          = "3.0.3"            # OpenAPI/Swagger UI — version riêng cho Spring Boot 4
 
 # Test
-junit              = "6.0.0"
+junit              = "6.0.3"
 
 [libraries]
 # --- Spring Boot starters (Spring MVC stack, blocking) ---
