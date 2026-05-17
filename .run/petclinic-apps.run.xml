@@ -4,6 +4,7 @@
     <toRun name="auth-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="customers-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="vets-service" type="SpringBootApplicationConfigurationType" />
+    <toRun name="visits-service" type="SpringBootApplicationConfigurationType" />
     <method v="2" />
   </configuration>
 </component>

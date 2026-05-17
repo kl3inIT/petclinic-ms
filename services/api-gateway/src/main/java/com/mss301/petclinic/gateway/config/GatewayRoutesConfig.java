@@ -52,6 +52,15 @@ public class GatewayRoutesConfig {
                 .build();
     }
 
+    @Bean
+    public RouterFunction<ServerResponse> visitsServiceRoute() {
+        return route("visits-service")
+                .route(path("/api/v1/visits/**"), http())
+                .filter(lb("visits-service"))
+                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
     /**
      * Auth PUBLIC endpoints — rate-limited per-IP (10 req/phút).
      * Chống brute-force (login), mass signup (register), refresh-spam.

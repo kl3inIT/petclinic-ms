@@ -1,0 +1,46 @@
+# Visits — env-agnostic config.
+# Datasource creds + URL khác env → visits-service-<profile>.yml.
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate                  # Liquibase quản lý schema
+    properties:
+      hibernate:
+        default_schema: visits
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+# Resilience4j defaults cho cross-service calls
+# (Spring Cloud CircuitBreaker auto-wire khi spring-cloud-starter-circuitbreaker-resilience4j có classpath)
+resilience4j:
+  circuitbreaker:
+    instances:
+      customers-service:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+      vets-service:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+  timelimiter:
+    instances:
+      customers-service:
+        timeoutDuration: 3s
+      vets-service:
+        timeoutDuration: 3s
+  retry:
+    instances:
+      customers-service:
+        maxAttempts: 3
+        waitDuration: 200ms
+        exponentialBackoffMultiplier: 2.0
+      vets-service:
+        maxAttempts: 3
+        waitDuration: 200ms
+        exponentialBackoffMultiplier: 2.0

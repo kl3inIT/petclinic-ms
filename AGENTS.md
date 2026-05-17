@@ -1,6 +1,6 @@
-# AGENTS.md
+# CLAUDE.md
 
-This file is the cross-tool agent guide (Claude Code, Cursor, Aider, Codex CLI, etc.) for working in this repository. Mirrors `CLAUDE.md`.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project context
 
@@ -85,6 +85,12 @@ Cross-cutting code lives in `shared/`. Services depend via `implementation(proje
   - `IdentifiedEnum` — interface for enums needing stable persistence ID + i18n key. `id()` is the contract with DB/FE; override it when renaming `name()` to keep DB compatibility. `labelKey()` uses `getDeclaringClass()` (not `getClass()`) to avoid the anonymous-subclass-when-enum-has-body bug.
   - `OrderedEnum` extends `IdentifiedEnum` — adds `weight()`. Convention: use gaps (10/20/30) so future inserts don't break forward-only invariants on persisted higher-weight values.
   - `IdentifiedEnums` — `byId`, `findById`, `sortedByWeight` utility methods.
+
+- **`shared/common-clients`** — service-to-service HTTP infrastructure (since Phase 5A):
+  - `JwtForwardInterceptor` — reads `JwtAuthenticationToken` from `SecurityContextHolder` and forwards the Bearer token to downstream calls. Downstream STILL validates JWT independently via `common-security` (defense-in-depth).
+  - `defaultRestClientBuilder` — plain `RestClient.Builder` marked `@Primary`. **CRITICAL: this bean must exist** — Eureka 2.x autowires `ObjectProvider<RestClient.Builder>` without qualifier to call its own server. If only the `@LoadBalanced` builder exists, Eureka picks it up → LoadBalancer tries to resolve `localhost` as a service name → `No instances available for localhost`. Always ship BOTH builders.
+  - `loadBalancedRestClientBuilder` — `@LoadBalanced` builder pre-wired with `JwtForwardInterceptor`. Consumers inject with `@LoadBalanced RestClient.Builder` qualifier to opt into LB.
+  - Service consumes by declaring local `@HttpExchange` interface + `@Bean` factory cloning the LB builder with `baseUrl("http://<service-name>")`. See `services/visits-service/src/main/java/com/mss301/petclinic/visits/client/`. **Pattern: client + DTO records live in the CONSUMER service (Tolerant Reader), not in shared/ — downstream service can evolve API without breaking consumers.**
 
 **Auto-config descriptor:** Each shared module ships `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` (Spring Boot 3+ replacement for legacy `spring.factories`). All beans use `@ConditionalOnMissingBean` so services can override.
 
@@ -250,7 +256,7 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
 
 5. **Precompiled script plugins (`build-logic/`)** — IntelliJ inspection often shows ERRORS in `*.gradle.kts` before Gradle sync runs (accessor types not yet generated). Run a Gradle sync — if Gradle build succeeds, the code is correct regardless of IDE squiggles.
 
-6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (N-N join + Set seed data) → `discovery-server` (Eureka registry, port 8761) → `config-server` (Spring Cloud Config native filesystem, port 8888, reads `config-repo/`) → `api-gateway` (Spring Cloud Gateway 5.x **WebMVC variant**, port 8180, lb:// routes via Eureka) → `auth-service` Iter 1 (port 8183, register/login/me, HMAC HS256 JWT, Spring Security 7 lambda DSL). Iter 2-4 of security roadmap: defense-in-depth (gateway + downstream validate), RSA + JWKS, service-to-service token forward + rate limit + audit. See `docs/security-flow.html`.
+6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (N-N join + Set seed data) → `discovery-server` (Eureka registry, port 8761) → `config-server` (Spring Cloud Config native filesystem, port 8888, reads `config-repo/`) → `api-gateway` (Spring Cloud Gateway 5.x **WebMVC variant**, port 8180, lb:// routes via Eureka) → `auth-service` Iter 1 (port 8183, register/login/me, HMAC HS256 JWT, Spring Security 7 lambda DSL). Iter 2-4 of security roadmap: defense-in-depth (gateway + downstream validate), RSA + JWKS, service-to-service token forward + rate limit + audit. See `docs/security-flow.html`. Phase 5A added `visits-service` (port 8184, state machine SCHEDULED→IN_PROGRESS→COMPLETED + CANCELLED, cross-service calls to customers/vets via HTTP Interface) — first service to consume `shared/common-clients`.
 
 7. **Spring Cloud Gateway 5.x property prefix** — Cloud 5.0+ (Boot 4 / Cloud 2025.x) renamed property prefix from `spring.cloud.gateway.mvc.*` (older docs / Cloud 4.x) to **`spring.cloud.gateway.server.webmvc.*`**. Cross-check via `/actuator/configprops` — bean `gatewayMvcProperties` shows the true prefix. Many web examples and even some context7 doc excerpts still use the old prefix; ignore them.
 
@@ -286,6 +292,16 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
    - `AutoConfigureDataMongo` — removed
    - `WebExchangeBindException` vs `MethodArgumentNotValidException` — MVC stack uses the latter, WebFlux the former
    - `LiquibaseProperties` — moved to `org.springframework.boot.liquibase.autoconfigure`
+
+14. **Service-to-service HTTP client = HTTP Interface + RestClient (NOT Feign)** — Spring Framework 6+ `@HttpExchange` interface is the canonical replacement for Feign on new projects. Spring Cloud OpenFeign still works but is no longer the recommended path for Spring Boot 4 / Cloud 2025.x. Pattern: declare interface in CONSUMER service (not shared), local `<Entity>Summary` records (Tolerant Reader — only fields the consumer reads), `@Bean` factory builds proxy via `HttpServiceProxyFactory.builderFor(RestClientAdapter.create(restClient)).build().createClient(Iface.class)`. See visits-service `client/CustomersClient.java`. **Resilience4j** wrap (timeout / retry / circuit breaker) via `@CircuitBreaker` / `@TimeLimiter` / `@Retry` annotations on the service method, NOT on the client interface itself (annotations don't propagate through Spring proxies the same way).
+
+15. **Eureka 2.x + RestClient transport — ALWAYS ship BOTH a plain `@Primary` and a `@LoadBalanced` `RestClient.Builder`** — `DiscoveryClientOptionalArgsConfiguration.restClientDiscoveryClientOptionalArgs` injects `ObjectProvider<RestClient.Builder>` (no qualifier) and uses `getIfAvailable(RestClient::builder)` to call `http://<eureka-host>:8761/eureka/`. Boot's `RestClientAutoConfiguration.restClientBuilder` is `@ConditionalOnMissingBean` — once ANY `RestClient.Builder` bean exists (including a `@LoadBalanced` one), Boot skips its default. If only the LB builder exists, Eureka picks it → LoadBalancer treats hostname "localhost" as a service ID → `No instances available for localhost` heartbeat spam. `shared/common-clients` provides both, named `defaultRestClientBuilder` (`@Primary`) + `loadBalancedRestClientBuilder` (`@LoadBalanced`), both `@ConditionalOnMissingBean(name=...)` so services can override either.
+
+16. **EnumSet inside enum constructor throws `ClassCastException: not an enum`** — `EnumSet.noneOf(MyEnum.class)` called from MyEnum's `<clinit>` (constructor or initializer) fails because the class is still mid-load — JVM hasn't marked it as an enum yet. Pattern: use `private final Set<MyEnum> allowed = new HashSet<>()` and populate via static block AFTER all constants are declared. See `visits-service/.../VisitStatus.java`. State-machine enums also implement `OrderedEnum` from `common-jpa` for stable `id()` + `weight()` (see gotcha around shared enums).
+
+17. **Postgres + JPQL `(:param IS NULL OR field = :param)` filter pattern fails with "could not determine data type of parameter $N"** — Postgres can't infer NULL parameter type when the same param is bound twice in `IS NULL OR =` shape. Use Spring Data **Specification** (`JpaSpecificationExecutor<T>`) for dynamic filters: add predicate to the criteria query only when the param is non-null. See `visits-service/.../VisitSpecifications.java` + `VisitRepository extends JpaRepository<Visit, Long>, JpaSpecificationExecutor<Visit>`. Cleaner than COALESCE workarounds and avoids the bug entirely.
+
+18. **Filter-chain security > scattered `@PreAuthorize`** — declare role + URL rules in a single `<Service>SecurityConfig` overriding `common-security`'s default `SecurityFilterChain`. Controller stays free of annotations. Resource-level checks (e.g., "USER can only cancel own visit") live in the SERVICE layer after the entity is loaded — throw `AccessDeniedException` from `org.springframework.security.access`. Avoids: (a) double DB hit when `@PreAuthorize` triggers entity load via `@securityHelper.isOwner(#id)`, (b) rules scattered between filter chain + `@PreAuthorize`, (c) testing controllers with full Spring Security context. See `visits-service/.../config/VisitsSecurityConfig.java`.
 
 ## MCP and tooling
 
@@ -326,5 +342,6 @@ JetBrains MCP doesn't have a "run gradle task" verb (use `mcp__jetbrains__execut
 
 ## Working with this codebase
 
-- When adding a new service, copy `services/customers-service/` and rename. Don't introduce alternative patterns. Update `settings.gradle.kts` `include(":services:<new-name>")` and add an entry to `.run/all-services.run.xml`.
-- Run configs in `.run/` ARE committed. IntelliJ workspace files (`.idea/workspace.xml`, etc.) are NOT.
+- When adding a new service, copy `services/customers-service/` and rename. Don't introduce alternative patterns. Update `settings.gradle.kts` `include(":services:<new-name>")` and add an entry to `.run/petclinic-apps.run.xml` (the compound containing all business services).
+- Run configs in `.run/` ARE committed. IntelliJ workspace files (`.idea/workspace.xml`, etc.) are NOT. The compound layout has TWO tiers: `🏗️ Petclinic Infra` (config-server + discovery-server — start first) → `🐱 Petclinic Apps` (gateway + auth + customers + vets + visits — start after infra is ready). Postgres must be up via `docker compose --profile db up -d` before infra. All Spring Boot direct-run configs use `SHORTEN_COMMAND_LINE=ARGS_FILE` (Java 9+ `@argfile`) to avoid the Windows command-line length limit.
+- When adding a service that makes cross-service calls, add `implementation(project(":shared:common-clients"))` to its `build.gradle.kts`. The autoconfig wires Builder beans + JwtForwardInterceptor; only thing the service writes is the `client/` package (interface + DTO records + `ClientsConfig` `@Bean` factory). See visits-service as the template.

@@ -1,6 +1,7 @@
 package com.mss301.petclinic.customers.model;
 
 import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,6 +22,14 @@ public class Pet extends AbstractAuditingEntity {
     private LocalDate birthDate;
     private String type;
 
+    /**
+     * Read-only mirror cho FK <code>owner_id</code> được Hibernate ghi qua
+     * Owner.@OneToMany.@JoinColumn. Đặt insertable/updatable=false để tránh write conflict
+     * — domain ownership của Pet vẫn là Owner aggregate.
+     */
+    @Column(name = "owner_id", insertable = false, updatable = false)
+    private Long ownerId;
+
     protected Pet() {
         // JPA requires no-arg constructor
     }
@@ -35,6 +44,7 @@ public class Pet extends AbstractAuditingEntity {
     public String getName() { return name; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getType() { return type; }
+    public Long getOwnerId() { return ownerId; }
 
     public void setName(String name) { this.name = name; }
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }

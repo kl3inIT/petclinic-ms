@@ -1,0 +1,134 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-schema-visits
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS visits
+            dbms: postgresql
+
+  - changeSet:
+      id: 002-create-table-visits
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: visits
+            tableName: visits
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: pet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: vet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              # JWT sub UUID — KHÔNG FK sang auth schema (cross-service ownership tracking)
+              - column:
+                  name: customer_user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scheduled_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: TEXT
+              - column:
+                  name: diagnosis
+                  type: TEXT
+              - column:
+                  name: treatment
+                  type: TEXT
+              - column:
+                  name: fee
+                  type: NUMERIC(12, 2)
+              # Audit columns (from AbstractAuditingEntity)
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+              # Optimistic locking
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 003-add-constraints-and-indexes
+      author: mss301
+      changes:
+        # Status enum check
+        - sql:
+            sql: >-
+              ALTER TABLE visits.visits
+              ADD CONSTRAINT visits_status_check
+              CHECK (status IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'))
+            dbms: postgresql
+
+        # No double-booking same vet at same time
+        - addUniqueConstraint:
+            schemaName: visits
+            tableName: visits
+            columnNames: vet_id, scheduled_at
+            constraintName: uk_visits_vet_slot
+
+        - createIndex:
+            schemaName: visits
+            tableName: visits
+            indexName: idx_visits_vet_date
+            columns:
+              - column:
+                  name: vet_id
+              - column:
+                  name: scheduled_at
+
+        - createIndex:
+            schemaName: visits
+            tableName: visits
+            indexName: idx_visits_pet
+            columns:
+              - column:
+                  name: pet_id
+
+        - createIndex:
+            schemaName: visits
+            tableName: visits
+            indexName: idx_visits_customer
+            columns:
+              - column:
+                  name: customer_user_id
+
+        - createIndex:
+            schemaName: visits
+            tableName: visits
+            indexName: idx_visits_status
+            columns:
+              - column:
+                  name: status

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>petclinic-ms — Business Flow</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a; --bg-card: #1e293b; --bg-code: #0b1220;
+    --fg: #e2e8f0; --fg-dim: #94a3b8;
+    --accent: #38bdf8; --accent-2: #a78bfa;
+    --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --customer: #38bdf8; --vet: #4ade80; --staff: #fbbf24; --admin: #f87171;
+    --clinic: #6366f1; --shop: #ec4899; --platform: #14b8a6;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.6; }
+  body { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 2.4em; margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 48px; }
+  h3 { color: var(--accent-2); margin-top: 28px; }
+  h4 { color: var(--fg-dim); margin-top: 20px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85em; }
+  .lede { color: var(--fg-dim); font-size: 1.1em; margin: 0 0 32px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; }
+  .card.ok { border-left: 4px solid var(--ok); }
+  .card.warn { border-left: 4px solid var(--warn); }
+  .card.bad { border-left: 4px solid var(--bad); }
+  .card.accent { border-left: 4px solid var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--bg-code); color: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.88em; }
+  pre { background: var(--bg-code); padding: 16px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); font-size: 0.85em; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: #e2e8f0; }
+  .mermaid { background: #f8fafc; padding: 24px; border-radius: 8px; margin: 16px 0; text-align: center; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--accent); font-weight: 600; }
+  td code { font-size: 0.85em; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 700; }
+  .badge.done { background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .badge.wip  { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid var(--warn); }
+  .badge.todo { background: rgba(148,163,184,0.15); color: var(--fg-dim); border: 1px solid var(--fg-dim); }
+  .tldr { background: rgba(56,189,248,0.08); border: 1px solid var(--accent); border-radius: 6px; padding: 16px; margin: 16px 0; }
+  .tldr::before { content: "TL;DR"; display: block; color: var(--accent); font-weight: 700; font-size: 0.85em; letter-spacing: 1px; margin-bottom: 6px; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 16px 0; }
+  .persona { background: var(--bg-card); border-radius: 8px; padding: 16px; border-top: 4px solid; }
+  .persona.customer { border-color: var(--customer); }
+  .persona.vet      { border-color: var(--vet); }
+  .persona.staff    { border-color: var(--staff); }
+  .persona.admin    { border-color: var(--admin); }
+  .persona h4 { color: var(--fg); margin: 0 0 8px; text-transform: none; letter-spacing: 0; font-size: 1.1em; }
+  .persona p { margin: 4px 0; font-size: 0.9em; color: var(--fg-dim); }
+  .domains { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .domain { background: var(--bg-card); border-radius: 8px; padding: 16px; border-top: 4px solid; }
+  .domain.clinic   { border-color: var(--clinic); }
+  .domain.shop     { border-color: var(--shop); }
+  .domain.platform { border-color: var(--platform); }
+  .domain h4 { color: var(--fg); margin: 0 0 12px; text-transform: none; letter-spacing: 0; font-size: 1.05em; }
+  .svc-list { display: flex; flex-direction: column; gap: 6px; }
+  .svc { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--bg-code); border-radius: 4px; font-size: 0.85em; font-family: ui-monospace, monospace; }
+  hr { border: none; border-top: 1px dashed var(--border); margin: 32px 0; }
+  .toc { background: var(--bg-card); padding: 16px 20px 16px 40px; border-radius: 6px; }
+  .toc h3 { margin-top: 0; }
+  .toc ol { margin: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .quote { border-left: 3px solid var(--accent-2); padding: 4px 14px; color: var(--fg-dim); font-style: italic; margin: 16px 0; }
+  @media (max-width: 800px) { .domains { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>petclinic-ms — Business Flow</h1>
+<p class="lede">Hệ thống quản lý phòng khám thú y kết hợp pet shop. Microservices Spring Boot 4 + React 19. Tài liệu mô tả nghiệp vụ, personas, workflows và bounded contexts.</p>
+
+<div class="tldr">
+Số hóa toàn bộ chu trình: khách hàng đăng ký pet → đặt lịch khám → bác sĩ chẩn đoán → thanh toán → mua phụ kiện. 4 personas (Customer / Vet / Staff / Admin), 3 domain (Clinic / Shop / Platform), 10 services. Phân tách bounded context theo team ownership + deploy cadence + compliance scope.
+</div>
+
+<div class="toc">
+  <h3>Mục lục</h3>
+  <ol>
+    <li><a href="#vision">Tầm nhìn hệ thống</a></li>
+    <li><a href="#personas">Personas (4 vai)</a></li>
+    <li><a href="#domains">Domain map — 3 bounded context</a></li>
+    <li><a href="#services">Service inventory</a></li>
+    <li><a href="#flow-customer">Workflow — Customer đặt khám</a></li>
+    <li><a href="#flow-vet">Workflow — Vet khám pet</a></li>
+    <li><a href="#flow-staff">Workflow — Staff tiếp tân</a></li>
+    <li><a href="#flow-shop">Workflow — Customer mua sản phẩm</a></li>
+    <li><a href="#rules">Business rules quan trọng</a></li>
+    <li><a href="#why">Tại sao tách microservices</a></li>
+    <li><a href="#roadmap">Lộ trình + trạng thái</a></li>
+  </ol>
+</div>
+
+<h2 id="vision">1. Tầm nhìn hệ thống</h2>
+
+<p>Bản gốc <strong>Spring Petclinic</strong> chỉ là phòng khám đơn thuần — owner đăng ký pet, đặt visit, vet ghi diagnosis. <strong>petclinic-ms (MSS301)</strong> mở rộng thành full clinic + e-commerce hybrid:</p>
+
+<table>
+  <thead><tr><th>Khía cạnh</th><th>Spring Petclinic gốc</th><th>petclinic-ms</th></tr></thead>
+  <tbody>
+    <tr><td>Phạm vi</td><td>Clinic CRUD</td><td>Clinic + Pet Shop + Inventory + Billing</td></tr>
+    <tr><td>Architecture</td><td>Monolith</td><td>10 microservices (auth + clinic + shop + platform)</td></tr>
+    <tr><td>Auth</td><td>Form login đơn giản</td><td>JWT RS256 + JWKS + refresh rotation + audit + rate limit</td></tr>
+    <tr><td>UI</td><td>Server-side rendering (Thymeleaf)</td><td>SPA React 19 + TanStack Router/Query + Tailwind 4</td></tr>
+    <tr><td>Mục tiêu giảng dạy</td><td>Demo Spring MVC</td><td>Demo microservices pattern + production-grade security + DDD bounded context</td></tr>
+  </tbody>
+</table>
+
+<div class="quote">"Pet shop + clinic hybrid là sweet spot cho MSS301: vừa đủ domain rộng để chấm điểm microservices design, vừa đủ thân thiện để demo + thuyết trình."</div>
+
+<h2 id="personas">2. Personas — 4 vai chính</h2>
+
+<div class="personas">
+  <div class="persona customer">
+    <h4>🐱 Customer (Pet Owner)</h4>
+    <p><strong>Role:</strong> <code>USER</code></p>
+    <p><strong>Cổng:</strong> Public + Customer area</p>
+    <p><strong>Hành vi:</strong> Self-service</p>
+    <p>Đăng ký tài khoản, thêm pet của mình, đặt lịch khám, xem hóa đơn, mua phụ kiện/thức ăn trong shop.</p>
+  </div>
+  <div class="persona vet">
+    <h4>🩺 Vet (Bác sĩ)</h4>
+    <p><strong>Role:</strong> <code>VET</code></p>
+    <p><strong>Cổng:</strong> Admin (role-gated)</p>
+    <p><strong>Hành vi:</strong> Thao tác chuyên môn</p>
+    <p>Xem lịch khám của mình, xem hồ sơ pet, ghi diagnosis + đơn thuốc, đóng visit khi xong.</p>
+  </div>
+  <div class="persona staff">
+    <h4>👤 Staff (Receptionist)</h4>
+    <p><strong>Role:</strong> <code>STAFF</code></p>
+    <p><strong>Cổng:</strong> Admin (full operations)</p>
+    <p><strong>Hành vi:</strong> CRUD operations</p>
+    <p>Tiếp tân walk-in, tạo owner+pet, schedule visit, tạo bill, xác nhận thanh toán, manage inventory.</p>
+  </div>
+  <div class="persona admin">
+    <h4>⚙️ Admin</h4>
+    <p><strong>Role:</strong> <code>ADMIN</code></p>
+    <p><strong>Cổng:</strong> Admin (full + config)</p>
+    <p><strong>Hành vi:</strong> System governance</p>
+    <p>Quản lý user/role, xem dashboard doanh thu + KPI, đọc audit log, cấu hình system, manage products catalog.</p>
+  </div>
+</div>
+
+<h2 id="domains">3. Domain map — 3 bounded context</h2>
+
+<div class="mermaid">
+graph TB
+  subgraph CLINIC["🏥 CLINIC DOMAIN"]
+    direction LR
+    CUST[customers<br/>Owner + Pet]
+    VETS[vets<br/>Vet + Specialty]
+    VISITS[visits<br/>Lịch khám + diagnosis]
+    CUST -->|owns| VISITS
+    VETS -->|performs| VISITS
+  end
+
+  subgraph SHOP["🛒 SHOP DOMAIN"]
+    direction LR
+    PROD[products<br/>Catalog]
+    CART[cart<br/>Giỏ hàng]
+    INV[inventory<br/>Tồn kho]
+    PROD -.->|references stock| INV
+    CART -->|checkout| INV
+  end
+
+  subgraph BILL["💰 BILLING (shared)"]
+    BILLING[billing<br/>Hóa đơn + thanh toán]
+  end
+
+  subgraph PLATFORM["⚙️ PLATFORM"]
+    direction LR
+    AUTH[auth<br/>JWT + Role]
+    MAIL[mailer<br/>Async email]
+    FILES[files<br/>S3 / MinIO]
+    GW[gateway]
+    CFG[config + discovery]
+  end
+
+  VISITS -->|generate fee| BILLING
+  CART -->|generate order| BILLING
+
+  classDef clinic fill:#6366f1,color:#fff,stroke:#a78bfa,stroke-width:2px
+  classDef shop fill:#ec4899,color:#fff,stroke:#f9a8d4,stroke-width:2px
+  classDef platform fill:#14b8a6,color:#fff,stroke:#5eead4,stroke-width:2px
+  classDef billing fill:#f59e0b,color:#000,stroke:#fbbf24,stroke-width:2px
+
+  class CUST,VETS,VISITS clinic
+  class PROD,CART,INV shop
+  class AUTH,MAIL,FILES,GW,CFG platform
+  class BILLING billing
+</div>
+
+<div class="domains">
+  <div class="domain clinic">
+    <h4>🏥 Clinic Domain</h4>
+    <p style="color: var(--fg-dim); font-size: 0.85em;">Quản lý quan hệ owner-pet-vet-visit. Core nghiệp vụ phòng khám.</p>
+    <div class="svc-list">
+      <div class="svc"><span>customers</span> <span class="badge done">done</span></div>
+      <div class="svc"><span>vets</span> <span class="badge done">done</span></div>
+      <div class="svc"><span>visits</span> <span class="badge wip">next</span></div>
+    </div>
+  </div>
+  <div class="domain shop">
+    <h4>🛒 Shop Domain</h4>
+    <p style="color: var(--fg-dim); font-size: 0.85em;">E-commerce: catalog sản phẩm + giỏ hàng + tồn kho.</p>
+    <div class="svc-list">
+      <div class="svc"><span>products</span> <span class="badge todo">todo</span></div>
+      <div class="svc"><span>cart</span> <span class="badge todo">todo</span></div>
+      <div class="svc"><span>inventory</span> <span class="badge todo">todo</span></div>
+    </div>
+  </div>
+  <div class="domain platform">
+    <h4>⚙️ Platform</h4>
+    <p style="color: var(--fg-dim); font-size: 0.85em;">Cross-cutting: auth, gateway, infra, async messaging, storage.</p>
+    <div class="svc-list">
+      <div class="svc"><span>auth-service</span> <span class="badge done">done</span></div>
+      <div class="svc"><span>api-gateway</span> <span class="badge done">done</span></div>
+      <div class="svc"><span>config + discovery</span> <span class="badge done">done</span></div>
+      <div class="svc"><span>billing</span> <span class="badge todo">todo</span></div>
+      <div class="svc"><span>mailer</span> <span class="badge todo">todo</span></div>
+      <div class="svc"><span>files</span> <span class="badge todo">todo</span></div>
+    </div>
+  </div>
+</div>
+
+<h2 id="services">4. Service inventory — chi tiết trách nhiệm</h2>
+
+<table>
+  <thead><tr><th>Service</th><th>Aggregate / Domain object</th><th>Trách nhiệm business</th><th>Tại sao tách</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>auth-service</code></td>
+      <td>User, Role, RefreshToken, AuditEvent</td>
+      <td>Đăng ký, đăng nhập, cấp JWT RS256, refresh token rotation, audit login event, publish JWKS</td>
+      <td>Cô lập compliance (lưu credential), scale-out riêng khi traffic register peak</td>
+    </tr>
+    <tr>
+      <td><code>customers-service</code></td>
+      <td>Owner ↔ Pet (1-N)</td>
+      <td>CRUD owner, pet; mỗi pet thuộc 1 owner; lịch sử pet (sinh nhật, giống, cân nặng)</td>
+      <td>Aggregate đóng kín: 1 owner sở hữu nhiều pet, không invariant cross-service</td>
+    </tr>
+    <tr>
+      <td><code>vets-service</code></td>
+      <td>Vet ↔ Specialty (N-N)</td>
+      <td>Danh sách bác sĩ + chuyên môn (mèo, chó, thú lạ, phẫu thuật...)</td>
+      <td>Đội ngũ tách biệt customer, quản lý ca trực, chuyên môn — domain khác hẳn</td>
+    </tr>
+    <tr>
+      <td><code>visits-service</code> <span class="badge wip">next</span></td>
+      <td>Visit (PetId, VetId, ScheduledAt, Status, Diagnosis)</td>
+      <td>Đặt lịch (kiểm tra conflict slot), xác nhận, ghi diagnosis, đóng visit, lịch sử khám</td>
+      <td>Lịch là pain point: race condition booking, reminder cron, history dài → schema + index khác hẳn</td>
+    </tr>
+    <tr>
+      <td><code>billing-service</code> <span class="badge todo">todo</span></td>
+      <td>Invoice, Payment, LineItem</td>
+      <td>Tạo hóa đơn từ visit fee + product order, xử lý thanh toán, refund</td>
+      <td>Idempotency cực kỳ quan trọng + PCI-DSS scope + integrate Stripe/VNPay sau</td>
+    </tr>
+    <tr>
+      <td><code>products-service</code> <span class="badge todo">todo</span></td>
+      <td>Product, Category, Price</td>
+      <td>Catalog: thức ăn, đồ chơi, thuốc OTC, phụ kiện. Search + filter + featured</td>
+      <td>Read-heavy, cacheable, CDN-friendly — pattern khác hẳn write-heavy clinic services</td>
+    </tr>
+    <tr>
+      <td><code>cart-service</code> <span class="badge todo">todo</span></td>
+      <td>Cart (UserId, Items, TTL)</td>
+      <td>Giỏ hàng theo user, có TTL 24h, checkout → trigger billing + inventory</td>
+      <td>Stateful per-user, ephemeral — hợp Redis-backed thay vì Postgres</td>
+    </tr>
+    <tr>
+      <td><code>inventory-service</code> <span class="badge todo">todo</span></td>
+      <td>Stock, StockMovement</td>
+      <td>Quản lý số lượng tồn, nhập/xuất, trừ kho khi checkout, cảnh báo low-stock</td>
+      <td>Concurrent update cần atomic (<code>SELECT ... FOR UPDATE</code>); business exception "không đủ hàng"</td>
+    </tr>
+    <tr>
+      <td><code>mailer-service</code> <span class="badge todo">todo</span></td>
+      <td>EmailEvent, Template</td>
+      <td>Gửi email: xác nhận đăng ký, nhắc visit, biên lai, reset password</td>
+      <td>Async via queue (Kafka/RabbitMQ), retry, không block luồng business chính</td>
+    </tr>
+    <tr>
+      <td><code>files-service</code> <span class="badge todo">todo</span></td>
+      <td>FileObject (key, contentType, size, ownerId)</td>
+      <td>Upload ảnh pet, document hồ sơ y tế, presigned URL download</td>
+      <td>Binary lớn — không hợp JPA + Postgres, tách để dùng MinIO/S3</td>
+    </tr>
+    <tr>
+      <td><code>api-gateway</code></td>
+      <td>—</td>
+      <td>Routing <code>lb://</code>, validate JWT, CORS, per-IP rate limit, circuit breaker, fallback</td>
+      <td>Single entry point — đóng port cho tất cả service backend</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="flow-customer">5. Workflow — Customer đặt lịch khám</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor C as Customer (Owner)
+  participant FE as Frontend :3333
+  participant GW as Gateway :8180
+  participant AUTH as auth :8183
+  participant CUST as customers :8181
+  participant VETS as vets :8182
+  participant VISITS as visits<br/>(coming)
+  participant MAIL as mailer<br/>(coming)
+
+  C->>FE: Vào /register, điền form
+  FE->>GW: POST /api/v1/auth/register
+  GW->>AUTH: forward
+  AUTH-->>FE: 201 UserResponse
+
+  C->>FE: Login
+  FE->>GW: POST /api/v1/auth/login
+  AUTH-->>FE: AuthResponse (JWT + refreshToken)
+
+  Note over C,FE: FE lưu token, mở /customer/my-pets
+
+  C->>FE: Thêm pet "Mochi" (giống mèo)
+  FE->>GW: POST /api/v1/owners/me/pets (Bearer JWT)
+  GW->>CUST: forward + validate JWT
+  CUST-->>FE: PetResponse {id, name, ownerId}
+
+  C->>FE: Browse danh sách vet
+  FE->>GW: GET /api/v1/vets?specialty=cat
+  GW->>VETS: forward
+  VETS-->>FE: [Dr.Lee, Dr.Park, ...]
+
+  C->>FE: Chọn Dr.Lee, slot 2026-05-20 10:00
+  FE->>GW: POST /api/v1/visits
+  GW->>VISITS: forward
+  VISITS->>VISITS: Validate slot trống<br/>(unique vet+time)
+  VISITS-->>FE: VisitResponse (status=SCHEDULED)
+  VISITS-)MAIL: Event "VisitCreated"
+  MAIL-)C: Email xác nhận lịch hẹn
+</div>
+
+<h2 id="flow-vet">6. Workflow — Vet khám pet</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor V as Vet (Dr.Lee)
+  participant FE as Frontend :3333
+  participant GW as Gateway :8180
+  participant VISITS as visits
+  participant CUST as customers
+  participant BILL as billing<br/>(coming)
+
+  V->>FE: Login → vào /admin (role=VET)
+  FE->>GW: GET /api/v1/visits?vet=me&date=today
+  GW->>VISITS: forward
+  VISITS-->>FE: [Visit#1 (Mochi 10:00), Visit#2 (Buddy 11:00), ...]
+
+  V->>FE: Click Visit#1 → xem chi tiết Mochi
+  FE->>GW: GET /api/v1/pets/{petId}
+  GW->>CUST: forward
+  CUST-->>FE: PetDetail + medical history
+
+  V->>FE: Ghi diagnosis + treatment + đơn thuốc<br/>"Viêm tai ngoài, tra Otibiotic 2x/ngày"
+  FE->>GW: PATCH /api/v1/visits/{id} (status=COMPLETED, diagnosis=...)
+  GW->>VISITS: forward
+  VISITS->>VISITS: Lưu diagnosis, status=COMPLETED
+  VISITS-)BILL: Event "VisitCompleted" (fee=500k)
+  BILL-->>BILL: Tạo Invoice line item
+</div>
+
+<h2 id="flow-staff">7. Workflow — Staff tiếp tân walk-in</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor S as Staff (Receptionist)
+  participant FE as Frontend :3333
+  participant GW as Gateway :8180
+  participant CUST as customers
+  participant VISITS as visits
+  participant BILL as billing<br/>(coming)
+
+  Note over S,FE: Khách walk-in không có tài khoản online
+
+  S->>FE: Form "New Customer" trong /admin/owners
+  FE->>GW: POST /api/v1/owners
+  CUST-->>FE: OwnerResponse
+
+  S->>FE: Thêm pet ngay sau đó
+  FE->>GW: POST /api/v1/owners/{id}/pets
+  CUST-->>FE: PetResponse
+
+  S->>FE: Chọn vet đang rảnh + slot ngay (15 phút sau)
+  FE->>GW: POST /api/v1/visits (status=SCHEDULED)
+  VISITS-->>FE: VisitResponse
+
+  Note over S,FE: Sau khi vet xong khám, status=COMPLETED
+
+  S->>FE: Click "Generate Bill"
+  FE->>GW: POST /api/v1/billing (visitId)
+  BILL-->>FE: Invoice
+
+  S->>FE: Khách trả tiền mặt → Mark Paid
+  FE->>GW: PATCH /api/v1/billing/{id}/pay
+  BILL-->>FE: status=PAID, in receipt
+</div>
+
+<h2 id="flow-shop">8. Workflow — Customer mua sản phẩm trong shop</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor C as Customer
+  participant FE as Frontend
+  participant GW as Gateway
+  participant PROD as products<br/>(coming)
+  participant CART as cart<br/>(coming)
+  participant INV as inventory<br/>(coming)
+  participant BILL as billing<br/>(coming)
+  participant MAIL as mailer<br/>(coming)
+
+  C->>FE: Browse /shop, lọc theo "Cat Food"
+  FE->>GW: GET /api/v1/products?category=cat-food
+  PROD-->>FE: [Royal Canin 2kg, Whiskas...]
+
+  C->>FE: Add to cart
+  FE->>GW: POST /api/v1/cart/items {productId, qty=2}
+  CART-->>FE: CartResponse (subtotal)
+
+  C->>FE: Checkout
+  FE->>GW: POST /api/v1/cart/checkout
+  CART->>INV: Reserve stock (atomic)
+  INV-->>CART: OK / OutOfStock
+  CART->>BILL: Create Order Invoice
+  BILL-->>FE: Invoice (status=PENDING)
+
+  C->>FE: Pay (VNPay redirect)
+  FE->>GW: POST /api/v1/billing/{id}/pay
+  BILL->>INV: Commit reservation
+  BILL-)MAIL: Event "OrderPaid"
+  MAIL-)C: Email biên lai + tracking
+</div>
+
+<h2 id="rules">9. Business rules quan trọng</h2>
+
+<table>
+  <thead><tr><th>Rule</th><th>Service enforce</th><th>Cơ chế</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Owner chỉ thấy pet của mình</td>
+      <td>customers</td>
+      <td>Query filter <code>WHERE owner_id = jwt.sub</code>; method-level <code>@PreAuthorize</code></td>
+    </tr>
+    <tr>
+      <td>Visit không double-booking 1 vet</td>
+      <td>visits</td>
+      <td>Unique constraint <code>(vet_id, scheduled_at)</code> + optimistic locking</td>
+    </tr>
+    <tr>
+      <td>Vet chỉ xem được visit của mình</td>
+      <td>visits</td>
+      <td>Query filter theo JWT sub + role VET</td>
+    </tr>
+    <tr>
+      <td>Stock không bao giờ âm</td>
+      <td>inventory</td>
+      <td><code>SELECT FOR UPDATE</code> + check <code>quantity &gt;= requested</code> → exception nếu fail</td>
+    </tr>
+    <tr>
+      <td>Refund tự động khi cancel visit &lt; 24h trước slot</td>
+      <td>visits → billing</td>
+      <td>Domain event "VisitCancelled" với timestamp → billing tính refund policy</td>
+    </tr>
+    <tr>
+      <td>Bill phải PAID trước khi đóng visit</td>
+      <td>visits + billing</td>
+      <td>State machine ở visits, check billing.status qua REST hoặc cached projection</td>
+    </tr>
+    <tr>
+      <td>Audit mọi thao tác đụng tiền + JWT login</td>
+      <td>auth + billing</td>
+      <td>Append-only audit table (ECS-compliant log fields)</td>
+    </tr>
+    <tr>
+      <td>Rate limit register/login để chống brute-force</td>
+      <td>gateway</td>
+      <td>Per-IP token bucket (10 req/min cho auth endpoints)</td>
+    </tr>
+    <tr>
+      <td>Refresh token reuse → revoke all tokens user đó</td>
+      <td>auth</td>
+      <td>Detect reuse (token đã rotated nhưng client còn dùng) → security incident</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="why">10. Tại sao tách microservices (business view)</h2>
+
+<table>
+  <thead><tr><th>Lý do</th><th>Ví dụ trong petclinic-ms</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Team ownership khác nhau</strong></td>
+      <td>Clinic team sở hữu customers/vets/visits. Shop team sở hữu products/cart/inventory. Platform team sở hữu auth/gateway/files.</td>
+    </tr>
+    <tr>
+      <td><strong>Tần suất deploy khác nhau</strong></td>
+      <td>Products catalog đổi hàng ngày (marketing campaign). auth-service đổi 1 lần/quý (vì compliance review).</td>
+    </tr>
+    <tr>
+      <td><strong>Scale profile khác nhau</strong></td>
+      <td>products GET cực cao → CDN + cache. billing POST hiếm hơn nhưng critical → HA cluster.</td>
+    </tr>
+    <tr>
+      <td><strong>Compliance scope khác nhau</strong></td>
+      <td>billing trong PCI-DSS scope (xử lý card data → thuê auditor). Medical records cô lập (HIPAA-like). Files cô lập (S3 access policy).</td>
+    </tr>
+    <tr>
+      <td><strong>Tech stack flexibility</strong></td>
+      <td>files dùng MinIO + presigned URL. mailer dùng worker queue. cart dùng Redis. Không ép tất cả là Postgres+JPA.</td>
+    </tr>
+    <tr>
+      <td><strong>Failure isolation</strong></td>
+      <td>mailer chết không kéo theo clinic chết. inventory bug không làm sập auth.</td>
+    </tr>
+    <tr>
+      <td><strong>Data ownership rõ ràng</strong></td>
+      <td>Mỗi service 1 schema Postgres riêng. Không share DB → không phụ thuộc schema chéo. Cross-service đọc qua REST hoặc event.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="roadmap">11. Lộ trình + trạng thái hiện tại</h2>
+
+<table>
+  <thead><tr><th>Phase</th><th>Service / Feature</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Foundation</td><td>config-server, discovery-server, api-gateway, common-web, common-jpa, common-security</td><td><span class="badge done">done</span></td></tr>
+    <tr><td>Iter 1 — Auth</td><td>auth-service: register/login/me + HMAC JWT + Security 7</td><td><span class="badge done">done</span></td></tr>
+    <tr><td>Iter 2-4 — Security hardening</td><td>RSA + JWKS + refresh rotation + audit + per-IP rate limit + defense-in-depth</td><td><span class="badge done">done</span></td></tr>
+    <tr><td>Clinic core</td><td>customers-service (Owner + Pet)</td><td><span class="badge done">done</span></td></tr>
+    <tr><td>Clinic core</td><td>vets-service (Vet + Specialty)</td><td><span class="badge done">done</span></td></tr>
+    <tr><td>Frontend</td><td>React 19 SPA + Tailwind 4 + TanStack Router/Query + auth flow + theme + brand</td><td><span class="badge done">done</span></td></tr>
+    <tr><td><strong>Clinic core (next)</strong></td><td><strong>visits-service</strong> — lịch khám, diagnosis, status flow</td><td><span class="badge wip">next</span></td></tr>
+    <tr><td>Billing</td><td>billing-service — invoice từ visit + cart, payment integration</td><td><span class="badge todo">todo</span></td></tr>
+    <tr><td>Shop core</td><td>products-service — catalog + search + filter</td><td><span class="badge todo">todo</span></td></tr>
+    <tr><td>Shop core</td><td>cart-service — Redis-backed, TTL 24h</td><td><span class="badge todo">todo</span></td></tr>
+    <tr><td>Shop core</td><td>inventory-service — stock management + atomic update</td><td><span class="badge todo">todo</span></td></tr>
+    <tr><td>Platform</td><td>mailer-service — async email queue</td><td><span class="badge todo">todo</span></td></tr>
+    <tr><td>Platform</td><td>files-service — MinIO/S3 + presigned URL</td><td><span class="badge todo">todo</span></td></tr>
+    <tr><td>Frontend modules</td><td>Owners/Pets/Vets/Visits CRUD admin module (Jmix-like DataTable)</td><td><span class="badge todo">todo</span></td></tr>
+    <tr><td>Frontend modules</td><td>Customer portal — my-pets, book-visit, my-bills, shop</td><td><span class="badge todo">todo</span></td></tr>
+    <tr><td>Observability</td><td>Distributed tracing (OpenTelemetry), metrics (Prometheus), centralized logs</td><td><span class="badge todo">todo</span></td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<p style="text-align: center; color: var(--fg-dim); font-size: 0.85em; margin-top: 48px;">
+  petclinic-ms — MSS301 Summer 2026 · Spring Boot 4 microservices + React 19 frontend
+</p>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    flowchart: { htmlLabels: true, curve: 'basis' },
+    sequence: { actorMargin: 50, boxMargin: 10 }
+  });
+</script>
+</body>
+</html>

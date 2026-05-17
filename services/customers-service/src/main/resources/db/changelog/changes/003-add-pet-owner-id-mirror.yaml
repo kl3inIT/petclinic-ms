@@ -1,0 +1,11 @@
+databaseChangeLog:
+  # owner_id column đã được tạo bởi Hibernate qua @JoinColumn ở Owner.@OneToMany.
+  # Changeset này KHÔNG add column mới — chỉ document rằng từ giờ Pet entity sẽ
+  # đọc owner_id qua field mapping (insertable=false, updatable=false). No-op SQL.
+  - changeSet:
+      id: 003-noop-pet-owner-id-mirror
+      author: mss301
+      changes:
+        - sql:
+            sql: SELECT 1
+            dbms: postgresql
