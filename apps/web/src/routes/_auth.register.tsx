@@ -1,13 +1,13 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from '@tanstack/react-form';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldError } from '@/lib/form/FieldError';
 import { useRegister } from '@/lib/api/generated/authentication/authentication';
-import { registerSchema, type RegisterValues } from '@/features/auth/schemas';
+import { registerSchema } from '@/features/auth/schemas';
 
 export const Route = createFileRoute('/_auth/register')({
   component: RegisterPage,
@@ -15,10 +15,6 @@ export const Route = createFileRoute('/_auth/register')({
 
 function RegisterPage() {
   const navigate = useNavigate();
-  const form = useForm<RegisterValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { username: '', email: '', password: '', confirmPassword: '' },
-  });
 
   const registerMutation = useRegister({
     mutation: {
@@ -32,11 +28,26 @@ function RegisterPage() {
     },
   });
 
+  const form = useForm({
+    defaultValues: {
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+    validators: { onChange: registerSchema },
+    onSubmit: ({ value }) =>
+      registerMutation.mutate({
+        data: { username: value.username, email: value.email, password: value.password },
+      }),
+  });
+
   return (
     <form
-      onSubmit={form.handleSubmit(({ username, email, password }) =>
-        registerMutation.mutate({ data: { username, email, password } }),
-      )}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void form.handleSubmit();
+      }}
       className="space-y-5"
     >
       <div className="space-y-2 text-center">
@@ -44,55 +55,76 @@ function RegisterPage() {
         <p className="text-sm text-muted-foreground">Tạo tài khoản PetClinic</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
-        <Input id="username" autoComplete="username" {...form.register('username')} />
-        {form.formState.errors.username ? (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.username.message}
-          </p>
-        ) : null}
-      </div>
+      <form.Field
+        name="username"
+        children={(field) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Username</Label>
+            <Input
+              id={field.name}
+              autoComplete="username"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            <FieldError field={field} />
+          </div>
+        )}
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
-        {form.formState.errors.email ? (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.email.message}
-          </p>
-        ) : null}
-      </div>
+      <form.Field
+        name="email"
+        children={(field) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Email</Label>
+            <Input
+              id={field.name}
+              type="email"
+              autoComplete="email"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            <FieldError field={field} />
+          </div>
+        )}
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          {...form.register('password')}
-        />
-        {form.formState.errors.password ? (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.password.message}
-          </p>
-        ) : null}
-      </div>
+      <form.Field
+        name="password"
+        children={(field) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Password</Label>
+            <Input
+              id={field.name}
+              type="password"
+              autoComplete="new-password"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            <FieldError field={field} />
+          </div>
+        )}
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Xác nhận password</Label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          {...form.register('confirmPassword')}
-        />
-        {form.formState.errors.confirmPassword ? (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.confirmPassword.message}
-          </p>
-        ) : null}
-      </div>
+      <form.Field
+        name="confirmPassword"
+        children={(field) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Xác nhận password</Label>
+            <Input
+              id={field.name}
+              type="password"
+              autoComplete="new-password"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            <FieldError field={field} />
+          </div>
+        )}
+      />
 
       <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
         {registerMutation.isPending ? 'Đang đăng ký…' : 'Đăng ký'}
