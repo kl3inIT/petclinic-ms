@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Download OpenAPI aggregate spec từ api-gateway (springdoc) và lưu vào ./openapi/.
- * Yêu cầu: api-gateway đang chạy ở http://localhost:8080.
+ * Yêu cầu: api-gateway đang chạy ở http://localhost:8180.
  *
  * Sử dụng:
  *   pnpm --filter web fetch:openapi
@@ -14,7 +14,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SPEC_URL = process.env.OPENAPI_SPEC_URL ?? 'http://localhost:8080/v3/api-docs';
+const SPEC_URL = process.env.OPENAPI_SPEC_URL ?? 'http://localhost:8180/v3/api-docs';
 const OUTPUT = resolve(__dirname, '../openapi/petclinic-api.json');
 
 async function main() {

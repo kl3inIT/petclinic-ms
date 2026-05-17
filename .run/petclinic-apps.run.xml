@@ -1,7 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="all-services" type="CompoundRunConfigurationType">
-    <toRun name="config-server" type="SpringBootApplicationConfigurationType" />
-    <toRun name="discovery-server" type="SpringBootApplicationConfigurationType" />
+  <configuration default="false" name="🐱 Petclinic Apps" type="CompoundRunConfigurationType">
     <toRun name="api-gateway" type="SpringBootApplicationConfigurationType" />
     <toRun name="auth-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="customers-service" type="SpringBootApplicationConfigurationType" />

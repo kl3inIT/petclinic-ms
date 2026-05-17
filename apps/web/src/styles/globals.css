@@ -4,49 +4,76 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/**
+ * Color palette: lifted từ Jmix petclinic-2 (Lumo theme override).
+ * Primary = soft purple rgb(134, 122, 235) = #867AEB.
+ * Event accents (red/green/yellow/blue/purple) cho status badges.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --background: #ffffff;
+  --foreground: #1c1d21;
+
+  --card: #ffffff;
+  --card-foreground: #1c1d21;
+
+  --popover: #ffffff;
+  --popover-foreground: #1c1d21;
+
+  --primary: #867aeb;
+  --primary-foreground: #ffffff;
+  --primary-50: rgba(134, 122, 235, 0.5);
+  --primary-10: rgba(134, 122, 235, 0.1);
+
+  --secondary: #f3f3f5;
+  --secondary-foreground: #1c1d21;
+
+  --muted: #f6f7f9;
+  --muted-foreground: #6b7280;
+
+  --accent: rgba(134, 122, 235, 0.1);
+  --accent-foreground: #5849c9;
+
+  --destructive: #df6679;
+  --destructive-foreground: #ffffff;
+
+  --success: #23ba75;
+  --success-foreground: #ffffff;
+
+  --warning: #e3a023;
+  --warning-foreground: #ffffff;
+
+  --info: #249faf;
+  --info-foreground: #ffffff;
+
+  --event-purple: #6e64b9;
+
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: rgba(134, 122, 235, 0.5);
+
+  --radius: 0.5rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  --background: #18181b;
+  --foreground: #f5f5f7;
+  --card: #1f1f23;
+  --card-foreground: #f5f5f7;
+  --popover: #1f1f23;
+  --popover-foreground: #f5f5f7;
+  --primary: #a59cf0;
+  --primary-foreground: #1c1d21;
+  --secondary: #27272a;
+  --secondary-foreground: #f5f5f7;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: rgba(165, 156, 240, 0.15);
+  --accent-foreground: #c7c0f5;
+  --destructive: #df6679;
+  --destructive-foreground: #ffffff;
+  --border: #2d2d33;
+  --input: #2d2d33;
+  --ring: rgba(165, 156, 240, 0.5);
 }
 
 @theme inline {
@@ -66,6 +93,12 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -83,4 +116,12 @@
     @apply bg-background text-foreground;
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
+}
+
+/* Login background — Jmix petclinic style */
+.auth-bg {
+  background-image: url('/brand/login-background.svg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
 }

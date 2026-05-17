@@ -1,6 +1,7 @@
 import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
 import { LayoutDashboard, Users, PawPrint, Stethoscope, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/logo';
 import { useAuthStore } from '@/features/auth/store';
 import { cn } from '@/lib/utils';
 
@@ -39,9 +40,9 @@ function AdminLayout() {
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-muted/30 md:flex">
-        <div className="border-b px-6 py-4">
-          <Link to="/admin" className="text-lg font-semibold">
-            PetClinic Admin
+        <div className="flex h-16 items-center border-b px-4">
+          <Link to="/admin" className="flex items-center gap-2">
+            <Logo size="sm" />
           </Link>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">

@@ -21,14 +21,14 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 3333,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8180',
         changeOrigin: true,
       },
       '/.well-known': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8180',
         changeOrigin: true,
       },
     },

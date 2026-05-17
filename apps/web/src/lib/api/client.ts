@@ -38,7 +38,7 @@ async function performRefresh(): Promise<string> {
   if (!refreshToken) throw new Error('No refresh token');
 
   const { data } = await axios.post<RefreshResponse>(
-    `${BASE_URL}/auth/refresh`,
+    `${BASE_URL}/v1/auth/refresh`,
     { refreshToken },
     { headers: { 'Content-Type': 'application/json' } },
   );
@@ -66,7 +66,10 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (original.url?.includes('/auth/login') || original.url?.includes('/auth/refresh')) {
+    if (
+      original.url?.includes('/v1/auth/login') ||
+      original.url?.includes('/v1/auth/refresh')
+    ) {
       return Promise.reject(error);
     }
 

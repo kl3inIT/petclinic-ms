@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="🏗️ Petclinic Infra" type="CompoundRunConfigurationType">
+    <toRun name="config-server" type="SpringBootApplicationConfigurationType" />
+    <toRun name="discovery-server" type="SpringBootApplicationConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

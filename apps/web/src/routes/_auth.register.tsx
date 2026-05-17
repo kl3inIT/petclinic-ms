@@ -18,18 +18,18 @@ function RegisterPage() {
   const navigate = useNavigate();
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { username: '', password: '', confirmPassword: '' },
+    defaultValues: { username: '', email: '', password: '', confirmPassword: '' },
   });
 
   const registerMutation = useMutation({
-    mutationFn: ({ username, password }: RegisterValues) =>
-      authApi.register({ username, password }),
+    mutationFn: ({ username, email, password }: RegisterValues) =>
+      authApi.register({ username, email, password }),
     onSuccess: () => {
       toast.success('Đăng ký thành công, vui lòng đăng nhập');
       void navigate({ to: '/login' });
     },
     onError: () => {
-      toast.error('Username đã tồn tại hoặc dữ liệu không hợp lệ');
+      toast.error('Username/email đã tồn tại hoặc dữ liệu không hợp lệ');
     },
   });
 
@@ -49,6 +49,21 @@ function RegisterPage() {
         {form.formState.errors.username ? (
           <p className="text-sm text-destructive">
             {form.formState.errors.username.message}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          autoComplete="email"
+          {...form.register('email')}
+        />
+        {form.formState.errors.email ? (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.email.message}
           </p>
         ) : null}
       </div>

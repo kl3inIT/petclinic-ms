@@ -97,7 +97,7 @@
 
 <div class="mermaid">
 graph LR
-  Client[Browser / Mobile] -->|Bearer JWT| GW[api-gateway :8080<br/>+ rate limit + CB]
+  Client[Browser / Mobile] -->|Bearer JWT| GW[api-gateway :8180<br/>+ rate limit + CB]
   GW -->|lb://| CUST[customers-service :8181]
   GW -->|lb://| VET[vets-service :8182]
   GW -->|lb://auth-service<br/>/api/v1/auth/**| AUTH[auth-service :8183<br/>RSA keypair<br/>JWKS issuer]
@@ -123,7 +123,7 @@ graph LR
   <thead><tr><th>Service</th><th>Port</th><th>Vai trò bảo mật</th></tr></thead>
   <tbody>
     <tr><td><code>auth-service</code></td><td>8183</td><td>JWT issuer (RSA private key), JWKS publisher, refresh token store, audit logger</td></tr>
-    <tr><td><code>api-gateway</code></td><td>8080</td><td>Defense lớp 1 (validate JWT trước khi forward), per-IP rate limit, CORS, circuit breaker, fallback</td></tr>
+    <tr><td><code>api-gateway</code></td><td>8180</td><td>Defense lớp 1 (validate JWT trước khi forward), per-IP rate limit, CORS, circuit breaker, fallback</td></tr>
     <tr><td><code>customers-service</code></td><td>8181</td><td>Defense lớp 2 (validate JWT độc lập từ JWKS, không trust gateway)</td></tr>
     <tr><td><code>vets-service</code></td><td>8182</td><td>Defense lớp 2 (same)</td></tr>
   </tbody>
@@ -218,7 +218,7 @@ public class PetClinicSecurityAutoConfiguration {
 sequenceDiagram
   autonumber
   actor U as Client
-  participant GW as gateway :8080
+  participant GW as gateway :8180
   participant AS as auth-service :8183
   participant DB as Postgres (auth)
   participant AU as AuthAuditLogger
@@ -339,7 +339,7 @@ public IssuedRefresh issue(UUID userId) {
 sequenceDiagram
   autonumber
   actor U as Client
-  participant GW as gateway :8080
+  participant GW as gateway :8180
   participant CUST as customers-service :8181
   participant JWKS as auth-service JWKS
 

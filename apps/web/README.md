@@ -6,10 +6,10 @@ React 19.2 + Vite 8 (Rolldown) + TanStack Router/Query + Tailwind v4 + shadcn (c
 
 ```bash
 pnpm install
-pnpm --filter @petclinic/web dev          # http://localhost:3000
+pnpm --filter @petclinic/web dev          # http://localhost:3333
 ```
 
-Yêu cầu backend (gateway) chạy ở `http://localhost:8080` — Vite proxy `/api/*` về gateway.
+Yêu cầu backend (gateway) chạy ở `http://localhost:8180` — Vite proxy `/api/*` về gateway.
 
 ## Scripts
 
