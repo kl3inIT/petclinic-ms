@@ -27,6 +27,28 @@ spring:
 
 # CircuitBreaker config — Resilience4j servlet stack (KHÔNG phải reactor).
 # Mở circuit khi 50% requests trong 10 lần gần nhất fail; mở 5s → half-open thử 3 request.
+# OpenAPI aggregation — Swagger UI tại http://localhost:8180/swagger-ui.html
+# Dropdown chọn được spec của 4 service. Mỗi URL trỏ vào /v3/api-docs/{service}
+# (gateway proxy về service tương ứng — xem GatewayRoutesConfig).
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    urls:
+      - name: auth-service
+        url: /v3/api-docs/auth
+      - name: customers-service
+        url: /v3/api-docs/customers
+      - name: vets-service
+        url: /v3/api-docs/vets
+      - name: visits-service
+        url: /v3/api-docs/visits
+  api-docs:
+    enabled: false                          # gateway tự không có endpoint nghiệp vụ — tắt spec riêng
+  show-actuator: false
+
 resilience4j:
   circuitbreaker:
     instances:

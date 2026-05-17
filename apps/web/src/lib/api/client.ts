@@ -1,11 +1,19 @@
 import axios, {
   type AxiosError,
-  type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios';
 import { useAuthStore } from '@/features/auth/store';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
+/**
+ * Axios client cho orval-generated hooks.
+ *
+ * <p><b>BASE_URL = ''</b> — orval sinh URL full (vd {@code /api/v1/auth/login}).
+ * Vite dev server proxy {@code /api} → gateway {@code localhost:8180}. Prod
+ * deploy phía sau ingress cùng host nên cũng dùng relative path.
+ *
+ * <p>Interceptor: gắn Bearer token + auto-refresh khi 401 (single-flight).
+ */
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -38,7 +46,7 @@ async function performRefresh(): Promise<string> {
   if (!refreshToken) throw new Error('No refresh token');
 
   const { data } = await axios.post<RefreshResponse>(
-    `${BASE_URL}/v1/auth/refresh`,
+    `${BASE_URL}/api/v1/auth/refresh`,
     { refreshToken },
     { headers: { 'Content-Type': 'application/json' } },
   );
@@ -67,8 +75,8 @@ apiClient.interceptors.response.use(
     }
 
     if (
-      original.url?.includes('/v1/auth/login') ||
-      original.url?.includes('/v1/auth/refresh')
+      original.url?.includes('/api/v1/auth/login') ||
+      original.url?.includes('/api/v1/auth/refresh')
     ) {
       return Promise.reject(error);
     }
@@ -93,8 +101,3 @@ apiClient.interceptors.response.use(
     }
   },
 );
-
-export async function apiRequest<T>(config: AxiosRequestConfig): Promise<T> {
-  const { data } = await apiClient.request<T>(config);
-  return data;
-}

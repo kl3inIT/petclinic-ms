@@ -43,6 +43,13 @@ public class GatewaySecurityConfig {
                         ).permitAll()
                         .requestMatchers("/fallback").permitAll()
                         .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                        // OpenAPI aggregation — gateway expose 1 Swagger UI list mọi service.
+                        // FE orval codegen cũng fetch ở đây. Spec public là tiêu chuẩn ngành.
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter)));

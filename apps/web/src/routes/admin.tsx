@@ -1,8 +1,9 @@
 import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
-import { LayoutDashboard, Users, PawPrint, Stethoscope, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, PawPrint, Stethoscope, CalendarCheck, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { useAuthStore } from '@/features/auth/store';
+import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin')({
@@ -20,7 +21,7 @@ export const Route = createFileRoute('/admin')({
 });
 
 interface NavItem {
-  to: '/admin' | '/admin/owners' | '/admin/pets' | '/admin/vets';
+  to: '/admin' | '/admin/owners' | '/admin/pets' | '/admin/vets' | '/admin/visits';
   label: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
@@ -28,14 +29,24 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { to: '/admin/visits', label: 'Visits', icon: CalendarCheck },
   { to: '/admin/owners', label: 'Owners', icon: Users },
   { to: '/admin/pets', label: 'Pets', icon: PawPrint },
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },
 ];
 
 function AdminLayout() {
-  const logout = useAuthStore((s) => s.clear);
+  const clear = useAuthStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
+  // Logout BE để revoke refresh token; clear local store rồi redirect dù BE fail.
+  const logoutMutation = useLogout({
+    mutation: {
+      onSettled: () => {
+        clear();
+        window.location.href = '/login';
+      },
+    },
+  });
 
   return (
     <div className="flex min-h-screen">
@@ -71,13 +82,11 @@ function AdminLayout() {
             variant="ghost"
             size="sm"
             className="w-full justify-start"
-            onClick={() => {
-              logout();
-              window.location.href = '/login';
-            }}
+            disabled={logoutMutation.isPending}
+            onClick={() => logoutMutation.mutate()}
           >
             <LogOut className="size-4" />
-            Đăng xuất
+            {logoutMutation.isPending ? 'Đang đăng xuất…' : 'Đăng xuất'}
           </Button>
         </div>
       </aside>

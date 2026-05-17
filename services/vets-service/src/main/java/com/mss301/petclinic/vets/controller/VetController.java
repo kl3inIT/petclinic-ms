@@ -32,7 +32,7 @@ public class VetController {
 
     @GetMapping
     @Operation(summary = "List vets (paginated)", description = "Filter optional by lastName. Use ?page=0&size=20&sort=lastName,asc.")
-    public Page<VetResponse> list(
+    public Page<VetResponse> listVets(
             @RequestParam(required = false) String lastName,
             Pageable pageable
     ) {
@@ -41,21 +41,21 @@ public class VetController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get vet by id")
-    public VetResponse get(@PathVariable Long id) {
+    public VetResponse getVet(@PathVariable Long id) {
         return service.findById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create vet", description = "specialtyNames must match existing specialties (seeded via Liquibase).")
-    public VetResponse create(@RequestBody @Valid VetRequest request) {
+    public VetResponse createVet(@RequestBody @Valid VetRequest request) {
         return service.create(request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete vet by id")
-    public void delete(@PathVariable Long id) {
+    public void deleteVet(@PathVariable Long id) {
         service.deleteById(id);
     }
 }

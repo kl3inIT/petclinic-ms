@@ -32,7 +32,7 @@ public class OwnerController {
 
     @GetMapping
     @Operation(summary = "List owners (paginated)", description = "Filter optional by lastName (contains, case-insensitive). Use ?page=0&size=20&sort=lastName,asc.")
-    public Page<OwnerResponse> list(
+    public Page<OwnerResponse> listOwners(
             @RequestParam(required = false) String lastName,
             Pageable pageable
     ) {
@@ -41,21 +41,21 @@ public class OwnerController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get owner by id")
-    public OwnerResponse get(@PathVariable Long id) {
+    public OwnerResponse getOwner(@PathVariable Long id) {
         return service.findById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create owner")
-    public OwnerResponse create(@RequestBody @Valid OwnerRequest request) {
+    public OwnerResponse createOwner(@RequestBody @Valid OwnerRequest request) {
         return service.create(request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete owner by id")
-    public void delete(@PathVariable Long id) {
+    public void deleteOwner(@PathVariable Long id) {
         service.deleteById(id);
     }
 }

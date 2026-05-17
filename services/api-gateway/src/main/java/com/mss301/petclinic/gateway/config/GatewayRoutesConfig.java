@@ -8,6 +8,7 @@ import org.springframework.web.servlet.function.ServerResponse;
 import java.net.URI;
 import java.time.Duration;
 
+import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.setPath;
 import static org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions.circuitBreaker;
 import static org.springframework.cloud.gateway.server.mvc.filter.LoadBalancerFilterFunctions.lb;
 import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
@@ -101,6 +102,47 @@ public class GatewayRoutesConfig {
                 .route(path("/.well-known/jwks.json"), http())
                 .filter(lb("auth-service"))
                 .filter(circuitBreaker(cb -> cb.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
+    // ─── OpenAPI aggregation ───────────────────────────────────────────────
+    // Mỗi service expose spec ở /v3/api-docs. Gateway proxy theo tên dịch vụ
+    // (/v3/api-docs/{service}) — Swagger UI dropdown chọn được, orval fetch
+    // dễ. setPath() rewrite request thành /v3/api-docs trước khi forward.
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsAuthRoute() {
+        return route("api-docs-auth")
+                .route(path("/v3/api-docs/auth"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("auth-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsCustomersRoute() {
+        return route("api-docs-customers")
+                .route(path("/v3/api-docs/customers"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("customers-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsVetsRoute() {
+        return route("api-docs-vets")
+                .route(path("/v3/api-docs/vets"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("vets-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsVisitsRoute() {
+        return route("api-docs-visits")
+                .route(path("/v3/api-docs/visits"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("visits-service"))
                 .build();
     }
 }

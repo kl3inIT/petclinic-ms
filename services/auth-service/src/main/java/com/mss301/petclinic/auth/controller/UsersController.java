@@ -32,7 +32,7 @@ public class UsersController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Look up user by id — for cross-service event enrichment")
-    public UserResponse get(@PathVariable UUID id) {
+    public UserResponse getUser(@PathVariable UUID id) {
         return authService.getCurrentUser(id);
     }
 }

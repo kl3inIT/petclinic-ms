@@ -23,7 +23,7 @@ public class SpecialtyController {
 
     @GetMapping
     @Operation(summary = "List all specialties")
-    public List<SpecialtyResponse> list() {
+    public List<SpecialtyResponse> listSpecialties() {
         return service.findAll();
     }
 }

@@ -1,13 +1,12 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { authApi } from '@/features/auth/api';
+import { useRegister } from '@/lib/api/generated/authentication/authentication';
 import { registerSchema, type RegisterValues } from '@/features/auth/schemas';
 
 export const Route = createFileRoute('/_auth/register')({
@@ -21,21 +20,23 @@ function RegisterPage() {
     defaultValues: { username: '', email: '', password: '', confirmPassword: '' },
   });
 
-  const registerMutation = useMutation({
-    mutationFn: ({ username, email, password }: RegisterValues) =>
-      authApi.register({ username, email, password }),
-    onSuccess: () => {
-      toast.success('Đăng ký thành công, vui lòng đăng nhập');
-      void navigate({ to: '/login' });
-    },
-    onError: () => {
-      toast.error('Username/email đã tồn tại hoặc dữ liệu không hợp lệ');
+  const registerMutation = useRegister({
+    mutation: {
+      onSuccess: () => {
+        toast.success('Đăng ký thành công, vui lòng đăng nhập');
+        void navigate({ to: '/login' });
+      },
+      onError: () => {
+        toast.error('Username/email đã tồn tại hoặc dữ liệu không hợp lệ');
+      },
     },
   });
 
   return (
     <form
-      onSubmit={form.handleSubmit((values) => registerMutation.mutate(values))}
+      onSubmit={form.handleSubmit(({ username, email, password }) =>
+        registerMutation.mutate({ data: { username, email, password } }),
+      )}
       className="space-y-5"
     >
       <div className="space-y-2 text-center">
@@ -55,12 +56,7 @@ function RegisterPage() {
 
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          {...form.register('email')}
-        />
+        <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
         {form.formState.errors.email ? (
           <p className="text-sm text-destructive">
             {form.formState.errors.email.message}

@@ -53,14 +53,14 @@ public class VisitController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Đặt visit cho pet với vet vào giờ xác định")
-    public VisitResponse book(@Valid @RequestBody BookVisitRequest request,
-                              @AuthenticationPrincipal Jwt jwt) {
+    public VisitResponse bookVisit(@Valid @RequestBody BookVisitRequest request,
+                                    @AuthenticationPrincipal Jwt jwt) {
         return service.book(request, currentUserId(jwt));
     }
 
     @GetMapping
     @Operation(summary = "List visits — USER thấy của mình, STAFF/ADMIN/VET thấy theo filter")
-    public Page<VisitResponse> search(
+    public Page<VisitResponse> searchVisits(
             @RequestParam(required = false) Long vetId,
             @RequestParam(required = false) Long petId,
             @RequestParam(required = false) VisitStatus status,
@@ -75,26 +75,26 @@ public class VisitController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get visit detail")
-    public VisitResponse get(@PathVariable Long id) {
+    public VisitResponse getVisit(@PathVariable Long id) {
         return service.findById(id);
     }
 
     @PatchMapping("/{id}/start")
     @Operation(summary = "Mark visit IN_PROGRESS (vet/staff)")
-    public VisitResponse start(@PathVariable Long id) {
+    public VisitResponse startVisit(@PathVariable Long id) {
         return service.start(id);
     }
 
     @PatchMapping("/{id}/complete")
     @Operation(summary = "Vet đóng visit + ghi diagnosis/treatment/fee")
-    public VisitResponse complete(@PathVariable Long id,
-                                   @Valid @RequestBody CompleteVisitRequest req) {
+    public VisitResponse completeVisit(@PathVariable Long id,
+                                        @Valid @RequestBody CompleteVisitRequest req) {
         return service.complete(id, req);
     }
 
     @PatchMapping("/{id}/cancel")
     @Operation(summary = "Cancel visit — USER chỉ hủy của mình; STAFF/ADMIN hủy được hết")
-    public VisitResponse cancel(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+    public VisitResponse cancelVisit(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         return service.cancel(id, currentUserId(jwt), isPrivileged(jwt));
     }
 

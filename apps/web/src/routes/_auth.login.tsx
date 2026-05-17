@@ -1,14 +1,13 @@
 import { Link, createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { authApi } from '@/features/auth/api';
+import { useLogin } from '@/lib/api/generated/authentication/authentication';
 import { loginSchema, type LoginValues } from '@/features/auth/schemas';
 import { useAuthStore } from '@/features/auth/store';
 
@@ -31,25 +30,26 @@ function LoginPage() {
     defaultValues: { username: '', password: '' },
   });
 
-  const loginMutation = useMutation({
-    mutationFn: authApi.login,
-    onSuccess: (data) => {
-      setSession({
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        user: { id: data.userId, username: data.username, roles: data.roles },
-      });
-      toast.success(`Xin chào ${data.username}`);
-      void navigate({ to: search.redirect ?? '/admin' });
-    },
-    onError: () => {
-      toast.error('Username hoặc password không đúng');
+  const loginMutation = useLogin({
+    mutation: {
+      onSuccess: (data) => {
+        setSession({
+          accessToken: data.accessToken!,
+          refreshToken: data.refreshToken!,
+          user: { id: data.userId!, username: data.username!, roles: data.roles ?? [] },
+        });
+        toast.success(`Xin chào ${data.username}`);
+        void navigate({ to: search.redirect ?? '/admin' });
+      },
+      onError: () => {
+        toast.error('Username hoặc password không đúng');
+      },
     },
   });
 
   return (
     <form
-      onSubmit={form.handleSubmit((values) => loginMutation.mutate(values))}
+      onSubmit={form.handleSubmit((values) => loginMutation.mutate({ data: values }))}
       className="space-y-5"
     >
       <div className="space-y-2 text-center">

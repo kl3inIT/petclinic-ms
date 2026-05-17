@@ -5,6 +5,8 @@ import com.mss301.petclinic.customers.exception.PetNotFoundException;
 import com.mss301.petclinic.customers.repository.PetRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,9 +27,15 @@ public class PetController {
         this.petRepository = petRepository;
     }
 
+    @GetMapping
+    @Operation(summary = "List pets (paginated) — dùng cho FE dropdown, OpenAPI client")
+    public Page<PetResponse> listPets(Pageable pageable) {
+        return petRepository.findAll(pageable).map(PetResponse::from);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get pet by id (returns ownerId for cross-service validation)")
-    public PetResponse get(@PathVariable Long id) {
+    public PetResponse getPet(@PathVariable Long id) {
         return petRepository.findById(id)
                 .map(PetResponse::from)
                 .orElseThrow(() -> new PetNotFoundException(id.toString()));
