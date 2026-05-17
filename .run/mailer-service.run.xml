@@ -1,0 +1,22 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="mailer-service" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="petclinic-mailer" />
+    <working_directory value="$PROJECT_DIR$/services/mailer-service" />
+    <parameters value="" />
+    <EXTENSION ID="net.ashald.envfile">
+      <option name="IS_ENABLED" value="false" />
+      <option name="IS_SUBST" value="false" />
+      <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+      <option name="IS_IGNORE_MISSING_FILES" value="false" />
+      <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+      <ENTRIES>
+        <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+      </ENTRIES>
+    </EXTENSION>
+    <kind value="PACKAGE" />
+    <package value="github.com/mss301/petclinic-mailer/cmd/mailer" />
+    <directory value="$PROJECT_DIR$/services/mailer-service" />
+    <filePath value="$PROJECT_DIR$/services/mailer-service/cmd/mailer/main.go" />
+    <method v="2" />
+  </configuration>
+</component>
