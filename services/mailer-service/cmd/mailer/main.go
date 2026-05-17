@@ -24,6 +24,9 @@ import (
 	"github.com/mss301/petclinic-mailer/internal/store"
 )
 
+// Format thời gian kiểu Việt Nam — hiển thị trong template HTML.
+const vnTimeLayout = "15:04 - 02/01/2006"
+
 func main() {
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)
@@ -64,21 +67,25 @@ func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	// Bind handler đóng over (m, idem, log, cfg) → 1 closure handler per event type.
-	handlerUserRegistered := makeUserRegisteredHandler(m, idem, cfg.AppBaseURL, log)
-
 	var wg sync.WaitGroup
+	subscribe := func(queue, routingKey, tagSuffix string, h consumer.Handler) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := cons.Subscribe(ctx, queue, routingKey, cfg.ConsumerName+"-"+tagSuffix, h)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				log.Error("subscriber stopped", "queue", queue, "err", err)
+				cancel()
+			}
+		}()
+	}
 
-	// Subscribe user.registered
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := cons.Subscribe(ctx, "mailer.user.registered", "user.registered", cfg.ConsumerName+"-user-registered", handlerUserRegistered)
-		if err != nil && !errors.Is(err, context.Canceled) {
-			log.Error("subscriber stopped", "err", err)
-			cancel()
-		}
-	}()
+	subscribe("mailer.user.registered", "user.registered", "user-registered",
+		makeUserRegisteredHandler(m, idem, cfg.AppBaseURL, log))
+	subscribe("mailer.visit.scheduled", "visit.scheduled", "visit-scheduled",
+		makeVisitScheduledHandler(m, idem, cfg.AppBaseURL, log))
+	subscribe("mailer.visit.completed", "visit.completed", "visit-completed",
+		makeVisitCompletedHandler(m, idem, cfg.AppBaseURL, log))
 
 	// Health HTTP server — k8s/CI ping liveness/readiness.
 	srv := &http.Server{
@@ -114,31 +121,95 @@ func run() error {
 	return nil
 }
 
+// claim — common boilerplate: unmarshal + idempotency check.
+// Trả về (eventID, ok=true) nếu cần gửi mail; ok=false nếu skip (đã thấy hoặc invalid).
+func claim[T any](ctx context.Context, body []byte, idem *store.Idempotency, eventTypeName string,
+	getID func(*T) string, getRequired func(*T) string,
+	log *slog.Logger) (*T, bool, error) {
+	var ev T
+	if err := json.Unmarshal(body, &ev); err != nil {
+		return nil, false, fmt.Errorf("unmarshal %s: %w", eventTypeName, err)
+	}
+	id := getID(&ev)
+	if id == "" {
+		return nil, false, fmt.Errorf("invalid %s: missing eventId", eventTypeName)
+	}
+	if required := getRequired(&ev); required == "" {
+		return nil, false, fmt.Errorf("invalid %s: missing required field", eventTypeName)
+	}
+	fresh, err := idem.Claim(ctx, id)
+	if err != nil {
+		return nil, false, fmt.Errorf("idempotency claim: %w", err)
+	}
+	if !fresh {
+		log.Info("event already processed, skipping", "eventId", id, "type", eventTypeName)
+		return nil, false, nil
+	}
+	return &ev, true, nil
+}
+
 func makeUserRegisteredHandler(m *mailer.Mailer, idem *store.Idempotency, appURL string, log *slog.Logger) consumer.Handler {
 	return func(ctx context.Context, body []byte) error {
-		var ev events.UserRegistered
-		if err := json.Unmarshal(body, &ev); err != nil {
-			// Bad payload → đẩy DLQ, không retry.
-			return fmt.Errorf("unmarshal user.registered: %w", err)
+		ev, ok, err := claim[events.UserRegistered](ctx, body, idem, "user.registered",
+			func(e *events.UserRegistered) string { return e.EventID },
+			func(e *events.UserRegistered) string { return e.Email },
+			log)
+		if err != nil || !ok {
+			return err
 		}
-		if ev.EventID == "" || ev.Email == "" {
-			return fmt.Errorf("invalid event: missing eventId or email")
-		}
-
-		fresh, err := idem.Claim(ctx, ev.EventID)
-		if err != nil {
-			return fmt.Errorf("idempotency claim: %w", err)
-		}
-		if !fresh {
-			log.Info("event already processed, skipping", "eventId", ev.EventID)
-			return nil
-		}
-
-		data := map[string]any{
+		return m.Send(ctx, ev.Email, "Chào mừng đến Petclinic MSS301!", "welcome", map[string]any{
 			"Username":   ev.Username,
 			"AppBaseURL": appURL,
+		})
+	}
+}
+
+func makeVisitScheduledHandler(m *mailer.Mailer, idem *store.Idempotency, appURL string, log *slog.Logger) consumer.Handler {
+	return func(ctx context.Context, body []byte) error {
+		ev, ok, err := claim[events.VisitScheduled](ctx, body, idem, "visit.scheduled",
+			func(e *events.VisitScheduled) string { return e.EventID },
+			func(e *events.VisitScheduled) string { return e.CustomerEmail },
+			log)
+		if err != nil || !ok {
+			return err
 		}
-		return m.Send(ctx, ev.Email, "Chào mừng đến Petclinic MSS301!", "welcome", data)
+		return m.Send(ctx, ev.CustomerEmail,
+			fmt.Sprintf("Xác nhận lịch khám cho %s — Petclinic MSS301", ev.PetName),
+			"visit-reminder", map[string]any{
+				"CustomerUsername":     ev.CustomerUsername,
+				"VisitID":              ev.VisitID,
+				"PetName":              ev.PetName,
+				"VetName":              ev.VetName,
+				"ScheduledAtFormatted": ev.ScheduledAt.Local().Format(vnTimeLayout),
+				"Reason":               ev.Reason,
+				"AppBaseURL":           appURL,
+			})
+	}
+}
+
+func makeVisitCompletedHandler(m *mailer.Mailer, idem *store.Idempotency, appURL string, log *slog.Logger) consumer.Handler {
+	return func(ctx context.Context, body []byte) error {
+		ev, ok, err := claim[events.VisitCompleted](ctx, body, idem, "visit.completed",
+			func(e *events.VisitCompleted) string { return e.EventID },
+			func(e *events.VisitCompleted) string { return e.CustomerEmail },
+			log)
+		if err != nil || !ok {
+			return err
+		}
+		return m.Send(ctx, ev.CustomerEmail,
+			fmt.Sprintf("Tóm tắt buổi khám của %s — Petclinic MSS301", ev.PetName),
+			"visit-completed", map[string]any{
+				"CustomerUsername":     ev.CustomerUsername,
+				"VisitID":              ev.VisitID,
+				"PetName":              ev.PetName,
+				"VetName":              ev.VetName,
+				"ScheduledAtFormatted": ev.ScheduledAt.Local().Format(vnTimeLayout),
+				"CompletedAtFormatted": ev.CompletedAt.Local().Format(vnTimeLayout),
+				"Diagnosis":            ev.Diagnosis,
+				"Treatment":            ev.Treatment,
+				"Fee":                  ev.Fee,
+				"AppBaseURL":           appURL,
+			})
 	}
 }
 

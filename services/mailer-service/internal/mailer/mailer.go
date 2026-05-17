@@ -17,11 +17,11 @@ import (
 
 // Mailer — bọc gomail.Client + cache template đã parse.
 type Mailer struct {
-	client       *mail.Client
-	from         string
-	fromName     string
-	templates    *template.Template
-	log          *slog.Logger
+	client    *mail.Client
+	from      string
+	fromName  string
+	templates *template.Template
+	log       *slog.Logger
 }
 
 // New khởi tạo gomail client + parse tất cả .html trong templatesDir.

@@ -15,11 +15,11 @@ type Config struct {
 	HTTPPort int `env:"HTTP_PORT" envDefault:"8186"`
 
 	// AMQP
-	AMQPURL          string `env:"AMQP_URL" envDefault:"amqp://guest:guest@localhost:5672/"`
-	EventsExchange   string `env:"EVENTS_EXCHANGE" envDefault:"petclinic.events"`
-	EventsDLX        string `env:"EVENTS_DLX" envDefault:"petclinic.events.dlx"`
-	PrefetchCount    int    `env:"AMQP_PREFETCH" envDefault:"10"`
-	ConsumerName     string `env:"CONSUMER_NAME" envDefault:"mailer-service"`
+	AMQPURL        string `env:"AMQP_URL" envDefault:"amqp://guest:guest@localhost:5672/"`
+	EventsExchange string `env:"EVENTS_EXCHANGE" envDefault:"petclinic.events"`
+	EventsDLX      string `env:"EVENTS_DLX" envDefault:"petclinic.events.dlx"`
+	PrefetchCount  int    `env:"AMQP_PREFETCH" envDefault:"10"`
+	ConsumerName   string `env:"CONSUMER_NAME" envDefault:"mailer-service"`
 
 	// SMTP — default Mailpit dev
 	SMTPHost     string `env:"SMTP_HOST" envDefault:"localhost"`
@@ -30,10 +30,10 @@ type Config struct {
 	MailFromName string `env:"MAIL_FROM_NAME" envDefault:"Petclinic MSS301"`
 
 	// Redis (idempotency dedupe)
-	RedisAddr        string        `env:"REDIS_ADDR" envDefault:"localhost:6380"`
-	RedisPassword    string        `env:"REDIS_PASSWORD" envDefault:""`
-	RedisDB          int           `env:"REDIS_DB" envDefault:"0"`
-	IdempotencyTTL   time.Duration `env:"IDEMPOTENCY_TTL" envDefault:"168h"` // 7 ngày
+	RedisAddr      string        `env:"REDIS_ADDR" envDefault:"localhost:6380"`
+	RedisPassword  string        `env:"REDIS_PASSWORD" envDefault:""`
+	RedisDB        int           `env:"REDIS_DB" envDefault:"0"`
+	IdempotencyTTL time.Duration `env:"IDEMPOTENCY_TTL" envDefault:"168h"` // 7 ngày
 
 	// Templates
 	TemplatesDir string `env:"TEMPLATES_DIR" envDefault:"templates"`

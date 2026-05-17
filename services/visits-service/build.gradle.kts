@@ -7,6 +7,7 @@ dependencies {
     implementation(project(":shared:common-jpa"))
     implementation(project(":shared:common-security"))      // JWT bearer auth
     implementation(project(":shared:common-clients"))       // service-to-service RestClient + JWT forward
+    implementation(project(":shared:common-events"))        // publish visit.scheduled / visit.completed → mailer
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.data.jpa)

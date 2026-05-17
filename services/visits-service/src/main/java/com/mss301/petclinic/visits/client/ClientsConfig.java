@@ -37,4 +37,15 @@ public class ClientsConfig {
                 .build()
                 .createClient(VetsClient.class);
     }
+
+    @Bean
+    public UsersClient usersClient(@LoadBalanced RestClient.Builder lbBuilder) {
+        RestClient client = lbBuilder.clone()
+                .baseUrl("http://auth-service")
+                .build();
+        return HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(client))
+                .build()
+                .createClient(UsersClient.class);
+    }
 }

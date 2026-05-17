@@ -1,12 +1,18 @@
 package com.mss301.petclinic.visits.service.impl;
 
+import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.visits.client.CustomersClient;
 import com.mss301.petclinic.visits.client.PetSummary;
+import com.mss301.petclinic.visits.client.UserSummary;
+import com.mss301.petclinic.visits.client.UsersClient;
+import com.mss301.petclinic.visits.client.VetSummary;
 import com.mss301.petclinic.visits.client.VetsClient;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
+import com.mss301.petclinic.visits.events.VisitCompletedEvent;
+import com.mss301.petclinic.visits.events.VisitScheduledEvent;
 import com.mss301.petclinic.visits.exception.SlotTakenException;
 import com.mss301.petclinic.visits.exception.VisitNotFoundException;
 import com.mss301.petclinic.visits.model.Visit;
@@ -14,6 +20,9 @@ import com.mss301.petclinic.visits.model.VisitStatus;
 import com.mss301.petclinic.visits.repository.VisitRepository;
 import com.mss301.petclinic.visits.repository.VisitSpecifications;
 import com.mss301.petclinic.visits.service.VisitService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,30 +38,39 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class VisitServiceImpl implements VisitService {
 
+    private static final Logger log = LoggerFactory.getLogger(VisitServiceImpl.class);
+
     private final VisitRepository repository;
     private final CustomersClient customersClient;
     private final VetsClient vetsClient;
+    private final UsersClient usersClient;
+    /** Optional — broker có thể disabled (test profile) hoặc tạm down. */
+    private final ObjectProvider<EventPublisher> events;
 
     public VisitServiceImpl(VisitRepository repository,
                             CustomersClient customersClient,
-                            VetsClient vetsClient) {
+                            VetsClient vetsClient,
+                            UsersClient usersClient,
+                            ObjectProvider<EventPublisher> events) {
         this.repository = repository;
         this.customersClient = customersClient;
         this.vetsClient = vetsClient;
+        this.usersClient = usersClient;
+        this.events = events;
     }
 
     @Override
     @Transactional
     public VisitResponse book(BookVisitRequest req, UUID currentUserId) {
-        // Cross-service validation #1: vet tồn tại
+        // Cross-service validation — reuse response cho event enrichment
+        VetSummary vet;
         try {
-            vetsClient.getVet(req.vetId());
+            vet = vetsClient.getVet(req.vetId());
         } catch (HttpClientErrorException.NotFound e) {
             throw new BadRequestAlertException(
                     "Vet không tồn tại: " + req.vetId(), "Visit", "vet-not-found");
         }
 
-        // Cross-service validation #2: pet tồn tại
         PetSummary pet;
         try {
             pet = customersClient.getPet(req.petId());
@@ -68,11 +86,15 @@ public class VisitServiceImpl implements VisitService {
         Visit visit = Visit.book(req.petId(), req.vetId(), currentUserId,
                 req.scheduledAt(), req.reason());
 
+        Visit saved;
         try {
-            return VisitResponse.from(repository.save(visit));
+            saved = repository.save(visit);
         } catch (DataIntegrityViolationException e) {
             throw new SlotTakenException();
         }
+
+        publishScheduled(saved, pet, vet, currentUserId);
+        return VisitResponse.from(saved);
     }
 
     @Override
@@ -103,6 +125,7 @@ public class VisitServiceImpl implements VisitService {
     public VisitResponse complete(Long id, CompleteVisitRequest req) {
         Visit v = loadOrThrow(id);
         v.complete(req.diagnosis(), req.treatment(), req.fee());
+        publishCompleted(v);
         return VisitResponse.from(v);
     }
 
@@ -110,7 +133,6 @@ public class VisitServiceImpl implements VisitService {
     @Transactional
     public VisitResponse cancel(Long id, UUID currentUserId, boolean privileged) {
         Visit v = loadOrThrow(id);
-        // Ownership rule — domain logic, không phải framework
         if (!privileged && !v.getCustomerUserId().equals(currentUserId)) {
             throw new AccessDeniedException(
                     "Bạn không thể hủy visit của người khác");
@@ -122,5 +144,47 @@ public class VisitServiceImpl implements VisitService {
     private Visit loadOrThrow(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new VisitNotFoundException(id.toString()));
+    }
+
+    /**
+     * Best-effort publish — exception KHÔNG rollback transaction. Broker down hoặc
+     * auth lookup fail thì chỉ log warning. Production cần outbox pattern cho event
+     * tiền (invoice/payment); welcome+reminder mất 1 mail chấp nhận được.
+     */
+    private void publishScheduled(Visit saved, PetSummary pet, VetSummary vet, UUID currentUserId) {
+        EventPublisher publisher = events.getIfAvailable();
+        if (publisher == null) {
+            return;
+        }
+        try {
+            UserSummary user = usersClient.getUser(currentUserId);
+            publisher.publish(VisitScheduledEvent.of(
+                    saved.getId(), saved.getScheduledAt(), saved.getReason(),
+                    user.id(), user.username(), user.email(),
+                    pet.id(), pet.name(),
+                    vet.id(), vet.firstName() + " " + vet.lastName()));
+        } catch (RuntimeException ex) {
+            log.warn("Publish visit.scheduled failed (visit={}): {}", saved.getId(), ex.getMessage());
+        }
+    }
+
+    private void publishCompleted(Visit v) {
+        EventPublisher publisher = events.getIfAvailable();
+        if (publisher == null) {
+            return;
+        }
+        try {
+            UserSummary user = usersClient.getUser(v.getCustomerUserId());
+            PetSummary pet = customersClient.getPet(v.getPetId());
+            VetSummary vet = vetsClient.getVet(v.getVetId());
+            publisher.publish(VisitCompletedEvent.of(
+                    v.getId(), v.getScheduledAt(), Instant.now(),
+                    user.id(), user.username(), user.email(),
+                    pet.id(), pet.name(),
+                    vet.id(), vet.firstName() + " " + vet.lastName(),
+                    v.getDiagnosis(), v.getTreatment(), v.getFee()));
+        } catch (RuntimeException ex) {
+            log.warn("Publish visit.completed failed (visit={}): {}", v.getId(), ex.getMessage());
+        }
     }
 }

@@ -7,6 +7,12 @@ spring:
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
+  # Visits publish visit.scheduled / visit.completed → cần RabbitMQ.
+  docker:
+    compose:
+      profiles:
+        active: ["db", "mq"]
+
 logging:
   level:
     org.hibernate.SQL: INFO
