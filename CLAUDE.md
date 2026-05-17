@@ -92,6 +92,15 @@ Cross-cutting code lives in `shared/`. Services depend via `implementation(proje
   - `loadBalancedRestClientBuilder` — `@LoadBalanced` builder pre-wired with `JwtForwardInterceptor`. Consumers inject with `@LoadBalanced RestClient.Builder` qualifier to opt into LB.
   - Service consumes by declaring local `@HttpExchange` interface + `@Bean` factory cloning the LB builder with `baseUrl("http://<service-name>")`. See `services/visits-service/src/main/java/com/mss301/petclinic/visits/client/`. **Pattern: client + DTO records live in the CONSUMER service (Tolerant Reader), not in shared/ — downstream service can evolve API without breaking consumers.**
 
+- **`shared/common-events`** — async event infrastructure over RabbitMQ:
+  - `DomainEvent` — interface contract (`eventId`, `eventType`, `occurredAt`, `source`, `routingKey()` default = eventType). Publisher service declares concrete records implementing it under its own `events/` package.
+  - `EventPublisher` — thin wrapper over `RabbitTemplate.convertAndSend(exchange, routingKey, event)`. Service injects this, never touches RabbitTemplate directly.
+  - `EventsProperties` (`petclinic.events.*`) — exchange name (default `petclinic.events` topic), DLX name (`petclinic.events.dlx`), `enabled` flag (set `false` in `application-test.yml`).
+  - `EventQueues.consumer(queueName, routingKey, props)` — returns `Declarables` with main queue (durable, `x-dead-letter-exchange` arg) + DLQ + bindings. **Per-service per-event-type queue** (vd `billing.visit.completed` + `billing.visit.completed.dlq`) for isolated retry/debug.
+  - Uses `JacksonJsonMessageConverter` (Jackson 3 — Boot 4 default; `Jackson2JsonMessageConverter` is deprecated for removal).
+  - **Tolerant Reader on consumer:** consumer redeclares its own DTO record (NOT importing the publisher's event class). Jackson silently ignores fields the consumer doesn't model.
+  - **Idempotency:** publisher does NOT guarantee exactly-once. Consumer must dedupe by `eventId` (UUID) — recommend a `processed_events` table with unique constraint, check inside the same `@Transactional` boundary as the side effect.
+
 **Auto-config descriptor:** Each shared module ships `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` (Spring Boot 3+ replacement for legacy `spring.factories`). All beans use `@ConditionalOnMissingBean` so services can override.
 
 **Rule: cross-cutting yes, domain no.** Never put entities, repositories, or business services in `shared/`. Each service owns its domain.
@@ -234,10 +243,17 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
 
 ### Dev infrastructure
 
-- `compose.yaml` defines `postgres` service with label `org.springframework.boot.service-connection: postgres`. Spring Boot Docker Compose support auto-detects, starts container, injects datasource config — no manual `spring.datasource.url`.
-- **Host port 5433:5432** (not 5432) because dev machines commonly have another Postgres bound to 5432.
-- `lifecycle-management: start-only` — container persists across app restarts (faster dev loop).
-- Per-service `application.yml`: `spring.docker.compose.file: compose.yaml` (relative, resolved from root because run configs set WORKING_DIRECTORY=$PROJECT_DIR$).
+- `compose.yaml` defines infra split by **profiles** — service `up` is opt-in:
+  - `db` → Postgres 18 (host port **5433:5432** — dev machines often have another PG on 5432)
+  - `mq` → RabbitMQ 4 management (AMQP **5672**, UI **http://localhost:15672**, `guest/guest`)
+  - `cache` → Redis 8 (host port **6380:6379** — dev machines often have another Redis on 6379)
+  - `mail` → Mailpit (SMTP **1025**, UI **http://localhost:8025**, no auth)
+  - `storage` → MinIO + auto-init (S3 **9000**, console **http://localhost:9001**, `minioadmin/minioadmin`, buckets `pet-photos` / `invoices` / `avatars` pre-created)
+  - `all` → every infra service at once
+- Spring Boot Docker Compose support auto-detects each container via `org.springframework.boot.service-connection` label (Postgres, RabbitMQ, Redis) and injects connection config — no manual `spring.datasource.url` / `spring.rabbitmq.host`. Mailpit + MinIO have no Boot connection adapter; config defaults live in `application-dev.yml` / per-service yml.
+- `lifecycle-management: start-only` — containers persist across app restarts (faster dev loop).
+- Per-service `application.yml`: `spring.docker.compose.file: compose.yaml` (relative, resolved from root because run configs set WORKING_DIRECTORY=$PROJECT_DIR$). Service using events/cache/mail/storage adds the relevant profile to `spring.docker.compose.profiles.active` in its own `<service>-dev.yml`.
+- Manual stack control: `docker compose --profile all up -d` (everything), `docker compose --profile db --profile mq up -d` (subset).
 
 ### Testing strategy
 
@@ -302,6 +318,10 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
 17. **Postgres + JPQL `(:param IS NULL OR field = :param)` filter pattern fails with "could not determine data type of parameter $N"** — Postgres can't infer NULL parameter type when the same param is bound twice in `IS NULL OR =` shape. Use Spring Data **Specification** (`JpaSpecificationExecutor<T>`) for dynamic filters: add predicate to the criteria query only when the param is non-null. See `visits-service/.../VisitSpecifications.java` + `VisitRepository extends JpaRepository<Visit, Long>, JpaSpecificationExecutor<Visit>`. Cleaner than COALESCE workarounds and avoids the bug entirely.
 
 18. **Filter-chain security > scattered `@PreAuthorize`** — declare role + URL rules in a single `<Service>SecurityConfig` overriding `common-security`'s default `SecurityFilterChain`. Controller stays free of annotations. Resource-level checks (e.g., "USER can only cancel own visit") live in the SERVICE layer after the entity is loaded — throw `AccessDeniedException` from `org.springframework.security.access`. Avoids: (a) double DB hit when `@PreAuthorize` triggers entity load via `@securityHelper.isOwner(#id)`, (b) rules scattered between filter chain + `@PreAuthorize`, (c) testing controllers with full Spring Security context. See `visits-service/.../config/VisitsSecurityConfig.java`.
+
+19. **Spring AMQP 4.x renamed the Jackson 3 converter to `JacksonJsonMessageConverter` (no version digit)** — Boot 4 / Spring AMQP 4 ship Jackson 3 as default. The class is **`org.springframework.amqp.support.converter.JacksonJsonMessageConverter`** (NOT `Jackson3JsonMessageConverter` — that name doesn't exist). The Jackson 2 variant retains its number: `Jackson2JsonMessageConverter` (kept but deprecated for removal). When Boot AMQP autoconfig sees a `MessageConverter` bean it wires it onto `RabbitTemplate` automatically — `common-events` declares `JacksonJsonMessageConverter` as `@ConditionalOnMissingBean(MessageConverter.class)` so services can override.
+
+20. **AMQP event topology — fanout via topic exchange, per-consumer DLQ** — `common-events` declares ONE shared topic exchange (`petclinic.events`) + ONE shared DLX (`petclinic.events.dlx`). Consumers declare their own queue per event type using `EventQueues.consumer("<service>.<routingKey>", routingKey, props)` which sets `x-dead-letter-exchange` + `x-dead-letter-routing-key` on the main queue, creates a parallel `.dlq` queue, and binds both to the right exchange. **Per-service per-event-type** queues (not shared) → independent retry, independent failure isolation, easy to inspect a single subscriber's stuck messages.
 
 ## MCP and tooling
 

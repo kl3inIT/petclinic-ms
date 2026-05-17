@@ -32,3 +32,9 @@ logging:
   level:
     root: WARN
     com.mss301.petclinic: INFO            # vẫn thấy log app, ẩn nhiễu của framework
+
+# common-events: skip autoconfig topology + EventPublisher trong test.
+# Test nào cần broker thật → dùng RabbitMQTestcontainer + override petclinic.events.enabled=true.
+petclinic:
+  events:
+    enabled: false

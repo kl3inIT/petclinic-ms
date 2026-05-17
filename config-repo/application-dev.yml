@@ -2,12 +2,21 @@
 
 spring:
   # Tự start Postgres từ compose.yaml ở rootDir khi bootRun. Container persist (`start-only`).
+  # Service dùng common-events tự bổ sung "mq" vào profile list ở <service>-dev.yml.
   docker:
     compose:
       file: compose.yaml
       profiles:
         active: ["db"]
       lifecycle-management: start-only
+
+  # RabbitMQ default localhost:5672 / guest:guest — match compose.yaml mq profile.
+  # Service không dùng common-events có thể bỏ qua (autoconfig chỉ bật khi RabbitTemplate trên classpath).
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
 management:
   endpoint:

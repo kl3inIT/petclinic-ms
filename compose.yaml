@@ -1,28 +1,28 @@
 # Dev infrastructure cho petclinic-ms.
 # Spring Boot Docker Compose support tự start/stop khi bootRun.
-# Chạy thủ công: docker compose up -d
 #
-# Profiles cho phép start subset tài nguyên:
-#   docker compose --profile db up -d    # chỉ Postgres
-#   docker compose up -d                  # tất cả không filter profile = chỉ service không có profile
+# Chạy thủ công:
+#   docker compose --profile all up -d         # tất cả infra
+#   docker compose --profile db up -d          # chỉ Postgres
+#   docker compose --profile db --profile mq up -d   # Postgres + RabbitMQ
+#
+# Lưu ý: service không có profile sẽ chạy mỗi lần `docker compose up` không filter,
+# nên mọi infra đều gán profile để dev chủ động chọn.
 
 services:
 
   postgres:
     image: postgres:18-alpine
     container_name: petclinic-postgres
-    profiles: ["db"]
+    profiles: ["db", "all"]
     environment:
       POSTGRES_DB: petclinic
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      # Tiếng UTF-8 + ICU collation cho text-heavy domain
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale-provider=icu --icu-locale=en"
     ports:
-      - "5433:5432"     # host:5433 → container:5432 (5432 host đã bị Postgres khác chiếm)
+      - "5433:5432"
     volumes:
-      # Postgres 18+ đổi layout: major-version-specific directory inside /var/lib/postgresql
-      # (vd /var/lib/postgresql/18/main). Mount parent dir thay vì /data như trước.
       - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d petclinic"]
@@ -31,10 +31,116 @@ services:
       retries: 10
       start_period: 10s
     restart: unless-stopped
-    # Spring Boot Docker Compose support đọc label này để map sang spring.datasource.*
     labels:
       org.springframework.boot.service-connection: postgres
+
+  # Message broker — fanout VisitCompleted → billing + mailer, DLQ retry.
+  # Mgmt UI: http://localhost:15672  (guest/guest)
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: petclinic-rabbitmq
+    profiles: ["mq", "all"]
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"      # AMQP
+      - "15672:15672"    # Mgmt UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    labels:
+      org.springframework.boot.service-connection: rabbit
+
+  # Cache + rate limit + refresh-token blacklist.
+  redis:
+    image: redis:8-alpine
+    container_name: petclinic-redis
+    profiles: ["cache", "all"]
+    ports:
+      - "6380:6379"      # host:6380 → container:6379 (6379 host bị Redis khác chiếm)
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    labels:
+      org.springframework.boot.service-connection: redis
+
+  # Dev SMTP — bắt mọi mail outbound + xem trong UI, không gửi thật.
+  # UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: petclinic-mailpit
+    profiles: ["mail", "all"]
+    ports:
+      - "1025:1025"      # SMTP
+      - "8025:8025"      # Web UI
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    restart: unless-stopped
+
+  # S3-compatible object storage — pet photos, invoice PDF, avatar.
+  # Console: http://localhost:9001  (minioadmin/minioadmin)
+  minio:
+    image: minio/minio:latest
+    container_name: petclinic-minio
+    profiles: ["storage", "all"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"      # S3 API
+      - "9001:9001"      # Console
+    volumes:
+      - minio_data:/data
+    command: ["server", "/data", "--console-address", ":9001"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  # Tạo bucket mặc định lúc init, exit ngay sau khi xong.
+  minio-init:
+    image: minio/mc:latest
+    container_name: petclinic-minio-init
+    profiles: ["storage", "all"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb --ignore-existing local/pet-photos;
+      mc mb --ignore-existing local/invoices;
+      mc mb --ignore-existing local/avatars;
+      mc anonymous set download local/pet-photos;
+      mc anonymous set download local/avatars;
+      exit 0;
+      "
+    restart: "no"
 
 volumes:
   postgres_data:
     name: petclinic-postgres-data
+  rabbitmq_data:
+    name: petclinic-rabbitmq-data
+  redis_data:
+    name: petclinic-redis-data
+  minio_data:
+    name: petclinic-minio-data
