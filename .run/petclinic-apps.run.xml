@@ -6,6 +6,7 @@
     <toRun name="vets-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="visits-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="mailer-service" type="GoApplicationRunConfiguration" />
+    <toRun name="admin-server" type="SpringBootApplicationConfigurationType" />
     <method v="2" />
   </configuration>
 </component>

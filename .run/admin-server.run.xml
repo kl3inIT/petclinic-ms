@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="admin-server" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="petclinic-ms.services.admin-server.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.mss301.petclinic.admin.AdminServerApplication" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+    <option name="ACTIVE_PROFILES" value="" />
+    <option name="UPDATE_ACTION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+    <option name="SHORTEN_COMMAND_LINE" value="ARGS_FILE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

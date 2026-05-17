@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: admin-server
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+server:
+  port: 8185                    # next sau visits (8184); mailer chiếm 8186.
+
+management:
+  server:
+    port: 9185                  # convention 9xxx — đồng nhất với 5 service kia.

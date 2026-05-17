@@ -31,7 +31,23 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics, prometheus
+        # Mở rộng cho Spring Boot Admin: loggers (đổi level runtime), env, mappings,
+        # threaddump, heapdump, configprops, beans, scheduledtasks. Dev/learning project —
+        # gateway permit-all /actuator của admin-server. Prod siết lại bằng basic-auth + IP allow.
+        include: health, info, metrics, prometheus, loggers, env, mappings, threaddump, heapdump, configprops, beans, scheduledtasks
+  endpoint:
+    health:
+      # Service tự coi mình UP/DOWN cho SBA — chi tiết components (db, diskSpace) để dev nhìn.
+      show-details: always
+    env:
+      # Cho phép sửa property runtime qua SBA UI — handy debug, prod tắt.
+      post:
+        enabled: true
+    loggers:
+      access: unrestricted
+  info:
+    env:
+      enabled: true                       # /actuator/info đọc `info.*` từ env
 
 springdoc:
   swagger-ui:

@@ -21,6 +21,7 @@ import (
 	"github.com/mss301/petclinic-mailer/internal/consumer"
 	"github.com/mss301/petclinic-mailer/internal/events"
 	"github.com/mss301/petclinic-mailer/internal/mailer"
+	"github.com/mss301/petclinic-mailer/internal/sba"
 	"github.com/mss301/petclinic-mailer/internal/store"
 )
 
@@ -93,11 +94,29 @@ func run() error {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+	healthHandler := func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"UP"}`))
+	}
+	// `/health` cho k8s liveness; `/actuator/health` cho Spring Boot Admin scrape.
+	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/actuator/health", healthHandler)
+	// `/actuator/info` — SBA hiển thị tab Info. Static metadata, không động.
+	mux.HandleFunc("/actuator/info", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"app":{"name":"mailer-service","runtime":"go","language":"go1.26"}}`))
 	})
 	srv.Handler = mux
+
+	// Self-register tới SBA — background goroutine, không block main.
+	// Mailer KHÔNG trên Eureka nên SBA không auto-discover được.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sba.Register(ctx, cfg.AdminServerURL, "mailer-service", cfg.AdminPublicHost, cfg.HTTPPort, log)
+	}()
 
 	wg.Add(1)
 	go func() {
