@@ -54,6 +54,12 @@ docker compose --profile all up -d
 
 # Run the Go mailer-service (NOT a Gradle module — see gotcha #21)
 cd services/mailer-service && go run ./cmd/mailer
+
+# Frontend dev (Vite on :3333 → proxies /api to gateway :8180)
+cd apps/web && pnpm dev
+
+# Regenerate API client after BE changes (requires gateway running)
+cd apps/web && pnpm fetch:openapi && pnpm generate:api
 ```
 
 In IntelliJ, prefer the committed run configs in `.run/`:
@@ -266,6 +272,41 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
 - **Testcontainers, not H2.** H2 in PostgreSQL mode misses Postgres-specific behavior (JSONB, ICU collation, `BIGSERIAL`, advisory locks). Tests use `@Container @ServiceConnection PostgreSQLContainer<>("postgres:18-alpine")` — Spring auto-wires the datasource.
 - Test profile keeps Liquibase **enabled** — migration is part of what's being validated.
 
+### Frontend API codegen (orval, contract-driven)
+
+The FE NEVER hand-writes API clients or types. Every BE endpoint becomes a typed function + TanStack Query hook via `orval`. Manual axios calls (`apiRequest({ url: '/v1/auth/login', ... })`) are forbidden after the orval setup landed — they're replaced by `useLogin({ mutation: { onSuccess } })`.
+
+**Pipeline:**
+
+1. **Gateway aggregates OpenAPI** at `/v3/api-docs/{service}` (one entry per downstream). Each gateway route uses `setPath("/v3/api-docs")` to rewrite the request before `lb://{service}`. Configured in `GatewayRoutesConfig` + permitted in `GatewaySecurityConfig`. Swagger UI dropdown at `http://localhost:8180/swagger-ui.html` (config in `config-repo/api-gateway.yml` → `springdoc.swagger-ui.urls`).
+2. **`pnpm fetch:openapi`** (script `apps/web/scripts/fetch-openapi.ts`) — fetches 4 specs in parallel from gateway, merges `paths` + `components.schemas` + dedupes `tags` into `apps/web/openapi/petclinic-api.json`. Pageable/PageableObject/SortObject collisions are "last wins" since the shape is identical.
+3. **`pnpm generate:api`** — orval reads merged spec + `orval.config.ts` → emits typed functions + `useX` query hooks + `useX` mutation hooks into `apps/web/src/lib/api/generated/` (split by tag). Mutator is `apiMutator` from `lib/api/mutator.ts`, which wraps the project's axios `apiClient` (token interceptor + refresh logic preserved).
+
+**Conventions enforced because of aggregation:**
+
+- **Unique controller method names across services.** Spring uses the Java method name as `operationId` by default. Aggregating multiple services into one spec collides on generic names. Always name methods `listOwners`/`getOwner`/`createOwner` — never bare `list`/`get`/`create`. Orval generates `useListOwners`, `useGetOwner`, etc.
+- **Spring `Pageable` becomes a nested object in generated params**: `useSearchVisits({ pageable: { page: 0, size: 50, sort: ['scheduledAt,desc'] } })`, NOT flat `{ page, size, sort }`. `sort` is `string[]`. Surfaces on the FE side — BE controllers stay unchanged.
+- **`apiClient.baseURL = ''`** — orval emits full paths (`/api/v1/auth/login`); Vite dev proxy `/api → :8180` resolves them. Prod deploy behind same-origin ingress works identically. `VITE_API_BASE_URL` only override if FE deploys to a different host than the gateway.
+- **DON'T edit generated files.** They're regen-overwritten. Helpers that orval can't generate (Vietnamese status labels, color mappings) live next to the feature, vd `features/visits/labels.ts` + `components/VisitStatusBadge.tsx`.
+
+**Workflow when BE API changes:**
+
+```bash
+# 1. Restart gateway (if controller paths/operationIds changed)
+# 2. Regen:
+cd apps/web
+pnpm fetch:openapi   # refresh spec from gateway
+pnpm generate:api    # regen types + hooks
+pnpm typecheck       # TS errors flag broken call sites — fix one by one
+```
+
+The `pnpm typecheck` step is the contract enforcement: any place still referencing a removed/renamed endpoint or a changed payload shape errors at build time, not at runtime.
+
+**When orval can't yet generate:**
+
+- Zod forms (validation that can't be inferred from OpenAPI alone) — write in `features/<x>/schemas.ts`.
+- Cross-cutting state (auth store, query keys for invalidation predicates) — write manually.
+
 ## Critical gotchas
 
 1. **Spring Boot 4 modularization** — use `spring-boot-starter-*` not raw third-party deps. Boot 4 doesn't auto-configure raw `liquibase-core`, `testcontainers-core`, etc. Many classes moved packages (`LiquibaseProperties`, `AutoConfigureDataMongo` removed entirely). Verify imports against Boot 4 changelog before writing.
@@ -278,7 +319,7 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
 
 5. **Precompiled script plugins (`build-logic/`)** — IntelliJ inspection often shows ERRORS in `*.gradle.kts` before Gradle sync runs (accessor types not yet generated). Run a Gradle sync — if Gradle build succeeds, the code is correct regardless of IDE squiggles.
 
-6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (N-N join + Set seed data) → `discovery-server` (Eureka registry, port 8761) → `config-server` (Spring Cloud Config native filesystem, port 8888, reads `config-repo/`) → `api-gateway` (Spring Cloud Gateway 5.x **WebMVC variant**, port 8180, lb:// routes via Eureka) → `auth-service` Iter 1 (port 8183, register/login/me, HMAC HS256 JWT, Spring Security 7 lambda DSL). Iter 2-4 of security roadmap: defense-in-depth (gateway + downstream validate), RSA + JWKS, service-to-service token forward + rate limit + audit. See `docs/security-flow.html`. Phase 5A added `visits-service` (port 8184, state machine SCHEDULED→IN_PROGRESS→COMPLETED + CANCELLED, cross-service calls to customers/vets via HTTP Interface) — first service to consume `shared/common-clients`. Phase 6A added events infra: `shared/common-events` (RabbitMQ topic exchange + DLX, `EventPublisher`, `EventQueues.consumer()` helper, `JacksonJsonMessageConverter`), `compose.yaml` profiles `mq`/`cache`/`mail`/`storage`/`all`, and **`services/mailer-service/` written in Go 1.26** (NOT Spring — see gotcha #21) as the first polyglot service. Auth-service Iter 5 emits `user.registered` event for mailer to consume.
+6. **Service ordering when scaffolding new services** — Done so far: `customers-service` (smallest surface: WebMVC + JPA + Liquibase) → `vets-service` (N-N join + Set seed data) → `discovery-server` (Eureka registry, port 8761) → `config-server` (Spring Cloud Config native filesystem, port 8888, reads `config-repo/`) → `api-gateway` (Spring Cloud Gateway 5.x **WebMVC variant**, port 8180, lb:// routes via Eureka) → `auth-service` Iter 1 (port 8183, register/login/me, HMAC HS256 JWT, Spring Security 7 lambda DSL). Iter 2-4 of security roadmap: defense-in-depth (gateway + downstream validate), RSA + JWKS, service-to-service token forward + rate limit + audit. See `docs/security-flow.html`. Phase 5A added `visits-service` (port 8184, state machine SCHEDULED→IN_PROGRESS→COMPLETED + CANCELLED, cross-service calls to customers/vets via HTTP Interface) — first service to consume `shared/common-clients`. Phase 6A added events infra: `shared/common-events` (RabbitMQ topic exchange + DLX, `EventPublisher`, `EventQueues.consumer()` helper, `JacksonJsonMessageConverter`), `compose.yaml` profiles `mq`/`cache`/`mail`/`storage`/`all`, and **`services/mailer-service/` written in Go 1.26** (NOT Spring — see gotcha #21) as the first polyglot service. Auth-service Iter 5 emits `user.registered` event for mailer to consume. Phase 7A added FE Visits module: gateway OpenAPI aggregation (4 service specs proxied via `/v3/api-docs/{service}` + Swagger UI dropdown), `apps/web/scripts/fetch-openapi.ts` merges into single spec, `pnpm generate:api` produces orval-generated TanStack Query hooks at `apps/web/src/lib/api/generated/`, `apps/web/src/routes/admin.visits.tsx` consumes them with shadcn components.
 
 7. **Spring Cloud Gateway 5.x property prefix** — Cloud 5.0+ (Boot 4 / Cloud 2025.x) renamed property prefix from `spring.cloud.gateway.mvc.*` (older docs / Cloud 4.x) to **`spring.cloud.gateway.server.webmvc.*`**. Cross-check via `/actuator/configprops` — bean `gatewayMvcProperties` shows the true prefix. Many web examples and even some context7 doc excerpts still use the old prefix; ignore them.
 
@@ -333,6 +374,12 @@ Config lives in TWO places: local (per-service `application.yml`, minimal) + `co
 
 22. **Spring Boot `ObjectProvider<T>` injection for autoconfig-optional beans** — when a bean comes from an autoconfig that may be disabled (vd `petclinic.events.enabled=false` in test profile turns off `EventPublisher`), inject `ObjectProvider<EventPublisher>` instead of `EventPublisher` directly. Then `provider.getIfAvailable()` returns `null` when bean missing without breaking the constructor. Avoids splitting `@ConditionalOn*` between the publisher autoconfig and every consumer service. Same pattern Eureka uses for `RestClient.Builder` (gotcha #15).
 
+23. **Controller method names ARE the orval operationId — must be unique across services** — Spring uses the Java method name as the OpenAPI `operationId` unless `@Operation(operationId = "...")` overrides. After gateway OpenAPI aggregation merges 4 service specs into one, generic names like `list`, `get`, `create` collide → orval errors out (`Duplicate schema names detected: 2x ListParams` etc.). **Rule**: name controller methods after the resource — `listOwners` / `getOwner` / `createOwner` / `deleteOwner`, `searchVisits` / `bookVisit` / `completeVisit`, `getUser`. Bonus: code reads more naturally even within a single controller. Fix at source, NOT at the fetch-openapi merge script (prefixing operationIds in post-process works but couples the gen pipeline to BE generic-name leakage).
+
+24. **Spring `Pageable` becomes a nested `pageable` object in orval-generated params** — `springdoc-openapi` emits a Spring `Pageable` controller arg as a single nested OpenAPI parameter (not flattened to `page`/`size`/`sort`). Orval generates `SearchVisitsParams { pageable: Pageable; ... }` where `Pageable = { page?: number; size?: number; sort?: string[] }`. Call site is `useSearchVisits({ pageable: { page: 0, size: 50, sort: ['scheduledAt,desc'] } })`, NOT `useSearchVisits({ page: 0, size: 50, sort: 'scheduledAt,desc' })`. Note `sort` is `string[]`, not a single string. Visible only on FE — BE controllers stay clean.
+
+25. **`apps/web/src/lib/api/client.ts` baseURL must be empty string after orval setup** — orval-generated functions emit full paths (`/api/v1/auth/login`). If axios baseURL is also `/api`, requests get duplicated to `/api/api/v1/auth/login` → 404. Set `baseURL = ''` so orval URLs resolve as-is; Vite dev proxy `/api → :8180` (in `vite.config.ts`) forwards them. The previous baseURL `/api` was for the old manual `apiRequest({ url: '/v1/auth/login' })` pattern which is now deleted. Refresh-token call inside the interceptor must use full path too (`/api/v1/auth/refresh`).
+
 ## MCP and tooling
 
 This project assumes the agent has JetBrains MCP, context7 MCP, and Playwright MCP available. Use them in this priority order:
@@ -362,9 +409,15 @@ This project assumes the agent has JetBrains MCP, context7 MCP, and Playwright M
 
 Use for: Spring Boot 4 APIs, Spring Cloud Netflix Eureka, springdoc OpenAPI, Liquibase YAML, Testcontainers, Hibernate 7, Postgres 18 features. **Don't use for** business logic, refactoring, or general Java.
 
-### 3. Playwright MCP — frontend & E2E (when UI exists)
+### 3. Playwright MCP — frontend & E2E
 
-Not used yet (no frontend module). When `frontend/` is added: `browser_navigate`, `browser_snapshot`, `browser_console_messages` to verify pages render + no console errors after changes. Take screenshots before reporting visual work done.
+Frontend at `apps/web/` (React 19 + Vite + TanStack Router/Query, dev server on `:3333`). Use Playwright for any UI verification:
+- `browser_navigate` to a route (vd `http://localhost:3333/admin/visits`)
+- `browser_snapshot` to inspect DOM + take screenshot — REQUIRED before reporting UI work done
+- `browser_console_messages` to catch runtime errors invisible to `pnpm typecheck`
+- `browser_network_requests` to verify orval hooks hit the correct gateway URL with auth header
+
+Never claim "UI works" from typecheck alone — TS doesn't catch missing data, layout breakage, broken auth flow.
 
 ### Bash / Gradle CLI fallback
 
