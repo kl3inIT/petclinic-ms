@@ -7,6 +7,13 @@ spring:
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
+  # Auth dùng common-events publish user.registered → cần RabbitMQ.
+  # Spring Boot Docker Compose support start cả db + mq.
+  docker:
+    compose:
+      profiles:
+        active: ["db", "mq"]
+
 # JWT secret moved to config-repo/application-dev.yml (Iter 2 — shared by mọi service).
 # Auth-service ttl + algorithm-specific config có thể ở đây nếu cần.
 

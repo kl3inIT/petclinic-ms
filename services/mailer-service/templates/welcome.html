@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chào mừng đến Petclinic MSS301</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
+    <div style="text-align: center; margin-bottom: 24px;">
+        <h1 style="margin: 0; color: #2d7a3e;">Petclinic MSS301</h1>
+        <p style="color: #6b7280; margin-top: 4px;">Hệ thống quản lý phòng khám thú y</p>
+    </div>
+
+    <div style="background: #f8faf9; border-left: 4px solid #2d7a3e; padding: 16px 20px; border-radius: 4px;">
+        <h2 style="margin: 0 0 8px 0;">Xin chào {{.Username}}!</h2>
+        <p style="margin: 0; line-height: 1.6;">
+            Cảm ơn bạn đã đăng ký tài khoản trên <strong>Petclinic MSS301</strong>.
+            Tài khoản của bạn đã sẵn sàng để đăng nhập và quản lý lịch hẹn thú cưng.
+        </p>
+    </div>
+
+    <div style="margin: 24px 0; text-align: center;">
+        <a href="{{.AppBaseURL}}/login"
+           style="display: inline-block; background: #2d7a3e; color: #fff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            Đăng nhập ngay
+        </a>
+    </div>
+
+    <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #6b7280;">
+        <p style="margin: 0 0 4px 0;">Bạn có thể bắt đầu bằng cách:</p>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+            <li>Thêm thú cưng vào hồ sơ</li>
+            <li>Đặt lịch khám với bác sĩ thú y</li>
+            <li>Xem lịch sử khám và hoá đơn</li>
+        </ul>
+    </div>
+
+    <p style="margin-top: 24px; font-size: 12px; color: #9ca3af; text-align: center;">
+        Email này được gửi tự động — vui lòng không trả lời.
+        <br>© 2026 Petclinic MSS301
+    </p>
+</body>
+</html>

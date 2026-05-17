@@ -4,6 +4,7 @@ import com.mss301.petclinic.auth.dto.req.LoginRequest;
 import com.mss301.petclinic.auth.dto.req.RegisterRequest;
 import com.mss301.petclinic.auth.dto.res.AuthResponse;
 import com.mss301.petclinic.auth.dto.res.UserResponse;
+import com.mss301.petclinic.auth.events.UserRegisteredEvent;
 import com.mss301.petclinic.auth.exception.InvalidCredentialsException;
 import com.mss301.petclinic.auth.exception.UsernameTakenException;
 import com.mss301.petclinic.auth.model.User;
@@ -12,8 +13,10 @@ import com.mss301.petclinic.auth.security.AuthAuditLogger;
 import com.mss301.petclinic.auth.security.JwtTokenProvider;
 import com.mss301.petclinic.auth.security.RefreshTokenService;
 import com.mss301.petclinic.auth.service.AuthService;
+import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.common.web.exception.ResourceNotFoundException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,17 +32,21 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenService refreshTokenService;
     private final AuthAuditLogger audit;
+    /** ObjectProvider — broker có thể chưa lên, autoconfig disabled khi test → publisher tuỳ chọn. */
+    private final ObjectProvider<EventPublisher> events;
 
     public AuthServiceImpl(UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
                            JwtTokenProvider jwtTokenProvider,
                            RefreshTokenService refreshTokenService,
-                           AuthAuditLogger audit) {
+                           AuthAuditLogger audit,
+                           ObjectProvider<EventPublisher> events) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.refreshTokenService = refreshTokenService;
         this.audit = audit;
+        this.events = events;
     }
 
     @Override
@@ -50,6 +57,19 @@ public class AuthServiceImpl implements AuthService {
         }
         User saved = userRepository.save(request.toEntity(passwordEncoder));
         audit.registerSuccess(saved.getId(), saved.getUsername());
+
+        // Publish event — failure không rollback transaction (broker down ≠ user create fail).
+        // EventPublisher tự nuốt RuntimeException? Không — RabbitTemplate có thể throw.
+        // Wrap try/catch để register vẫn ok khi broker tạm down. Mailer dùng polling sau cũng được.
+        EventPublisher publisher = events.getIfAvailable();
+        if (publisher != null) {
+            try {
+                publisher.publish(UserRegisteredEvent.of(saved.getId(), saved.getUsername(), saved.getEmail()));
+            } catch (RuntimeException ex) {
+                audit.eventPublishFailure("user.registered", saved.getId(), ex.getMessage());
+            }
+        }
+
         return UserResponse.from(saved);
     }
 

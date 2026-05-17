@@ -40,6 +40,7 @@ public class AuthAuditLogger {
     private static final String ACTION_REFRESH_SUCCESS  = "authentication.token.refresh.success";
     private static final String ACTION_REFRESH_FAILURE  = "authentication.token.refresh.failure";
     private static final String ACTION_LOGOUT_SUCCESS   = "authentication.logout.success";
+    private static final String ACTION_EVENT_PUBLISH_FAILURE = "event.publish.failure";
 
     public void loginSuccess(UUID userId, String username) {
         try {
@@ -89,6 +90,21 @@ public class AuthAuditLogger {
             putBase(ACTION_REFRESH_FAILURE, OUTCOME_FAILURE);
             MDC.put(K_REASON, reason);
             log.warn("Refresh token failure");
+        } finally {
+            clearAll();
+        }
+    }
+
+    /**
+     * Broker tạm down hoặc bị reject — register vẫn ok, mailer mất 1 event.
+     * Production thật cứng sẽ dùng outbox pattern; ở đây log đủ để dev biết.
+     */
+    public void eventPublishFailure(String eventType, UUID userId, String reason) {
+        try {
+            putBase(ACTION_EVENT_PUBLISH_FAILURE, OUTCOME_FAILURE);
+            MDC.put(K_USER_ID, userId.toString());
+            MDC.put(K_REASON, reason);
+            log.warn("Event publish failure: {}", eventType);
         } finally {
             clearAll();
         }

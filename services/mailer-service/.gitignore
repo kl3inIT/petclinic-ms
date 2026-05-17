@@ -1,0 +1,6 @@
+/mailer
+/mailer.exe
+*.test
+*.out
+.idea/
+.vscode/
