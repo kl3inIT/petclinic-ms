@@ -61,8 +61,16 @@ updates:
       prefix: "deps(docker)"
 
   # ─────────────────────────────────────────────────────────
-  # GitHub Actions — TẠM bỏ vì repo chưa có .github/workflows/.
-  # Dependabot updater fail với "encountered one or more errors" khi
-  # không tìm thấy manifest action nào để scan. Add lại entry này
-  # ngay khi commit workflow đầu tiên vào .github/workflows/.
+  # GitHub Actions — scan các action ref trong .github/workflows/.
   # ─────────────────────────────────────────────────────────
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 99
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "deps(actions)"
