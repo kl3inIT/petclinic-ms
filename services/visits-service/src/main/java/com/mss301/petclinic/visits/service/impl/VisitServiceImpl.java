@@ -3,6 +3,7 @@ package com.mss301.petclinic.visits.service.impl;
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.visits.client.PetSummary;
+import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.UserSummary;
 import com.mss301.petclinic.visits.client.VetSummary;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;

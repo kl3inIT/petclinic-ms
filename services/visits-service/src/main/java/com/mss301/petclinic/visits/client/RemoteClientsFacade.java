@@ -1,12 +1,6 @@
-package com.mss301.petclinic.visits.service.impl;
+package com.mss301.petclinic.visits.client;
 
 import com.mss301.petclinic.common.web.exception.ExternalServiceUnavailableException;
-import com.mss301.petclinic.visits.client.CustomersClient;
-import com.mss301.petclinic.visits.client.PetSummary;
-import com.mss301.petclinic.visits.client.UserSummary;
-import com.mss301.petclinic.visits.client.UsersClient;
-import com.mss301.petclinic.visits.client.VetSummary;
-import com.mss301.petclinic.visits.client.VetsClient;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
