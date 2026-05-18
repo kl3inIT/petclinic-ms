@@ -64,9 +64,8 @@ jobs:
     name: FE (pnpm typecheck + lint + build)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: apps/web
+    # NOTE: pnpm workspace — `pnpm-lock.yaml` ở repo ROOT (apps/web là workspace member).
+    # Install + cache-dep-path đều ở root; typecheck/lint/build filter qua workspace name.
 
     steps:
       - name: Checkout
@@ -74,8 +73,8 @@ jobs:
 
       # Order MATTERS: setup-node auto-detect pnpm-lock.yaml → cần pnpm cho cache.
       # Cài pnpm TRƯỚC, rồi setup-node mới resolve được.
-      # KHÔNG set `version:` — action sẽ đọc từ apps/web/package.json `packageManager`
-      # field (single source of truth). Set version ở đây gây conflict ERR_PNPM_BAD_PM_VERSION.
+      # KHÔNG set `version:` — action đọc từ ROOT package.json `packageManager`
+      # field (single source of truth). Set version gây ERR_PNPM_BAD_PM_VERSION.
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
         with:
@@ -86,19 +85,20 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-          cache-dependency-path: apps/web/pnpm-lock.yaml
+          # pnpm-lock.yaml ở repo root (workspace single lockfile)
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Typecheck FE
+        run: pnpm --filter @petclinic/web typecheck
 
-      - name: Lint
-        run: pnpm lint
+      - name: Lint FE
+        run: pnpm --filter @petclinic/web lint
 
-      - name: Build
-        run: pnpm build
+      - name: Build FE
+        run: pnpm --filter @petclinic/web build
 
   # ===========================================================================
   # Job 3 — Go build + vet + test (mailer-service)
