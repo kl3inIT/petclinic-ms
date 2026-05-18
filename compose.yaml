@@ -388,6 +388,34 @@ services:
       start_period: 45s
     restart: unless-stopped
 
+  mcp-server:
+    build: { context: ., dockerfile: services/mcp-server/Dockerfile }
+    image: petclinic-ms/mcp-server:latest
+    container_name: petclinic-mcp-server
+    profiles: ["apps"]
+    ports:
+      - "8187:8187"
+      - "9187:9187"
+    depends_on:
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+      customers-service: { condition: service_healthy }
+      vets-service: { condition: service_healthy }
+      visits-service: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9187/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
   # Mailer (Go) — đã có Dockerfile riêng tại services/mailer-service/.
   # Kéo lên profile "apps" để full-stack `--profile all --profile apps up` cover luôn.
   mailer-service:

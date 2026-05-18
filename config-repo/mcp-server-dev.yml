@@ -1,0 +1,13 @@
+# mcp-server — dev profile.
+# Service KHÔNG bind DB/MQ/Redis → docker-compose lifecycle để application-dev.yml lo (start db nếu cần,
+# nhưng mcp-server tự không cần). Eureka URL kế thừa application-dev.yml.
+
+# Empty — placeholder để Config Server resolve 4 file (application.yml, application-dev.yml,
+# mcp-server.yml, mcp-server-dev.yml) đúng precedence chain. Nếu trống hoàn toàn, Spring Cloud Config
+# vẫn OK; chỉ cần đảm bảo placement.
+spring:
+  ai:
+    mcp:
+      server:
+        # Để dev luôn log đủ tool call/response (learning project — log mọi thứ)
+        request-timeout: 30s

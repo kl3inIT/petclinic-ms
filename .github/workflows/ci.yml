@@ -156,6 +156,7 @@ jobs:
           - vets-service
           - visits-service
           - admin-server
+          - mcp-server
 
     steps:
       - name: Checkout
