@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>petclinic-ms — auth-service</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a; --bg-card: #1e293b; --bg-code: #0b1220;
+    --fg: #e2e8f0; --fg-dim: #94a3b8;
+    --accent: #38bdf8; --accent-2: #a78bfa;
+    --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --customer: #38bdf8; --vet: #4ade80; --staff: #fbbf24; --admin: #f87171;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.6; }
+  body { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 2.4em; margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 48px; }
+  h3 { color: var(--accent-2); margin-top: 28px; }
+  h4 { color: var(--fg-dim); margin-top: 20px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85em; }
+  .lede { color: var(--fg-dim); font-size: 1.1em; margin: 0 0 32px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; }
+  .card.ok { border-left: 4px solid var(--ok); }
+  .card.warn { border-left: 4px solid var(--warn); }
+  .card.bad { border-left: 4px solid var(--bad); }
+  .card.accent { border-left: 4px solid var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--bg-code); color: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.88em; }
+  pre { background: var(--bg-code); padding: 16px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); font-size: 0.85em; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: #e2e8f0; }
+  .mermaid { background: #f8fafc; padding: 24px; border-radius: 8px; margin: 16px 0; text-align: center; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--accent); font-weight: 600; }
+  td code { font-size: 0.85em; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 700; }
+  .badge.done { background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .badge.todo { background: rgba(148,163,184,0.15); color: var(--fg-dim); border: 1px solid var(--fg-dim); }
+  .badge.hard { background: rgba(248,113,113,0.15); color: var(--bad); border: 1px solid var(--bad); }
+  .badge.soft { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid var(--warn); }
+  .badge.evt  { background: rgba(167,139,250,0.15); color: var(--accent-2); border: 1px solid var(--accent-2); }
+  .tldr { background: rgba(56,189,248,0.08); border: 1px solid var(--accent); border-radius: 6px; padding: 16px; margin: 16px 0; }
+  .tldr::before { content: "TL;DR"; display: block; color: var(--accent); font-weight: 700; font-size: 0.85em; letter-spacing: 1px; margin-bottom: 6px; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 16px 0; }
+  .persona { background: var(--bg-card); border-radius: 8px; padding: 16px; border-top: 4px solid; }
+  .persona.customer { border-color: var(--customer); }
+  .persona.staff    { border-color: var(--staff); }
+  .persona.admin    { border-color: var(--admin); }
+  .persona h4 { color: var(--fg); margin: 0 0 8px; text-transform: none; letter-spacing: 0; font-size: 1.1em; }
+  .persona p { margin: 4px 0; font-size: 0.9em; color: var(--fg-dim); }
+  hr { border: none; border-top: 1px dashed var(--border); margin: 32px 0; }
+  .toc { background: var(--bg-card); padding: 16px 20px 16px 40px; border-radius: 6px; }
+  .toc h3 { margin-top: 0; }
+  .toc ol { margin: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .phase { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.75em; font-weight: 700; margin-left: 8px; vertical-align: middle; }
+  .phase.now    { background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .phase.next   { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid var(--warn); }
+</style>
+</head>
+<body>
+
+<h1>auth-service</h1>
+<p class="lede">Service xác thực và phát hành JWT cho toàn cluster — quản lý User, role, refresh token rotation, và JWKS endpoint cho service khác validate token. <strong>Identity provider</strong> của hệ thống.</p>
+
+<div class="tldr">
+  RS256 JWT signing với keypair generated tại startup, public key expose qua <code>/.well-known/jwks.json</code>. Access token 15 phút, refresh token 7 ngày — refresh <em>single-use rotation</em> với detect-reuse → revoke all (signal token theft). User identity = UUID (không expose Long internal). Roles = CSV trong DB (đơn giản hơn N-N table). Phát event <code>user.registered</code> cho mailer.
+</div>
+
+<div class="toc">
+  <h3>Mục lục</h3>
+  <ol>
+    <li><a href="#scope">Trạng thái</a></li>
+    <li><a href="#personas">Personas &amp; roles</a></li>
+    <li><a href="#crypto">Mô hình crypto — RS256 + JWKS</a></li>
+    <li><a href="#erd">ERD — User + RefreshToken</a></li>
+    <li><a href="#seq-register">Sequence 1 — Đăng ký + welcome mail</a></li>
+    <li><a href="#seq-login">Sequence 2 — Login</a></li>
+    <li><a href="#seq-refresh">Sequence 3 — Refresh token rotation</a></li>
+    <li><a href="#seq-reuse">Sequence 4 — Token reuse detection (theft signal)</a></li>
+    <li><a href="#seq-validate">Sequence 5 — Service khác validate JWT qua JWKS</a></li>
+    <li><a href="#dependencies">Dependency map</a></li>
+    <li><a href="#api">API surface</a></li>
+    <li><a href="#token-lifecycle">Token lifecycle &amp; security model</a></li>
+    <li><a href="#open-questions">Câu hỏi mở</a></li>
+  </ol>
+</div>
+
+<h2 id="scope">1. Trạng thái <span class="phase now">PHASE NOW (Iter 1-5)</span></h2>
+
+<table>
+  <thead><tr><th>Tính năng</th><th>Iter</th><th>Trạng thái</th><th>Code reference</th></tr></thead>
+  <tbody>
+    <tr><td>User entity (UUID id, BCrypt password, roles CSV)</td><td>1</td><td><span class="badge done">DONE</span></td><td><code>model/User.java</code></td></tr>
+    <tr><td>Register / Login / Me endpoints</td><td>1</td><td><span class="badge done">DONE</span></td><td><code>AuthController</code></td></tr>
+    <tr><td>HMAC HS256 JWT (initial)</td><td>1</td><td>↑ upgraded</td><td>Iter 3 upgrade to RS256</td></tr>
+    <tr><td>Defense-in-depth (gateway + downstream validate)</td><td>2</td><td><span class="badge done">DONE</span></td><td><code>shared/common-security</code></td></tr>
+    <tr><td>RSA-2048 keypair tại startup + JWKS endpoint</td><td>3</td><td><span class="badge done">DONE</span></td><td><code>security/RsaKeyConfig.java</code>, <code>controller/JwksController.java</code></td></tr>
+    <tr><td>Refresh token rotation single-use + reuse detection</td><td>3</td><td><span class="badge done">DONE</span></td><td><code>security/RefreshTokenService.java</code></td></tr>
+    <tr><td>Service-to-service token forward (JwtForwardInterceptor)</td><td>4</td><td><span class="badge done">DONE</span></td><td><code>shared/common-clients</code></td></tr>
+    <tr><td>Rate limit + audit log security events</td><td>4</td><td><span class="badge done">DONE</span></td><td><code>security/AuthAuditLogger.java</code> + gateway PerIpRateLimit</td></tr>
+    <tr><td>Event <code>user.registered</code> publish</td><td>5</td><td><span class="badge done">DONE</span></td><td><code>events/UserRegisteredEvent.java</code></td></tr>
+    <tr><td>UsersController <code>GET /users/id</code> cross-service consume</td><td>5</td><td><span class="badge done">DONE</span></td><td><code>controller/UsersController.java</code></td></tr>
+    <tr><td>Email verification (gửi link)</td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>Bổ sung field <code>verified: boolean</code></td></tr>
+    <tr><td>Password reset (qua mail)</td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>Entity <code>PasswordResetToken</code> tương tự RefreshToken</td></tr>
+    <tr><td>Key rotation (dev → prod)</td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>Load PEM từ env var, hai key cùng publish JWKS</td></tr>
+    <tr><td>OAuth2 social login (Google/Facebook)</td><td>Phase Future</td><td><span class="badge todo">DEFER</span></td><td>Spring Security 7 oauth2Client</td></tr>
+    <tr><td>2FA / TOTP</td><td>Phase Future</td><td><span class="badge todo">DEFER</span></td><td>—</td></tr>
+  </tbody>
+</table>
+
+<h2 id="personas">2. Personas &amp; roles</h2>
+
+<div class="personas">
+  <div class="persona customer">
+    <h4>👤 USER (default sau register)</h4>
+    <p>Tự đăng ký, login, refresh token, đổi mật khẩu, xem profile của mình. Mọi service downstream check role này cho ownership endpoints.</p>
+  </div>
+  <div class="persona staff">
+    <h4>🛡️ STAFF</h4>
+    <p>Receptionist — quyền tạo owner hộ, book visit hộ, moderation review. Role này gán <em>thủ công</em> bởi admin (chưa có UI gán role — phase next).</p>
+  </div>
+  <div class="persona staff" style="border-color: var(--vet);">
+    <h4>🩺 VET</h4>
+    <p>Bác sĩ — quyền start + complete visit, set ca trực (phase next). Gán bởi admin khi tạo account.</p>
+  </div>
+  <div class="persona admin">
+    <h4>👑 ADMIN</h4>
+    <p>Toàn quyền + gán role + hard delete + catalog admin (specialties, pet types). Tạo qua seed Liquibase (không qua register endpoint).</p>
+  </div>
+</div>
+
+<div class="card warn">
+  <strong>Role được lưu CSV string</strong> (vd. <code>roles_csv = "USER,STAFF"</code>) thay vì entity Role + N-N table. Lý do: roles tĩnh (4 giá trị, không thêm runtime), CSV đủ + zero JOIN overhead. Trade-off: query "tìm user có role X" phải dùng <code>LIKE '%X%'</code> — chấp nhận vì rare. Nếu sau này roles động (hundreds of tenants) → migrate sang N-N.
+</div>
+
+<h2 id="crypto">3. Mô hình crypto — RS256 + JWKS</h2>
+
+<div class="mermaid">
+graph TB
+  subgraph auth["auth-service (signer)"]
+    KP[Generate RSA-2048<br/>at startup]
+    PRIV[Private Key<br/>in-memory only]
+    PUB[Public Key + kid UUID]
+    JWE[JwtEncoder NimbusJwtEncoder]
+    JWKS[GET /.well-known/jwks.json<br/>jwkSet.toJSONObject true<br/>strip private params]
+  end
+
+  subgraph other["Other services (validator)"]
+    NJD[NimbusJwtDecoder.withJwkSetUri]
+    VAL[Validate signature + iss + aud + exp]
+    CONV[JwtGrantedAuthoritiesConverter<br/>roles claim → ROLE_* authorities]
+  end
+
+  KP --> PRIV
+  KP --> PUB
+  PRIV --> JWE
+  JWE -.signs RS256.-> TOKEN[Access Token JWT]
+  PUB --> JWKS
+
+  JWKS -.HTTPS poll cached.-> NJD
+  TOKEN -.Bearer header.-> NJD
+  NJD --> VAL
+  VAL --> CONV
+
+  classDef secret fill:#1e293b,stroke:#f87171,color:#fff
+  classDef pub fill:#1e293b,stroke:#4ade80,color:#fff
+  class PRIV,JWE secret
+  class PUB,JWKS,NJD,VAL,CONV pub
+</div>
+
+<table>
+  <thead><tr><th>Aspect</th><th>Dev pattern (đang dùng)</th><th>Prod pattern (chưa apply)</th></tr></thead>
+  <tbody>
+    <tr><td>Keypair source</td><td>Generate RSA-2048 tại startup</td><td>Load PEM từ env var <code>JWT_PRIVATE_KEY_PEM</code> (k8s Secret / Vault)</td></tr>
+    <tr><td>kid</td><td>Random UUID mỗi restart</td><td>Stable kid per key version</td></tr>
+    <tr><td>Restart impact</td><td>Mọi access token cũ invalidate (refresh token vẫn dùng được)</td><td>Stable — không invalidate</td></tr>
+    <tr><td>Key rotation</td><td>Không có</td><td>Generate new keypair, publish CẢ 2 trong JWKS một thời gian, drop old khi tokens expire</td></tr>
+    <tr><td>Algorithm</td><td>RS256 (Iter 3+); HS256 (Iter 1, đã upgrade)</td><td>RS256 — asymmetric cho phép multiple validators không share secret</td></tr>
+  </tbody>
+</table>
+
+<div class="card accent">
+  <strong>Vì sao RS256 thay vì HS256:</strong> HS256 dùng shared secret — mọi validator cần biết secret = secret leak ở 1 service = compromise toàn cluster. RS256 asymmetric: chỉ auth-service biết private key (sign), mọi service khác chỉ cần public key (verify). Public key đăng qua JWKS endpoint, validator tự fetch + cache. Đúng zero-trust principle.
+</div>
+
+<h2 id="erd">4. ERD — User + RefreshToken</h2>
+
+<div class="mermaid">
+erDiagram
+  USER ||--o{ REFRESH_TOKEN : "có nhiều (1 per device)"
+
+  USER {
+    uuid    id PK "GenerationType.UUID"
+    string  username "UNIQUE NOT NULL length 100"
+    string  email "NOT NULL length 100"
+    string  password "BCrypt hash 12 rounds"
+    string  roles_csv "Set<String> qua StringSetConverter"
+    bool    enabled "default true — disable thay vì delete"
+    timestamp created_date
+    timestamp last_modified_date
+    string  created_by
+    string  last_modified_by
+  }
+
+  REFRESH_TOKEN {
+    uuid    id PK
+    uuid    user_id FK "INDEX"
+    string  token_hash "SHA-256 hex, UNIQUE INDEX"
+    timestamp expires_at "now + 7 days"
+    bool    revoked "default false"
+    timestamp created_date
+  }
+</div>
+
+<h4>Quyết định thiết kế quan trọng</h4>
+<ul>
+  <li><strong>User.id là UUID, không Long:</strong> ID xuất hiện trong JWT <code>sub</code> claim → expose ra public. UUID không leak insertion order, không enumerable.</li>
+  <li><strong>Password = BCrypt 12 rounds:</strong> ~250ms/hash trên dev machine — chống brute force. KHÔNG dùng SHA hay MD5.</li>
+  <li><strong>RefreshToken lưu hash, không raw:</strong> DB leak ≠ token usable. Verify: hash input token + lookup. Tốc độ SHA-256 OK vì refresh endpoint không hot.</li>
+  <li><strong>Raw refresh token = random 256-bit hex</strong> (32 bytes từ <code>SecureRandom</code>), KHÔNG phải UUID — UUID có structural bits, không đủ entropy cho secret.</li>
+  <li><strong>Single-use rotation:</strong> mỗi refresh tạo token mới + mark old <code>revoked=true</code>. Nếu token đã revoked được dùng lại → detect theft → revoke ALL của user (Sequence 4).</li>
+  <li><strong>UNIQUE INDEX token_hash:</strong> phòng race condition khi 2 device cùng refresh đồng thời (chỉ 1 thắng).</li>
+</ul>
+
+<h2 id="seq-register">5. Sequence 1 — Đăng ký + welcome mail</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as Visitor
+  participant FE as apps/web
+  participant GW as api-gateway
+  participant A as auth-service
+  participant DB as Postgres auth
+  participant MQ as RabbitMQ
+
+  U->>FE: Form đăng ký {username, email, password}
+  FE->>GW: POST /api/v1/auth/register
+  Note over GW: KHÔNG cần JWT (public endpoint)
+  GW->>A: forward
+  A->>A: @Valid RegisterRequest<br/>(NotBlank, email format, password ≥ 8 ký tự)
+
+  A->>DB: SELECT user WHERE username=?
+  alt Username taken
+    DB-->>A: exists
+    A-->>FE: 409 UsernameTakenException → ProblemDetail
+  else OK
+    A->>A: BCrypt.hash(password, 12 rounds)
+    A->>DB: INSERT user (id=UUID, roles_csv='USER', enabled=true)
+    DB-->>A: user.id
+
+    A->>MQ: publish user.registered<br/>{userId, username, email}
+    Note over A,MQ: ObjectProvider<EventPublisher> try/catch<br/>→ register vẫn thành công khi MQ down
+
+    A-->>FE: 201 UserResponse{id, username, email, roles:[USER]}
+    FE->>U: Toast "Đăng ký thành công, kiểm tra mail"
+  end
+
+  Note over MQ: Consumer asynchronous
+  MQ->>MQ: mailer.user.registered queue
+  MQ->>MQ: Go mailer dedupe by eventId
+  MQ->>U: Email "Chào mừng đến petclinic..."
+</div>
+
+<h2 id="seq-login">6. Sequence 2 — Login → access + refresh token</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant FE as apps/web
+  participant GW as api-gateway
+  participant A as auth-service
+  participant DB as Postgres
+  participant JTP as JwtTokenProvider
+  participant RTS as RefreshTokenService
+
+  U->>FE: Form login {username, password}
+  FE->>GW: POST /api/v1/auth/login
+  GW->>A: forward (public)
+  A->>DB: SELECT user WHERE username=?
+  alt Not found / disabled
+    DB-->>A: empty / enabled=false
+    A-->>FE: 401 InvalidCredentialsException → ProblemDetail
+    Note over A: AuthAuditLogger.failedLogin(username, IP)
+  else OK
+    DB-->>A: User
+    A->>A: BCrypt.matches(password, user.password)
+    alt Wrong password
+      A-->>FE: 401 (same message — chống user enumeration)
+    else OK
+      A->>JTP: createAccessToken(user.id, user.roles)
+      JTP->>JTP: JwtEncoder.encode<br/>headers={alg:RS256, kid:...}<br/>claims={iss, sub:userId, aud, exp:+15min, roles:[USER]}
+      JTP-->>A: accessToken (JWT string)
+
+      A->>RTS: issue(user.id)
+      RTS->>RTS: SecureRandom 32 bytes → hex (raw)
+      RTS->>RTS: SHA-256(raw) → hash
+      RTS->>DB: INSERT refresh_token {hash, expires_at:+7d}
+      RTS-->>A: IssuedRefresh{raw, 604800s}
+
+      A-->>FE: 200 AuthResponse{accessToken, refreshToken:raw, expiresIn:900}
+      FE->>FE: Store tokens (localStorage / httpOnly cookie)
+      FE->>U: Redirect /dashboard
+      Note over A: AuthAuditLogger.successfulLogin
+    end
+  end
+</div>
+
+<h2 id="seq-refresh">7. Sequence 3 — Refresh token rotation</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant FE as apps/web<br/>(axios interceptor)
+  participant GW as api-gateway
+  participant A as auth-service
+  participant RTS as RefreshTokenService
+  participant DB as Postgres
+  participant JTP as JwtTokenProvider
+
+  Note over FE: Access token sắp hết hạn (hoặc 401 từ downstream)
+  FE->>GW: POST /api/v1/auth/refresh<br/>{refreshToken: raw}
+  GW->>A: forward
+  A->>RTS: consumeAndValidate(raw)
+  RTS->>RTS: SHA-256(raw) → hash
+  RTS->>DB: SELECT WHERE token_hash=?
+  alt Not found
+    DB-->>RTS: empty
+    RTS-->>A: throw InvalidRefreshTokenException
+    A-->>FE: 401
+  else Found
+    DB-->>RTS: RefreshToken
+    alt expired (now > expires_at)
+      RTS-->>A: throw InvalidRefreshTokenException
+    else revoked
+      Note over RTS: 🚨 THEFT SIGNAL — xem Sequence 4
+    else usable
+      RTS->>DB: UPDATE refresh_token SET revoked=true WHERE id=?
+      RTS-->>A: userId (UUID)
+
+      A->>DB: SELECT user WHERE id=?
+      A->>JTP: createAccessToken(userId, roles)
+      JTP-->>A: new accessToken
+      A->>RTS: issue(userId)
+      RTS->>DB: INSERT new refresh_token
+      RTS-->>A: new IssuedRefresh
+
+      A-->>FE: 200 AuthResponse{accessToken, refreshToken:NEW raw}
+      Note over FE: REPLACE refresh token cũ (single-use)
+    end
+  end
+</div>
+
+<h2 id="seq-reuse">8. Sequence 4 — Token reuse detection (theft signal)</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor V as Victim (legit user)
+  actor T as Thief (token stolen)
+  participant A as auth-service
+  participant RTS as RefreshTokenService
+  participant DB as Postgres
+
+  Note over V,T: Thief đã chiếm được refresh token R1 (vd. XSS, log leak)
+
+  V->>A: POST /refresh {token: R1}
+  A->>RTS: consumeAndValidate(R1)
+  RTS->>DB: UPDATE token_hash(R1) SET revoked=true
+  RTS->>DB: INSERT new token R2
+  RTS-->>A: userId
+  A-->>V: AuthResponse{refreshToken: R2}
+  Note over V: Victim tiếp tục dùng R2 bình thường
+
+  Note over T: Sau đó thief thử dùng R1 (đã revoked)
+  T->>A: POST /refresh {token: R1}
+  A->>RTS: consumeAndValidate(R1)
+  RTS->>DB: SELECT WHERE token_hash(R1)
+  DB-->>RTS: RefreshToken{revoked: TRUE}
+  RTS->>RTS: 🚨 token đã revoked nhưng vẫn được dùng<br/>→ chỉ có thể là thief
+  RTS->>DB: UPDATE refresh_token SET revoked=true<br/>WHERE user_id=victimId (ALL TOKENS)
+  RTS-->>A: throw InvalidRefreshTokenException
+  A-->>T: 401
+  Note over A: AuthAuditLogger.securityIncident<br/>("Refresh token reuse detected")
+
+  Note over V: Victim's R2 cũng bị revoke → next request 401 → force re-login.<br/>Đau cho UX nhưng đúng — không biết R2 có bị leak chung không.
+</div>
+
+<div class="card bad">
+  <strong>Trade-off của reuse detection:</strong> victim bị force logout cùng thief — không phân biệt được session nào "lành". Đây là <em>cost of defense</em>: thà invalidate tất cả còn hơn để thief tiếp tục access. Phase next có thể thêm device fingerprint trên refresh_token để chỉ revoke device bị nghi.
+</div>
+
+<h2 id="seq-validate">9. Sequence 5 — Service khác validate JWT qua JWKS</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant FE as apps/web
+  participant GW as api-gateway
+  participant V as visits-service<br/>(downstream)
+  participant CSEC as shared/common-security<br/>(autoconfig)
+  participant A as auth-service<br/>/.well-known/jwks.json
+
+  Note over CSEC: Boot time — fetch JWKS, cache trong NimbusJwtDecoder
+
+  CSEC->>A: GET /.well-known/jwks.json
+  A-->>CSEC: {keys: [{kty:RSA, n, e, kid, alg:RS256}]}
+  CSEC->>CSEC: NimbusJwtDecoder.withJwkSetUri(...).build()<br/>+ token validators {iss, aud, exp}
+
+  Note over U: Subsequent request flow
+
+  U->>FE: Click action
+  FE->>GW: POST /api/v1/visits<br/>Authorization: Bearer eyJhbGc...
+  GW->>GW: 1st validation: Gateway có common-security<br/>decode + check sig
+  GW->>V: forward + Authorization header (qua lb://)
+  V->>CSEC: 2nd validation (defense-in-depth zero-trust)
+  CSEC->>CSEC: Verify RS256 sig với public key cache
+  CSEC->>CSEC: Check exp not expired
+  CSEC->>CSEC: Check iss == "petclinic-auth"
+  CSEC->>CSEC: Check aud contains "petclinic"
+  CSEC->>CSEC: JwtGrantedAuthoritiesConverter<br/>roles claim → ROLE_USER, ROLE_STAFF
+  alt Invalid
+    CSEC-->>U: 401 Unauthorized
+  else Valid
+    CSEC-->>V: Jwt + Authentication object
+    V->>V: Filter chain check role + ownership
+  end
+
+  Note over CSEC,A: JWKS refresh tự động khi gặp kid mới<br/>(vd. auth-service restart → new kid)
+</div>
+
+<div class="card accent">
+  <strong>Defense-in-depth (gotcha #11):</strong> JWT được validate ở CẢ gateway VÀ downstream service. Không phụ thuộc gateway forward header <code>X-User-Id</code> — luôn re-verify Bearer token. Nếu attacker bypass gateway (vd. internal misconfiguration), downstream vẫn từ chối invalid token.
+</div>
+
+<h2 id="dependencies">10. Dependency map</h2>
+
+<div class="mermaid">
+graph TB
+  FE[apps/web]
+  GW[api-gateway:8180]
+  A[auth-service:8183]
+
+  CFG[config-server:8888]
+  DSC[discovery-server:8761]
+  DB[(Postgres schema=auth)]
+  MQ[RabbitMQ]
+
+  C[customers-service]
+  V[visits-service]
+  R[reviews-service tương lai]
+  ML[mailer-service Go]
+
+  FE -->|POST register/login/refresh| GW
+  GW -->|lb://| A
+  A --> DB
+  A -.->|boot| CFG
+  A -.->|register| DSC
+
+  A -->|publish user.registered| MQ
+  MQ -->|consume welcome mail| ML
+
+  C -.->|JWKS validate| A
+  V -.->|JWKS validate| A
+  R -.->|JWKS validate| A
+  V -->|GET /users/id<br/>denormalize email| A
+
+  classDef hard fill:#1e293b,stroke:#f87171,color:#fff
+  classDef self fill:#312e81,stroke:#38bdf8,color:#fff
+  classDef consumer fill:#1e293b,stroke:#fbbf24,color:#fff
+  classDef evt fill:#1e293b,stroke:#a78bfa,color:#fff
+  class CFG,DSC,DB,GW hard
+  class A self
+  class C,V,R consumer
+  class MQ,ML evt
+</div>
+
+<table>
+  <thead><tr><th>Hướng</th><th>Service</th><th>Loại</th><th>Mục đích</th></tr></thead>
+  <tbody>
+    <tr><td>auth → infra</td><td>config / discovery / Postgres</td><td><span class="badge hard">HARD</span></td><td>Boot + register + persist users/tokens</td></tr>
+    <tr><td>auth → MQ</td><td>RabbitMQ</td><td><span class="badge evt">EVENT</span></td><td>Publish user.registered (ObjectProvider try/catch)</td></tr>
+    <tr><td>ALL services → auth (JWKS)</td><td>customers, vets, visits, gateway, reviews, ...</td><td><span class="badge hard">HARD</span></td><td>Validate JWT signature qua public key</td></tr>
+    <tr><td>visits → auth <code>/users/id</code></td><td>visits-service</td><td><span class="badge soft">SOFT</span></td><td>Denormalize customerEmail vào visit.scheduled event</td></tr>
+    <tr><td>auth → khác</td><td>(không có)</td><td>-</td><td>Auth-service là <em>identity provider</em> — không phụ thuộc business service nào</td></tr>
+  </tbody>
+</table>
+
+<h2 id="api">11. API surface</h2>
+
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>operationId</th><th>Auth</th><th>Mô tả</th></tr></thead>
+  <tbody>
+    <tr><td>POST</td><td>/api/v1/auth/register</td><td><code>register</code></td><td>Public</td><td>Tạo USER role mặc định</td></tr>
+    <tr><td>POST</td><td>/api/v1/auth/login</td><td><code>login</code></td><td>Public</td><td>Trả accessToken (15min) + refreshToken (7d)</td></tr>
+    <tr><td>POST</td><td>/api/v1/auth/refresh</td><td><code>refresh</code></td><td>Public</td><td>Single-use rotation</td></tr>
+    <tr><td>POST</td><td>/api/v1/auth/logout</td><td><code>logout</code></td><td>USER+</td><td>Revoke ALL refresh tokens của user</td></tr>
+    <tr><td>GET</td><td>/api/v1/auth/me</td><td><code>getMe</code></td><td>USER+</td><td>User từ JWT sub</td></tr>
+    <tr><td>GET</td><td>/api/v1/users/{id}</td><td><code>getUser</code></td><td>USER+</td><td>Cross-service consume — visits dùng để denormalize email</td></tr>
+    <tr><td>GET</td><td>/.well-known/jwks.json</td><td><code>jwks</code></td><td>Public</td><td>Public keys cho services khác validate</td></tr>
+  </tbody>
+</table>
+
+<h3>Phase next <span class="phase next">PHASE NEXT</span></h3>
+<table>
+  <tbody>
+    <tr><td>POST</td><td>/api/v1/auth/verify-email</td><td><code>verifyEmail</code></td><td>Public</td><td>Token từ mail → mark <code>verified=true</code></td></tr>
+    <tr><td>POST</td><td>/api/v1/auth/forgot-password</td><td><code>requestPasswordReset</code></td><td>Public</td><td>Phát PasswordResetToken → mail link</td></tr>
+    <tr><td>POST</td><td>/api/v1/auth/reset-password</td><td><code>resetPassword</code></td><td>Public</td><td>Consume reset token + set password mới</td></tr>
+    <tr><td>PATCH</td><td>/api/v1/users/{id}/roles</td><td><code>updateUserRoles</code></td><td>ADMIN</td><td>Gán/bỏ STAFF / VET / ADMIN</td></tr>
+    <tr><td>PATCH</td><td>/api/v1/users/{id}/disable</td><td><code>disableUser</code></td><td>ADMIN</td><td>Set <code>enabled=false</code> thay vì delete</td></tr>
+  </tbody>
+</table>
+
+<h2 id="token-lifecycle">12. Token lifecycle &amp; security model</h2>
+
+<div class="mermaid">
+gantt
+    title Token lifecycle (1 chu kỳ refresh)
+    dateFormat HH:mm
+    axisFormat %H:%M
+
+    section Access Token
+    AT1 issued (login)    :a1, 10:00, 15m
+    AT1 valid             :a2, 10:00, 15m
+    AT1 expired           :crit, 10:15, 5m
+    AT2 issued (refresh)  :a3, 10:14, 15m
+    AT2 valid             :10:14, 15m
+
+    section Refresh Token
+    RT1 issued (login)         :r1, 10:00, 14m
+    RT1 valid                  :10:00, 14m
+    RT1 revoked + RT2 issued   :crit, 10:14, 1m
+    RT2 valid                  :10:14, 7d
+</div>
+
+<table>
+  <thead><tr><th>Lớp bảo mật</th><th>Cơ chế</th><th>Vị trí</th></tr></thead>
+  <tbody>
+    <tr><td>1. Identity proof</td><td>Username + BCrypt password 12 rounds</td><td>AuthService.login</td></tr>
+    <tr><td>2. Access proof</td><td>RS256 JWT 15min, sub=UUID, roles claim</td><td>JwtTokenProvider + JWKS</td></tr>
+    <tr><td>3. Session persistence</td><td>Refresh token 7d, SHA-256 hashed, single-use rotation</td><td>RefreshTokenService</td></tr>
+    <tr><td>4. Theft detection</td><td>Reuse → revoke ALL tokens của user</td><td>RefreshTokenService.consumeAndValidate</td></tr>
+    <tr><td>5. Rate limit</td><td>Per-IP bucket trên /login + /refresh</td><td>api-gateway PerIpRateLimit</td></tr>
+    <tr><td>6. Defense-in-depth</td><td>Gateway + downstream cùng validate JWT</td><td>shared/common-security autoconfig</td></tr>
+    <tr><td>7. Audit log</td><td>Successful/failed login, theft, role change</td><td>AuthAuditLogger</td></tr>
+  </tbody>
+</table>
+
+<h2 id="open-questions">13. Câu hỏi mở</h2>
+
+<div class="card warn">
+  <ol>
+    <li><strong>Email verification:</strong> Bắt buộc verify mới login được? Hay cho login + nhắc verify? Tác động đến UX onboarding.</li>
+    <li><strong>Role bootstrap:</strong> Sao tạo user đầu tiên với role ADMIN? Hiện chỉ qua Liquibase seed — phase next có thể thêm CLI command hoặc env var bootstrap.</li>
+    <li><strong>Token storage FE:</strong> Hiện <code>localStorage</code> (vulnerable XSS) hay <code>httpOnly cookie</code> (cần CSRF protection)? Trade-off.</li>
+    <li><strong>Logout cascade:</strong> Revoke all refresh tokens của user — có nên cũng push event <code>user.logged-out</code> để invalidate cache ở các service khác (vd. Spring Boot Admin)?</li>
+    <li><strong>Session timeout:</strong> Inactive user > X giờ → force logout? Cần thêm <code>last_seen_at</code> trên User?</li>
+    <li><strong>Password policy:</strong> Hiện chỉ check length ≥ 8. Thêm complexity (uppercase + number + special)? Có nên check qua HaveIBeenPwned API?</li>
+    <li><strong>Anti-enumeration:</strong> Hiện trả 401 cùng message cho wrong username và wrong password — tốt. Nhưng register vẫn trả 409 cho username taken → vẫn enumerable. Có nên unified message "đã có tài khoản dùng email/username này"?</li>
+    <li><strong>Prod key rotation timeline:</strong> Bao lâu rotate 1 lần? 90 ngày? 1 năm?</li>
+  </ol>
+</div>
+
+<hr>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+</body>
+</html>
