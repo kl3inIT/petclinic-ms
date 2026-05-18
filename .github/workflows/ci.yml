@@ -157,6 +157,7 @@ jobs:
           - visits-service
           - admin-server
           - mcp-server
+          - genai-service
 
     steps:
       - name: Checkout

@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: genai-service
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+server:
+  port: 8188                    # 8187=mcp-server. Next free.
+
+management:
+  server:
+    port: 9188

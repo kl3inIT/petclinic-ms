@@ -416,6 +416,38 @@ services:
       start_period: 45s
     restart: unless-stopped
 
+  genai-service:
+    build: { context: ., dockerfile: services/genai-service/Dockerfile }
+    image: petclinic-ms/genai-service:latest
+    container_name: petclinic-genai-service
+    profiles: ["apps"]
+    ports:
+      - "8188:8188"
+      - "9188:9188"
+    depends_on:
+      postgres: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+      mcp-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic?currentSchema=genai
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      # LLM provider — env-driven Phase 12b, admin DB Phase 12c.
+      PETCLINIC_LLM_BASE_URL: ${PETCLINIC_LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      PETCLINIC_LLM_API_KEY: ${PETCLINIC_LLM_API_KEY:-}
+      PETCLINIC_LLM_CHAT_MODEL: ${PETCLINIC_LLM_CHAT_MODEL:-anthropic/claude-3.5-haiku}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9188/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    restart: unless-stopped
+
   # Mailer (Go) — đã có Dockerfile riêng tại services/mailer-service/.
   # Kéo lên profile "apps" để full-stack `--profile all --profile apps up` cover luôn.
   mailer-service:

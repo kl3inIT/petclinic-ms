@@ -63,6 +63,19 @@ public class GatewayRoutesConfig {
     }
 
     /**
+     * AI chat — Phase 12b. JWT-protected ở downstream (genai-service security config).
+     * CB scope rộng vì downstream call OpenRouter có thể chậm/lỗi không kiểm soát được.
+     */
+    @Bean
+    public RouterFunction<ServerResponse> genaiServiceRoute() {
+        return route("genai-service")
+                .route(path("/api/v1/ai/**"), http())
+                .filter(lb("genai-service"))
+                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
+    /**
      * Auth PUBLIC endpoints — rate-limited per-IP (10 req/phút).
      * Chống brute-force (login), mass signup (register), refresh-spam.
      */

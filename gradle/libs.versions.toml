@@ -81,7 +81,13 @@ spring-boot-admin-starter-server       = { module = "de.codecentric:spring-boot-
 spring-ai-bom                          = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
 spring-ai-starter-mcp-server-webmvc    = { module = "org.springframework.ai:spring-ai-starter-mcp-server-webmvc" }
 spring-ai-starter-mcp-client           = { module = "org.springframework.ai:spring-ai-starter-mcp-client" }
-spring-ai-openai                       = { module = "org.springframework.ai:spring-ai-openai" }
+# Spring AI 2.0 chia thành 2 artifact: `spring-ai-openai` (low-level api beans) + starter
+# (autoconfig + ChatClient + spring-ai-client-chat). genai-service cần STARTER để có
+# ChatClient + ToolCallbackProvider auto-pickup.
+spring-ai-starter-model-openai         = { module = "org.springframework.ai:spring-ai-starter-model-openai" }
+# Chat memory repository module — 2.0 rename: thêm `.repository.` vào package + artifact
+# (upgrade-notes nói "spring-ai-model-chat-memory-*" → "spring-ai-model-chat-memory-repository-*").
+spring-ai-starter-model-chat-memory-repository-jdbc = { module = "org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc" }
 spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
 
 # --- Plugin artifacts (dùng trong build-logic) ---

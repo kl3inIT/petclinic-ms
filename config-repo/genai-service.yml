@@ -1,0 +1,79 @@
+# genai-service — env-agnostic config.
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: genai
+        format_sql: true
+    open-in-view: false
+
+  # Liquibase quản changelog table trong `public` (default), nhưng từng changeset chỉ định
+  # schemaName: genai. KHÔNG set `default-schema: genai` — schema chưa tồn tại lúc Liquibase
+  # khởi tạo DATABASECHANGELOG → chicken-and-egg fail. Pattern này áp cho mọi service trong project.
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  ai:
+    # ⚠️ Gotcha #33 — TẮT hết model auto-config trừ chat. spring-ai-openai eagerly create
+    # 5 model beans (chat/embedding/image/audio/moderation), tất cả require api-key.
+    # genai-service tự build OpenAiChatModel trong ChatClientConfig → tắt chat auto-config luôn
+    # (set =none) cho an toàn.
+    model:
+      chat: none
+      embedding: none
+      embedding.text: none
+      embedding.multimodal: none
+      image: none
+      audio.speech: none
+      audio.transcription: none
+      moderation: none
+
+    # Spring AI 2.0 cho phép log prompt/completion qua observation. Learning project —
+    # BẬT để debug dễ. Production: tắt cả 2 (PII + cost của log volume).
+    chat:
+      client:
+        observations:
+          log-prompt: true
+      observations:
+        log-prompt: true
+        log-completion: true
+
+    # MCP client config — discover mcp-server qua Eureka (lb://) + auto-register
+    # SyncMcpToolCallbackProvider bean cho ChatClient.
+    mcp:
+      client:
+        type: SYNC
+        request-timeout: 30s
+        # name → identifier để xuất hiện trong logs/metrics. URL trỏ vào mcp-server qua Eureka.
+        sse:
+          connections:
+            petclinic-mcp:
+              url: http://mcp-server:8187
+              sse-endpoint: /sse
+
+# Petclinic AI properties — env-driven (Phase 12b). Phase 12c sẽ thêm admin endpoint
+# persist DB + AES-GCM encrypt api-key.
+petclinic:
+  ai:
+    llm:
+      base-url: ${PETCLINIC_LLM_BASE_URL:https://openrouter.ai/api/v1}
+      api-key: ${PETCLINIC_LLM_API_KEY:}
+      chat-model: ${PETCLINIC_LLM_CHAT_MODEL:anthropic/claude-3.5-haiku}
+      read-timeout: 60s
+    chat:
+      temperature: 0.7
+      memory-max-messages: 10
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+logging:
+  level:
+    org.springframework.ai: DEBUG
+    com.mss301.petclinic.genai: DEBUG
