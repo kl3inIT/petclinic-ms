@@ -1,6 +1,7 @@
 package com.mss301.petclinic.vets.service.impl;
 
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
+import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
 import com.mss301.petclinic.vets.dto.req.VetRequest;
 import com.mss301.petclinic.vets.dto.res.VetResponse;
 import com.mss301.petclinic.vets.exception.VetNotFoundException;
@@ -49,6 +50,33 @@ public class VetServiceImpl implements VetService {
         var vet = request.toEntity();
         if (request.specialtyNames() != null && !request.specialtyNames().isEmpty()) {
             vet.setSpecialties(resolveSpecialties(request.specialtyNames()));
+        }
+        return VetResponse.from(vetRepository.save(vet));
+    }
+
+    @Override
+    @Transactional
+    public VetResponse update(Long id, UpdateVetRequest request) {
+        var vet = vetRepository.findById(id)
+                .orElseThrow(() -> new VetNotFoundException(id.toString()));
+
+        if (request.hasFirstName()) {
+            if (request.firstName().isBlank()) {
+                throw new BadRequestAlertException("firstName must not be blank", "vet", "firstName-blank");
+            }
+            vet.setFirstName(request.firstName());
+        }
+        if (request.hasLastName()) {
+            if (request.lastName().isBlank()) {
+                throw new BadRequestAlertException("lastName must not be blank", "vet", "lastName-blank");
+            }
+            vet.setLastName(request.lastName());
+        }
+        if (request.hasSpecialties()) {
+            // Empty set = clear all; non-empty = REPLACE (không merge với specialty hiện tại)
+            vet.setSpecialties(request.specialtyNames().isEmpty()
+                    ? new HashSet<>()
+                    : resolveSpecialties(request.specialtyNames()));
         }
         return VetResponse.from(vetRepository.save(vet));
     }
