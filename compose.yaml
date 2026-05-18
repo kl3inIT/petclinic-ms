@@ -135,6 +135,271 @@ services:
       "
     restart: "no"
 
+  # =================================================================
+  # Spring services — profile "apps" — build từ root Dockerfile + ARG SERVICE.
+  #
+  #   docker compose --profile all --profile apps up -d --build
+  #
+  # Thứ tự khởi động ràng buộc qua depends_on:
+  #   config-server → discovery-server → (auth, customers, vets, visits, admin) → api-gateway
+  #
+  # Mailer-service đã có Dockerfile riêng (Go) → giữ profile cũ, chỉ thêm depends_on lên rabbitmq.
+  # =================================================================
+
+  config-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: config-server
+    image: petclinic-ms/config-server:latest
+    container_name: petclinic-config-server
+    profiles: ["apps"]
+    ports:
+      - "8888:8888"
+      - "9888:9888"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      # Spring Boot Docker Compose Support phải tắt khi chạy TRONG container — sẽ vô hạn lồng.
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9888/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  discovery-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: discovery-server
+    image: petclinic-ms/discovery-server:latest
+    container_name: petclinic-discovery-server
+    profiles: ["apps"]
+    ports:
+      - "8761:8761"
+      - "9761:9761"
+    depends_on:
+      config-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth-service
+    image: petclinic-ms/auth-service:latest
+    container_name: petclinic-auth-service
+    profiles: ["apps"]
+    ports:
+      - "8183:8183"
+      - "9183:9183"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9183/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  customers-service:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: customers-service } }
+    image: petclinic-ms/customers-service:latest
+    container_name: petclinic-customers-service
+    profiles: ["apps"]
+    ports:
+      - "8181:8181"
+      - "9181:9181"
+    depends_on:
+      postgres: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9181/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  vets-service:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: vets-service } }
+    image: petclinic-ms/vets-service:latest
+    container_name: petclinic-vets-service
+    profiles: ["apps"]
+    ports:
+      - "8182:8182"
+      - "9182:9182"
+    depends_on:
+      postgres: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9182/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  visits-service:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: visits-service } }
+    image: petclinic-ms/visits-service:latest
+    container_name: petclinic-visits-service
+    profiles: ["apps"]
+    ports:
+      - "8184:8184"
+      - "9184:9184"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+      customers-service: { condition: service_healthy }
+      vets-service: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9184/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  api-gateway:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: api-gateway } }
+    image: petclinic-ms/api-gateway:latest
+    container_name: petclinic-api-gateway
+    profiles: ["apps"]
+    ports:
+      - "8180:8180"
+      - "9080:9080"
+    depends_on:
+      auth-service: { condition: service_healthy }
+      customers-service: { condition: service_healthy }
+      vets-service: { condition: service_healthy }
+      visits-service: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  admin-server:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: admin-server } }
+    image: petclinic-ms/admin-server:latest
+    container_name: petclinic-admin-server
+    profiles: ["apps"]
+    ports:
+      - "8185:8185"
+      - "9185:9185"
+    depends_on:
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9185/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  # Mailer (Go) — đã có Dockerfile riêng tại services/mailer-service/.
+  # Kéo lên profile "apps" để full-stack `--profile all --profile apps up` cover luôn.
+  mailer-service:
+    build:
+      context: ./services/mailer-service
+      dockerfile: Dockerfile
+    image: petclinic-ms/mailer-service:latest
+    container_name: petclinic-mailer-service
+    profiles: ["apps"]
+    ports:
+      - "8186:8186"
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      mailpit: { condition: service_started }
+      admin-server: { condition: service_healthy }
+    environment:
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+      REDIS_ADDR: redis:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      ADMIN_SERVER_URL: http://admin-server:8185
+      ADMIN_PUBLIC_HOST: mailer-service
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8186/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     name: petclinic-postgres-data

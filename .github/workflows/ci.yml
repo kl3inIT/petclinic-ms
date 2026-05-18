@@ -1,27 +1,33 @@
 name: CI
 
-# Workflow tối thiểu để:
-#  1. Verify gradle build trên mỗi push/PR vào main.
-#  2. Cho Dependabot `github-actions` ecosystem có manifest để scan
-#     (actions/checkout, actions/setup-java, gradle/actions/setup-gradle).
+# Workflow gồm 4 job song song:
+#  1. gradle-build   — verify build + test cho 5 Spring service + 5 shared module.
+#  2. fe-check       — typecheck + lint + build FE React (apps/web).
+#  3. go-build       — go build + vet mailer-service.
+#  4. docker-build   — matrix build 6 image (5 Spring + admin-server). Chỉ on push main/tag.
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+  packages: write   # push image lên ghcr.io khi tag
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Gradle build (JDK 25)
+  # ===========================================================================
+  # Job 1 — Gradle build + test (5 Spring service + 5 shared module)
+  # ===========================================================================
+  gradle-build:
+    name: Gradle build + test (JDK 25)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -38,5 +44,204 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Build
+      - name: Build + test
         run: ./gradlew --no-daemon build
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+          retention-days: 7
+
+  # ===========================================================================
+  # Job 2 — Frontend typecheck + lint + build
+  # ===========================================================================
+  fe-check:
+    name: FE (pnpm typecheck + lint + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+          run_install: false
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('apps/web/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+  # ===========================================================================
+  # Job 3 — Go build + vet + test (mailer-service)
+  # ===========================================================================
+  go-build:
+    name: Go build + vet (mailer-service)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/mailer-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go 1.26
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache-dependency-path: services/mailer-service/go.sum
+
+      - name: Verify deps
+        run: go mod verify
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
+  # ===========================================================================
+  # Job 4 — Docker buildx matrix (6 service Spring + 1 admin + Go mailer)
+  # Chỉ chạy on push main + tag — không tốn CI minute cho mỗi PR.
+  # Push lên ghcr.io khi tag `v*`; chỉ build/cache khi push main (verify Dockerfile vẫn ok).
+  # ===========================================================================
+  docker-build:
+    name: Docker build matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [gradle-build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - config-server
+          - discovery-server
+          - api-gateway
+          - auth-service
+          - customers-service
+          - vets-service
+          - visits-service
+          - admin-server
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/petclinic-ms-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build (and push on tag)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          build-args: |
+            SERVICE=${{ matrix.service }}
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+
+  # ===========================================================================
+  # Job 5 — Go mailer Docker build (file riêng services/mailer-service/Dockerfile)
+  # ===========================================================================
+  docker-build-mailer:
+    name: Docker build mailer-service (Go)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [go-build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/petclinic-ms-mailer-service
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build (and push on tag)
+        uses: docker/build-push-action@v6
+        with:
+          context: services/mailer-service
+          file: services/mailer-service/Dockerfile
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=mailer
+          cache-to: type=gha,scope=mailer,mode=max
