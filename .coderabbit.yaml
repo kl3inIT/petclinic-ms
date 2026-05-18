@@ -1,0 +1,137 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit config — petclinic-ms (Spring Boot 4 + Spring AI 2.0-M6 microservices + React 19 web).
+# Docs: https://docs.coderabbit.ai/getting-started/yaml-configuration
+#
+# Profile "chill" — bot không spam nit picks, chỉ flag điều quan trọng. Hợp với learning project
+# nơi feedback chính giúp catch bugs/security, không phải style enforcement.
+
+language: "en-US"
+early_access: false
+tone_instructions: |
+  Trả lời TIẾNG VIỆT khi maintainer hỏi tiếng Việt, English mặc định cho review comments.
+  Câu trả lời ngắn gọn, tập trung vào root cause + fix gợi ý. Không lecture về fundamentals.
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false                       # tắt — noise trong PR
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  # Exclude generated code, lockfiles, build artifacts, infra-config heavy YAML.
+  # Pattern leading "!" = exclude. CodeRabbit có default ignore list tốt sẵn,
+  # mình thêm các pattern monorepo-specific.
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/.gradle/**"
+    - "!**/target/**"
+    - "!**/coverage/**"
+    - "!**/*.lock"
+    - "!**/pnpm-lock.yaml"
+    - "!**/package-lock.json"
+    - "!**/yarn.lock"
+    - "!**/gradle-wrapper.jar"
+    - "!**/gradle/wrapper/**"
+    - "!**/gradlew"
+    - "!**/gradlew.bat"
+    - "!apps/web/src/lib/api/generated/**"     # orval-generated OpenAPI client
+    - "!apps/web/openapi/**"                    # fetched OpenAPI specs
+    - "!apps/web/src/routeTree.gen.ts"          # TanStack Router generated
+    - "!**/*.gen.ts"
+    - "!**/dist/**"
+    - "!**/*.png"
+    - "!**/*.jpg"
+    - "!**/*.jpeg"
+    - "!**/*.gif"
+    - "!**/*.svg"
+    - "!**/*.ico"
+    - "!docs/**/*.html"
+    - "!hs_err_pid*.log"
+    - "!replay_pid*.log"
+    - "!**/.idea/**"
+    - "!**/.vscode/**"
+
+  path_instructions:
+    - path: "services/**/*.java"
+      instructions: |
+        Spring Boot 4.0.6 + Spring Cloud 2025.1.1 microservices. Khi review:
+        - KIỂM TRA imports/annotations Boot 4 vs Boot 3 (jakarta.* not javax.*). Nhiều API
+          đã đổi giữa Boot 3 → 4; nghi ngờ thì flag.
+        - Spring Security: phân biệt servlet (SecurityFilterChain, HttpSecurity) vs reactive
+          (SecurityWebFilterChain, ServerHttpSecurity). genai-service dùng WebFlux; các service khác MVC.
+        - JPA: dùng @ConfigurationProperties record + @EnableConfigurationProperties, KHÔNG dùng @Value
+          rải rác. KHÔNG dùng Lombok. KHÔNG tạo mapper/ layer — dùng Java records + static factory trong DTO.
+        - Database: Postgres + JPA mặc định, schema-per-service. Liquibase changesets phải có
+          rollback hoặc preconditions cho idempotency.
+        - Reactive code: blocking JPA/HTTP phải wrap Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic()).
+        - Spring AI 2.0-M6: M-release có breaking changes — verify với release notes nếu nghi.
+
+    - path: "services/genai-service/**"
+      instructions: |
+        WebFlux stack. Spring AI 2.0-M6 ChatClient.stream() có bug aggregation (.collectList()
+        trong OpenAiChatModel.internalStream() làm mất per-token streaming). Streaming endpoint
+        dùng OpenAI Java SDK trực tiếp (createStreaming + Flux.using). Flag nếu thấy ai đó wire
+        lại ChatClient.stream() cho production stream.
+
+    - path: "services/mcp-server/**"
+      instructions: |
+        MCP server expose tools cho LLM (CustomerTools/VetTools/VisitTools). Transport mặc định
+        Streamable HTTP (SSE deprecated). Method @Tool phải có description chính xác — LLM dựa
+        vào description để chọn tool.
+
+    - path: "shared/**/*.java"
+      instructions: |
+        Shared module dùng cho mọi service. Mọi bean nên @ConditionalOnMissingBean để service
+        có thể override. @ConditionalOnWebApplication(type=SERVLET|REACTIVE) khi bean phụ thuộc stack.
+
+    - path: "apps/web/**/*.{ts,tsx}"
+      instructions: |
+        React 19 + TypeScript strict + TanStack Router/Query + Vercel AI SDK v5 + shadcn/ui.
+        - KHÔNG dùng `any` — flag nếu thấy.
+        - Enterprise app: ergonomics > minimalism. Loading states + error boundaries phải có.
+        - Form: TanStack Form + Zod schema. KHÔNG hand-roll validation.
+        - API client: orval-generated từ OpenAPI — không tự fetch raw.
+        - Streaming chat: TextStreamChatTransport consume text/plain chunked từ BE.
+        - i18n: text Tiếng Việt + English; user-facing UI thường Tiếng Việt.
+
+    - path: "apps/web/src/components/ui/**"
+      instructions: |
+        shadcn/ui components — chỉ chỉnh khi thật cần. Custom UI để components/ root,
+        không pollute ui/ folder.
+
+    - path: "config-repo/**.yml"
+      instructions: |
+        Spring Cloud Config repository. KHÔNG commit secret/api-key — dùng env placeholder
+        ${PETCLINIC_FOO:default}. Check format Boot 4 properties (một số keys đã rename).
+
+    - path: "**/Dockerfile"
+      instructions: |
+        Multi-stage Gradle + jlink custom JRE. Java 25 module list phải bao gồm
+        java.instrument (Tomcat class transformer), java.sql/.rowset (JDBC), java.net.http (MCP),
+        jdk.crypto.ec/.cryptoki (TLS). Thiếu module → NoClassDefFoundError lúc runtime, không build-time.
+
+    - path: "compose.yaml"
+      instructions: |
+        Multi-profile compose (db/mq/cache/mail/storage/obs/apps/all). Mọi service Java phải
+        có depends_on config-server + discovery-server với condition: service_healthy.
+        Env JWKS_URI phải trỏ Docker hostname (auth-service:8183), không localhost.
+
+    - path: "**/*.sql"
+      instructions: |
+        Postgres dialect. CREATE EXTENSION phải SCHEMA <name> không để public (gây JDBC
+        currentSchema resolve fail). Liquibase changesets phải có id + author unique.
+
+  finishing_touches:
+    docstrings:
+      enabled: false                # Java codebase đã có Javadoc style riêng; bot generated docstrings xung đột
+
+chat:
+  auto_reply: true
