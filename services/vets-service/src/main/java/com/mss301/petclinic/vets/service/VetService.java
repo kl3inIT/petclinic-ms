@@ -7,7 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface VetService {
 
-    Page<VetResponse> findAll(String lastName, Pageable pageable);
+    Page<VetResponse> findAll(String lastName, Long specialtyId, Pageable pageable);
 
     VetResponse findById(Long id);
 

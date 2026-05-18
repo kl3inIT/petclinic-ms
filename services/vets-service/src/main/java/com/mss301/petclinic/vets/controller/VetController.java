@@ -31,12 +31,13 @@ public class VetController {
     }
 
     @GetMapping
-    @Operation(summary = "List vets (paginated)", description = "Filter optional by lastName. Use ?page=0&size=20&sort=lastName,asc.")
+    @Operation(summary = "List vets (paginated)", description = "Filter optional by lastName (contains, case-insensitive) and/or specialtyId. Use ?page=0&size=20&sort=lastName,asc.")
     public Page<VetResponse> listVets(
             @RequestParam(required = false) String lastName,
+            @RequestParam(required = false) Long specialtyId,
             Pageable pageable
     ) {
-        return service.findAll(lastName, pageable);
+        return service.findAll(lastName, specialtyId, pageable);
     }
 
     @GetMapping("/{id}")

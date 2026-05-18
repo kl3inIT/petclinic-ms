@@ -7,6 +7,7 @@ import com.mss301.petclinic.vets.exception.VetNotFoundException;
 import com.mss301.petclinic.vets.model.Specialty;
 import com.mss301.petclinic.vets.repository.SpecialtyRepository;
 import com.mss301.petclinic.vets.repository.VetRepository;
+import com.mss301.petclinic.vets.repository.VetSpecifications;
 import com.mss301.petclinic.vets.service.VetService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,11 +31,9 @@ public class VetServiceImpl implements VetService {
     }
 
     @Override
-    public Page<VetResponse> findAll(String lastName, Pageable pageable) {
-        var page = (lastName == null || lastName.isBlank())
-                ? vetRepository.findAll(pageable)
-                : vetRepository.findByLastNameContainingIgnoreCase(lastName, pageable);
-        return page.map(VetResponse::from);
+    public Page<VetResponse> findAll(String lastName, Long specialtyId, Pageable pageable) {
+        return vetRepository.findAll(VetSpecifications.filter(lastName, specialtyId), pageable)
+                .map(VetResponse::from);
     }
 
     @Override
