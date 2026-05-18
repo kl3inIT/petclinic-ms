@@ -440,6 +440,8 @@ services:
       PETCLINIC_LLM_BASE_URL: ${PETCLINIC_LLM_BASE_URL:-https://openrouter.ai/api/v1}
       PETCLINIC_LLM_API_KEY: ${PETCLINIC_LLM_API_KEY:-}
       PETCLINIC_LLM_CHAT_MODEL: ${PETCLINIC_LLM_CHAT_MODEL:-anthropic/claude-3.5-haiku}
+      # AES-GCM key cho encrypt apiKey lưu DB. Trống → ephemeral key (dev only).
+      PETCLINIC_CRYPTO_KEY: ${PETCLINIC_CRYPTO_KEY:-}
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9188/actuator/health || exit 1"]
       interval: 10s

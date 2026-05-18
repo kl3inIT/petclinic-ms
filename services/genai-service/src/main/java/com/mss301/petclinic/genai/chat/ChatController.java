@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
+import com.mss301.petclinic.genai.config.LlmClientHolder;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,11 +34,11 @@ public class ChatController {
 
     private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
-    private final ChatClient chatClient;
+    private final LlmClientHolder clientHolder;
     private final ChatMemory chatMemory;
 
-    public ChatController(ChatClient chatClient, ChatMemory chatMemory) {
-        this.chatClient = chatClient;
+    public ChatController(LlmClientHolder clientHolder, ChatMemory chatMemory) {
+        this.clientHolder = clientHolder;
         this.chatMemory = chatMemory;
     }
 
@@ -53,7 +53,13 @@ public class ChatController {
         log.info("Chat request: conversationId={}, message='{}'",
                 conversationId, abbreviate(request.message()));
 
-        String reply = chatClient.prompt()
+        if (!clientHolder.isReady()) {
+            throw new com.mss301.petclinic.common.web.exception.ExternalServiceUnavailableException(
+                    "llm (not configured — admin must POST /api/v1/admin/llm/config)", null);
+        }
+
+        // ChatClient có thể đã swap qua admin rebuild → đọc current snapshot mỗi request.
+        String reply = clientHolder.chatClient().prompt()
                 .system(SystemPrompts.GENERAL_ASSISTANT)
                 .user(request.message())
                 .advisors(MessageChatMemoryAdvisor.builder(chatMemory).build())

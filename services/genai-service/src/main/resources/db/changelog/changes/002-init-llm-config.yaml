@@ -1,0 +1,46 @@
+# Phase 12c — Admin-configurable LLM provider settings (BYOK pattern từ zero-mail).
+# Singleton row (id = 1). api_key stored AES-GCM encrypted; never plaintext at rest.
+
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-table-ai-llm-config
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: genai
+            tableName: ai_llm_config
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: base_url
+                  type: VARCHAR(256)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: api_key_encrypted
+                  type: VARCHAR(2048)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: chat_model
+                  type: VARCHAR(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_by
+                  type: VARCHAR(64)
+        - sql:
+            sql: >
+              ALTER TABLE genai.ai_llm_config
+              ADD CONSTRAINT ai_llm_config_singleton CHECK (id = 1)
+            dbms: postgresql

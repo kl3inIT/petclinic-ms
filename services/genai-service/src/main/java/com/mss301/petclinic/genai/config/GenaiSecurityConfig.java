@@ -33,6 +33,9 @@ public class GenaiSecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+                        // Admin LLM config — chỉ ADMIN. JWT claim "roles" có "ADMIN"
+                        // → JwtGrantedAuthoritiesConverter map → ROLE_ADMIN.
+                        .requestMatchers("/api/v1/admin/llm/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/ai/**").authenticated()
                         .anyRequest().authenticated()
                 )

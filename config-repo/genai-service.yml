@@ -67,6 +67,11 @@ petclinic:
       temperature: 0.7
       memory-max-messages: 10
 
+# Crypto config — AES-GCM key dùng encrypt apiKey lưu DB. Set qua env (`PETCLINIC_CRYPTO_KEY`).
+# Trống → AesGcmEncryptor auto-generate ephemeral key (cảnh báo log) — OK cho dev local,
+# KHÔNG ok cho prod (restart sẽ làm DB row unreadable).
+petclinic.crypto.key: ${PETCLINIC_CRYPTO_KEY:}
+
 management:
   endpoints:
     web:
