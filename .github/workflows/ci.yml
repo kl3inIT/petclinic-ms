@@ -285,7 +285,7 @@ jobs:
       # `ignore-unfixed: true` — bỏ qua vuln không có patch, focus actionable.
       - name: Trivy scan
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: petclinic-scan:${{ matrix.service }}
           format: 'sarif'
