@@ -28,6 +28,13 @@ management:
   tracing:
     sampling:
       probability: 0.1                    # 10% — đủ debug, tiết kiệm storage Tempo
+  # Prod OTLP — backend phải set qua env (k8s ConfigMap). NO fallback: fail-fast nếu thiếu.
+  # Vd: http://tempo.observability.svc.cluster.local:4318/v1/traces (Tempo OTLP/HTTP).
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTLP_ENDPOINT}
 
 # Prod Eureka — multi-instance, peer-aware. URL phải set qua env (k8s ConfigMap / Helm values).
 eureka:

@@ -115,6 +115,23 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  # Distributed tracing backend — Zipkin + zipkin-otel collector module.
+  # UI: http://localhost:9411 | OTLP HTTP: :9411/v1/traces
+  # ⚠️ Image `openzipkin/zipkin:3` KHÔNG ship OTLP collector. Module nằm trong repo riêng
+  # `openzipkin-contrib/zipkin-otel` và phân phối qua image này:
+  #   ghcr.io/openzipkin-contrib/zipkin-otel:latest
+  # Spring services ship span qua OTLP/HTTP, collector parse → in-memory storage → Lens UI.
+  zipkin:
+    image: ghcr.io/openzipkin-contrib/zipkin-otel:latest
+    container_name: petclinic-zipkin
+    profiles: ["obs", "all"]
+    ports:
+      - "9411:9411"
+    # NOTE: image distroless → KHÔNG có wget/curl cho HEALTHCHECK. Compose depends_on
+    # dùng `service_started` cho zipkin — span loss vài giây đầu khi exporter retry
+    # là acceptable cho dev.
+    restart: unless-stopped
+
   # Tạo bucket mặc định lúc init, exit ngay sau khi xong.
   minio-init:
     image: minio/mc:latest
@@ -160,6 +177,9 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       # Spring Boot Docker Compose Support phải tắt khi chạy TRONG container — sẽ vô hạn lồng.
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      # Tracing → Zipkin. Nếu profile `obs` không active, exporter retry với backoff
+      # và drop span (không crash) — log có thể nhiễu vài dòng connection-refused.
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9888/actuator/health || exit 1"]
       interval: 10s
@@ -185,6 +205,7 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
       CONFIG_SERVER_URL: http://config-server:8888
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9761/actuator/health || exit 1"]
       interval: 10s
@@ -219,6 +240,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9183/actuator/health || exit 1"]
       interval: 10s
@@ -245,6 +267,7 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9181/actuator/health || exit 1"]
       interval: 10s
@@ -271,6 +294,7 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9182/actuator/health || exit 1"]
       interval: 10s
@@ -301,6 +325,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9184/actuator/health || exit 1"]
       interval: 10s
@@ -327,6 +352,7 @@ services:
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9080/actuator/health || exit 1"]
       interval: 10s
@@ -353,6 +379,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       ADMIN_USER: admin
       ADMIN_PASSWORD: admin
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9185/actuator/health || exit 1"]
       interval: 10s

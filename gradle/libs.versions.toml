@@ -38,8 +38,11 @@ spring-boot-starter-liquibase          = { module = "org.springframework.boot:sp
 spring-boot-docker-compose             = { module = "org.springframework.boot:spring-boot-docker-compose" }
 
 # --- Observability ---
-micrometer-tracing-bridge-otel         = { module = "io.micrometer:micrometer-tracing-bridge-otel" }   # version từ BOM
-# Note: chưa add OTLP exporter — chưa có Tempo backend. TraceId vẫn được generate vào MDC để log.
+# Bridge: chuyển Micrometer Observation → OpenTelemetry SDK (đã có sẵn span/context propagation).
+# Exporter: ship trace OTLP/HTTP → Zipkin 3.x native receiver tại :9411/v1/traces. Version cả 2
+# đều quản lý bởi spring-boot-dependencies BOM (Boot 4.0.x) — không pin.
+micrometer-tracing-bridge-otel         = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
+opentelemetry-exporter-otlp            = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
 
 # --- API docs ---
 springdoc-openapi-starter-webmvc-ui    = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }

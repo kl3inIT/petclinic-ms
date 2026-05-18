@@ -14,6 +14,7 @@ dependencies {
     implementation(libs.spring.cloud.starter.netflix.eureka.client)
     implementation(libs.spring.cloud.starter.config)
     implementation(libs.micrometer.tracing.bridge.otel)
+    runtimeOnly(libs.opentelemetry.exporter.otlp)
     runtimeOnly(libs.postgresql)
 
     // bootRun trong dev tự start/stop container theo compose.yaml.

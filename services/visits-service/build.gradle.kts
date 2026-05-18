@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.spring.cloud.starter.circuitbreaker.resilience4j)
 
     implementation(libs.micrometer.tracing.bridge.otel)
+    runtimeOnly(libs.opentelemetry.exporter.otlp)
     runtimeOnly(libs.postgresql)
 
     developmentOnly(libs.spring.boot.docker.compose)

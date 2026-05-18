@@ -7,6 +7,7 @@ dependencies {
     // KHÔNG cần data-jpa / liquibase / postgres — discovery không có persistence.
     implementation(libs.spring.cloud.starter.netflix.eureka.server)
     implementation(libs.micrometer.tracing.bridge.otel)
+    runtimeOnly(libs.opentelemetry.exporter.otlp)
 
     testImplementation(libs.spring.boot.starter.test)
 }
