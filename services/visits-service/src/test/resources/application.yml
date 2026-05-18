@@ -1,3 +1,5 @@
+# Test overrides — Testcontainers Postgres + dummy JWT config.
+
 spring:
   profiles:
     active: test
@@ -16,10 +18,13 @@ spring:
     enabled: true
 
 # JWT decoder property — required bởi common-security auto-config.
-# Test smoke chỉ load context, không decode JWT thật → dummy URL ok.
 petclinic:
   auth:
     jwt:
       jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
       issuer: petclinic-test
       audience: petclinic-test
+
+# Disable event publishing trong test — broker không có sẵn.
+# ObjectProvider<EventPublisher> sẽ getIfAvailable() return null → service skip publish.
+petclinic.events.enabled: false
