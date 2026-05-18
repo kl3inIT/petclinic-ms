@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
@@ -42,14 +42,14 @@ jobs:
           java-version: '25'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Build + test
         run: ./gradlew --no-daemon build
 
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gradle-test-reports
           path: |
@@ -70,19 +70,20 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
-      # Order MATTERS: setup-node@v5 auto-detects pnpm-lock.yaml → cố dùng pnpm cho cache.
-      # Nếu pnpm chưa cài, setup-node fail "Unable to locate executable file: pnpm".
-      # Cài pnpm TRƯỚC, rồi setup-node mới resolve được pnpm.
+      # Order MATTERS: setup-node auto-detect pnpm-lock.yaml → cần pnpm cho cache.
+      # Cài pnpm TRƯỚC, rồi setup-node mới resolve được.
+      # KHÔNG set `version:` — action sẽ đọc từ apps/web/package.json `packageManager`
+      # field (single source of truth). Set version ở đây gây conflict ERR_PNPM_BAD_PM_VERSION.
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 11
+          package_json_file: apps/web/package.json
           run_install: false
 
       - name: Set up Node 22
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -113,10 +114,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Go 1.26
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.26'
           cache-dependency-path: services/mailer-service/go.sum
@@ -159,14 +160,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to GHCR
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -174,7 +175,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/petclinic-ms-${{ matrix.service }}
           tags: |
@@ -184,7 +185,7 @@ jobs:
             type=sha,prefix=sha-,format=short
 
       - name: Build (and push on tag)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: services/${{ matrix.service }}/Dockerfile
@@ -206,14 +207,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to GHCR
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -221,7 +222,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/petclinic-ms-mailer-service
           tags: |
@@ -231,7 +232,7 @@ jobs:
             type=sha,prefix=sha-,format=short
 
       - name: Build (and push on tag)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: services/mailer-service
           file: services/mailer-service/Dockerfile
