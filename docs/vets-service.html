@@ -247,9 +247,9 @@ sequenceDiagram
   GW->>V: forward + JWT (role=USER)
   V->>V: Filter chain check role authenticated
   V->>DB: SELECT v.*, s.* FROM vets v<br/>JOIN vet_specialties vs ON v.id=vs.vet_id<br/>JOIN specialties s ON s.id=vs.specialty_id<br/>WHERE s.id=:specialtyId
-  DB-->>V: Page<Vet>
-  V->>V: Map → Page<VetResponse>
-  V-->>GW: 200 Page<VetResponse>
+  DB-->>V: Page&lt;Vet&gt;
+  V->>V: Map → Page&lt;VetResponse&gt;
+  V-->>GW: 200 Page&lt;VetResponse&gt;
   GW-->>FE: 200
   FE->>C: Hiển thị danh sách BS Lee, BS Tâm... (mỗi card có chuyên môn)
 
@@ -257,7 +257,7 @@ sequenceDiagram
   FE->>GW: GET /api/v1/vets/42
   GW->>V: forward
   V->>DB: SELECT v.*, s.* WHERE v.id=42
-  V-->>FE: VetResponse + Set<SpecialtyResponse>
+  V-->>FE: VetResponse + Set&lt;SpecialtyResponse&gt;
   FE->>C: Trang chi tiết vet + nút "Đặt lịch khám"
 </div>
 
@@ -276,7 +276,7 @@ sequenceDiagram
   FE->>GW: GET /api/v1/specialties
   GW->>V: forward
   V->>DB: SELECT * FROM specialties
-  V-->>FE: List<SpecialtyResponse>
+  V-->>FE: List&lt;SpecialtyResponse&gt;
   FE->>S: Render checkbox specialties
 
   S->>FE: Submit {firstName, lastName,<br/>specialtyNames: ["surgery","dentistry"]}
@@ -319,7 +319,7 @@ sequenceDiagram
   GW->>V: forward
   V->>V: Decode JWT → vetId = me
   V->>DB: SELECT workday + work_hour WHERE vet_id=me
-  V-->>FE: List<WorkdayResponse>
+  V-->>FE: List&lt;WorkdayResponse&gt;
 
   Vet->>FE: Set "Thứ 2: 8-12 và 14-18"
   FE->>GW: PUT /api/v1/vets/me/schedule<br/>{workdays: [{dayOfWeek:MONDAY, hours:[{start:08:00,end:12:00},{start:14:00,end:18:00}]}, ...]}
@@ -330,7 +330,7 @@ sequenceDiagram
   V->>DB: INSERT workday + work_hour (batch)
   DB-->>V: OK
 
-  V-->>FE: 200 List<WorkdayResponse>
+  V-->>FE: 200 List&lt;WorkdayResponse&gt;
   FE->>Vet: Toast "Đã cập nhật lịch"
 
   alt Staff sửa lịch hộ vet khác
@@ -487,9 +487,8 @@ graph LR
 
 <h2>Next steps</h2>
 <ol>
-  <li><strong>Phase Now đã DONE</strong> — chỉ cần verify FE đang dùng đúng endpoints + orval typecheck pass</li>
-  <li><strong>Phase Next ưu tiên:</strong> filter <code>?specialtyId=</code> + PATCH vet (effort thấp, giá trị cao cho FE list page)</li>
-  <li><strong>Phase Next quan trọng:</strong> workday + availability — block trang booking, cần align với visits-service dev sớm</li>
+  <li><strong>Phase Now + Đợt 1 đã DONE</strong> — Vet ↔ Specialty N-N + filter <code>?specialtyId=</code> + PATCH vet. Verify FE đang dùng đúng endpoints + orval typecheck pass.</li>
+  <li><strong>Phase Next ưu tiên:</strong> workday + availability — block trang booking, cần align với visits-service dev sớm</li>
   <li><strong>Phase reviews tích hợp:</strong> chỉ cần thêm field <code>averageRating</code> + consumer event — phụ thuộc reviews-service ra trước</li>
 </ol>
 

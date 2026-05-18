@@ -284,7 +284,7 @@ sequenceDiagram
   FE->>GW: GET /api/v1/admin/reviews?status=PENDING_MODERATION&pageable=...
   GW->>R: forward + JWT (role=STAFF)
   R->>R: Filter chain check role STAFF|ADMIN
-  R-->>FE: Page<Review>
+  R-->>FE: Page&lt;Review&gt;
 
   S->>FE: Click "Approve" trên review #abc
   FE->>GW: PATCH /api/v1/admin/reviews/abc/approve
