@@ -10,7 +10,7 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -29,7 +29,10 @@ import org.springframework.context.annotation.Primary;
  * </ol>
  */
 @Configuration
-@ConditionalOnProperty(prefix = "petclinic.ai.embedding", name = "api-key")
+// @ConditionalOnProperty với name=api-key fire kể cả khi value="" (Spring Boot match-if-set).
+// Cần ExpressionLanguage để loại trừ chuỗi rỗng — tránh tạo OpenAIClient với apiKey=null,
+// PgVectorStore autoconfig nuốt rồi RAG advisor crash khi query embedding.
+@ConditionalOnExpression("!'${petclinic.ai.embedding.api-key:}'.isEmpty()")
 public class EmbeddingConfig {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingConfig.class);

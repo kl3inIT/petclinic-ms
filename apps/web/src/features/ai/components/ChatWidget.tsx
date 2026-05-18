@@ -205,7 +205,6 @@ export function ChatWidget() {
           >
             <PromptInputBody>
               <PromptInputTextarea
-                name="text"
                 placeholder="Hỏi gì đó về clinic…"
                 disabled={isStreaming}
               />

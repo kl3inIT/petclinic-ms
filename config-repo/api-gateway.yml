@@ -51,8 +51,8 @@ springdoc:
 
 resilience4j:
   circuitbreaker:
-    instances:
-      defaultCircuitBreaker:
+    configs:
+      default:
         sliding-window-size: 10
         minimum-number-of-calls: 5
         failure-rate-threshold: 50
@@ -60,8 +60,37 @@ resilience4j:
         permitted-number-of-calls-in-half-open-state: 3
         slow-call-duration-threshold: 2s
         slow-call-rate-threshold: 80
-  timelimiter:
     instances:
-      defaultCircuitBreaker:
+      customersCircuitBreaker:
+        base-config: default
+      vetsCircuitBreaker:
+        base-config: default
+      visitsCircuitBreaker:
+        base-config: default
+      authCircuitBreaker:
+        base-config: default
+      # Genai: LLM streaming có thể chạy 30-120s. Threshold nới lỏng — chỉ trip khi
+      # OpenRouter thực sự chết, không phải khi response chậm bình thường.
+      genaiCircuitBreaker:
+        base-config: default
+        slow-call-duration-threshold: 60s
+        failure-rate-threshold: 80
+  timelimiter:
+    configs:
+      default:
         timeout-duration: 3s
         cancel-running-future: true
+    instances:
+      customersCircuitBreaker:
+        base-config: default
+      vetsCircuitBreaker:
+        base-config: default
+      visitsCircuitBreaker:
+        base-config: default
+      authCircuitBreaker:
+        base-config: default
+      # LLM streaming + RAG retrieval: 90s đủ cho most responses; CB sẽ vẫn trip nếu
+      # downstream stuck. cancel-running-future=false để stream cancel không kill connection.
+      genaiCircuitBreaker:
+        timeout-duration: 90s
+        cancel-running-future: false

@@ -456,6 +456,10 @@ services:
       PETCLINIC_LLM_BASE_URL: ${PETCLINIC_LLM_BASE_URL:-https://openrouter.ai/api/v1}
       PETCLINIC_LLM_API_KEY: ${PETCLINIC_LLM_API_KEY:-}
       PETCLINIC_LLM_CHAT_MODEL: ${PETCLINIC_LLM_CHAT_MODEL:-anthropic/claude-3.5-haiku}
+      # Phase 12d — embedding (RAG). Để trống → EmbeddingConfig skip, ChatClient không có RAG.
+      PETCLINIC_EMBEDDING_BASE_URL: ${PETCLINIC_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      PETCLINIC_EMBEDDING_API_KEY: ${PETCLINIC_EMBEDDING_API_KEY:-}
+      PETCLINIC_EMBEDDING_MODEL: ${PETCLINIC_EMBEDDING_MODEL:-text-embedding-3-small}
       # AES-GCM key cho encrypt apiKey lưu DB. Trống → ephemeral key (dev only).
       PETCLINIC_CRYPTO_KEY: ${PETCLINIC_CRYPTO_KEY:-}
     healthcheck:
