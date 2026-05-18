@@ -1,0 +1,47 @@
+# CODEOWNERS — auto-request review khi file matching được modify trong PR.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customization/customizing-your-repository/about-code-owners
+#
+# Pattern follows .gitignore syntax. LAST match wins (override gốc lên specific).
+# Owner phải là GitHub user/team có quyền read repo.
+
+# --- Default owner cho mọi file (catch-all) ---
+*                                                       @kl3inIT
+
+# --- CI / build infra ---
+/.github/                                               @kl3inIT
+/build-logic/                                           @kl3inIT
+/gradle/                                                @kl3inIT
+*.gradle.kts                                            @kl3inIT
+/compose.yaml                                           @kl3inIT
+/.husky/                                                @kl3inIT
+/.coderabbit.yaml                                       @kl3inIT
+/.coderabbitignore                                      @kl3inIT
+/scripts/                                               @kl3inIT
+
+# --- Spring Cloud platform (config, discovery, gateway, admin) ---
+/services/config-server/                                @kl3inIT
+/services/discovery-server/                             @kl3inIT
+/services/api-gateway/                                  @kl3inIT
+/services/admin-server/                                 @kl3inIT
+/config-repo/                                           @kl3inIT
+
+# --- Domain services ---
+/services/auth-service/                                 @kl3inIT
+/services/customers-service/                            @kl3inIT @NhanhAnhXtanh
+/services/vets-service/                                 @kl3inIT @NhanhAnhXtanh
+/services/visits-service/                               @kl3inIT
+/services/mailer-service/                               @kl3inIT
+/services/mcp-server/                                   @kl3inIT
+/services/genai-service/                                @kl3inIT
+
+# --- Shared modules — careful, ảnh hưởng mọi service ---
+/shared/                                                @kl3inIT
+
+# --- Frontend ---
+/apps/web/                                              @kl3inIT @NhanhAnhXtanh
+/apps/web/src/lib/api/generated/                        # auto-generated, no review needed
+/apps/web/src/routeTree.gen.ts                          # auto-generated
+
+# --- Docs ---
+/docs/                                                  @kl3inIT
+*.md                                                    @kl3inIT

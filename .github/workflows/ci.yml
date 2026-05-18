@@ -16,7 +16,8 @@ on:
 
 permissions:
   contents: read
-  packages: write   # push image lên ghcr.io khi tag
+  packages: write           # push image lên ghcr.io khi tag
+  security-events: write    # upload Trivy SARIF lên GitHub Security tab
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -44,8 +45,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Build + test
-        run: ./gradlew --no-daemon build
+      - name: Build + test + aggregate coverage
+        run: ./gradlew --no-daemon build jacocoAggregatedReport
 
       - name: Upload test reports
         if: failure()
@@ -56,6 +57,16 @@ jobs:
             **/build/reports/tests/
             **/build/test-results/
           retention-days: 7
+
+      # Coverage XML aggregate cho Codecov / SonarCloud upload. Hiện chỉ artifact.
+      # Khi enable Codecov: thêm step codecov/codecov-action@v5 với token.
+      - name: Upload JaCoCo aggregated coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: jacoco-aggregated-coverage
+          path: build/reports/jacoco/jacocoAggregatedReport/
+          retention-days: 14
 
   # ===========================================================================
   # Job 2 — Frontend typecheck + lint + build
@@ -99,6 +110,73 @@ jobs:
 
       - name: Build FE
         run: pnpm --filter @petclinic/web build
+
+  # ===========================================================================
+  # Job 2b — Playwright E2E smoke (FE-only, không spin BE container).
+  # Tách job riêng để fail-fast vẫn build được FE; cache pnpm dùng chung.
+  # ===========================================================================
+  fe-e2e:
+    name: FE E2E (Playwright smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [fe-check]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      # Playwright cache theo version để tránh re-download Chromium mỗi run.
+      - name: Get Playwright version
+        id: pw-version
+        working-directory: apps/web
+        run: |
+          VERSION=$(pnpm exec playwright --version | awk '{print $2}')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @petclinic/web exec playwright install --with-deps chromium
+
+      - name: Install Playwright OS deps only (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @petclinic/web exec playwright install-deps chromium
+
+      - name: Run E2E smoke
+        run: pnpm --filter @petclinic/web test:e2e
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
 
   # ===========================================================================
   # Job 3 — Go build + vet + test (mailer-service)
@@ -185,16 +263,47 @@ jobs:
             type=semver,pattern={{version}}
             type=sha,prefix=sha-,format=short
 
-      - name: Build (and push on tag)
+      - name: Build (and push on tag, load locally for scan)
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
           file: services/${{ matrix.service }}/Dockerfile
           push: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          tags: ${{ steps.meta.outputs.tags }}
+          # Load thêm 1 local tag `petclinic-scan:${service}` để Trivy scan offline.
+          # KHÔNG load khi tag release vì push registry trực tiếp.
+          load: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            petclinic-scan:${{ matrix.service }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
+
+      # Trivy CVE scan local image. `exit-code: 0` — KHÔNG fail build, chỉ
+      # surface vào Security tab + artifact. Đổi '1' khi muốn enforce.
+      # `ignore-unfixed: true` — bỏ qua vuln không có patch, focus actionable.
+      - name: Trivy scan
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: petclinic-scan:${{ matrix.service }}
+          format: 'sarif'
+          output: 'trivy-${{ matrix.service }}.sarif'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '0'
+          vuln-type: 'os,library'
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db
+
+      - name: Upload Trivy SARIF
+        if: ${{ always() && !startsWith(github.ref, 'refs/tags/v') }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-${{ matrix.service }}.sarif'
+          category: 'trivy-${{ matrix.service }}'
 
   # ===========================================================================
   # Job 5 — Go mailer Docker build (file riêng services/mailer-service/Dockerfile)
