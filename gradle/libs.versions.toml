@@ -51,6 +51,7 @@ opentelemetry-exporter-otlp            = { module = "io.opentelemetry:openteleme
 
 # --- API docs ---
 springdoc-openapi-starter-webmvc-ui    = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+springdoc-openapi-starter-webflux-ui   = { module = "org.springdoc:springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
 
 # --- DB ---
 postgresql                             = { module = "org.postgresql:postgresql", version.ref = "postgresql" }

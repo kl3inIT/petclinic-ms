@@ -9,6 +9,14 @@ dependencyManagement {
     }
 }
 
+// WebFlux stack — exclude Tomcat transitive (kéo từ spring-cloud-config/eureka client etc.)
+// để khỏi conflict với Netty (Tomcat & Netty cùng có ReactiveManagementContextAutoConfiguration,
+// Spring Boot 4 không cho cả 2 đồng thời).
+configurations.all {
+    exclude(group = "org.apache.tomcat.embed")
+    exclude(group = "org.springframework.boot", module = "spring-boot-starter-tomcat")
+}
+
 dependencies {
     implementation(project(":shared:common-web"))
     implementation(project(":shared:common-jpa"))
@@ -29,12 +37,16 @@ dependencies {
     // MCP client: discover mcp-server qua Eureka, consume tools qua SyncMcpToolCallbackProvider
     implementation(libs.spring.ai.starter.mcp.client)
 
-    // Standard Spring stack
-    implementation(libs.spring.boot.starter.web)
-    implementation(libs.spring.boot.starter.data.jpa)       // JdbcChatMemoryRepository cần JdbcTemplate
+    // Standard Spring stack — WebFlux for true SSE streaming (bypass Spring MVC ReactiveTypeHandler aggregation)
+    implementation(libs.spring.boot.starter.webflux)
+    implementation(libs.spring.boot.starter.data.jpa)       // JdbcChatMemoryRepository cần JdbcTemplate; blocking JPA wrapped in boundedElastic
     implementation(libs.spring.boot.starter.validation)
+    // Hibernate Validator cần Jakarta EL impl ở runtime (HV000183). Khi xài Tomcat,
+    // Tomcat embed cung cấp; với Netty/WebFlux phải add riêng. Expressly = Jakarta EL 6.0 RI.
+    // BOM Spring Boot 4.0 không manage version → pin explicit.
+    runtimeOnly("org.glassfish.expressly:expressly:6.0.0")
     implementation(libs.spring.boot.starter.liquibase)
-    implementation(libs.springdoc.openapi.starter.webmvc.ui)
+    implementation(libs.springdoc.openapi.starter.webflux.ui)
     implementation(libs.spring.cloud.starter.netflix.eureka.client)
     implementation(libs.spring.cloud.starter.config)
     implementation("org.springframework.cloud:spring-cloud-starter-loadbalancer")

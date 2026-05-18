@@ -1,6 +1,5 @@
 package com.mss301.petclinic.genai.rag;
 
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -10,6 +9,8 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,10 @@ import java.util.List;
  *
  * <p>Conditional: chỉ chạy khi {@link VectorStore} bean tồn tại (= EmbeddingConfig đã active
  * → PgVectorStore autoconfig đã tạo bean). Empty embedding key → skip toàn bộ flow.
+ *
+ * <p>WebFlux migration: dùng {@link ApplicationReadyEvent} thay {@code @PostConstruct} —
+ * embedding API call là blocking I/O, không nên chạy trong bean init (block startup +
+ * potential event-loop pin nếu được trigger từ reactive context).
  */
 @Service
 @ConditionalOnBean(VectorStore.class)
@@ -39,7 +44,7 @@ public class RagIngestService {
         this.faqResource = faqResource;
     }
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     void ingestOnStartup() {
         if (!vectorStoreEmpty()) {
             log.info("VectorStore already populated — skip FAQ ingest");

@@ -14,17 +14,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
- * Admin LLM config endpoints (BYOK pattern). ROLE_ADMIN required — enforced trong
- * {@link com.mss301.petclinic.genai.config.GenaiSecurityConfig}.
- *
- * <ul>
- *   <li>{@code GET    /api/v1/admin/llm/current}  — config hiện tại (apiKey masked)</li>
- *   <li>{@code POST   /api/v1/admin/llm/config}   — save mới + rebuild ChatClient</li>
- *   <li>{@code POST   /api/v1/admin/llm/validate} — test config TÙY Ý (chưa save)</li>
- *   <li>{@code POST   /api/v1/admin/llm/test}     — test config ĐANG ACTIVE</li>
- * </ul>
+ * Admin LLM config endpoints (BYOK pattern). WebFlux stack — wrap blocking JPA/HTTP probe
+ * trong {@code Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())} để khỏi block event loop.
  */
 @RestController
 @RequestMapping("/api/v1/admin/llm")
@@ -39,28 +34,34 @@ public class AdminLlmController {
 
     @GetMapping("/current")
     @Operation(summary = "Get current LLM config (apiKey masked)")
-    public LlmConfigResponse current() {
-        return configService.getCurrentMasked();
+    public Mono<LlmConfigResponse> current() {
+        return Mono.fromCallable(configService::getCurrentMasked)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @PostMapping("/config")
     @Operation(summary = "Save LLM config + rebuild ChatClient immediately")
-    public LlmConfigResponse save(@Valid @RequestBody SaveLlmConfigRequest request,
-                                   @AuthenticationPrincipal Jwt jwt) {
-        return configService.save(request, jwt.getSubject());
+    public Mono<LlmConfigResponse> save(@Valid @RequestBody SaveLlmConfigRequest request,
+                                         @AuthenticationPrincipal Jwt jwt) {
+        return Mono.fromCallable(() -> configService.save(request, jwt.getSubject()))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @PostMapping("/validate")
     @Operation(summary = "Ping LLM với config bất kỳ — KHÔNG save. Dùng trước khi POST /config.")
-    public ValidateLlmConfigResponse validate(@Valid @RequestBody ValidateLlmConfigRequest request) {
-        return configService.validate(request);
+    public Mono<ValidateLlmConfigResponse> validate(@Valid @RequestBody ValidateLlmConfigRequest request) {
+        return Mono.fromCallable(() -> configService.validate(request))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @PostMapping("/test")
     @Operation(summary = "Test config ĐANG ACTIVE (DB hoặc env fallback). Cho nút \"Test\" trên UI.")
-    public ValidateLlmConfigResponse testCurrent() {
-        LlmConfig active = configService.getCurrent();
-        return configService.validate(new ValidateLlmConfigRequest(
-                active.baseUrl(), active.apiKey(), active.chatModel()));
+    public Mono<ValidateLlmConfigResponse> testCurrent() {
+        return Mono.fromCallable(() -> {
+                    LlmConfig active = configService.getCurrent();
+                    return configService.validate(new ValidateLlmConfigRequest(
+                            active.baseUrl(), active.apiKey(), active.chatModel()));
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }

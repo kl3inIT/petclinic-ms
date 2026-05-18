@@ -39,6 +39,11 @@ public class LlmClientHolder {
     private final VectorStore vectorStore;  // null nếu Phase 12d skip RAG (no embedding key)
 
     private volatile ChatClient currentChatClient;
+    // Exposed cho streaming endpoint — bypass Spring AI 2.0-M6 OpenAiChatModel.internalStream()
+    // bug: nó .collectList().flatMapMany() để detect tool calls, biến stream thành Flux.just(aggregated)
+    // → mất per-token streaming. Manual stream path dùng OpenAI SDK trực tiếp.
+    private volatile OpenAIClient currentSyncClient;
+    private volatile String currentChatModelName;
 
     public LlmClientHolder(ToolCallbackProvider mcpToolProvider,
                             PetclinicAiProperties bootstrapProperties,
@@ -72,6 +77,19 @@ public class LlmClientHolder {
 
     public boolean isReady() {
         return currentChatClient != null;
+    }
+
+    /** Sync OpenAI SDK client cho streaming endpoint (bypass Spring AI aggregation bug). */
+    public OpenAIClient syncClient() {
+        return currentSyncClient;
+    }
+
+    public String chatModelName() {
+        return currentChatModelName;
+    }
+
+    public VectorStore vectorStore() {
+        return vectorStore;
     }
 
     public synchronized void rebuild(LlmConfig cfg) {
@@ -109,5 +127,7 @@ public class LlmClientHolder {
         }
 
         this.currentChatClient = builder.build();
+        this.currentSyncClient = sync;
+        this.currentChatModelName = cfg.chatModel();
     }
 }
