@@ -149,9 +149,7 @@ services:
   config-server:
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE: config-server
+      dockerfile: services/config-server/Dockerfile
     image: petclinic-ms/config-server:latest
     container_name: petclinic-config-server
     profiles: ["apps"]
@@ -173,9 +171,7 @@ services:
   discovery-server:
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE: discovery-server
+      dockerfile: services/discovery-server/Dockerfile
     image: petclinic-ms/discovery-server:latest
     container_name: petclinic-discovery-server
     profiles: ["apps"]
@@ -200,9 +196,7 @@ services:
   auth-service:
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE: auth-service
+      dockerfile: services/auth-service/Dockerfile
     image: petclinic-ms/auth-service:latest
     container_name: petclinic-auth-service
     profiles: ["apps"]
@@ -234,7 +228,7 @@ services:
     restart: unless-stopped
 
   customers-service:
-    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: customers-service } }
+    build: { context: ., dockerfile: services/customers-service/Dockerfile }
     image: petclinic-ms/customers-service:latest
     container_name: petclinic-customers-service
     profiles: ["apps"]
@@ -260,7 +254,7 @@ services:
     restart: unless-stopped
 
   vets-service:
-    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: vets-service } }
+    build: { context: ., dockerfile: services/vets-service/Dockerfile }
     image: petclinic-ms/vets-service:latest
     container_name: petclinic-vets-service
     profiles: ["apps"]
@@ -286,7 +280,7 @@ services:
     restart: unless-stopped
 
   visits-service:
-    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: visits-service } }
+    build: { context: ., dockerfile: services/visits-service/Dockerfile }
     image: petclinic-ms/visits-service:latest
     container_name: petclinic-visits-service
     profiles: ["apps"]
@@ -316,7 +310,7 @@ services:
     restart: unless-stopped
 
   api-gateway:
-    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: api-gateway } }
+    build: { context: ., dockerfile: services/api-gateway/Dockerfile }
     image: petclinic-ms/api-gateway:latest
     container_name: petclinic-api-gateway
     profiles: ["apps"]
@@ -342,7 +336,7 @@ services:
     restart: unless-stopped
 
   admin-server:
-    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: admin-server } }
+    build: { context: ., dockerfile: services/admin-server/Dockerfile }
     image: petclinic-ms/admin-server:latest
     container_name: petclinic-admin-server
     profiles: ["apps"]
