@@ -34,7 +34,7 @@ management:
         # Mở rộng cho Spring Boot Admin: loggers (đổi level runtime), env, mappings,
         # threaddump, heapdump, configprops, beans, scheduledtasks. Dev/learning project —
         # gateway permit-all /actuator của admin-server. Prod siết lại bằng basic-auth + IP allow.
-        include: health, info, metrics, prometheus, loggers, env, mappings, threaddump, heapdump, configprops, beans, scheduledtasks
+        include: health, info, metrics, prometheus, loggers, env, mappings, threaddump, heapdump, configprops, beans, scheduledtasks, circuitbreakers, circuitbreakerevents, ratelimiters, retries
   endpoint:
     health:
       # Service tự coi mình UP/DOWN cho SBA — chi tiết components (db, diskSpace) để dev nhìn.

@@ -34,15 +34,16 @@ resilience4j:
         permitted-number-of-calls-in-half-open-state: 3
         automatic-transition-from-open-to-half-open-enabled: true
         # Service healthy nhưng data 404 — KHÔNG phải tín hiệu fault. Không trigger fallback.
+        # Eureka LB throw IllegalStateException("No instances available"), RestClient throw
+        # ResourceAccessException, downstream 5xx → HttpServerErrorException... muôn hình vạn
+        # trạng nên dùng `ignore-exceptions` whitelist sau đó cho phép R4j count mặc định mọi
+        # exception còn lại là failure. KHÔNG dùng `record-exceptions` (whitelist hẹp dễ miss).
         ignore-exceptions:
           - org.springframework.web.client.HttpClientErrorException$NotFound
+          - org.springframework.web.client.HttpClientErrorException$BadRequest
+          - org.springframework.web.client.HttpClientErrorException$Unauthorized
+          - org.springframework.web.client.HttpClientErrorException$Forbidden
           - com.mss301.petclinic.common.web.exception.BadRequestAlertException
-        # Chỉ count network/server errors:
-        record-exceptions:
-          - org.springframework.web.client.HttpServerErrorException
-          - org.springframework.web.client.ResourceAccessException
-          - java.io.IOException
-          - java.util.concurrent.TimeoutException
     instances:
       customers-service:
         base-config: default

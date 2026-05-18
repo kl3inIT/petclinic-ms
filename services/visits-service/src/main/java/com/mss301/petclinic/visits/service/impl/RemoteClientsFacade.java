@@ -1,0 +1,82 @@
+package com.mss301.petclinic.visits.service.impl;
+
+import com.mss301.petclinic.common.web.exception.ExternalServiceUnavailableException;
+import com.mss301.petclinic.visits.client.CustomersClient;
+import com.mss301.petclinic.visits.client.PetSummary;
+import com.mss301.petclinic.visits.client.UserSummary;
+import com.mss301.petclinic.visits.client.UsersClient;
+import com.mss301.petclinic.visits.client.VetSummary;
+import com.mss301.petclinic.visits.client.VetsClient;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.UUID;
+
+/**
+ * Facade bao bọc cross-service HTTP calls + Resilience4j circuit breakers.
+ *
+ * <h4>Vì sao tách bean riêng?</h4>
+ * Spring AOP intercept method qua proxy ĐƯỢC TẠO QUANH bean. Khi
+ * {@code VisitServiceImpl.book()} gọi {@code this.fetchPet(...)} trong cùng class,
+ * Java resolve method trực tiếp trên object — KHÔNG đi qua proxy → annotation
+ * {@code @CircuitBreaker} không kick in (self-invocation trap).
+ *
+ * <p>Đặt CB methods trong bean tách riêng + inject vào caller → mỗi call đi qua proxy →
+ * R4j aspect chặn được → fallback + state machine hoạt động đúng.
+ *
+ * <p>Tất cả fallback đều throw {@link ExternalServiceUnavailableException} → mapped HTTP 503
+ * trong {@code common-web ExceptionTranslator}. {@code HttpClientErrorException.NotFound}
+ * vẫn được bubble lên caller (ignore-exceptions trong config) để caller phân loại 404 vs 503.
+ */
+@Component
+public class RemoteClientsFacade {
+
+    private static final Logger log = LoggerFactory.getLogger(RemoteClientsFacade.class);
+
+    private final CustomersClient customersClient;
+    private final VetsClient vetsClient;
+    private final UsersClient usersClient;
+
+    public RemoteClientsFacade(CustomersClient customersClient,
+                               VetsClient vetsClient,
+                               UsersClient usersClient) {
+        this.customersClient = customersClient;
+        this.vetsClient = vetsClient;
+        this.usersClient = usersClient;
+    }
+
+    @CircuitBreaker(name = "customers-service", fallbackMethod = "fetchPetFallback")
+    public PetSummary fetchPet(Long petId) {
+        return customersClient.getPet(petId);
+    }
+
+    @CircuitBreaker(name = "vets-service", fallbackMethod = "fetchVetFallback")
+    public VetSummary fetchVet(Long vetId) {
+        return vetsClient.getVet(vetId);
+    }
+
+    @CircuitBreaker(name = "auth-service", fallbackMethod = "fetchUserFallback")
+    public UserSummary fetchUser(UUID userId) {
+        return usersClient.getUser(userId);
+    }
+
+    @SuppressWarnings("unused") // referenced by @CircuitBreaker fallbackMethod
+    private PetSummary fetchPetFallback(Long petId, Throwable t) {
+        log.warn("customers-service circuit OPEN/down (petId={}): {}", petId, t.toString());
+        throw new ExternalServiceUnavailableException("customers-service", t);
+    }
+
+    @SuppressWarnings("unused")
+    private VetSummary fetchVetFallback(Long vetId, Throwable t) {
+        log.warn("vets-service circuit OPEN/down (vetId={}): {}", vetId, t.toString());
+        throw new ExternalServiceUnavailableException("vets-service", t);
+    }
+
+    @SuppressWarnings("unused")
+    private UserSummary fetchUserFallback(UUID userId, Throwable t) {
+        log.warn("auth-service circuit OPEN/down (userId={}): {}", userId, t.toString());
+        throw new ExternalServiceUnavailableException("auth-service", t);
+    }
+}
