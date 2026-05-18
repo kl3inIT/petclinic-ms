@@ -73,6 +73,15 @@ public class VetServiceImpl implements VetService {
             vet.setLastName(request.lastName());
         }
         if (request.hasSpecialties()) {
+            // Validate elements TRƯỚC khi gọi resolveSpecialties — tránh NPE toLowerCase()
+            // trên null/blank entry, trả 400 thay vì 500.
+            if (request.specialtyNames().stream().anyMatch(n -> n == null || n.isBlank())) {
+                throw new BadRequestAlertException(
+                        "specialtyNames must not contain null or blank values",
+                        "vet",
+                        "specialty-name-invalid"
+                );
+            }
             // Empty set = clear all; non-empty = REPLACE (không merge với specialty hiện tại)
             vet.setSpecialties(request.specialtyNames().isEmpty()
                     ? new HashSet<>()

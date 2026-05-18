@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Build {@link Specification} cho query động — chỉ add predicate khi param != null.
@@ -24,7 +25,9 @@ public final class VetSpecifications {
             List<Predicate> preds = new ArrayList<>();
 
             if (lastName != null && !lastName.isBlank()) {
-                preds.add(cb.like(cb.lower(root.get("lastName")), "%" + lastName.toLowerCase() + "%"));
+                // Locale.ROOT: deterministic lowercasing across deployments
+                // (default locale như tr-TR đổi 'I' → 'ı' thay vì 'i' → bug filter).
+                preds.add(cb.like(cb.lower(root.get("lastName")), "%" + lastName.toLowerCase(Locale.ROOT) + "%"));
             }
             if (specialtyId != null) {
                 Join<Vet, Specialty> spec = root.join("specialties", JoinType.INNER);
