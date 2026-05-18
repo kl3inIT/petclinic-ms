@@ -47,6 +47,10 @@ type Config struct {
 	AdminServerURL string `env:"ADMIN_SERVER_URL" envDefault:"http://localhost:8185"`
 	// Hostname mailer self-report tới SBA. Trong docker compose sẽ override = service name.
 	AdminPublicHost string `env:"ADMIN_PUBLIC_HOST" envDefault:"localhost"`
+	// Basic auth creds — SBA permitAll /instances nhưng giữ field cho prod siết.
+	// Khi cả hai empty → skip header (compat với SBA chạy không bật Security).
+	AdminUser     string `env:"ADMIN_USER" envDefault:"admin"`
+	AdminPassword string `env:"ADMIN_PASSWORD" envDefault:"admin"`
 
 	// Logging
 	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`

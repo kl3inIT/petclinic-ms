@@ -115,7 +115,9 @@ func run() error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		sba.Register(ctx, cfg.AdminServerURL, "mailer-service", cfg.AdminPublicHost, cfg.HTTPPort, log)
+		sba.Register(ctx, cfg.AdminServerURL, "mailer-service",
+			cfg.AdminPublicHost, cfg.HTTPPort,
+			cfg.AdminUser, cfg.AdminPassword, log)
 	}()
 
 	wg.Add(1)

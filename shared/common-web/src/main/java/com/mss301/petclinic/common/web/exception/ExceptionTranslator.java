@@ -59,6 +59,21 @@ public class ExceptionTranslator {
     }
 
     /**
+     * Downstream service unhealthy (circuit OPEN, timeout, connection refused).
+     * RFC 9457 + Retry-After header (RFC 7231 §7.1.3) để client biết khoảng cách thử lại.
+     */
+    @ExceptionHandler(ExternalServiceUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleServiceUnavailable(ExternalServiceUnavailableException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+        pd.setType(ErrorConstants.SERVICE_UNAVAILABLE_TYPE);
+        pd.setTitle("Service unavailable");
+        pd.setProperty("serviceName", ex.getServiceName());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(pd);
+    }
+
+    /**
      * Validation error từ {@code @Valid @RequestBody}. Trả về fieldErrors array — FE map từng field.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)

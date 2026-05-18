@@ -29,7 +29,11 @@ type Instance struct {
 
 // Register POST tới SBA /instances. Lặp với backoff ngắn để chịu được SBA chậm startup.
 // Background goroutine — không block main, không crash nếu SBA chưa lên.
-func Register(ctx context.Context, sbaURL, name, publicHost string, port int, log *slog.Logger) {
+//
+// authUser/authPassword: nếu cả hai non-empty → kèm header Basic auth (tương thích với
+// SBA bật Spring Security). Empty → skip header (SBA permitAll /instances).
+func Register(ctx context.Context, sbaURL, name, publicHost string, port int,
+	authUser, authPassword string, log *slog.Logger) {
 	if sbaURL == "" {
 		log.Info("sba self-register disabled (ADMIN_SERVER_URL empty)")
 		return
@@ -60,6 +64,9 @@ func Register(ctx context.Context, sbaURL, name, publicHost string, port int, lo
 			return
 		}
 		req.Header.Set("Content-Type", "application/json")
+		if authUser != "" && authPassword != "" {
+			req.SetBasicAuth(authUser, authPassword)
+		}
 		resp, err := client.Do(req)
 		if err != nil {
 			log.Debug("sba register: post failed", "endpoint", endpoint, "err", err)

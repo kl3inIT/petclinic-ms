@@ -3,6 +3,13 @@
 # Mailer Go self-register qua HTTP POST /instances (xem mailer-service/cmd/mailer/main.go).
 
 spring:
+  # Basic auth — dev default admin/admin. Prod inject qua ENV.
+  security:
+    user:
+      name: ${ADMIN_USER:admin}
+      password: ${ADMIN_PASSWORD:admin}
+      roles: ADMIN
+
   boot:
     admin:
       server:

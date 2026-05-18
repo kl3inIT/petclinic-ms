@@ -2,6 +2,12 @@ plugins {
     id("petclinic.spring-boot-service")
 }
 
+// Thymeleaf 3.1.4+ restrict SpEL trong CSS template (cấm T(...), new, @bean refs).
+// SBA 4.0.0 `variables.css` template vẫn dùng các expression này → runtime error
+// "Instantiation of new objects and access to static classes or parameters is forbidden".
+// Pin về 3.1.3.RELEASE (last version trước siết). Sẽ unpin khi SBA 4.0.1+ patch template.
+extra["thymeleaf.version"] = "3.1.3.RELEASE"
+
 dependencies {
     // Spring Boot Admin server 4.0.0 — UI dashboard quản trị 5 Spring service.
     // Pull theo BOM Boot 4 + Spring Cloud 2025.x.
@@ -16,6 +22,9 @@ dependencies {
 
     // Tracing bridge — đồng nhất MDC traceId/spanId với 5 service còn lại.
     implementation(libs.micrometer.tracing.bridge.otel)
+
+    // Basic auth + form-login bảo vệ dashboard. Bỏ → UI public (chỉ dev local).
+    implementation(libs.spring.boot.starter.security)
 
     testImplementation(libs.spring.boot.starter.test)
 }
