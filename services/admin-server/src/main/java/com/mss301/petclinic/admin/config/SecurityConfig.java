@@ -4,27 +4,18 @@ import de.codecentric.boot.admin.server.config.AdminServerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authentication.RedirectServerAuthenticationSuccessHandler;
 /**
- * Bảo vệ Spring Boot Admin UI bằng form-login (user) + HTTP Basic (client polling).
+ * Bảo vệ Spring Boot Admin UI (WebFlux stack — SBA 4 reactive) bằng form-login + HTTP Basic.
  *
- * <p>Endpoints public:
- * <ul>
- *   <li>{@code /assets/**}, {@code /login} — UI static resources + login page</li>
- *   <li>{@code /instances*} — SBA client self-register endpoint (mailer Go POST tới đây)</li>
- *   <li>{@code /actuator/**} — admin-server tự monitor mình</li>
- * </ul>
- *
- * <p>CSRF tắt cho {@code /instances*} và {@code /actuator/**} — client POST không có session.
- * Cookie-based CSRF token vẫn áp dụng cho form login.
+ * <p>Endpoints public: assets, login, instances (SBA client register), actuator.
+ * CSRF disabled — dev/learning project, SBA client POST không có session.
  */
 @Configuration
-@EnableWebSecurity
+@EnableWebFluxSecurity
 public class SecurityConfig {
 
     private final AdminServerProperties adminServer;
@@ -34,27 +25,24 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        var successHandler = new SavedRequestAwareAuthenticationSuccessHandler();
-        successHandler.setTargetUrlParameter("redirectTo");
-        successHandler.setDefaultTargetUrl(adminServer.path("/"));
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        var successHandler = new RedirectServerAuthenticationSuccessHandler();
+        successHandler.setLocation(java.net.URI.create(adminServer.path("/")));
 
-        http.authorizeHttpRequests(req -> req
-                        .requestMatchers(adminServer.path("/assets/**"),
-                                          adminServer.path("/login"),
-                                          adminServer.path("/variables.css"),
-                                          adminServer.path("/instances"),
-                                          adminServer.path("/instances/*"),
-                                          adminServer.path("/actuator/**"))
+        return http.authorizeExchange(ex -> ex
+                        .pathMatchers(adminServer.path("/assets/**"),
+                                       adminServer.path("/login"),
+                                       adminServer.path("/variables.css"),
+                                       adminServer.path("/instances"),
+                                       adminServer.path("/instances/*"),
+                                       adminServer.path("/actuator/**"))
                         .permitAll()
-                        .anyRequest().authenticated())
-                .formLogin(form -> form.loginPage(adminServer.path("/login")).successHandler(successHandler))
+                        .anyExchange().authenticated())
+                .formLogin(form -> form.loginPage(adminServer.path("/login"))
+                        .authenticationSuccessHandler(successHandler))
                 .logout(out -> out.logoutUrl(adminServer.path("/logout")))
                 .httpBasic(Customizer.withDefaults())
-                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .ignoringRequestMatchers(adminServer.path("/instances"),
-                                                  adminServer.path("/instances/*"),
-                                                  adminServer.path("/actuator/**")));
-        return http.build();
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .build();
     }
 }

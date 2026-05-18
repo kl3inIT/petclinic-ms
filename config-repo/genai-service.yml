@@ -23,9 +23,11 @@ spring:
     # (set =none) cho an toàn.
     model:
       chat: none
-      # KHÔNG tắt embedding — Phase 12d wire OpenAiEmbeddingModel manually (conditional
-      # on petclinic.ai.embedding.api-key). Tắt starter auto-config thì PgVectorStore
-      # autoconfig sẽ skip do thiếu EmbeddingModel. Đúng behavior — graceful skip.
+      # TẮT embedding auto-config — EmbeddingConfig wire OpenAiEmbeddingModel manually
+      # với baseUrl + apiKey riêng (petclinic.ai.embedding.*). Để auto-config on sẽ ép
+      # phải set spring.ai.openai.api-key duplicate, conflict với bean của ta.
+      # PgVectorStore tự inject @Primary bean của EmbeddingConfig — không cần autoconfig.
+      embedding: none
       embedding.multimodal: none
       image: none
       audio.speech: none

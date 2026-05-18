@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 /**
  * Embedding model — Phase 12d RAG.
@@ -60,8 +61,11 @@ public class EmbeddingConfig {
      * dùng constructor positional. Async client transitively built bên trong từ sync
      * (verified qua jar inspection, không cần truyền explicit như ChatModel).
      */
+    /** Bean name "petclinicEmbeddingModel" tránh conflict với Spring AI autoconfig
+     * (cùng name "openAiEmbeddingModel" — sẽ fail vì spring.main.allow-bean-definition-overriding=false). */
     @Bean
-    public EmbeddingModel openAiEmbeddingModel(
+    @Primary
+    public EmbeddingModel petclinicEmbeddingModel(
             @Qualifier("embedding") OpenAIClient sync,
             PetclinicAiProperties properties) {
         PetclinicAiProperties.Embedding embed = properties.embedding();

@@ -6,12 +6,15 @@
 # trong dev compose) đủ. Production có thể cần postgres-with-pgvector image.
 
 databaseChangeLog:
+  # Install pgvector vào schema `genai` thay vì default `public` — nhất quán với
+  # pattern "schema per service". JDBC currentSchema=genai chỉ resolve 1 schema,
+  # nên type `vector` phải nằm trong genai để Liquibase/PgVectorStore tìm được.
   - changeSet:
       id: 005-create-extension-vector
       author: mss301
       changes:
         - sql:
-            sql: CREATE EXTENSION IF NOT EXISTS vector
+            sql: CREATE EXTENSION IF NOT EXISTS vector SCHEMA genai
             dbms: postgresql
 
   - changeSet:
@@ -19,7 +22,7 @@ databaseChangeLog:
       author: mss301
       changes:
         - sql:
-            sql: CREATE EXTENSION IF NOT EXISTS hstore
+            sql: CREATE EXTENSION IF NOT EXISTS hstore SCHEMA genai
             dbms: postgresql
 
   - changeSet:
@@ -27,7 +30,7 @@ databaseChangeLog:
       author: mss301
       changes:
         - sql:
-            sql: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+            sql: CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA genai
             dbms: postgresql
 
   # Bảng vector_store — pgvector requires `vector(N)` type, raw SQL because Liquibase

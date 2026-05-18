@@ -45,7 +45,7 @@ RUN jdeps --ignore-missing-deps -q --recursive --multi-release 25         --prin
 #   jdk.naming.dns → Eureka DNS lookup
 #   jdk.crypto.cryptoki → TLS
 #   java.compiler, java.scripting → Spring AOT, JSP runtime
-RUN jlink         --add-modules "$(cat /deps.info),java.instrument,java.sql,java.sql.rowset,java.management.rmi,java.rmi,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.naming.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.zipfs,jdk.httpserver,jdk.attach,java.compiler,java.scripting,java.desktop,java.security.jgss,java.security.sasl,jdk.security.auth"         --compress zip-9         --no-header-files         --no-man-pages         --strip-debug         --output /jre-minimal
+RUN jlink         --add-modules "$(cat /deps.info),java.instrument,java.sql,java.sql.rowset,java.management.rmi,java.rmi,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.naming.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.zipfs,java.net.http,jdk.httpserver,jdk.net,jdk.attach,java.compiler,java.scripting,java.desktop,java.security.jgss,java.security.sasl,jdk.security.auth"         --compress zip-9         --no-header-files         --no-man-pages         --strip-debug         --output /jre-minimal
 
 # Spring Boot layered JAR — 4 layer cho cache hit cao
 RUN java -Djarmode=layertools -jar /app.jar extract --destination /extracted
