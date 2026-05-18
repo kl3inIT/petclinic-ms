@@ -41,7 +41,7 @@ RUN jdeps --ignore-missing-deps -q --recursive --multi-release 25 \
 
 # jlink — bổ sung modules cho Spring Actuator + Eureka + JDBC + Liquibase + OkHttp (OpenAI SDK).
 RUN jlink \
-        --add-modules "java.base,java.compiler,java.datatransfer,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.net.http,java.prefs,java.rmi,java.scripting,java.security.jgss,java.security.sasl,java.smartcardio,java.sql,java.sql.rowset,java.transaction.xa,java.xml,java.xml.crypto,jdk.accessibility,jdk.attach,jdk.charsets,jdk.compiler,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.dynalink,jdk.httpserver,jdk.jartool,jdk.jcmd,jdk.jdi,jdk.jdwp.agent,jdk.jfr,jdk.jlink,jdk.jsobject,jdk.localedata,jdk.management,jdk.management.agent,jdk.management.jfr,jdk.naming.dns,jdk.naming.rmi,jdk.net,jdk.nio.mapmode,jdk.random,jdk.sctp,jdk.security.auth,jdk.security.jgss,jdk.unsupported,jdk.xml.dom,jdk.zipfs" \
+        --add-modules "$(cat /deps.info),java.instrument,java.sql,java.sql.rowset,java.management.rmi,java.rmi,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.naming.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.zipfs,jdk.httpserver,jdk.attach,java.compiler,java.scripting,java.desktop,java.security.jgss,java.security.sasl,jdk.security.auth,java.sql,java.sql.rowset" \
         --compress zip-9 \
         --no-header-files \
         --no-man-pages \

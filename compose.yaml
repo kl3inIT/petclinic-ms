@@ -178,7 +178,9 @@ services:
       - "8888:8888"
       - "9888:9888"
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      # `native` cần luôn active — config-server đọc filesystem thay vì Git.
+      # Spring Cloud Config 5 không có fallback "no-op" nữa: thiếu profile → fail.
+      SPRING_PROFILES_ACTIVE: native,dev
       # Spring Boot Docker Compose Support phải tắt khi chạy TRONG container — sẽ vô hạn lồng.
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
       # Tracing → Zipkin. Nếu profile `obs` không active, exporter retry với backoff
