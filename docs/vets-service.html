@@ -107,12 +107,12 @@
     <tr><td>API: list / get / create / delete vet</td><td>Phase 2</td><td><span class="badge done">DONE</span></td><td>Pageable + filter <code>?lastName=</code></td></tr>
     <tr><td>API: list specialties (read-only)</td><td>Phase 2</td><td><span class="badge done">DONE</span></td><td>FE dùng làm select option khi create vet</td></tr>
     <tr><td>Cross-service consume từ visits-service</td><td>Phase 5A</td><td><span class="badge done">DONE</span></td><td>visits-service gọi qua <code>VetClient</code> (HTTP Interface)</td></tr>
-    <tr><td>Filter <code>?specialtyId=</code> trong list vets</td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>Specification predicate khi <code>specialtyId != null</code></td></tr>
-    <tr><td>PATCH vet (sửa name + specialties)</td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>Hiện chỉ có create + delete, không có edit</td></tr>
-    <tr><td><strong>Workday / Ca trực</strong></td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>Entity Workday + WorkHour, API set/get schedule</td></tr>
-    <tr><td>Slot availability cho booking</td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>visits-service gọi để check slot trống trước khi tạo visit</td></tr>
-    <tr><td>averageRating denormalized field</td><td>Phase reviews</td><td><span class="badge todo">TODO</span></td><td>Consume event <code>review.summary.updated.vet</code>, update local</td></tr>
-    <tr><td>Photo / Resume / Education / Badge</td><td>Defer</td><td><span class="badge todo">DEFER</span></td><td>Champlain có nhưng petclinic-ms cố ý bỏ — scope creep</td></tr>
+    <tr><td>Filter <code>?specialtyId=</code> trong list vets</td><td>Phase Next ✓</td><td><span class="badge done">DONE</span></td><td><code>VetSpecifications.filter</code> + <code>JpaSpecificationExecutor</code> (commit 87c5d7b)</td></tr>
+    <tr><td>PATCH vet (sửa name + specialties)</td><td>Phase Next ✓</td><td><span class="badge done">DONE</span></td><td><code>UpdateVetRequest</code> partial; null=không-đổi, []=clear, [...]=replace (commit 4c5e9bc)</td></tr>
+    <tr><td><strong>Workday / Ca trực</strong></td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>⚠️ Cần chốt <em>Vet ↔ User account link</em> trước nếu muốn <code>/me/schedule</code>. Có thể bỏ <code>/me</code> và chỉ làm STAFF set hộ (~1-2 ngày)</td></tr>
+    <tr><td>Slot availability cho booking</td><td>Phase Next</td><td><span class="badge todo">TODO</span></td><td>🔒 BLOCK bởi Workday + cần align với dev visits-service (Option A vs B trong Sequence 4)</td></tr>
+    <tr><td>averageRating denormalized field</td><td>Phase reviews</td><td><span class="badge todo">TODO</span></td><td>🔒 BLOCK bởi reviews-service (chưa tồn tại). Consume event <code>review.summary.updated.vet</code></td></tr>
+    <tr><td>Photo / Resume / Education / Badge</td><td>Defer</td><td><span class="badge todo">DEFER</span></td><td>⏸️ Không làm — scope creep từ Champlain</td></tr>
   </tbody>
 </table>
 
@@ -444,9 +444,10 @@ graph LR
 <table>
   <thead><tr><th>Method</th><th>Path</th><th>operationId</th><th>Role</th><th>Mô tả</th></tr></thead>
   <tbody>
-    <tr><td>GET</td><td>/api/v1/vets</td><td><code>listVets</code></td><td>USER+</td><td>Paginated, <code>?lastName=</code> filter</td></tr>
+    <tr><td>GET</td><td>/api/v1/vets</td><td><code>listVets</code></td><td>USER+</td><td>Paginated, filter <code>?lastName=</code> và/hoặc <code>?specialtyId=</code></td></tr>
     <tr><td>GET</td><td>/api/v1/vets/{id}</td><td><code>getVet</code></td><td>USER+</td><td>Chi tiết vet + specialties</td></tr>
     <tr><td>POST</td><td>/api/v1/vets</td><td><code>createVet</code></td><td>STAFF</td><td>Body có <code>specialtyNames[]</code> match existing</td></tr>
+    <tr><td>PATCH</td><td>/api/v1/vets/{id}</td><td><code>updateVet</code></td><td>STAFF</td><td>Partial update — null=không đổi, []=clear specialties, [...]=replace</td></tr>
     <tr><td>DELETE</td><td>/api/v1/vets/{id}</td><td><code>deleteVet</code></td><td>ADMIN</td><td>Hard delete (chưa có soft delete)</td></tr>
     <tr><td>GET</td><td>/api/v1/specialties</td><td><code>listSpecialties</code></td><td>USER+</td><td>Read-only, seeded</td></tr>
   </tbody>
@@ -456,8 +457,6 @@ graph LR
 <table>
   <thead><tr><th>Method</th><th>Path</th><th>operationId</th><th>Role</th><th>Mô tả</th></tr></thead>
   <tbody>
-    <tr><td>GET</td><td>/api/v1/vets?specialtyId=</td><td><code>listVets</code></td><td>USER+</td><td>Thêm filter specialtyId (Specification predicate)</td></tr>
-    <tr><td>PATCH</td><td>/api/v1/vets/{id}</td><td><code>updateVet</code></td><td>STAFF</td><td>Sửa name + specialties</td></tr>
     <tr><td>PATCH</td><td>/api/v1/vets/{id}/deactivate</td><td><code>deactivateVet</code></td><td>STAFF</td><td>Set <code>active=false</code> khi vet nghỉ việc</td></tr>
     <tr><td>GET</td><td>/api/v1/vets/me/schedule</td><td><code>getMySchedule</code></td><td>VET</td><td>Lịch của vet đang login</td></tr>
     <tr><td>PUT</td><td>/api/v1/vets/me/schedule</td><td><code>updateMySchedule</code></td><td>VET</td><td>Replace toàn bộ workday</td></tr>
