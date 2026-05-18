@@ -11,6 +11,8 @@ export default tseslint.config(
       'src/routeTree.gen.ts',
       'src/lib/api/generated/**',
       'src/components/ui/**',
+      // AI Elements — registry copy (shadcn-style). Patch-compatible với upstream.
+      'src/components/ai-elements/**',
     ],
   },
   {

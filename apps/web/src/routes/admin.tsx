@@ -1,9 +1,18 @@
 import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
-import { LayoutDashboard, Users, PawPrint, Stethoscope, CalendarCheck, LogOut } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  PawPrint,
+  Stethoscope,
+  CalendarCheck,
+  LogOut,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { useAuthStore } from '@/features/auth/store';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
+import { ChatWidget } from '@/features/ai/components/ChatWidget';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin')({
@@ -21,10 +30,17 @@ export const Route = createFileRoute('/admin')({
 });
 
 interface NavItem {
-  to: '/admin' | '/admin/owners' | '/admin/pets' | '/admin/vets' | '/admin/visits';
+  to:
+    | '/admin'
+    | '/admin/owners'
+    | '/admin/pets'
+    | '/admin/vets'
+    | '/admin/visits'
+    | '/admin/llm-config';
   label: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -33,11 +49,13 @@ const navItems: NavItem[] = [
   { to: '/admin/owners', label: 'Owners', icon: Users },
   { to: '/admin/pets', label: 'Pets', icon: PawPrint },
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },
+  { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, adminOnly: true },
 ];
 
 function AdminLayout() {
   const clear = useAuthStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.roles.includes('ADMIN') ?? false;
   // Logout BE để revoke refresh token; clear local store rồi redirect dù BE fail.
   const logoutMutation = useLogout({
     mutation: {
@@ -48,6 +66,8 @@ function AdminLayout() {
     },
   });
 
+  const visibleNav = navItems.filter((item) => !item.adminOnly || isAdmin);
+
   return (
     <div className="flex min-h-screen">
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-muted/30 md:flex">
@@ -57,7 +77,7 @@ function AdminLayout() {
           </Link>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => (
+          {visibleNav.map((item) => (
             <Link
               key={item.to}
               to={item.to}
@@ -93,6 +113,8 @@ function AdminLayout() {
       <main className="flex-1 overflow-auto p-6">
         <Outlet />
       </main>
+      {/* Floating AI chat widget — chỉ render khi đã login (check trong widget). */}
+      <ChatWidget />
     </div>
   );
 }

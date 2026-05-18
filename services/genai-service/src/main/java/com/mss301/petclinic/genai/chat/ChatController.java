@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import com.mss301.petclinic.genai.config.LlmClientHolder;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.http.MediaType;
+import reactor.core.publisher.Flux;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -70,6 +72,42 @@ public class ChatController {
         log.info("Chat reply: conversationId={}, length={}",
                 conversationId, reply == null ? 0 : reply.length());
         return new ChatReply(reply, conversationId);
+    }
+
+    /**
+     * Streaming endpoint — Vercel AI SDK {@code useChat} + {@code TextStreamChatTransport}.
+     *
+     * <p>Spring AI {@link org.springframework.ai.chat.client.ChatClient}{@code .stream().content()}
+     * trả {@link Flux} String — Spring MVC adapter tự convert sang HTTP chunked transfer
+     * (mỗi onNext → 1 chunk, mỗi chunk plain UTF-8 text). FE accumulate text qua AI SDK.
+     */
+    @PostMapping(value = "/chat/stream",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "Stream chat response (Vercel AI SDK TextStreamChatTransport)")
+    public Flux<String> chatStream(@Valid @RequestBody StreamChatRequest request,
+                                    @AuthenticationPrincipal Jwt jwt) {
+        String threadId = (request.threadId() == null || request.threadId().isBlank())
+                ? "default" : request.threadId();
+        String conversationId = "u:" + jwt.getSubject() + ":t:" + threadId;
+        String userText = request.lastUserText();
+
+        log.info("Chat stream request: conversationId={}, message='{}'",
+                conversationId, abbreviate(userText));
+
+        if (!clientHolder.isReady()) {
+            return Flux.error(new com.mss301.petclinic.common.web.exception.ExternalServiceUnavailableException(
+                    "llm (not configured — admin must POST /api/v1/admin/llm/config)", null));
+        }
+
+        return clientHolder.chatClient().prompt()
+                .system(SystemPrompts.GENERAL_ASSISTANT)
+                .user(userText)
+                .advisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+                .stream()
+                .content()
+                .doOnComplete(() -> log.info("Chat stream completed: conversationId={}", conversationId));
     }
 
     private static String abbreviate(String s) {

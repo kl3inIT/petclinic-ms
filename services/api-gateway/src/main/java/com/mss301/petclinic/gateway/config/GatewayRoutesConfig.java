@@ -158,4 +158,13 @@ public class GatewayRoutesConfig {
                 .filter(lb("visits-service"))
                 .build();
     }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsGenaiRoute() {
+        return route("api-docs-genai")
+                .route(path("/v3/api-docs/genai"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("genai-service"))
+                .build();
+    }
 }
