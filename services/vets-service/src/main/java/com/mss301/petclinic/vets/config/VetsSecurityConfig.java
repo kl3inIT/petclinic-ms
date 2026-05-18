@@ -19,6 +19,8 @@ import org.springframework.security.web.SecurityFilterChain;
  *   <li>{@code POST /api/v1/vets} — STAFF | ADMIN (tạo vet mới)</li>
  *   <li>{@code PATCH /api/v1/vets/**} — STAFF | ADMIN (sửa name + specialties)</li>
  *   <li>{@code DELETE /api/v1/vets/**} — ADMIN (hard delete)</li>
+ *   <li><strong>Default non-GET</strong> trên {@code /vets/**} → STAFF|ADMIN; trên {@code /specialties/**} → ADMIN.
+ *       Endpoint mới (vd. PUT tương lai) mặc định an toàn — KHÔNG để USER access nếu dev quên.</li>
  * </ul>
  *
  * <h4>Bean ưu tiên</h4>
@@ -45,19 +47,22 @@ public class VetsSecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // Write — role-restricted (thứ tự matter: cụ thể trước, broad sau)
+                        // Write — explicit rules trước (thứ tự matter: cụ thể trước, broad sau)
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/**")
                             .hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/vets")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/vets/**")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        // POST /api/v1/specialties tương lai (admin-only) — đã defer trong roadmap
-                        .requestMatchers(HttpMethod.POST, "/api/v1/specialties/**")
-                            .hasRole("ADMIN")
 
-                        // Read — bất kỳ user đã đăng nhập
-                        .requestMatchers("/api/v1/vets/**", "/api/v1/specialties/**").authenticated()
+                        // Read — chỉ GET (KHÔNG dùng catch-all .authenticated() để tránh
+                        // bypass khi dev thêm PUT/POST/PATCH mới mà quên rule cụ thể)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/vets/**", "/api/v1/specialties/**")
+                            .authenticated()
+
+                        // Default guard cho mọi non-GET còn lại — secure by default:
+                        //   vets/**       → STAFF|ADMIN (covers POST, PATCH, future PUT)
+                        //   specialties/** → ADMIN (catalog management)
+                        .requestMatchers("/api/v1/vets/**")
+                            .hasAnyRole("STAFF", "ADMIN")
+                        .requestMatchers("/api/v1/specialties/**")
+                            .hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )
