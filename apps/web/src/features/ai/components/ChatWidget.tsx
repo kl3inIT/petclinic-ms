@@ -9,9 +9,9 @@
  * resolve qua Vite dev proxy → gateway :8180.
  */
 import { useChat } from '@ai-sdk/react';
-import { TextStreamChatTransport } from 'ai';
+import { TextStreamChatTransport, type UIMessage } from 'ai';
 import { Bot, RotateCcw, Sparkles, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +33,8 @@ import {
 import { useAuthStore } from '@/features/auth/store';
 
 const THREAD_KEY = 'petclinic.ai.threadId';
+const MESSAGES_KEY = 'petclinic.ai.messages';
+const MAX_PERSISTED = 50;
 
 function loadOrCreateThread(): string {
   let id = localStorage.getItem(THREAD_KEY);
@@ -41,6 +43,22 @@ function loadOrCreateThread(): string {
     localStorage.setItem(THREAD_KEY, id);
   }
   return id;
+}
+
+/** Load UIMessage[] đã persist. Schema sai → trả [] thay vì crash. */
+function loadPersistedMessages(): UIMessage[] {
+  try {
+    const raw = localStorage.getItem(MESSAGES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (m): m is UIMessage =>
+        typeof m === 'object' && m !== null && 'id' in m && 'role' in m && 'parts' in m,
+    );
+  } catch {
+    return [];
+  }
 }
 
 export function ChatWidget() {
@@ -65,7 +83,18 @@ export function ChatWidget() {
 
   const { messages, sendMessage, status, error, stop, regenerate, setMessages } = useChat({
     transport,
+    messages: loadPersistedMessages(),
   });
+
+  // Persist sau mỗi message change. Cap MAX_PERSISTED tránh localStorage phình to.
+  useEffect(() => {
+    try {
+      const tail = messages.slice(-MAX_PERSISTED);
+      localStorage.setItem(MESSAGES_KEY, JSON.stringify(tail));
+    } catch {
+      // QuotaExceeded → bỏ qua. Dữ liệu vẫn còn trong-mem.
+    }
+  }, [messages]);
 
   if (!user) return null;
 
@@ -74,6 +103,7 @@ export function ChatWidget() {
   const resetConversation = () => {
     setMessages([]);
     localStorage.removeItem(THREAD_KEY);
+    localStorage.removeItem(MESSAGES_KEY);
     setThreadId(loadOrCreateThread());
   };
 

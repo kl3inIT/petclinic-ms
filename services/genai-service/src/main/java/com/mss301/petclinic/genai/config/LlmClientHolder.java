@@ -8,9 +8,13 @@ import com.openai.client.okhttp.OpenAIOkHttpClientAsync;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /**
@@ -32,13 +36,21 @@ public class LlmClientHolder {
 
     private final ToolCallbackProvider mcpToolProvider;
     private final PetclinicAiProperties bootstrapProperties;
+    private final VectorStore vectorStore;  // null nếu Phase 12d skip RAG (no embedding key)
 
     private volatile ChatClient currentChatClient;
 
     public LlmClientHolder(ToolCallbackProvider mcpToolProvider,
-                            PetclinicAiProperties bootstrapProperties) {
+                            PetclinicAiProperties bootstrapProperties,
+                            ObjectProvider<VectorStore> vectorStoreProvider) {
         this.mcpToolProvider = mcpToolProvider;
         this.bootstrapProperties = bootstrapProperties;
+        this.vectorStore = vectorStoreProvider.getIfAvailable();
+        if (this.vectorStore == null) {
+            log.info("VectorStore bean absent — RAG disabled. Set petclinic.ai.embedding.api-key to enable.");
+        } else {
+            log.info("VectorStore bean present — RAG enabled, QuestionAnswerAdvisor wired into ChatClient.");
+        }
         // Bootstrap từ env. {@link com.mss301.petclinic.genai.admin.LlmConfigService}
         // @PostConstruct sẽ override sau khi load DB row (nếu có).
         // Nếu apiKey rỗng (chưa set) → defer build, ChatController trả lỗi tới khi admin save.
@@ -84,8 +96,18 @@ public class LlmClientHolder {
                         .build())
                 .build();
 
-        this.currentChatClient = ChatClient.builder(chatModel)
-                .defaultToolCallbacks(mcpToolProvider)
-                .build();
+        ChatClient.Builder builder = ChatClient.builder(chatModel)
+                .defaultToolCallbacks(mcpToolProvider);
+
+        if (vectorStore != null) {
+            // RAG: similarity top-3 chunks → inject vào prompt context. Mỗi chat call
+            // sẽ search VectorStore TRƯỚC khi gửi message lên LLM.
+            builder.defaultAdvisors(
+                    QuestionAnswerAdvisor.builder(vectorStore)
+                            .searchRequest(SearchRequest.builder().topK(3).build())
+                            .build());
+        }
+
+        this.currentChatClient = builder.build();
     }
 }

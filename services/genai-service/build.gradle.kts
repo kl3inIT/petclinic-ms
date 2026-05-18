@@ -20,6 +20,12 @@ dependencies {
     implementation(libs.spring.ai.starter.model.openai)
     // Chat memory persistence — Postgres backed JdbcChatMemoryRepository.
     implementation(libs.spring.ai.starter.model.chat.memory.repository.jdbc)
+    // Phase 12d — RAG via pgvector. Auto-config tạo PgVectorStore bean nếu spring.ai.vectorstore.*
+    // có config; nếu skip → bean không create, RagConfig handle graceful.
+    implementation(libs.spring.ai.starter.vector.store.pgvector)
+    // QuestionAnswerAdvisor (Phase 12d) sống ở module tách riêng từ core
+    // (spring-ai-client-chat KHÔNG kéo). Mới add ở 2.0.
+    implementation(libs.spring.ai.advisors.vector.store)
     // MCP client: discover mcp-server qua Eureka, consume tools qua SyncMcpToolCallbackProvider
     implementation(libs.spring.ai.starter.mcp.client)
 

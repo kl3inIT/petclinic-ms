@@ -89,6 +89,8 @@ spring-ai-starter-model-openai         = { module = "org.springframework.ai:spri
 # (upgrade-notes nói "spring-ai-model-chat-memory-*" → "spring-ai-model-chat-memory-repository-*").
 spring-ai-starter-model-chat-memory-repository-jdbc = { module = "org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc" }
 spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
+# RAG advisor module — QuestionAnswerAdvisor + VectorStoreChatMemoryAdvisor. Tách riêng từ core.
+spring-ai-advisors-vector-store        = { module = "org.springframework.ai:spring-ai-advisors-vector-store" }
 
 # --- Plugin artifacts (dùng trong build-logic) ---
 spring-boot-gradle-plugin              = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }

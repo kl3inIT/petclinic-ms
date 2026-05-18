@@ -11,8 +11,12 @@
 
 services:
 
+  # Postgres 18 + pgvector extension. Phase 12d RAG requires `CREATE EXTENSION vector`
+  # which standard `postgres:18-alpine` không có sẵn. `pgvector/pgvector:pg18` ship đầy đủ
+  # (Debian-based, kích cỡ lớn hơn ~50MB nhưng dev OK). Production: build custom image
+  # FROM postgres-alpine + pgvector via initdb script.
   postgres:
-    image: postgres:18-alpine
+    image: pgvector/pgvector:pg18
     container_name: petclinic-postgres
     profiles: ["db", "all"]
     environment:

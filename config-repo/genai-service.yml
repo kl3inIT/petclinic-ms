@@ -23,13 +23,25 @@ spring:
     # (set =none) cho an toàn.
     model:
       chat: none
-      embedding: none
-      embedding.text: none
+      # KHÔNG tắt embedding — Phase 12d wire OpenAiEmbeddingModel manually (conditional
+      # on petclinic.ai.embedding.api-key). Tắt starter auto-config thì PgVectorStore
+      # autoconfig sẽ skip do thiếu EmbeddingModel. Đúng behavior — graceful skip.
       embedding.multimodal: none
       image: none
       audio.speech: none
       audio.transcription: none
       moderation: none
+
+    # PgVectorStore auto-config (Phase 12d RAG). Schema do Liquibase tạo
+    # (genai.vector_store), tắt initialize-schema để khỏi đè.
+    vectorstore:
+      pgvector:
+        schema-name: genai
+        table-name: vector_store
+        initialize-schema: false
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: ${PETCLINIC_EMBEDDING_DIMENSIONS:1536}
 
     # Spring AI 2.0 cho phép log prompt/completion qua observation. Learning project —
     # BẬT để debug dễ. Production: tắt cả 2 (PII + cost của log volume).
@@ -66,6 +78,16 @@ petclinic:
     chat:
       temperature: 0.7
       memory-max-messages: 10
+
+    # Phase 12d — RAG embedding. Empty api-key → skip RAG, chat vẫn chạy.
+    # OpenRouter KHÔNG hỗ trợ /embeddings; phải OpenAI direct hoặc Ollama local:
+    #   - OpenAI:  base-url=https://api.openai.com/v1,  api-key=sk-...,    model=text-embedding-3-small (dim 1536)
+    #   - Ollama:  base-url=http://localhost:11434/v1, api-key=ollama,    model=nomic-embed-text (dim 768)
+    embedding:
+      base-url: ${PETCLINIC_EMBEDDING_BASE_URL:https://api.openai.com/v1}
+      api-key: ${PETCLINIC_EMBEDDING_API_KEY:}
+      model: ${PETCLINIC_EMBEDDING_MODEL:text-embedding-3-small}
+      dimensions: ${PETCLINIC_EMBEDDING_DIMENSIONS:1536}
 
 # Crypto config — AES-GCM key dùng encrypt apiKey lưu DB. Set qua env (`PETCLINIC_CRYPTO_KEY`).
 # Trống → AesGcmEncryptor auto-generate ephemeral key (cảnh báo log) — OK cho dev local,
