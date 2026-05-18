@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>petclinic-ms — reviews-service</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a; --bg-card: #1e293b; --bg-code: #0b1220;
+    --fg: #e2e8f0; --fg-dim: #94a3b8;
+    --accent: #38bdf8; --accent-2: #a78bfa;
+    --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --customer: #38bdf8; --staff: #fbbf24; --admin: #f87171;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.6; }
+  body { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 2.4em; margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 48px; }
+  h3 { color: var(--accent-2); margin-top: 28px; }
+  h4 { color: var(--fg-dim); margin-top: 20px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85em; }
+  .lede { color: var(--fg-dim); font-size: 1.1em; margin: 0 0 32px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; }
+  .card.ok { border-left: 4px solid var(--ok); }
+  .card.warn { border-left: 4px solid var(--warn); }
+  .card.bad { border-left: 4px solid var(--bad); }
+  .card.accent { border-left: 4px solid var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--bg-code); color: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.88em; }
+  pre { background: var(--bg-code); padding: 16px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); font-size: 0.85em; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: #e2e8f0; }
+  .mermaid { background: #f8fafc; padding: 24px; border-radius: 8px; margin: 16px 0; text-align: center; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--accent); font-weight: 600; }
+  td code { font-size: 0.85em; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 700; }
+  .badge.done { background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .badge.wip  { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid var(--warn); }
+  .badge.todo { background: rgba(148,163,184,0.15); color: var(--fg-dim); border: 1px solid var(--fg-dim); }
+  .badge.hard { background: rgba(248,113,113,0.15); color: var(--bad); border: 1px solid var(--bad); }
+  .badge.soft { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid var(--warn); }
+  .badge.evt  { background: rgba(167,139,250,0.15); color: var(--accent-2); border: 1px solid var(--accent-2); }
+  .tldr { background: rgba(56,189,248,0.08); border: 1px solid var(--accent); border-radius: 6px; padding: 16px; margin: 16px 0; }
+  .tldr::before { content: "TL;DR"; display: block; color: var(--accent); font-weight: 700; font-size: 0.85em; letter-spacing: 1px; margin-bottom: 6px; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 16px 0; }
+  .persona { background: var(--bg-card); border-radius: 8px; padding: 16px; border-top: 4px solid; }
+  .persona.customer { border-color: var(--customer); }
+  .persona.staff    { border-color: var(--staff); }
+  .persona.admin    { border-color: var(--admin); }
+  .persona h4 { color: var(--fg); margin: 0 0 8px; text-transform: none; letter-spacing: 0; font-size: 1.1em; }
+  .persona p { margin: 4px 0; font-size: 0.9em; color: var(--fg-dim); }
+  hr { border: none; border-top: 1px dashed var(--border); margin: 32px 0; }
+  .toc { background: var(--bg-card); padding: 16px 20px 16px 40px; border-radius: 6px; }
+  .toc h3 { margin-top: 0; }
+  .toc ol { margin: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .quote { border-left: 3px solid var(--accent-2); padding: 4px 14px; color: var(--fg-dim); font-style: italic; margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<h1>reviews-service</h1>
+<p class="lede">Service quản lý đánh giá đa hình (polymorphic review) — cùng schema dùng cho <strong>VET</strong>, <strong>PRODUCT</strong>, và <strong>VISIT</strong>. Tài liệu sketch nghiệp vụ trước khi vào phase plan/execute.</p>
+
+<div class="tldr">
+  1 aggregate <code>Review</code> với <code>(targetType, targetId)</code> chỉ xác định đối tượng được review. Customer chỉ được review khi đã <em>tương tác hợp lệ</em> (visit COMPLETED hoặc bill PAID). Review qua moderation pipeline (PENDING_MODERATION → PUBLISHED/HIDDEN). Khi summary thay đổi, fan-out event <code>review.summary.updated</code> để vets/products cập nhật <code>averageRating</code> denormalized.
+</div>
+
+<div class="toc">
+  <h3>Mục lục</h3>
+  <ol>
+    <li><a href="#personas">Personas &amp; vai trò</a></li>
+    <li><a href="#bounded-context">Bounded context</a></li>
+    <li><a href="#erd">ERD — Review aggregate</a></li>
+    <li><a href="#status-machine">State machine — Review status</a></li>
+    <li><a href="#seq-create">Sequence 1 — Tạo review (eligibility check)</a></li>
+    <li><a href="#seq-moderation">Sequence 2 — Moderation flow</a></li>
+    <li><a href="#seq-summary">Sequence 3 — Summary fan-out</a></li>
+    <li><a href="#dependencies">Dependency map</a></li>
+    <li><a href="#api">API surface</a></li>
+    <li><a href="#events">Event contracts</a></li>
+    <li><a href="#open-questions">Câu hỏi mở (cần align với team)</a></li>
+  </ol>
+</div>
+
+<h2 id="personas">1. Personas &amp; vai trò</h2>
+
+<div class="personas">
+  <div class="persona customer">
+    <h4>👤 Customer (USER)</h4>
+    <p><strong>Quyền:</strong> tạo / sửa (≤7 ngày) / xóa mềm review của mình; vote helpful; xem mọi review PUBLISHED.</p>
+    <p><strong>Điều kiện tạo:</strong> phải có visit COMPLETED (cho VET/VISIT) hoặc bill PAID chứa product (cho PRODUCT).</p>
+  </div>
+  <div class="persona staff">
+    <h4>🛡️ Staff (RECEPTIONIST / VET)</h4>
+    <p><strong>Quyền:</strong> xem moderation queue, approve / hide review (kèm lý do); không xóa cứng.</p>
+    <p><strong>Không thể:</strong> tạo review hộ customer.</p>
+  </div>
+  <div class="persona admin">
+    <h4>👑 Admin</h4>
+    <p><strong>Quyền:</strong> mọi quyền của Staff + xóa cứng (hard delete) review vi phạm pháp lý.</p>
+    <p><strong>Audit:</strong> mọi action ghi vào <code>review_audit_log</code>.</p>
+  </div>
+</div>
+
+<h2 id="bounded-context">2. Bounded context</h2>
+
+<table>
+  <thead><tr><th>Sở hữu</th><th>Không sở hữu</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>
+        <ul>
+          <li>Review aggregate (entity + lifecycle)</li>
+          <li>Eligibility rule engine</li>
+          <li>Moderation pipeline (queue + actions)</li>
+          <li>Summary tính toán (avg, count, distribution)</li>
+          <li>Helpful vote</li>
+          <li>Review audit log</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><strong>Vet</strong> profile (vets-service sở hữu) — chỉ giữ <code>targetId</code></li>
+          <li><strong>Product</strong> catalog (products-service sở hữu) — chỉ giữ <code>targetId</code></li>
+          <li><strong>Visit</strong> entity (visits-service sở hữu) — chỉ giữ <code>targetId</code></li>
+          <li><strong>User</strong> identity (auth-service sở hữu) — chỉ snapshot <code>authorName</code></li>
+          <li><strong>Bill</strong> (billing-service sở hữu) — chỉ query để check eligibility</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="card accent">
+  <strong>Quy tắc vàng:</strong> review-service KHÔNG có foreign key xuyên service. Mọi <code>targetId</code> / <code>authorId</code> chỉ là UUID lưu trữ. Validation xảy ra qua HTTP call (eligibility) hoặc qua event (snapshot tên author).
+</div>
+
+<h2 id="erd">3. ERD — Review aggregate</h2>
+
+<div class="mermaid">
+erDiagram
+  REVIEW ||--o{ REVIEW_VOTE : "có nhiều"
+  REVIEW ||--o{ REVIEW_AUDIT_LOG : "có nhiều"
+
+  REVIEW {
+    uuid    id PK
+    string  target_type "ENUM VET PRODUCT VISIT"
+    uuid    target_id
+    uuid    author_id "user.id"
+    string  author_name "snapshot"
+    int     rating "1..5"
+    string  title "nullable, max 120"
+    text    comment "nullable, max 2000"
+    string  status "ENUM PUBLISHED PENDING_MODERATION FLAGGED HIDDEN DELETED"
+    string  moderation_reason "nullable"
+    int     helpful_count
+    timestamp created_date
+    timestamp last_modified_date
+    string  created_by
+    string  last_modified_by
+  }
+
+  REVIEW_VOTE {
+    uuid    id PK
+    uuid    review_id FK
+    uuid    voter_id "user.id"
+    bool    is_helpful
+    timestamp voted_at
+  }
+
+  REVIEW_AUDIT_LOG {
+    uuid    id PK
+    uuid    review_id FK
+    string  action "ENUM CREATED EDITED APPROVED HIDDEN DELETED FLAGGED"
+    string  actor_id
+    string  actor_role
+    text    detail "JSON delta"
+    timestamp created_date
+  }
+
+  PROCESSED_EVENT {
+    uuid    event_id PK
+    string  event_type
+    timestamp processed_at
+  }
+</div>
+
+<h4>Index &amp; ràng buộc</h4>
+<ul>
+  <li><code>UNIQUE (author_id, target_type, target_id)</code> — 1 user chỉ review 1 đối tượng 1 lần</li>
+  <li><code>UNIQUE (review_id, voter_id)</code> trên <code>review_vote</code></li>
+  <li><code>INDEX (target_type, target_id, status)</code> — query chính: list review theo target</li>
+  <li><code>INDEX (status, created_date)</code> — moderation queue sort theo cũ nhất</li>
+  <li><code>processed_event</code> — idempotency table cho consumer (gotcha #20)</li>
+</ul>
+
+<h2 id="status-machine">4. State machine — Review status</h2>
+
+<div class="mermaid">
+stateDiagram-v2
+  [*] --> PENDING_MODERATION : POST /reviews (nếu auto-moderation FAIL hoặc tắt)
+  [*] --> PUBLISHED : POST /reviews (auto-moderation PASS)
+  PENDING_MODERATION --> PUBLISHED : staff approve
+  PENDING_MODERATION --> HIDDEN : staff hide (reason)
+  PUBLISHED --> FLAGGED : user report (>= N báo cáo)
+  PUBLISHED --> HIDDEN : staff hide (reason)
+  PUBLISHED --> DELETED : author soft delete (trong 7 ngày)
+  FLAGGED --> PUBLISHED : staff approve sau review
+  FLAGGED --> HIDDEN : staff hide
+  HIDDEN --> [*] : admin hard delete
+  DELETED --> [*] : admin hard delete
+</div>
+
+<div class="card warn">
+  <strong>Quy tắc edit:</strong> author chỉ được PATCH trong 7 ngày kể từ <code>created_date</code>. Edit reset <code>status</code> về <code>PENDING_MODERATION</code> nếu nội dung thay đổi đáng kể (rating ±2 sao hoặc comment thay >30% ký tự).
+</div>
+
+<h2 id="seq-create">5. Sequence 1 — Tạo review VET (eligibility check)</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as Customer
+  participant FE as apps/web
+  participant GW as api-gateway
+  participant R as reviews-service
+  participant V as visits-service
+  participant MQ as RabbitMQ
+
+  U->>FE: Click "Đánh giá bác sĩ Lee"<br/>(rating=5, comment="Khám kỹ...")
+  FE->>GW: POST /api/v1/reviews<br/>Bearer JWT
+  GW->>R: forward + JWT validated
+  R->>R: Decode JWT → authorId, authorName
+  R->>R: Check UNIQUE(authorId, VET, vetId)<br/>→ chưa review
+
+  Note over R,V: Eligibility check qua common-clients<br/>(HTTP Interface + @CircuitBreaker)
+  R->>V: GET /api/v1/visits?ownerId={authorId}&vetId={targetId}&status=COMPLETED
+  alt Có ít nhất 1 visit COMPLETED
+    V-->>R: 200 [Visit{...}]
+    R->>R: Run auto-moderation<br/>(profanity filter, regex)
+    alt PASS
+      R->>R: INSERT review status=PUBLISHED
+    else FAIL
+      R->>R: INSERT review status=PENDING_MODERATION
+    end
+    R->>MQ: publish review.created<br/>(eventId, targetType, targetId, rating)
+    R-->>GW: 201 Created + Review body
+    GW-->>FE: 201
+    FE->>U: Toast "Cảm ơn đánh giá của bạn"
+  else Không có visit COMPLETED
+    V-->>R: 200 []
+    R-->>GW: 403 ProblemDetail<br/>"Bạn cần có visit COMPLETED với bác sĩ này"
+    GW-->>FE: 403
+    FE->>U: Toast lỗi
+  end
+
+  alt visits-service down → Circuit OPEN
+    V--xR: timeout / 5xx
+    R-->>GW: 503 ProblemDetail<br/>"Không thể xác minh, thử lại sau"
+  end
+</div>
+
+<h2 id="seq-moderation">6. Sequence 2 — Moderation flow (Staff approve / hide)</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor S as Staff
+  participant FE as apps/web (admin)
+  participant GW as api-gateway
+  participant R as reviews-service
+  participant MQ as RabbitMQ
+
+  S->>FE: Mở /admin/reviews?status=PENDING_MODERATION
+  FE->>GW: GET /api/v1/admin/reviews?status=PENDING_MODERATION&pageable=...
+  GW->>R: forward + JWT (role=STAFF)
+  R->>R: Filter chain check role STAFF|ADMIN
+  R-->>FE: Page<Review>
+
+  S->>FE: Click "Approve" trên review #abc
+  FE->>GW: PATCH /api/v1/admin/reviews/abc/approve
+  GW->>R: forward
+  R->>R: Load review → check status==PENDING_MODERATION
+  R->>R: UPDATE status=PUBLISHED, audit log APPROVED
+  R->>MQ: publish review.summary.updated<br/>(targetType, targetId)
+  R-->>FE: 200 Review
+
+  alt Staff click "Hide" với reason
+    S->>FE: "Hide" + reason="spam"
+    FE->>GW: PATCH /api/v1/admin/reviews/abc/hide<br/>{reason: "spam"}
+    GW->>R: forward
+    R->>R: UPDATE status=HIDDEN, moderation_reason=...
+    R->>R: Audit log HIDDEN(actorId, reason)
+    R->>MQ: publish review.summary.updated
+    R->>MQ: publish review.hidden<br/>(notify author qua mailer)
+    R-->>FE: 200
+  end
+</div>
+
+<h2 id="seq-summary">7. Sequence 3 — Summary fan-out (sau khi review thay đổi)</h2>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant R as reviews-service
+  participant MQ as RabbitMQ topic petclinic.events
+  participant V as vets-service
+  participant P as products-service
+  participant ML as mailer-service (Go)
+
+  Note over R: Trigger: review created / approved / hidden / deleted
+
+  R->>MQ: publish review.summary.updated.vet<br/>{eventId, targetType:VET, targetId, avgRating, count}
+  R->>MQ: publish review.created<br/>{eventId, targetType, targetId, authorId, rating}
+
+  par Fan-out song song
+    MQ->>V: queue vets.review.summary.updated.vet
+    V->>V: Dedupe by eventId<br/>(processed_events table)
+    V->>V: UPDATE vet SET average_rating=?, review_count=?
+  and
+    MQ->>P: queue products.review.summary.updated.product<br/>(chỉ khi targetType=PRODUCT)
+    P->>P: UPDATE product SET average_rating=?
+  and
+    MQ->>ML: queue mailer.review.created
+    ML->>ML: Compose email "Cảm ơn đánh giá"
+    ML->>ML: SMTP → Mailpit (dev) / SES (prod)
+  end
+
+  Note over V,P: vets/products giữ averageRating denormalized<br/>→ list page không phải call reviews-service N lần
+</div>
+
+<div class="card ok">
+  <strong>Vì sao fan-out qua event thay vì HTTP:</strong> (1) reviews-service không cần biết ai consume — thêm consumer mới (vd. analytics-service) không phải sửa publisher. (2) Decouple uptime: vets-service down không chặn customer tạo review. (3) Tránh N+1 khi vets list page render — đọc <code>average_rating</code> local thay vì call sang reviews-service N lần.
+</div>
+
+<h2 id="dependencies">8. Dependency map</h2>
+
+<div class="mermaid">
+graph LR
+  FE[apps/web<br/>React+orval]
+  GW[api-gateway:8180]
+  R[reviews-service:818X<br/>Postgres+JPA+Liquibase]
+
+  CFG[config-server:8888]
+  DSC[discovery-server:8761]
+  AUTH[auth-service:8183<br/>JWKS]
+
+  V[visits-service:8184]
+  B[billing-service<br/>phase tương lai]
+  C[customers-service:8181]
+
+  VET[vets-service:8182]
+  P[products-service<br/>phase tương lai]
+  ML[mailer-service Go]
+
+  MQ[RabbitMQ topic<br/>petclinic.events]
+  DB[(Postgres schema=reviews)]
+
+  FE -->|HTTP+JWT| GW
+  GW -->|lb://| R
+  R --> DB
+  R -.->|boot| CFG
+  R -.->|register| DSC
+  R -.->|JWKS| AUTH
+
+  R -->|eligibility VET/VISIT| V
+  R -->|eligibility PRODUCT| B
+  R -.->|optional authorName| C
+
+  R -->|publish| MQ
+  MQ -->|consume averageRating| VET
+  MQ -->|consume averageRating| P
+  MQ -->|consume notification| ML
+
+  V -->|publish visit.completed| MQ
+  B -->|publish bill.paid| MQ
+  MQ -.->|optional consume| R
+
+  classDef hard fill:#1e293b,stroke:#f87171,color:#fff
+  classDef soft fill:#1e293b,stroke:#fbbf24,color:#fff
+  classDef evt  fill:#1e293b,stroke:#a78bfa,color:#fff
+  classDef self fill:#312e81,stroke:#38bdf8,color:#fff
+  class CFG,DSC,AUTH,DB,GW hard
+  class V,B,C soft
+  class MQ,ML,VET,P evt
+  class R self
+</div>
+
+<table>
+  <thead><tr><th>Phụ thuộc</th><th>Loại</th><th>Mục đích</th><th>Fallback</th></tr></thead>
+  <tbody>
+    <tr><td>config-server</td><td><span class="badge hard">HARD</span></td><td>Lấy reviews-service.yml</td><td><code>optional:</code> import, app boot được khi down</td></tr>
+    <tr><td>discovery-server</td><td><span class="badge hard">HARD</span></td><td>Register Eureka</td><td>Không có</td></tr>
+    <tr><td>auth-service (JWKS)</td><td><span class="badge hard">HARD</span></td><td>Validate JWT</td><td>Cache JWKS local</td></tr>
+    <tr><td>Postgres</td><td><span class="badge hard">HARD</span></td><td>Store Review</td><td>Không có</td></tr>
+    <tr><td>visits-service</td><td><span class="badge soft">SOFT</span></td><td>Eligibility VET/VISIT review</td><td>Circuit Breaker → 503 ProblemDetail</td></tr>
+    <tr><td>billing-service</td><td><span class="badge soft">SOFT</span></td><td>Eligibility PRODUCT review</td><td>CB → 503; có thể bỏ qua type PRODUCT ở phase 1</td></tr>
+    <tr><td>customers-service</td><td><span class="badge soft">SOFT</span></td><td>Lấy authorName snapshot</td><td>Lấy <code>name</code> từ JWT claim, không call</td></tr>
+    <tr><td>RabbitMQ</td><td><span class="badge evt">EVENT</span></td><td>Publish review.* events</td><td><code>ObjectProvider&lt;EventPublisher&gt;</code> + try/catch → review vẫn tạo được khi MQ down</td></tr>
+    <tr><td>mailer-service</td><td><span class="badge evt">EVENT</span></td><td>Consume gửi mail</td><td>Async — không chặn</td></tr>
+    <tr><td>vets-service / products-service</td><td><span class="badge evt">EVENT</span></td><td>Consume cập nhật averageRating</td><td>Async</td></tr>
+  </tbody>
+</table>
+
+<h2 id="api">9. API surface</h2>
+
+<h3>Public (USER)</h3>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>operationId (orval)</th><th>Mô tả</th></tr></thead>
+  <tbody>
+    <tr><td>GET</td><td>/api/v1/reviews</td><td><code>searchReviews</code></td><td>Query <code>?targetType=VET&amp;targetId=...&amp;pageable=...</code></td></tr>
+    <tr><td>GET</td><td>/api/v1/reviews/{id}</td><td><code>getReview</code></td><td>Chi tiết 1 review</td></tr>
+    <tr><td>GET</td><td>/api/v1/reviews/summary</td><td><code>getReviewSummary</code></td><td><code>?targetType=&amp;targetId=</code> → avg/count/distribution</td></tr>
+    <tr><td>GET</td><td>/api/v1/reviews/mine</td><td><code>listMyReviews</code></td><td>Review của user hiện tại (từ JWT)</td></tr>
+    <tr><td>POST</td><td>/api/v1/reviews</td><td><code>createReview</code></td><td>Tạo mới (chạy eligibility check)</td></tr>
+    <tr><td>PATCH</td><td>/api/v1/reviews/{id}</td><td><code>updateReview</code></td><td>Edit trong 7 ngày (author only)</td></tr>
+    <tr><td>DELETE</td><td>/api/v1/reviews/{id}</td><td><code>deleteReview</code></td><td>Soft delete (author only)</td></tr>
+    <tr><td>POST</td><td>/api/v1/reviews/{id}/vote</td><td><code>voteReview</code></td><td><code>{helpful: true|false}</code></td></tr>
+    <tr><td>POST</td><td>/api/v1/reviews/{id}/report</td><td><code>reportReview</code></td><td>Báo cáo vi phạm → FLAGGED</td></tr>
+  </tbody>
+</table>
+
+<h3>Admin (STAFF / ADMIN)</h3>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>operationId</th><th>Mô tả</th></tr></thead>
+  <tbody>
+    <tr><td>GET</td><td>/api/v1/admin/reviews</td><td><code>listAdminReviews</code></td><td>Moderation queue, filter <code>?status=</code></td></tr>
+    <tr><td>PATCH</td><td>/api/v1/admin/reviews/{id}/approve</td><td><code>approveReview</code></td><td>PENDING/FLAGGED → PUBLISHED</td></tr>
+    <tr><td>PATCH</td><td>/api/v1/admin/reviews/{id}/hide</td><td><code>hideReview</code></td><td><code>{reason: "..."}</code> → HIDDEN</td></tr>
+    <tr><td>DELETE</td><td>/api/v1/admin/reviews/{id}</td><td><code>hardDeleteReview</code></td><td>ADMIN only — hard delete</td></tr>
+    <tr><td>GET</td><td>/api/v1/admin/reviews/{id}/audit</td><td><code>getReviewAuditLog</code></td><td>Lịch sử action</td></tr>
+  </tbody>
+</table>
+
+<div class="card warn">
+  <strong>Lưu ý orval (gotcha #23):</strong> mỗi operationId phải unique trên toàn cluster. Không dùng tên generic như <code>list</code>, <code>get</code>, <code>create</code> — sẽ collision với owners/vets/visits khi gateway aggregate OpenAPI.
+</div>
+
+<h2 id="events">10. Event contracts</h2>
+
+<h3>Publish (publisher = reviews-service, exchange = <code>petclinic.events</code>)</h3>
+<pre><code>// review.created — sau khi review insert thành công (bất kể status)
+{
+  "eventId": "uuid",
+  "eventType": "review.created",
+  "occurredAt": "2026-05-18T10:00:00Z",
+  "source": "reviews-service",
+  "reviewId": "uuid",
+  "targetType": "VET",
+  "targetId": "uuid",
+  "authorId": "uuid",
+  "rating": 5,
+  "status": "PUBLISHED"
+}
+
+// review.summary.updated.{vet|product|visit} — sau create/approve/hide/delete
+{
+  "eventId": "uuid",
+  "eventType": "review.summary.updated",
+  "occurredAt": "...",
+  "source": "reviews-service",
+  "targetType": "VET",
+  "targetId": "uuid",
+  "averageRating": 4.7,
+  "reviewCount": 23,
+  "distribution": { "1": 0, "2": 1, "3": 2, "4": 5, "5": 15 }
+}
+
+// review.hidden — staff ẩn review → mailer báo author
+{
+  "eventId": "uuid",
+  "eventType": "review.hidden",
+  "occurredAt": "...",
+  "source": "reviews-service",
+  "reviewId": "uuid",
+  "authorId": "uuid",
+  "reason": "spam"
+}</code></pre>
+
+<h3>Consume (optional, phase 2+)</h3>
+<table>
+  <thead><tr><th>Routing key</th><th>Publisher</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><code>visit.completed</code></td><td>visits-service</td><td>Tạo notification "Bạn có thể review visit này"</td></tr>
+    <tr><td><code>bill.paid</code></td><td>billing-service</td><td>Mark eligibility cho PRODUCT review</td></tr>
+  </tbody>
+</table>
+
+<div class="card accent">
+  <strong>Idempotency:</strong> consumer (vets/products/mailer) phải dedupe theo <code>eventId</code> dùng <code>processed_events</code> table với UNIQUE constraint, check trong cùng <code>@Transactional</code> với side effect (gotcha #20). Publisher KHÔNG guarantee exactly-once.
+</div>
+
+<h2 id="open-questions">11. Câu hỏi mở (cần align với team trước khi /gsd-plan-phase)</h2>
+
+<div class="card warn">
+  <ol>
+    <li><strong>Phase 1 scope:</strong> Bắt đầu với 2 target type (VET + VISIT) — defer PRODUCT đến khi billing-service ra? Hay làm cả 3 nhưng PRODUCT eligibility tạm bypass?</li>
+    <li><strong>Auto-moderation engine:</strong> Phase 1 dùng regex profanity filter (Vietnamese + English wordlist)? Hay tích hợp OpenAI Moderation API ngay? Trade-off: regex free + offline; OpenAI tốt hơn nhưng cần API key + chi phí.</li>
+    <li><strong>Edit window:</strong> 7 ngày có quá ngắn/dài? Champlain reference không có rule này — chốt với giảng viên.</li>
+    <li><strong>Visit review vs Vet review:</strong> 1 visit chỉ 1 review nhưng 1 vet nhiều review. UI có nên hỏi "Bạn muốn review BÁC SĨ hay BUỔI KHÁM?" khi customer vào trang visit hoàn thành?</li>
+    <li><strong>Báo cáo (report) threshold:</strong> ≥ N báo cáo → auto FLAGGED. Chốt N = 3 hay 5?</li>
+    <li><strong>Anonymous review:</strong> Có cho phép review ẩn danh (giấu authorName)? Champlain không có — khả năng cao là KHÔNG (compliance + trách nhiệm).</li>
+    <li><strong>Port:</strong> 818X — chốt port (đề xuất 8186 vì 8185 là admin-server, 8187 là mcp-server).</li>
+    <li><strong>vets-service averageRating field:</strong> Champlain reference đã có Rating bên trong vets-service. Khi port qua petclinic-ms phải bỏ entity Rating khỏi vets-service và chỉ giữ field denormalized <code>averageRating: Double</code>. Cần Dev vets-service align.</li>
+  </ol>
+</div>
+
+<hr>
+
+<h2>Next steps</h2>
+<ol>
+  <li><strong>Share file này</strong> với 4 dev còn lại + giảng viên — collect feedback trên 8 câu hỏi mở.</li>
+  <li><strong>Chốt scope phase 1</strong> (khuyến nghị: VET + VISIT target, regex moderation, 7-day edit, port 8186).</li>
+  <li><strong>Chạy <code>/gsd-spec-phase reviews-service</code></strong> → khóa cứng requirements thành SPEC.md.</li>
+  <li><strong>Chạy <code>/gsd-plan-phase</code></strong> → PLAN.md với task breakdown.</li>
+  <li><strong>Chạy <code>/gsd-execute-phase</code></strong> → code thực tế.</li>
+</ol>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+</script>
+</body>
+</html>
