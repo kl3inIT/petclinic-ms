@@ -186,6 +186,7 @@ services:
       # Tracing → Zipkin. Nếu profile `obs` không active, exporter retry với backoff
       # và drop span (không crash) — log có thể nhiễu vài dòng connection-refused.
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9888/actuator/health || exit 1"]
       interval: 10s
@@ -212,6 +213,7 @@ services:
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
       CONFIG_SERVER_URL: http://config-server:8888
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9761/actuator/health || exit 1"]
       interval: 10s
@@ -247,6 +249,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9183/actuator/health || exit 1"]
       interval: 10s
@@ -274,6 +277,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9181/actuator/health || exit 1"]
       interval: 10s
@@ -301,6 +305,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9182/actuator/health || exit 1"]
       interval: 10s
@@ -332,6 +337,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9184/actuator/health || exit 1"]
       interval: 10s
@@ -359,6 +365,7 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9080/actuator/health || exit 1"]
       interval: 10s
@@ -386,6 +393,7 @@ services:
       ADMIN_USER: admin
       ADMIN_PASSWORD: admin
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9185/actuator/health || exit 1"]
       interval: 10s
@@ -414,6 +422,7 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9187/actuator/health || exit 1"]
       interval: 10s
@@ -442,6 +451,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic?currentSchema=genai
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
       # LLM provider — env-driven Phase 12b, admin DB Phase 12c.
       PETCLINIC_LLM_BASE_URL: ${PETCLINIC_LLM_BASE_URL:-https://openrouter.ai/api/v1}
       PETCLINIC_LLM_API_KEY: ${PETCLINIC_LLM_API_KEY:-}

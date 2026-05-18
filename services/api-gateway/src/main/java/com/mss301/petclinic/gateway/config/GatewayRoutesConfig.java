@@ -69,7 +69,7 @@ public class GatewayRoutesConfig {
     @Bean
     public RouterFunction<ServerResponse> genaiServiceRoute() {
         return route("genai-service")
-                .route(path("/api/v1/ai/**"), http())
+                .route(path("/api/v1/ai/**").or(path("/api/v1/admin/llm/**")), http())
                 .filter(lb("genai-service"))
                 .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
                 .build();

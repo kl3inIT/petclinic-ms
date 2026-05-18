@@ -55,18 +55,18 @@ spring:
         log-prompt: true
         log-completion: true
 
-    # MCP client config — discover mcp-server qua Eureka (lb://) + auto-register
-    # SyncMcpToolCallbackProvider bean cho ChatClient.
+    # MCP client — Spring AI 2.0 Streamable HTTP transport (SSE deprecated).
+    # mcp-server expose protocol STREAMABLE ở /mcp; client phải match.
+    # Property prefix verified ở McpStreamableHttpClientProperties: spring.ai.mcp.client.streamable-http
     mcp:
       client:
         type: SYNC
         request-timeout: 30s
-        # name → identifier để xuất hiện trong logs/metrics. URL trỏ vào mcp-server qua Eureka.
-        sse:
+        streamable-http:
           connections:
             petclinic-mcp:
               url: http://mcp-server:8187
-              sse-endpoint: /sse
+              # endpoint optional — default /mcp khớp với mcp-server config.
 
 # Petclinic AI properties — env-driven (Phase 12b). Phase 12c sẽ thêm admin endpoint
 # persist DB + AES-GCM encrypt api-key.
