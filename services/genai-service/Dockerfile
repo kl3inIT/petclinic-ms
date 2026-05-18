@@ -41,7 +41,7 @@ RUN jdeps --ignore-missing-deps -q --recursive --multi-release 25 \
 
 # jlink — bổ sung modules cho Spring Actuator + Eureka + JDBC + Liquibase + OkHttp (OpenAI SDK).
 RUN jlink \
-        --add-modules "$(cat /deps.info),java.management.rmi,java.rmi,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.naming.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.zipfs,jdk.httpserver,jdk.attach,java.compiler,java.scripting,java.sql,java.sql.rowset" \
+        --add-modules "$(cat /deps.info),java.management.rmi,java.rmi,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.naming.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.zipfs,jdk.httpserver,jdk.attach,java.compiler,java.scripting,java.desktop,java.sql,java.sql.rowset" \
         --compress zip-9 \
         --no-header-files \
         --no-man-pages \

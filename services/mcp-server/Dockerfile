@@ -48,7 +48,7 @@ RUN jdeps --ignore-missing-deps -q --recursive --multi-release 25 \
 
 # jlink → custom JRE ~70 MB. Bổ sung modules jdeps không detect được do reflection
 RUN jlink \
-        --add-modules "$(cat /deps.info),java.management.rmi,java.rmi,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.naming.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.zipfs,jdk.httpserver,jdk.attach,java.compiler,java.scripting" \
+        --add-modules "$(cat /deps.info),java.management.rmi,java.rmi,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.naming.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.zipfs,jdk.httpserver,jdk.attach,java.compiler,java.scripting,java.desktop" \
         --compress zip-9 \
         --no-header-files \
         --no-man-pages \
