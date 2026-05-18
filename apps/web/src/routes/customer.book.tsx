@@ -81,8 +81,8 @@ function BookVisitPage() {
       }),
   });
 
-  const pets = petsQuery.data?.content ?? [];
-  const vets = vetsQuery.data?.content ?? [];
+  const pets = useMemo(() => petsQuery.data?.content ?? [], [petsQuery.data]);
+  const vets = useMemo(() => vetsQuery.data?.content ?? [], [vetsQuery.data]);
 
   const values = form.state.values;
   const selectedPet = useMemo(
@@ -141,7 +141,7 @@ function BookVisitPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              Bước {step}: {STEPS[step - 1].label}
+              Bước {step}: {STEPS[step - 1]?.label}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
