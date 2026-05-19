@@ -15,6 +15,14 @@ spring:
   liquibase:
     enabled: true
 
+  # Test tắt config-server → KHÔNG nhận hibernate.default_schema từ config-repo/vets-service.yml.
+  # Phải set thủ công ở đây, nếu không Hibernate query 'vets' table thay vì 'vets.vets' (schema.table)
+  # và fail với "relation vets does not exist".
+  jpa:
+    properties:
+      hibernate:
+        default_schema: vets
+
 # JWT decoder property — required bởi common-security auto-config.
 # Test smoke chỉ load context, không decode JWT thật → dummy URL ok.
 petclinic:

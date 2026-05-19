@@ -103,3 +103,7 @@ spotless-gradle-plugin                 = { module = "com.diffplug.spotless:spotl
 junit-bom                              = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter                          = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher                = { module = "org.junit.platform:junit-platform-launcher" }
+# Spring Security Test — Boot 4 starter-test KHÔNG còn include security-test transitively.
+# Cung cấp SecurityMockMvcRequestPostProcessors (jwt()) + springSecurity() configurer cho MockMvc.
+# Version managed by spring-boot-dependencies BOM (Security 7.x).
+spring-security-test                   = { module = "org.springframework.security:spring-security-test" }
