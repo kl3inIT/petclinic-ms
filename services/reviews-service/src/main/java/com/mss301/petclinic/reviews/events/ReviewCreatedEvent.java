@@ -36,7 +36,7 @@ public record ReviewCreatedEvent(
         ReviewStatus status
 ) implements DomainEvent {
 
-    public static ReviewCreatedEvent of(Long reviewId, TargetType targetType, UUID targetId,
+    public static ReviewCreatedEvent of(Long reviewId, TargetType targetType, Long targetId,
                                          UUID authorId, String authorName,
                                          int rating, String title, ReviewStatus status) {
         return new ReviewCreatedEvent(
