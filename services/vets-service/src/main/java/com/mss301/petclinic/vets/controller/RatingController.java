@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.vets.dto.req.RatingRequest;
 import com.mss301.petclinic.vets.dto.res.RatingResponse;
 import com.mss301.petclinic.vets.dto.res.RatingSummaryResponse;
@@ -57,14 +60,23 @@ public class RatingController {
     @Operation(
             summary = "Add rating to a vet",
             description = "score 1-5 (out of range → 400 ProblemDetail). " +
-                          "customerName tạm client-supplied; sau khi tích hợp auth sẽ lấy từ JWT. " +
-                          "Vet không tồn tại → 404."
+                          "customerName lấy từ JWT claim 'username' (auth-service ký vào access token) " +
+                          "— client không thể giả mạo identity. Vet không tồn tại → 404. " +
+                          "JWT thiếu claim 'username' → 400 (token version cũ → cần login lại)."
     )
     public ResponseEntity<RatingResponse> addVetRating(
             @PathVariable Long vetId,
-            @RequestBody @Valid RatingRequest request
+            @RequestBody @Valid RatingRequest request,
+            @AuthenticationPrincipal Jwt jwt
     ) {
-        RatingResponse created = service.create(vetId, request);
+        String customerName = jwt.getClaimAsString("username");
+        if (customerName == null || customerName.isBlank()) {
+            // JWT cũ trước Phase F không có claim này. Force user login lại để được token mới.
+            throw new BadRequestAlertException(
+                    "JWT thiếu claim 'username' — login lại để cấp token mới",
+                    "rating", "missing-username");
+        }
+        RatingResponse created = service.create(vetId, request, customerName);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(created.id())

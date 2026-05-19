@@ -14,7 +14,7 @@ public interface RatingService {
 
     Page<RatingResponse> findAllByVetId(Long vetId, Pageable pageable);
 
-    RatingResponse create(Long vetId, RatingRequest request);
+    RatingResponse create(Long vetId, RatingRequest request, String customerName);
 
     void delete(Long vetId, Long ratingId);
 

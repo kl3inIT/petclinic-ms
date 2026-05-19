@@ -42,9 +42,9 @@ public class RatingServiceImpl implements RatingService {
 
     @Override
     @Transactional
-    public RatingResponse create(Long vetId, RatingRequest request) {
+    public RatingResponse create(Long vetId, RatingRequest request, String customerName) {
         ensureVetExists(vetId);
-        Rating saved = ratingRepository.save(request.toEntity(vetId));
+        Rating saved = ratingRepository.save(request.toEntity(vetId, customerName));
         return RatingResponse.from(saved);
     }
 
