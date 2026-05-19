@@ -15,9 +15,9 @@
 | **C** | Work-schedule (Workday × WorkHour) PUT-replace | ✅ Done | `5dbf230` | `579babe` |
 | **D** | Ratings (CRUD + summary + top-rated cross-vet) | ✅ Done | `fabc828` | `6f2543f` |
 | **E1** | Badges (metadata, không cần MinIO) | ✅ Done | `52891c2` | `94b3fc8` |
-| **E2** | Photo + Album (cần MinIO + multipart) | ⏸️ Blocked — chờ user xác nhận setup | — | — |
+| **E2** | Photo + Album (MinIO + multipart) | ✅ Done | `5942050` | `8aaa67b` |
 
-**Tổng test hiện tại**: 51 IT pass (1 smoke + 8 Vet + 10 Education + 9 WorkSchedule + 13 Rating + 10 Badge).
+**Tổng test hiện tại**: 71 IT pass (1 smoke + 8 Vet + 11 Education + 10 WorkSchedule + 14 Rating + 10 Badge + 9 Photo + 9 Album).
 
 ---
 
@@ -150,28 +150,47 @@
 
 **Test**: 10 IT (`BadgeControllerIT`) — empty list, vet 404, list multiple, add valid 201+Location, future date 400 `error.date-future`, vetNotFound 404, invalid enum 400, same badge multiple times allowed, delete 204, delete wrong vetId 404.
 
-### E2 — Photo + Album (BLOCKED — chờ user xác nhận setup MinIO)
+### E2 — Photo + Album (`5942050`, `8aaa67b`)
 
-**Scope**: Avatar (1-1) + Album gallery (1-N) với binary lưu MinIO.
+**Scope**: Avatar 1-1 + Album gallery 1-N. Binary ở MinIO, metadata ở Postgres.
 
-**Pre-requisite (cần user xác nhận)**:
-1. Start MinIO: `docker compose --profile storage up -d` (đã có sẵn trong `compose.yaml`, bucket `avatars` + `pet-photos` pre-create với `minioadmin/minioadmin`).
-2. Thêm dependency vào `libs.versions.toml` + `services/vets-service/build.gradle.kts`:
-   - `software.amazon.awssdk:s3` (S3 client universal — dùng được cả MinIO + AWS S3)
+**Decision chốt**:
+- **1 bucket `avatars`** với prefix:
+  - `vets/photo/<vetId>` — avatar, overwrite khi re-upload (idempotent)
+  - `vets/album/<vetId>/<photoId>` — gallery item
+- **Presigned URL** cho GET (TTL 1h config qua `petclinic.storage.minio.presigned-ttl`)
+- **10MB max** + content-type whitelist `image/{jpeg,png,webp}` (GIF intentionally bỏ)
 
-**Decision chưa chốt** (sẽ hỏi user khi tới):
-- Bucket: 1 bucket `avatars` dùng prefix (`vets/photo/`, `vets/album/`) HAY 2 bucket riêng?
-- GET photo: trả presigned URL (FE fetch trực tiếp MinIO, nhẹ BE) HAY proxy stream qua BE (đơn giản FE, nặng BE)?
-- Validate: kích thước tối đa (5MB?), content-type whitelist (image/jpeg|png|webp)?
+**Dependency mới** (`libs.versions.toml`):
+- `awsSdk = "2.30.21"` + `aws-sdk-s3` (universal S3 client — dùng cả MinIO local + AWS S3 prod)
+- `testcontainers-minio` (cho IT)
 
-**Skeleton dự kiến**:
-- `model/VetPhoto.java` (vet_id PK, object_key, content_type, size_bytes, uploaded_at) — 1-1 với vet
-- `model/VetAlbumPhoto.java` (id BIGSERIAL, vet_id FK, caption, object_key, content_type, size_bytes, audit) — 1-N
-- `service/StorageService.java` interface + `MinioStorageService.java` impl (S3 SDK v2)
-- Endpoints:
-  - `PUT /api/v1/vets/{vetId}/photo` (multipart) / `GET` / `DELETE`
-  - `GET /api/v1/vets/{vetId}/album` / `POST` (multipart) / `DELETE /{photoId}`
-- Test: dùng MinioContainer Testcontainers thay vì real MinIO
+**Storage layer**:
+- `StorageProperties` (`petclinic.storage.minio.*`) — record + `@Validated` + `@DefaultValue`
+- `MinioConfig` — `@Bean S3Client + S3Presigner` với `pathStyleAccessEnabled(true)` (bắt buộc MinIO — subdomain-style không support localhost)
+- `StorageService` interface (universal) + `MinioStorageService` impl (AWS SDK v2)
+
+**Entity + DB**:
+- Liquibase 009: `vet_photo` (vetId PK + FK 1-1 CASCADE) + `vet_album_photos` (id BIGSERIAL, vet_id FK CASCADE, caption, audit, idx)
+- 2 entity extends `AbstractAuditingEntity`
+- `MediaValidator` (package-private) share giữa 2 service: validate size + content-type whitelist
+
+**Endpoints**:
+- `/api/v1/vets/{vetId}/photo`: `GET` (metadata + presignedUrl) / `PUT` (multipart, overwrite) / `DELETE` (204)
+- `/api/v1/vets/{vetId}/album`: `GET` (paginated) / `POST` (multipart + optional `caption` form param, 201+Location) / `DELETE /{photoId}` (204)
+
+**Idempotency rules**:
+- Photo: key cố định `vets/photo/<vetId>` → re-upload overwrite cả MinIO + DB upsert
+- Album: `saveAndFlush` TRƯỚC để có id auto-gen → key = `vets/album/<vetId>/<id>` → upload MinIO → update entity với key thật
+- Delete: MinIO TRƯỚC, DB SAU (retry-safe — nếu MinIO fail thì DB row giữ lại để retry)
+
+**Config**:
+- `config-repo/vets-service.yml`: multipart 10MB + `petclinic.storage.minio.*` env-driven (`MINIO_ENDPOINT/ACCESS_KEY/SECRET_KEY/BUCKET`)
+- `test/resources/application.yml`: dummy storage props cho smoke test (IT override qua `@DynamicPropertySource`)
+
+**Security**: thêm rule `DELETE /vets/*/photo` + `DELETE /vets/*/album/** → STAFF|ADMIN`.
+
+**Test**: 18 IT (9 `VetPhotoControllerIT` + 9 `VetAlbumControllerIT`) với `MinIOContainer` + bucket auto-create `@BeforeEach`.
 
 ---
 
@@ -179,11 +198,13 @@
 
 1. **Resume sau khi pull**: `git pull origin nhat-anh` → `./gradlew :services:vets-service:test` (cần Docker chạy).
 2. **Coverage report**: `./gradlew :services:vets-service:jacocoTestReport` → mở `services/vets-service/build/reports/jacoco/test/html/index.html`.
-3. **Bước tiếp theo IMMEDIATE**: Phase E2 (Photo + Album) — chờ user xác nhận setup MinIO + trả lời 3 decision ở section E2 trước khi viết code.
+3. **Phase A-E đã xong toàn bộ** — vets-service nghiệp vụ hoàn chỉnh ở granularity này. 71 IT cover.
 4. **Optional future phases (chưa lên kế hoạch)**:
    - Phase F: Customer-name từ JWT principal (thay vì client body) — refactor RatingController.
    - Phase G: Publish `vet.rating.added` event qua `shared/common-events` (cho billing/analytics consume sau).
    - Phase H: Workday × WorkHour integration với visits-service (check vet rảnh trước khi đặt visit).
+   - Phase I: Soft-delete vet → cleanup MinIO orphans (CASCADE Postgres không động đến MinIO).
+   - Phase J: FE orval regen + UI cho 8 sub-resource mới.
 
 **Cross-cutting rule reminder**:
 - Mỗi entity mới phải `extends AbstractAuditingEntity` + Liquibase changeset có 4 audit columns.
