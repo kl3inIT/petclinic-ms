@@ -14,10 +14,10 @@
 | **B** | Education sub-resource (CRUD nested) | ✅ Done | `51d37a9` | `8e731a2` |
 | **C** | Work-schedule (Workday × WorkHour) PUT-replace | ✅ Done | `5dbf230` | `579babe` |
 | **D** | Ratings (CRUD + summary + top-rated cross-vet) | ✅ Done | `fabc828` | `6f2543f` |
-| **E1** | Badges (metadata, không cần MinIO) | 🚧 Stage 2 TODO | `52891c2` | _pending_ |
-| **E2** | Photo + Album (cần MinIO + multipart) | ⏸️ Blocked — chờ setup | — | — |
+| **E1** | Badges (metadata, không cần MinIO) | ✅ Done | `52891c2` | `94b3fc8` |
+| **E2** | Photo + Album (cần MinIO + multipart) | ⏸️ Blocked — chờ user xác nhận setup | — | — |
 
-**Tổng test hiện tại**: 41 IT pass (1 smoke + 8 Vet + 10 Education + 9 WorkSchedule + 13 Rating).
+**Tổng test hiện tại**: 51 IT pass (1 smoke + 8 Vet + 10 Education + 9 WorkSchedule + 13 Rating + 10 Badge).
 
 ---
 
@@ -133,7 +133,7 @@
 
 ## Phase E — Photo + Album + Badge
 
-### E1 — Badges (`52891c2`, Stage 2 pending)
+### E1 — Badges (`52891c2`, `94b3fc8`)
 
 **Scope**: Achievement badge (metadata only, không image bytes).
 
@@ -148,7 +148,7 @@
 
 **Security**: thêm rule `DELETE /vets/*/badges/** → STAFF|ADMIN`.
 
-**TODO Stage 2 (sắp làm tiếp)**: `BadgeControllerIT` (~8 test: list empty, add valid 201, add future date 400, vetNotFound 404, invalid enum 400, list multiple, delete 204, delete wrong vetId 404).
+**Test**: 10 IT (`BadgeControllerIT`) — empty list, vet 404, list multiple, add valid 201+Location, future date 400 `error.date-future`, vetNotFound 404, invalid enum 400, same badge multiple times allowed, delete 204, delete wrong vetId 404.
 
 ### E2 — Photo + Album (BLOCKED — chờ user xác nhận setup MinIO)
 
@@ -179,8 +179,11 @@
 
 1. **Resume sau khi pull**: `git pull origin nhat-anh` → `./gradlew :services:vets-service:test` (cần Docker chạy).
 2. **Coverage report**: `./gradlew :services:vets-service:jacocoTestReport` → mở `services/vets-service/build/reports/jacoco/test/html/index.html`.
-3. **Bước tiếp theo IMMEDIATE**: hoàn thành E1 Stage 2 (BadgeControllerIT).
-4. **Phase E2 (Photo/Album)**: trả lời 3 decision ở trên trước khi viết code.
+3. **Bước tiếp theo IMMEDIATE**: Phase E2 (Photo + Album) — chờ user xác nhận setup MinIO + trả lời 3 decision ở section E2 trước khi viết code.
+4. **Optional future phases (chưa lên kế hoạch)**:
+   - Phase F: Customer-name từ JWT principal (thay vì client body) — refactor RatingController.
+   - Phase G: Publish `vet.rating.added` event qua `shared/common-events` (cho billing/analytics consume sau).
+   - Phase H: Workday × WorkHour integration với visits-service (check vet rảnh trước khi đặt visit).
 
 **Cross-cutting rule reminder**:
 - Mỗi entity mới phải `extends AbstractAuditingEntity` + Liquibase changeset có 4 audit columns.
