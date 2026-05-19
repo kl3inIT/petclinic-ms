@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.vets.dto.req.RatingRequest;
 import com.mss301.petclinic.vets.dto.res.RatingResponse;
 import com.mss301.petclinic.vets.dto.res.RatingSummaryResponse;
@@ -79,6 +80,13 @@ public class RatingServiceImpl implements RatingService {
 
     @Override
     public List<TopRatedVetResponse> getTopRated(int limit) {
+        // Validate ở service (KHÔNG dùng @Validated trên @RequestParam — pattern lý do ở
+        // TopRatedVetsController javadoc). 1-50: lower bound tránh 0/âm, upper bound
+        // tránh query toàn DB nếu FE gửi limit lớn.
+        if (limit < 1 || limit > 50) {
+            throw new BadRequestAlertException(
+                    "limit must be between 1 and 50, got " + limit, "rating", "limit-invalid");
+        }
         // PageRequest dùng làm LIMIT thuần — query đã có ORDER BY, không cần sort param.
         List<Object[]> rows = ratingRepository.findTopRatedVets(PageRequest.of(0, limit));
         return rows.stream()
