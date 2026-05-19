@@ -1,0 +1,17 @@
+# Reviews prod.
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    org.hibernate.SQL: WARN

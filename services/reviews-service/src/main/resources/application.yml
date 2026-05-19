@@ -1,0 +1,18 @@
+# Local config — chỉ giữ những gì PHẢI ở local. Còn lại sống ở config-repo/.
+
+spring:
+  application:
+    name: reviews-service
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+server:
+  port: 8189                    # 8188=genai-service. Next free.
+
+management:
+  server:
+    port: 9189

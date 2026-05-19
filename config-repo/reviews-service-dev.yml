@@ -1,0 +1,19 @@
+# Reviews dev — datasource từ compose Postgres.
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/petclinic?currentSchema=reviews}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  # Reviews publish review.created → cần RabbitMQ.
+  docker:
+    compose:
+      profiles:
+        active: ["db", "mq"]
+
+logging:
+  level:
+    org.hibernate.SQL: INFO
+    com.mss301.petclinic.reviews: DEBUG
