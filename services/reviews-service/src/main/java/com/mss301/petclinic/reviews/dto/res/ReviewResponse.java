@@ -10,7 +10,7 @@ import com.mss301.petclinic.reviews.model.TargetType;
 public record ReviewResponse(
         Long id,
         TargetType targetType,
-        UUID targetId,
+        Long targetId,
         UUID authorId,
         String authorName,
         Integer rating,

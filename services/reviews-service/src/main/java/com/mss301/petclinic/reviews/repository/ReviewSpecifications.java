@@ -20,7 +20,7 @@ public final class ReviewSpecifications {
 
     private ReviewSpecifications() {}
 
-    public static Specification<Review> filter(TargetType targetType, UUID targetId,
+    public static Specification<Review> filter(TargetType targetType, Long targetId,
                                                 ReviewStatus status, UUID authorId,
                                                 Integer minRating) {
         return (root, query, cb) -> {

@@ -18,7 +18,7 @@ import com.mss301.petclinic.reviews.model.TargetType;
  */
 public record CreateReviewRequest(
         @NotNull TargetType targetType,
-        @NotNull UUID targetId,
+        @NotNull Long targetId,
         @NotNull @Min(1) @Max(5) Integer rating,
         @NotBlank @Size(max = 120) String title,
         @NotBlank @Size(max = 2000) String comment

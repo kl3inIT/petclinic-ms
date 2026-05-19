@@ -29,9 +29,11 @@ databaseChangeLog:
                   type: VARCHAR(20)
                   constraints:
                     nullable: false
+              # BIGINT vì cả 3 target service (vets/products/visits) đều dùng BIGSERIAL PK.
+              # KHÔNG dùng UUID (overkill + không match visits-service.getById Long).
               - column:
                   name: target_id
-                  type: UUID
+                  type: BIGINT
                   constraints:
                     nullable: false
               # Author = JWT sub UUID. authorName = snapshot lúc tạo (denorm) — chống thay đổi profile làm sai lệch review.

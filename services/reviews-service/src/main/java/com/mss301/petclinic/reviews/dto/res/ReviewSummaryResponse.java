@@ -2,7 +2,6 @@ package com.mss301.petclinic.reviews.dto.res;
 
 import java.math.BigDecimal;
 import java.util.Map;
-import java.util.UUID;
 
 import com.mss301.petclinic.reviews.model.TargetType;
 
@@ -17,7 +16,7 @@ import com.mss301.petclinic.reviews.model.TargetType;
  */
 public record ReviewSummaryResponse(
         TargetType targetType,
-        UUID targetId,
+        Long targetId,
         Long count,
         BigDecimal average,
         Map<Integer, Long> distribution

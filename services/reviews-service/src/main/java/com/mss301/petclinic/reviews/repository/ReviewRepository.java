@@ -22,7 +22,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
     Optional<Review> findByIdAndAuthorId(Long id, UUID authorId);
 
     /** Pre-check UNIQUE (author_id, target_type, target_id) trước save. */
-    boolean existsByAuthorIdAndTargetTypeAndTargetId(UUID authorId, TargetType targetType, UUID targetId);
+    boolean existsByAuthorIdAndTargetTypeAndTargetId(UUID authorId, TargetType targetType, Long targetId);
 
     /**
      * Aggregate cho {@code GET /reviews/summary}:
@@ -38,6 +38,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, JpaSpecif
             """)
     java.util.List<Object[]> aggregateRatingDistribution(
             @Param("targetType") TargetType targetType,
-            @Param("targetId") UUID targetId,
+            @Param("targetId") Long targetId,
             @Param("status") ReviewStatus status);
 }

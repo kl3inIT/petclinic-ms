@@ -48,9 +48,12 @@ public class Review extends AbstractAuditingEntity {
     @Column(name = "target_type", nullable = false, length = 20)
     private TargetType targetType;
 
-    /** ID của Vet/Product/Visit. KHÔNG FK — orphan cleanup là job định kỳ (v2). */
+    /**
+     * ID của Vet/Product/Visit (Long — cả 3 target service đều dùng BIGSERIAL PK).
+     * KHÔNG FK — target ở 3 schema khác, orphan cleanup là job định kỳ (v2).
+     */
     @Column(name = "target_id", nullable = false)
-    private UUID targetId;
+    private Long targetId;
 
     /** JWT sub UUID. */
     @Column(name = "author_id", nullable = false)
@@ -83,7 +86,7 @@ public class Review extends AbstractAuditingEntity {
         // JPA
     }
 
-    private Review(TargetType targetType, UUID targetId, UUID authorId, String authorName,
+    private Review(TargetType targetType, Long targetId, UUID authorId, String authorName,
                    int rating, String title, String comment, ReviewStatus initialStatus) {
         this.targetType = targetType;
         this.targetId = targetId;
@@ -100,7 +103,7 @@ public class Review extends AbstractAuditingEntity {
      * Factory. Caller (Service) tự quyết {@code initialStatus} = PUBLISHED hoặc
      * PENDING_MODERATION dựa trên kết quả {@code ContentModerator}.
      */
-    public static Review create(TargetType targetType, UUID targetId,
+    public static Review create(TargetType targetType, Long targetId,
                                 UUID authorId, String authorName,
                                 int rating, String title, String comment,
                                 ReviewStatus initialStatus) {
@@ -156,7 +159,7 @@ public class Review extends AbstractAuditingEntity {
 
     public Long getId() { return id; }
     public TargetType getTargetType() { return targetType; }
-    public UUID getTargetId() { return targetId; }
+    public Long getTargetId() { return targetId; }
     public UUID getAuthorId() { return authorId; }
     public String getAuthorName() { return authorName; }
     public Integer getRating() { return rating; }
