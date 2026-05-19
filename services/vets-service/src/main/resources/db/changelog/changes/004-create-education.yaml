@@ -1,0 +1,63 @@
+databaseChangeLog:
+
+  # Phase B — Education sub-resource của Vet.
+  # FK ON DELETE CASCADE: vet bị hard-delete (DELETE /api/v1/vets/{id}) → educations đi cùng.
+  # KHÔNG tham chiếu bằng UUID/string ngoài như Champlain — id BIGSERIAL local + vet_id FK đủ.
+
+  - changeSet:
+      id: 004-001-create-table-educations
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: vets
+            tableName: educations
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: vet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_educations_vet
+                    references: vets.vets(id)
+                    deleteCascade: true
+              - column:
+                  name: school_name
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: degree
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column: { name: field_of_study, type: VARCHAR(150) }
+              - column:
+                  name: start_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column: { name: end_date, type: DATE }
+              # Audit columns — Spring Data JPA Auditing fill qua AbstractAuditingEntity
+              - column: { name: created_by,         type: VARCHAR(50) }
+              - column: { name: created_date,       type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: last_modified_by,   type: VARCHAR(50) }
+              - column: { name: last_modified_date, type: TIMESTAMP WITH TIME ZONE }
+
+  - changeSet:
+      id: 004-002-index-educations-vet-id
+      author: mss301
+      changes:
+        # Query chính: WHERE vet_id = ? (list educations của 1 vet). Cardinality cao →
+        # index dramatically tăng tốc; nếu không, table-scan toàn educations cho mỗi list.
+        - createIndex:
+            schemaName: vets
+            tableName: educations
+            indexName: idx_educations_vet_id
+            columns:
+              - column: { name: vet_id }

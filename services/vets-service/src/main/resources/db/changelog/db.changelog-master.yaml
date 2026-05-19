@@ -6,4 +6,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/003-add-vet-contact.yaml
   - include:
+      file: db/changelog/changes/004-create-education.yaml
+  - include:
       file: db/changelog/changes/006-seed-dev-data.yaml
