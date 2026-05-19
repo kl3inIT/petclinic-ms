@@ -29,6 +29,10 @@ springAi           = "2.0.0-M6"
 # Test
 junit              = "6.0.3"
 
+# AWS SDK v2 — dùng cho S3-compatible storage (MinIO). Không quản lý bởi Spring Boot BOM,
+# pin tại đây. 2.30+ stable May 2026.
+awsSdk             = "2.30.21"
+
 [libraries]
 # --- Spring Boot starters (Spring MVC stack, blocking) ---
 spring-boot-starter-web                = { module = "org.springframework.boot:spring-boot-starter-web" }
@@ -60,6 +64,10 @@ postgresql                             = { module = "org.postgresql:postgresql",
 spring-boot-testcontainers             = { module = "org.springframework.boot:spring-boot-testcontainers" }  # version từ Boot BOM
 testcontainers-postgresql              = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 testcontainers-junit-jupiter           = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+testcontainers-minio                   = { module = "org.testcontainers:testcontainers-minio", version.ref = "testcontainers" }
+
+# --- AWS S3 SDK v2 (S3-compatible: AWS, MinIO, Cloudflare R2, ...) ---
+aws-sdk-s3                             = { module = "software.amazon.awssdk:s3", version.ref = "awsSdk" }
 
 # --- Spring Cloud (BOM controls these — không cần version) ---
 # Gateway 5.x (Spring Cloud 2025.x) tách 2 starter:

@@ -23,6 +23,12 @@ spring:
       hibernate:
         default_schema: vets
 
+  # Phase E2 — multipart limits cho upload test
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
 # JWT decoder property — required bởi common-security auto-config.
 # Test smoke chỉ load context, không decode JWT thật → dummy URL ok.
 petclinic:
@@ -31,3 +37,13 @@ petclinic:
       jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
       issuer: petclinic-test
       audience: petclinic-test
+  # Phase E2 — dummy storage props cho smoke test (context load). Integration test
+  # qua Testcontainers MinIO sẽ override 4 prop này via @DynamicPropertySource.
+  storage:
+    minio:
+      endpoint: http://localhost:9000
+      access-key: minioadmin
+      secret-key: minioadmin
+      bucket: avatars
+      presigned-ttl: PT1H
+      max-file-size-bytes: 10485760

@@ -59,6 +59,10 @@ public class VetsSecurityConfig {
                             .hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/badges/**")
                             .hasAnyRole("STAFF", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/photo")
+                            .hasAnyRole("STAFF", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/album/**")
+                            .hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/**")
                             .hasRole("ADMIN")
 

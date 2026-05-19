@@ -14,6 +14,9 @@ dependencies {
     implementation(libs.spring.cloud.starter.netflix.eureka.client)
     implementation(libs.spring.cloud.starter.config)
     implementation(libs.micrometer.tracing.bridge.otel)
+    // Phase E2 — S3-compatible storage (MinIO local dev, AWS S3 prod). aws-sdk-s3
+    // kéo theo `s3-presigner` cùng SDK, không cần khai báo riêng.
+    implementation(libs.aws.sdk.s3)
     runtimeOnly(libs.opentelemetry.exporter.otlp)
     runtimeOnly(libs.postgresql)
 
@@ -23,5 +26,6 @@ dependencies {
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.junit.jupiter)
+    testImplementation(libs.testcontainers.minio)
     testImplementation(libs.spring.security.test)
 }
