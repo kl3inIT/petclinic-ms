@@ -11,14 +11,75 @@ Branch: **`nhat-anh`**
 Pushed: **NO** (chưa push remote, đang local)
 
 ```
-32992cf  W6+W7 — service layer + ReviewCreatedEvent + targetId Long migration   ← HEAD
-0d09...  W4+W5 — repositories + visits client + DTOs        (SHA xem git log)
-...      W3 — domain (enums + entities + exceptions + moderator)
+9caf7fb  W9 ops — Dockerfile + run config + compose entry            ← HEAD
+87e1130  W8 — REST controllers + role-based security filter chain
+d0dccec  docs progress note
+32992cf  W6+W7 service layer + ReviewCreatedEvent + targetId Long migration
+411d5e8  W4+W5 repositories + visits client + DTOs
+5e56df0  W3 domain — enums + entities + exceptions + moderator
 7567e06  W2 schema — reviews + review_votes with auditing
 47ed6d7  W1 skeleton — bootable service on 8189
 ```
 
 (Lấy SHA chính xác qua `git log --oneline -10`)
+
+---
+
+## ✅ W10 VERIFY — PASS
+
+### Smoke test results (26 case)
+
+| # | Bước | Kết quả |
+|---|---|---|
+| 1 | reviews-service container UP healthy | ✅ port 8189/9189 |
+| 2 | `GET /actuator/health` | ✅ `{"status":"UP"}` |
+| 3 | Eureka registration | ✅ `REVIEWS-SERVICE` instance ADDED |
+| 4 | Postgres schema apply | ✅ `reviews.reviews` + `reviews.review_votes` |
+| 5 | `GET /api/v1/reviews` public empty | ✅ Page paginated structure |
+| 6 | `GET /api/v1/reviews/summary` (no data) | ✅ `count=0, average=null, distribution{1..5}=0` |
+| 7 | `GET /api/v1/reviews/999` | ✅ 404 ProblemDetail RFC 9457 |
+| 8 | POST không JWT | ✅ 401 unauthorized |
+| A-F | OpenAPI spec + Swagger + filters + invalid enum + missing param + admin 401 | ✅ tất cả PASS |
+| G | Pageable size + sort | ✅ Spring Data Pageable hoạt động |
+| H | 13 path + 13 operationId UNIQUE cross-service | ✅ (gotcha #23) |
+| J,K | JWT fake → 401, /me no auth → 401 | ✅ |
+| L | rating>5 → fieldErrors Max | ✅ Bean Validation |
+| 9a | POST PRODUCT skip eligibility (USER JWT) | ✅ 201, status=PUBLISHED, authorName=`testuser` snapshot |
+| 9b | rating=99 | ✅ 400 fieldErrors `rating Max` |
+| 9c | blank title | ✅ 400 fieldErrors `title NotBlank` |
+| 10a | Duplicate target | ✅ 400 errorKey `already-exists` |
+| 10b | Profanity `shit` → PENDING_MODERATION | ✅ |
+| 10c | Profanity Vietnamese `vcl` | ✅ PENDING_MODERATION |
+| 10d | Leetspeak `sh1t` (1→i) | ✅ PENDING_MODERATION |
+| 11 | PATCH own review | ✅ 200, lastModifiedDate updated |
+| 12 | Self-vote → forbidden | ✅ 400 errorKey `self-vote-forbidden` |
+| 13 | User2 vote HELPFUL | ✅ helpful_count=1 (recompute) |
+| 14 | User2 flip vote NOT_HELPFUL | ✅ helpful_count=0 |
+| 15 | User2 PATCH user1's review | ✅ 404 path-tamper (không leak) |
+| 16 | User2 DELETE user1's review | ✅ 404 path-tamper |
+| 17 | `/me` list user1 reviews | ✅ mọi status hiển thị |
+| 18 | STAFF/ADMIN GET admin queue | ✅ PENDING list |
+| 19 | Approve PENDING → PUBLISHED | ✅ state transition |
+| 20 | Hide với reason → HIDDEN | ✅ |
+| 21 | STAFF DELETE admin endpoint | ✅ 403 (chỉ ADMIN) |
+| 22 | ADMIN DELETE | ✅ 204 |
+| 23-24 | Summary với data thực | ✅ count + avg + distribution chính xác |
+| 25 | GET HIDDEN review | ✅ vẫn xem được (theo spec) |
+| 26 | Filter `status=PUBLISHED` | ✅ HIDDEN/PENDING không lộ |
+| RMQ | Exchange `petclinic.events` publish_in=7 | ✅ event review.created publish OK |
+
+### Skip (cần service khác)
+
+- ⏭️ Eligibility VET/VISIT REST call → cần visits-service + có visit COMPLETED seed (test riêng với PRODUCT thay vào, eligibility code path đã verify khi PRODUCT skip)
+- ⏭️ Swagger gateway dropdown — cần rebuild api-gateway image (cùng bug `java.desktop`)
+- ⏭️ Edit window expired (>7 ngày) — cần wait or mock created_date
+
+### Issues fixed trong lúc verify
+
+1. **Bug compile (commit `8b6752c`)**: `ReviewCreatedEvent.of()` factory parameter `targetId` vẫn UUID — missed lúc migration UUID→Long. Local Gradle bị Windows port collision không catch. Docker build báo lỗi → fix 1 dòng.
+2. **Image config-server + auth-service cũ 28h-29h**: jlink JRE cũ thiếu `java.desktop` → `ClassNotFoundException: java.beans.PropertyEditorSupport`. Dockerfile mới đã có `java.desktop` trong `--add-modules`. Stop + rebuild fix.
+3. **Postgres image mismatch**: container hiện `postgres:18-alpine` (cũ) — compose.yaml định nghĩa `pgvector/pgvector:pg18`. Không ảnh hưởng reviews vì không dùng pgvector.
+4. **Auth-service register không cho set role**: phải `UPDATE auth.users SET roles_csv='ADMIN,STAFF'` qua DB rồi login lại — fresh JWT có role mới. Đúng security (FE/API không tự promote được).
 
 ---
 
