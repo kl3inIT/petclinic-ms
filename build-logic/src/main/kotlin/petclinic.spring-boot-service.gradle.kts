@@ -38,4 +38,8 @@ tasks.named<BootRun>("bootRun") {
 
 dependencies {
     "implementation"(libs.spring.boot.starter.actuator)
+    // Mọi service ship metrics dạng Prometheus exposition format qua /actuator/prometheus.
+    // Endpoint chỉ visible khi registry có trên classpath → để ở runtime cũng được, nhưng
+    // implementation giữ compile-time visibility nếu service muốn custom Tags/MeterFilter.
+    "runtimeOnly"(libs.micrometer.registry.prometheus)
 }

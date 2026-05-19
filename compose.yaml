@@ -136,6 +136,60 @@ services:
     # là acceptable cho dev.
     restart: unless-stopped
 
+  # Metrics scrape backend — Prometheus pull /actuator/prometheus mỗi 15s.
+  # UI: http://localhost:9090  | Targets: /targets  | Graph: /graph
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: petclinic-prometheus
+    profiles: ["obs", "all"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d                 # dev: 7 ngày là đủ
+      - --web.enable-lifecycle                            # POST /-/reload áp config thay đổi
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+
+  # Metrics visualization. Provision datasource Prometheus + 1 default dashboard tự load.
+  # UI: http://localhost:3000  (admin/admin — đổi pwd lần đầu trừ khi env override)
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: petclinic-grafana
+    profiles: ["obs", "all"]
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"                   # dev: xem dashboard không cần login
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_INSTALL_PLUGINS: ""
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+
   # Tạo bucket mặc định lúc init, exit ngay sau khi xong.
   minio-init:
     image: minio/mc:latest
@@ -512,3 +566,7 @@ volumes:
     name: petclinic-redis-data
   minio_data:
     name: petclinic-minio-data
+  prometheus_data:
+    name: petclinic-prometheus-data
+  grafana_data:
+    name: petclinic-grafana-data
