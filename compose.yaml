@@ -139,7 +139,7 @@ services:
   # Metrics scrape backend — Prometheus pull /actuator/prometheus mỗi 15s.
   # UI: http://localhost:9090  | Targets: /targets  | Graph: /graph
   prometheus:
-    image: prom/prometheus:v2.55.1
+    image: prom/prometheus:v3.11.3
     container_name: petclinic-prometheus
     profiles: ["obs", "all"]
     ports:
