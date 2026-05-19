@@ -16,8 +16,10 @@
 | **D** | Ratings (CRUD + summary + top-rated cross-vet) | ✅ Done | `fabc828` | `6f2543f` |
 | **E1** | Badges (metadata, không cần MinIO) | ✅ Done | `52891c2` | `94b3fc8` |
 | **E2** | Photo + Album (MinIO + multipart) | ✅ Done | `5942050` | `8aaa67b` |
+| **I** | MinIO orphan-cleanup scheduled job | ✅ Done | `018212f` | `2256c33` |
+| **F** | Rating customerName lấy từ JWT (anti-spoof) | ✅ Done | `7387418` | `d943cc6` |
 
-**Tổng test hiện tại**: 71 IT pass (1 smoke + 8 Vet + 11 Education + 10 WorkSchedule + 14 Rating + 10 Badge + 9 Photo + 9 Album).
+**Tổng test hiện tại**: 76 IT pass (71 từ A-E + 5 MinioOrphanCleanupJobIT). Phase F giữ nguyên count RatingControllerIT (14 → 14: bỏ `blankCustomerName_returns400`, thêm `jwtMissingUsername_returns400` + `bodyCustomerNameField_isSilentlyIgnored`).
 
 ---
 
@@ -198,12 +200,10 @@
 
 1. **Resume sau khi pull**: `git pull origin nhat-anh` → `./gradlew :services:vets-service:test` (cần Docker chạy).
 2. **Coverage report**: `./gradlew :services:vets-service:jacocoTestReport` → mở `services/vets-service/build/reports/jacoco/test/html/index.html`.
-3. **Phase A-E đã xong toàn bộ** — vets-service nghiệp vụ hoàn chỉnh ở granularity này. 71 IT cover.
+3. **Phase A-E + I + F đã xong toàn bộ** — vets-service nghiệp vụ + security + operational hoàn chỉnh. 76 IT cover.
 4. **Optional future phases (chưa lên kế hoạch)**:
-   - Phase F: Customer-name từ JWT principal (thay vì client body) — refactor RatingController.
    - Phase G: Publish `vet.rating.added` event qua `shared/common-events` (cho billing/analytics consume sau).
    - Phase H: Workday × WorkHour integration với visits-service (check vet rảnh trước khi đặt visit).
-   - Phase I: Soft-delete vet → cleanup MinIO orphans (CASCADE Postgres không động đến MinIO).
    - Phase J: FE orval regen + UI cho 8 sub-resource mới.
 
 **Cross-cutting rule reminder**:
