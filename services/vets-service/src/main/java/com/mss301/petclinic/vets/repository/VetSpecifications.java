@@ -22,7 +22,7 @@ public final class VetSpecifications {
 
     private VetSpecifications() {}
 
-    public static Specification<Vet> filter(String lastName, Long specialtyId) {
+    public static Specification<Vet> filter(String lastName, Long specialtyId, Boolean active) {
         return (root, query, cb) -> {
             List<Predicate> preds = new ArrayList<>();
 
@@ -36,6 +36,9 @@ public final class VetSpecifications {
                 preds.add(cb.equal(spec.get("id"), specialtyId));
                 // Vet có nhiều specialty → JOIN có thể duplicate vet row. distinct ngăn count sai.
                 query.distinct(true);
+            }
+            if (active != null) {
+                preds.add(cb.equal(root.get("active"), active));
             }
             return cb.and(preds.toArray(new Predicate[0]));
         };

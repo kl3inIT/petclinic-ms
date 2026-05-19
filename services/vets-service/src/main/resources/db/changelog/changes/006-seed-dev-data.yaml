@@ -15,12 +15,12 @@ databaseChangeLog:
       changes:
         - sql:
             sql: >-
-              INSERT INTO vets.vets (first_name, last_name) VALUES
-                ('Thanh',  'Nguyễn'),
-                ('Hương',  'Trần'),
-                ('Quân',   'Lê'),
-                ('Mai',    'Phạm'),
-                ('Hùng',   'Vũ')
+              INSERT INTO vets.vets (first_name, last_name, email, phone_number, active) VALUES
+                ('Thanh',  'Nguyễn', 'thanh.nguyen@petclinic.local', '0901000001', TRUE),
+                ('Hương',  'Trần',   'huong.tran@petclinic.local',   '0901000002', TRUE),
+                ('Quân',   'Lê',     'quan.le@petclinic.local',      '0901000003', TRUE),
+                ('Mai',    'Phạm',   'mai.pham@petclinic.local',     '0901000004', TRUE),
+                ('Hùng',   'Vũ',     'hung.vu@petclinic.local',      '0901000005', TRUE)
 
   - changeSet:
       id: 006-002-seed-vet-specialties
