@@ -30,6 +30,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Integration test cho RatingController + TopRatedVetsController.
  * Pattern theo VetControllerIT/EducationControllerIT (MockMvc + Testcontainers + Transactional).
+ *
+ * <p>Phase F: customerName lấy từ JWT claim "username" thay vì body. Helper {@code staff(name)}
+ * inject claim. Test cũ {@code addVetRating_blankCustomerName_returns400} thay bằng
+ * {@code addVetRating_jwtMissingUsername_returns400} cho semantic mới.</p>
  */
 @SpringBootTest
 @Testcontainers
@@ -56,7 +60,19 @@ class RatingControllerIT {
         mvc = webAppContextSetup(wac).apply(springSecurity()).build();
     }
 
+    /** Default staff JWT với claim username="test-user" (cho test không quan tâm identity). */
     private static RequestPostProcessor staff() {
+        return staff("test-user");
+    }
+
+    /** Staff JWT với claim "username" custom — Phase F controller đọc claim này làm customerName. */
+    private static RequestPostProcessor staff(String username) {
+        return jwt().jwt(j -> j.claim("username", username))
+                .authorities(new SimpleGrantedAuthority("ROLE_STAFF"));
+    }
+
+    /** Staff JWT KHÔNG có claim username — test fallback 400. */
+    private static RequestPostProcessor staffNoUsername() {
         return jwt().authorities(new SimpleGrantedAuthority("ROLE_STAFF"));
     }
 
@@ -65,21 +81,37 @@ class RatingControllerIT {
     @Test
     void addVetRating_validRequest_returns201WithLocation() throws Exception {
         Long vetId = firstVetId();
-        String body =
-                """
-                { "score": 5, "description": "Excellent vet!", "customerName": "Alice" }
+        String body = """
+                { "score": 5, "description": "Excellent vet!" }
                 """;
         mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body)
-                        .with(staff()))
+                        .with(staff("alice")))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.vetId").value(vetId))
                 .andExpect(jsonPath("$.score").value(5))
-                .andExpect(jsonPath("$.customerName").value("Alice"))
+                // customerName lấy TỪ JWT, không từ body — chứng minh không spoof được
+                .andExpect(jsonPath("$.customerName").value("alice"))
                 .andExpect(jsonPath("$.rateDate").exists());
+    }
+
+    @Test
+    void addVetRating_bodyCustomerNameField_isSilentlyIgnored() throws Exception {
+        // FE cũ vẫn gửi customerName="hacker" trong body — Jackson ignore (DTO không có field),
+        // service lấy từ JWT → kết quả lưu đúng JWT principal, không phải body.
+        Long vetId = firstVetId();
+        String body = """
+                { "score": 4, "customerName": "hacker", "description": "spoof attempt" }
+                """;
+        mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .with(staff("alice")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customerName").value("alice"));
     }
 
     @Test
@@ -87,7 +119,7 @@ class RatingControllerIT {
         Long vetId = firstVetId();
         mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"score\": 0, \"customerName\": \"Alice\"}")
+                        .content("{\"score\": 0}")
                         .with(staff()))
                 .andExpect(status().isBadRequest());
     }
@@ -97,27 +129,28 @@ class RatingControllerIT {
         Long vetId = firstVetId();
         mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"score\": 6, \"customerName\": \"Alice\"}")
+                        .content("{\"score\": 6}")
                         .with(staff()))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void addVetRating_blankCustomerName_returns400() throws Exception {
+    void addVetRating_jwtMissingUsername_returns400() throws Exception {
         Long vetId = firstVetId();
         mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"score\": 3, \"customerName\": \"  \"}")
-                        .with(staff()))
-                .andExpect(status().isBadRequest());
+                        .content("{\"score\": 3}")
+                        .with(staffNoUsername()))
+                .andExpect(status().isBadRequest())
+                .andExpect(header().string("X-PetClinic-Alert", "error.missing-username"));
     }
 
     @Test
     void addVetRating_vetNotFound_returns404() throws Exception {
         mvc.perform(post("/api/v1/vets/{vetId}/ratings", 999_999L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"score\": 5, \"customerName\": \"Alice\"}")
-                        .with(staff()))
+                        .content("{\"score\": 5}")
+                        .with(staff("alice")))
                 .andExpect(status().isNotFound());
     }
 
@@ -172,7 +205,6 @@ class RatingControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(0))
                 .andExpect(jsonPath("$.average").doesNotExist())
-                // Distribution luôn có đủ 5 key (1..5), value 0 nếu không có rating
                 .andExpect(jsonPath("$.distribution.1").value(0))
                 .andExpect(jsonPath("$.distribution.2").value(0))
                 .andExpect(jsonPath("$.distribution.3").value(0))
@@ -186,7 +218,6 @@ class RatingControllerIT {
         addRating(vetId, 5, "A");
         addRating(vetId, 5, "B");
         addRating(vetId, 3, "C");
-        // count=3, avg=(5+5+3)/3 = 4.333..., distribution {5:2, 3:1, rest:0}
 
         mvc.perform(get("/api/v1/vets/{vetId}/ratings/summary", vetId).with(staff()))
                 .andExpect(status().isOk())
@@ -212,14 +243,11 @@ class RatingControllerIT {
         Long vetB = secondVetId();
         Long vetC = thirdVetId();
 
-        // vetA: avg = (5+5+4)/3 = 4.67
         addRating(vetA, 5, "x1");
         addRating(vetA, 5, "x2");
         addRating(vetA, 4, "x3");
-        // vetB: avg = (5+3)/2 = 4.0
         addRating(vetB, 5, "y1");
         addRating(vetB, 3, "y2");
-        // vetC: avg = (3+3)/2 = 3.0
         addRating(vetC, 3, "z1");
         addRating(vetC, 3, "z2");
 
@@ -272,14 +300,15 @@ class RatingControllerIT {
         return om.readTree(body).path("content").get(idx).path("id").asLong();
     }
 
+    /**
+     * customerName giờ là JWT claim, không phải body field. Inject qua staff(customerName).
+     */
     private Long addRating(Long vetId, int score, String customerName) throws Exception {
-        String body = """
-                { "score": %d, "customerName": "%s" }
-                """.formatted(score, customerName);
+        String body = "{ \"score\": %d }".formatted(score);
         String resp = mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body)
-                        .with(staff()))
+                        .with(staff(customerName)))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
