@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/changes/001-init-vets.yaml
   - include:
       file: db/changelog/changes/002-add-auditing-columns.yaml
+  - include:
+      file: db/changelog/changes/006-seed-dev-data.yaml
