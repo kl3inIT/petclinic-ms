@@ -21,8 +21,7 @@ dependencies {
     // KHÔNG kích hoạt lúc package/prod build — chỉ developmentOnly.
     developmentOnly(libs.spring.boot.docker.compose)
 
-    testImplementation(libs.spring.boot.starter.test)
-    testImplementation(libs.spring.boot.testcontainers)
-    testImplementation(libs.testcontainers.postgresql)
-    testImplementation(libs.testcontainers.junit.jupiter)
+    // Shared test fixtures: AbstractPostgresIntegrationTest + JwtTestSupport + Spring test stack.
+    // common-testing api-exposes starter-test + testcontainers + security-test → không cần redeclare.
+    testImplementation(project(":shared:common-testing"))
 }

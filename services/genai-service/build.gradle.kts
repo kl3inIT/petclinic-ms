@@ -57,8 +57,7 @@ dependencies {
 
     developmentOnly(libs.spring.boot.docker.compose)
 
-    testImplementation(libs.spring.boot.starter.test)
-    testImplementation(libs.spring.boot.testcontainers)
-    testImplementation(libs.testcontainers.postgresql)
-    testImplementation(libs.testcontainers.junit.jupiter)
+    // Shared test fixtures + WebFlux test annotation (genai-service WebFlux-only).
+    testImplementation(project(":shared:common-testing"))
+    testImplementation("org.springframework.boot:spring-boot-webflux-test")
 }
