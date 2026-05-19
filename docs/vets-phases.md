@@ -201,10 +201,124 @@
 1. **Resume sau khi pull**: `git pull origin nhat-anh` → `./gradlew :services:vets-service:test` (cần Docker chạy).
 2. **Coverage report**: `./gradlew :services:vets-service:jacocoTestReport` → mở `services/vets-service/build/reports/jacoco/test/html/index.html`.
 3. **Phase A-E + I + F đã xong toàn bộ** — vets-service nghiệp vụ + security + operational hoàn chỉnh. 76 IT cover.
-4. **Optional future phases (chưa lên kế hoạch)**:
-   - Phase G: Publish `vet.rating.added` event qua `shared/common-events` (cho billing/analytics consume sau).
-   - Phase H: Workday × WorkHour integration với visits-service (check vet rảnh trước khi đặt visit).
-   - Phase J: FE orval regen + UI cho 8 sub-resource mới.
+4. **Optional future phases (chưa lên kế hoạch)** — xem flow chi tiết section "🗺️ Flow next phases" ngay bên dưới.
+
+---
+
+## 🗺️ Flow next phases — dev resume cheat sheet
+
+Mỗi phase ghi 4 mục: **(1) Mục tiêu** — đầu ra business, **(2) Đã có sẵn** — precondition project đã đáp ứng, **(3) Cần thêm** — code/infra/dep phải bổ sung, **(4) Bước làm**.
+
+### Phase G — Publish `vet.rating.added` event
+
+1. **Mục tiêu**: Mỗi khi `POST /api/v1/vets/{vetId}/ratings` thành công, publish event lên RabbitMQ topic exchange `petclinic.events`. Billing/analytics service tương lai sẽ subscribe để tính KPI, gửi notification, v.v.
+
+2. **Đã có sẵn**:
+   - `shared/common-events` autoconfig (`EventPublisher` bean, `JacksonJsonMessageConverter`, topology DLX) — xem CLAUDE.md `shared/common-events` section.
+   - RabbitMQ container ở `compose.yaml` profile `mq` (`AMQP 5672`, UI `15672`, `guest/guest`).
+   - Pattern mẫu: `auth-service` Iter 5 publish `user.registered` (xem `services/auth-service/.../service/impl/AuthServiceImpl.java` chỗ `eventPublisher.publish(...)`).
+
+3. **Cần thêm**:
+   - **Dep**: `implementation(project(":shared:common-events"))` trong `services/vets-service/build.gradle.kts`.
+   - **DTO event**: `services/vets-service/src/main/java/com/mss301/petclinic/vets/events/VetRatingAddedEvent.java` — record implements `DomainEvent`, payload `{vetId, ratingId, score, customerName, rateDate}`. `routingKey()` = `"vet.rating.added"`.
+   - **Inject**: `ObjectProvider<EventPublisher>` vào `RatingServiceImpl` (vì test profile tắt events qua `petclinic.events.enabled=false`).
+   - **Publish-after-commit**: dùng `TransactionSynchronizationManager.registerSynchronization(afterCommit(...))` — tránh publish khi transaction rollback (orphan event).
+   - **Config**: `config-repo/vets-service.yml` thêm `petclinic.events.enabled: true`, `petclinic.docker.compose.profiles.active: db,mq`. `application-test.yml` đã có `petclinic.events.enabled: false` (kế thừa từ common).
+   - **Test**: `@SpringBootTest` với `@TestPropertySource(properties = "petclinic.events.enabled=true")` + `RabbitMQContainer` từ `testcontainers-rabbitmq`. Verify message landed đúng exchange + routingKey + payload. Hoặc đơn giản hơn: inject `EventPublisher` mock, assert call params (unit-style).
+
+4. **Bước làm** (≈ 2-3 giờ):
+   1. Add dep vào build.gradle.kts.
+   2. Tạo `events/VetRatingAddedEvent.java`.
+   3. Sửa `RatingServiceImpl.create(...)`: inject `ObjectProvider<EventPublisher>`, sau `ratingRepository.save(...)` đăng ký `afterCommit` callback publish event.
+   4. Update `config-repo/vets-service.yml` thêm events config.
+   5. Test IT (Testcontainers RabbitMQ) — verify message published có đầy đủ field.
+   6. Commit 2 stage: feat + test. Push.
+   7. Update `docs/vets-phases.md` đánh dấu G done.
+
+---
+
+### Phase H — Vet schedule integration với visits-service
+
+1. **Mục tiêu**: Khi `POST /api/v1/visits` (book lịch khám) ở `visits-service`, gọi vets-service kiểm tra vet có rảnh đúng workday × workHour đó không. Nếu vet không rảnh → 409 Conflict. Tránh double-booking.
+
+2. **Đã có sẵn**:
+   - **Vets side**: `WorkScheduleSlot` entity + `GET /api/v1/vets/{vetId}/work-schedule` (Phase C). DB query bằng composite PK (vet_id, workday, work_hour).
+   - **Visits side**: `services/visits-service` đã consume vets qua `client/VetsClient` (HTTP Interface + RestClient `@LoadBalanced`). Pattern Tolerant Reader.
+   - **Cross-service infra**: `shared/common-clients` autoconfig (Builder beans + JwtForwardInterceptor).
+
+3. **Cần thêm**:
+   - **Vets side — endpoint mới**: `GET /api/v1/vets/{vetId}/work-schedule/check?workday=MONDAY&workHour=MORNING_9` → `{available: true|false}`. Service query `WorkScheduleSlotRepository.existsById(new WorkScheduleSlotId(vetId, workday, workHour))`. Sub-100ms response.
+   - **Visits side — client mở rộng**: trong `visits-service/.../client/VetsClient.java` thêm `@GetExchange("/api/v1/vets/{vetId}/work-schedule/check") boolean isVetAvailable(@PathVariable Long vetId, @RequestParam Workday workday, @RequestParam WorkHour workHour)`.
+   - **Visits side — bookVisit logic**: trong `VisitServiceImpl.bookVisit(...)`, derive (workday, workHour) từ `scheduledAt` (Java `DayOfWeek` → `Workday`, `LocalTime.getHour()` → `WorkHour`), gọi `vetsClient.isVetAvailable(...)`. Nếu false → throw `BadRequestAlertException("Vet không trống khung giờ này", "visit", "vet-unavailable")`.
+   - **Resilience**: vets-service down → `@CircuitBreaker` đã có ở `RemoteClientsFacade` (Phase 8B pattern). Fallback strategy: fail-open (cho book vẫn được, log warning) hay fail-closed (block book)? Mặc định **fail-closed** vì over-booking nguy hiểm hơn cản trở 1 booking.
+   - **Test**: IT trong visits-service: stub vets-service via `@MockBean` hoặc Testcontainers wiremock; verify cả 2 path (available → book OK, unavailable → 400). Vets IT: thêm 2 test case cho endpoint check.
+
+4. **Bước làm** (≈ 3-4 giờ):
+   1. **Vets-side trước** (vets-service):
+      - Thêm method `WorkScheduleService.isAvailable(Long vetId, Workday workday, WorkHour workHour)`.
+      - Thêm endpoint `WorkScheduleController.checkVetAvailability(...)`.
+      - 2 IT case (available true/false).
+      - Commit + push.
+   2. **Visits-side sau** (visits-service):
+      - Mở rộng `VetsClient` interface.
+      - Sửa `VisitServiceImpl.bookVisit` gọi check trước khi save.
+      - Sửa `RemoteClientsFacade` thêm `@CircuitBreaker` cho method này (fallback returns `false` — fail-closed).
+      - IT verify happy path + conflict path.
+      - Commit + push.
+   3. Update `docs/vets-phases.md` đánh dấu H done.
+
+   **Lưu ý ordering**: làm vets-side TRƯỚC (deploy độc lập được) — visits-side chờ vets-side merge mới ra. Tránh circular blocker.
+
+---
+
+### Phase J — FE orval regen + UI mới
+
+1. **Mục tiêu**: FE (apps/web) consume 8 sub-resource mới của vets-service (education, work-schedule, ratings, top-rated, badges, photo, album) qua orval-generated TanStack Query hooks. Hiển thị UI ở `/admin/vets/[id]` page.
+
+2. **Đã có sẵn**:
+   - **Backend OpenAPI**: tất cả controller có `@Tag` + `@Operation` → springdoc xuất spec đầy đủ. Method name unique cross-service (CLAUDE.md gotcha #23).
+   - **Pipeline orval**: `apps/web/scripts/fetch-openapi.ts` merge spec, `pnpm generate:api` xuất hook. Mutator wraps axios `apiClient`.
+   - **UI stack**: React 19 + Vite + TanStack Router + shadcn components. Pattern dialog từ Phase 7B Owners CRUD.
+   - **Form**: `@tanstack/react-form` + Zod schemas (xem `lib/form/FieldError.tsx`).
+
+3. **Cần thêm**:
+   - **Gateway phải chạy** (port 8180) khi `pnpm fetch:openapi` — script gọi `/v3/api-docs/{service}` qua gateway.
+   - **Đoạn UI mới**: `apps/web/src/routes/admin.vets.$id.tsx` (tab layout: Info / Education / Schedule / Ratings / Album / Badges). Mỗi tab gọi hook tương ứng từ `lib/api/generated/`.
+   - **Upload component**: photo + album cần `<input type="file">` + multipart submit. Reuse hoặc tạo mới `components/MediaUploader.tsx` — drag-drop với preview, validate client-side (10MB, mime image/*).
+   - **Multipart hook**: orval-generated hook cho multipart endpoint cần config `bodyType: 'FormData'` trong `orval.config.ts` cho path matching `/photo` + `/album`.
+   - **Vietnamese labels**: tạo `features/vets/labels.ts` cho `Workday` (MONDAY → "Thứ Hai"), `WorkHour` (MORNING_9 → "9-10h sáng"), `BadgeTitle` (CERTIFIED_VET → "Bác sĩ thú y có chứng chỉ").
+   - **Validation schemas**: `features/vets/schemas.ts` — Zod cho VetForm, RatingForm.
+
+4. **Bước làm** (≈ 4-6 giờ):
+   1. Spin up backend stack: `docker compose --profile db --profile storage up -d` + IntelliJ "🐱 Petclinic Apps" compound (config + discovery + gateway + vets).
+   2. FE: `cd apps/web && pnpm fetch:openapi && pnpm generate:api` — verify generated/vets/ folder có 8 file mới.
+   3. `pnpm typecheck` — không có error là spec đầy đủ.
+   4. Tạo `routes/admin.vets.$id.tsx` với 6 tab + skeleton loading state.
+   5. Tab Info: GET `/api/v1/vets/{id}` + PATCH form (TanStack Form + Zod). Test bằng MSW hoặc dev API thật.
+   6. Tab Education: list + add/delete dialog. Pattern theo Owners CRUD (Phase 7B).
+   7. Tab Schedule: 7 day × 12 hour grid checkbox → PUT replace.
+   8. Tab Ratings: list + top-rated badge nếu vet trong top 5.
+   9. Tab Album: photo grid + uploader. Photo avatar slot riêng (PUT replace).
+   10. Tab Badges: card list + add dialog.
+   11. Playwright snapshot mỗi tab (`browser_navigate` → `browser_snapshot`) — đảm bảo layout không vỡ.
+   12. Commit theo tab (6 commit) để review dễ.
+   13. Update `docs/vets-phases.md` đánh dấu J done.
+
+   **Lưu ý**: KHÔNG edit `lib/api/generated/*` — auto-regen sẽ wipe. Helper code (label map, dialog component) đặt cùng feature folder.
+
+---
+
+### Thứ tự đề nghị
+
+```
+G (events)      ──→ độc lập, không phụ thuộc service khác → làm trước
+H (visits int)  ──→ cần coordinate với visits-service team, làm sau G
+J (FE orval)    ──→ làm cuối khi BE ổn định, tránh regen liên tục
+```
+
+Nếu chỉ có 1 dev: **G → H → J**. Nếu nhiều dev: **G + J song song** (independent), **H** sau khi G xong (visits-side cần stable contract).
+
+---
 
 **Cross-cutting rule reminder**:
 - Mỗi entity mới phải `extends AbstractAuditingEntity` + Liquibase changeset có 4 audit columns.
