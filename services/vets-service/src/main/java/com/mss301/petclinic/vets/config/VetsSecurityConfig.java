@@ -48,10 +48,12 @@ public class VetsSecurityConfig {
                         ).permitAll()
 
                         // Write — explicit rules trước (thứ tự matter: cụ thể trước, broad sau)
-                        // Sub-resource education: STAFF được delete vì bằng cấp lifecycle riêng,
-                        // không gây mất audit nghiêm trọng như hard-delete cả vet record.
-                        // Pattern phải khai báo TRƯỚC rule DELETE /vets/** → ADMIN bên dưới.
+                        // Sub-resource (education, work-schedule, ...): STAFF được delete vì
+                        // lifecycle riêng, không gây mất audit nghiêm trọng như hard-delete cả vet
+                        // record. Pattern phải khai báo TRƯỚC rule DELETE /vets/** → ADMIN bên dưới.
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/educations/**")
+                            .hasAnyRole("STAFF", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/work-schedule/**")
                             .hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/**")
                             .hasRole("ADMIN")
