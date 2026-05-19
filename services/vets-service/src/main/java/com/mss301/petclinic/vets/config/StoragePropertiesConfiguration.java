@@ -8,5 +8,5 @@ import org.springframework.context.annotation.Configuration;
  * để giảm coupling test (xem CLAUDE.md "Configuration binding pattern").
  */
 @Configuration
-@EnableConfigurationProperties(StorageProperties.class)
+@EnableConfigurationProperties({StorageProperties.class, StorageCleanupProperties.class})
 public class StoragePropertiesConfiguration {}

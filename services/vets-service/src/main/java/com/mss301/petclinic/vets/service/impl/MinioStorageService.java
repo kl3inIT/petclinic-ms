@@ -3,17 +3,22 @@ package com.mss301.petclinic.vets.service.impl;
 import java.io.InputStream;
 import java.net.URL;
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import com.mss301.petclinic.vets.config.StorageProperties;
+import com.mss301.petclinic.vets.service.StorageObject;
 import com.mss301.petclinic.vets.service.StorageService;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
@@ -66,5 +71,19 @@ public class MinioStorageService implements StorageService {
                 .getObjectRequest(get)
                 .build();
         return presigner.presignGetObject(presign).url();
+    }
+
+    @Override
+    public List<StorageObject> list(String prefix) {
+        // ListObjectsV2Iterable tự auto-paginate qua continuation token — caller không cần
+        // quản lý nextToken. Mỗi page mặc định 1000 keys.
+        ListObjectsV2Request req = ListObjectsV2Request.builder()
+                .bucket(props.bucket())
+                .prefix(prefix)
+                .build();
+        ListObjectsV2Iterable pages = s3.listObjectsV2Paginator(req);
+        return pages.contents().stream()
+                .map(o -> new StorageObject(o.key(), o.lastModified(), o.size()))
+                .collect(Collectors.toList());
     }
 }
