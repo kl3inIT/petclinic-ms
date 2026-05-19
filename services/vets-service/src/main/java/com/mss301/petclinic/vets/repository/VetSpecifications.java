@@ -1,15 +1,17 @@
 package com.mss301.petclinic.vets.repository;
 
-import com.mss301.petclinic.vets.model.Specialty;
-import com.mss301.petclinic.vets.model.Vet;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Predicate;
-import org.springframework.data.jpa.domain.Specification;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+
+import org.springframework.data.jpa.domain.Specification;
+
+import com.mss301.petclinic.vets.model.Specialty;
+import com.mss301.petclinic.vets.model.Vet;
 
 /**
  * Build {@link Specification} cho query động — chỉ add predicate khi param != null.

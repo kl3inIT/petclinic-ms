@@ -1,6 +1,7 @@
 package com.mss301.petclinic.common.security.autoconfigure;
 
-import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
+import java.util.List;
+
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -23,7 +24,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.util.List;
+import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
 
 /**
  * Common security auto-config — RSA + JWKS pattern (production-grade từ đầu).

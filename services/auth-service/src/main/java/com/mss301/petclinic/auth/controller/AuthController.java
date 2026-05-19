@@ -1,14 +1,9 @@
 package com.mss301.petclinic.auth.controller;
 
-import com.mss301.petclinic.auth.dto.req.LoginRequest;
-import com.mss301.petclinic.auth.dto.req.RefreshRequest;
-import com.mss301.petclinic.auth.dto.req.RegisterRequest;
-import com.mss301.petclinic.auth.dto.res.AuthResponse;
-import com.mss301.petclinic.auth.dto.res.UserResponse;
-import com.mss301.petclinic.auth.service.AuthService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.UUID;
+
 import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,7 +14,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
+import com.mss301.petclinic.auth.dto.req.LoginRequest;
+import com.mss301.petclinic.auth.dto.req.RefreshRequest;
+import com.mss301.petclinic.auth.dto.req.RegisterRequest;
+import com.mss301.petclinic.auth.dto.res.AuthResponse;
+import com.mss301.petclinic.auth.dto.res.UserResponse;
+import com.mss301.petclinic.auth.service.AuthService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/v1/auth")

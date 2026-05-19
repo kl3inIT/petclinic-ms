@@ -1,6 +1,8 @@
 package com.mss301.petclinic.vets.model;
 
-import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
+import java.util.HashSet;
+import java.util.Set;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,8 +15,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
-import java.util.HashSet;
-import java.util.Set;
+import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 @Entity
 @Table(name = "vets")

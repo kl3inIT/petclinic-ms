@@ -1,5 +1,14 @@
 package com.mss301.petclinic.vets.service.impl;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
 import com.mss301.petclinic.vets.dto.req.VetRequest;
@@ -10,14 +19,6 @@ import com.mss301.petclinic.vets.repository.SpecialtyRepository;
 import com.mss301.petclinic.vets.repository.VetRepository;
 import com.mss301.petclinic.vets.repository.VetSpecifications;
 import com.mss301.petclinic.vets.service.VetService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)

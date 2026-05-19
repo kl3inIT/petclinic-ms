@@ -1,11 +1,5 @@
 package com.mss301.petclinic.auth.security;
 
-import com.mss301.petclinic.auth.config.AuthProperties;
-import com.mss301.petclinic.auth.model.RefreshToken;
-import com.mss301.petclinic.auth.repository.RefreshTokenRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,6 +8,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.mss301.petclinic.auth.config.AuthProperties;
+import com.mss301.petclinic.auth.model.RefreshToken;
+import com.mss301.petclinic.auth.repository.RefreshTokenRepository;
 
 /**
  * Issue + validate refresh tokens. Raw token = random 256-bit hex (KHÔNG phải UUID — UUID có

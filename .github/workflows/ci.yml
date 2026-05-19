@@ -45,6 +45,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Spotless check (Java import order + whitespace + EOL)
+        run: ./gradlew --no-daemon spotlessCheck
+
       - name: Build + test + aggregate coverage
         run: ./gradlew --no-daemon build jacocoAggregatedReport
 

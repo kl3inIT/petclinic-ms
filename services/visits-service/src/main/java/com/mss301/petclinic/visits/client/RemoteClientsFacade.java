@@ -1,12 +1,14 @@
 package com.mss301.petclinic.visits.client;
 
-import com.mss301.petclinic.common.web.exception.ExternalServiceUnavailableException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
+import com.mss301.petclinic.common.web.exception.ExternalServiceUnavailableException;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 /**
  * Facade bao bọc cross-service HTTP calls + Resilience4j circuit breakers.

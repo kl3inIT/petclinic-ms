@@ -1,13 +1,14 @@
 package com.mss301.petclinic.mcp.tools;
 
-import com.mss301.petclinic.mcp.client.VisitsClient;
-import com.mss301.petclinic.mcp.client.dto.PageResult;
-import com.mss301.petclinic.mcp.client.dto.VisitSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
+
+import com.mss301.petclinic.mcp.client.VisitsClient;
+import com.mss301.petclinic.mcp.client.dto.PageResult;
+import com.mss301.petclinic.mcp.client.dto.VisitSummary;
 
 @Component
 public class VisitTools {

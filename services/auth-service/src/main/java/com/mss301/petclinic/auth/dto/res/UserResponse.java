@@ -1,9 +1,9 @@
 package com.mss301.petclinic.auth.dto.res;
 
-import com.mss301.petclinic.auth.model.User;
-
 import java.util.Set;
 import java.util.UUID;
+
+import com.mss301.petclinic.auth.model.User;
 
 public record UserResponse(
         UUID id,

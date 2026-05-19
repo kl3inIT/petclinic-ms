@@ -1,11 +1,12 @@
 package com.mss301.petclinic.gateway.controller;
 
-import com.mss301.petclinic.common.web.exception.ErrorConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.mss301.petclinic.common.web.exception.ErrorConstants;
 
 /**
  * Đích forward của CircuitBreaker default filter khi downstream service không reachable.

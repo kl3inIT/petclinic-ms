@@ -1,9 +1,9 @@
 package com.mss301.petclinic.auth.config;
 
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
-
-import java.time.Duration;
 
 /**
  * Auth-service riêng config — token TTLs. Immutable record với defaults qua {@code @DefaultValue}.

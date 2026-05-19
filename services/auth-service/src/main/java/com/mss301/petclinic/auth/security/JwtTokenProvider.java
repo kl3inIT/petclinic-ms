@@ -1,9 +1,9 @@
 package com.mss301.petclinic.auth.security;
 
-import com.mss301.petclinic.auth.config.AuthProperties;
-import com.mss301.petclinic.auth.model.User;
-import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
-import com.nimbusds.jose.jwk.RSAKey;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -11,9 +11,10 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
+import com.mss301.petclinic.auth.config.AuthProperties;
+import com.mss301.petclinic.auth.model.User;
+import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
+import com.nimbusds.jose.jwk.RSAKey;
 
 /**
  * Encode RS256 JWT access tokens.

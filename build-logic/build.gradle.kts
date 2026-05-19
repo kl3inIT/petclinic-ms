@@ -9,6 +9,7 @@ plugins {
 dependencies {
     implementation(libs.spring.boot.gradle.plugin)
     implementation(libs.spring.dep.management.plugin)
+    implementation(libs.spotless.gradle.plugin)
 
     // Hack đã được Gradle community công nhận: expose generated type-safe accessor
     // `org.gradle.accessors.dm.LibrariesForLibs` cho precompiled script plugins,

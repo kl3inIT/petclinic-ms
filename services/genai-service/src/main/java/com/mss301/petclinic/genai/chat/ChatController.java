@@ -1,14 +1,9 @@
 package com.mss301.petclinic.genai.chat;
 
-import com.mss301.petclinic.common.web.exception.ExternalServiceUnavailableException;
-import com.mss301.petclinic.genai.config.LlmClientHolder;
-import com.openai.client.OpenAIClient;
-import com.openai.core.http.StreamResponse;
-import com.openai.models.chat.completions.ChatCompletionChunk;
-import com.openai.models.chat.completions.ChatCompletionCreateParams;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
+
 import jakarta.validation.Valid;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -27,11 +22,19 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.mss301.petclinic.common.web.exception.ExternalServiceUnavailableException;
+import com.mss301.petclinic.genai.config.LlmClientHolder;
+import com.openai.client.OpenAIClient;
+import com.openai.core.http.StreamResponse;
+import com.openai.models.chat.completions.ChatCompletionChunk;
+import com.openai.models.chat.completions.ChatCompletionCreateParams;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-
-import java.util.List;
 
 /**
  * Chat endpoint — WebFlux reactive stack (Phase 12e).

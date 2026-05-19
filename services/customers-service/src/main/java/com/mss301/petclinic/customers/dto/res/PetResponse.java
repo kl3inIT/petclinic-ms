@@ -1,8 +1,8 @@
 package com.mss301.petclinic.customers.dto.res;
 
-import com.mss301.petclinic.customers.model.Pet;
-
 import java.time.LocalDate;
+
+import com.mss301.petclinic.customers.model.Pet;
 
 /**
  * Standalone Pet response — exposed cho cross-service consumers (vd visits-service)

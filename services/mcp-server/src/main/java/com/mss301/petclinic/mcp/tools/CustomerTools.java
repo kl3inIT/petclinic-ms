@@ -1,14 +1,15 @@
 package com.mss301.petclinic.mcp.tools;
 
-import com.mss301.petclinic.mcp.client.CustomersClient;
-import com.mss301.petclinic.mcp.client.dto.OwnerSummary;
-import com.mss301.petclinic.mcp.client.dto.PageResult;
-import com.mss301.petclinic.mcp.client.dto.PetSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
+
+import com.mss301.petclinic.mcp.client.CustomersClient;
+import com.mss301.petclinic.mcp.client.dto.OwnerSummary;
+import com.mss301.petclinic.mcp.client.dto.PageResult;
+import com.mss301.petclinic.mcp.client.dto.PetSummary;
 
 /**
  * Tool catalog cho domain Customers + Pets. LLM gọi bằng tên hàm Java.

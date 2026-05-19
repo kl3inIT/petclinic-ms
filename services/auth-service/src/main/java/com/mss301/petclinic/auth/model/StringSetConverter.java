@@ -1,12 +1,12 @@
 package com.mss301.petclinic.auth.model;
 
-import jakarta.persistence.AttributeConverter;
-import jakarta.persistence.Converter;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
 
 /**
  * Persist {@code Set<String>} as CSV trong VARCHAR. Phù hợp cho roles tĩnh (USER/VET/ADMIN).

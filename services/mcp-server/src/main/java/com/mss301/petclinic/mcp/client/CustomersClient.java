@@ -1,12 +1,13 @@
 package com.mss301.petclinic.mcp.client;
 
-import com.mss301.petclinic.mcp.client.dto.OwnerSummary;
-import com.mss301.petclinic.mcp.client.dto.PageResult;
-import com.mss301.petclinic.mcp.client.dto.PetSummary;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.HttpExchange;
+
+import com.mss301.petclinic.mcp.client.dto.OwnerSummary;
+import com.mss301.petclinic.mcp.client.dto.PageResult;
+import com.mss301.petclinic.mcp.client.dto.PetSummary;
 
 /**
  * HTTP Interface đối tới customers-service (Eureka LB qua "http://customers-service").

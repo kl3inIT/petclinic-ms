@@ -1,13 +1,14 @@
 package com.mss301.petclinic.visits.repository;
 
-import com.mss301.petclinic.visits.model.Visit;
-import com.mss301.petclinic.visits.model.VisitStatus;
-import org.springframework.data.jpa.domain.Specification;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.data.jpa.domain.Specification;
+
+import com.mss301.petclinic.visits.model.Visit;
+import com.mss301.petclinic.visits.model.VisitStatus;
 
 /**
  * Build {@link Specification} cho query động — chỉ add predicate khi param != null.

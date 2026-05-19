@@ -1,8 +1,8 @@
 package com.mss301.petclinic.genai.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.time.Duration;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * AI provider config bind từ {@code petclinic.ai.*}. Phase 12b: env-driven (đọc từ

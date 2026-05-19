@@ -1,11 +1,11 @@
 package com.mss301.petclinic.auth.security;
 
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
-
-import java.util.UUID;
 
 /**
  * Structured audit log cho mọi auth event (ECS schema — Loki/Elasticsearch parse trực tiếp).

@@ -1,6 +1,5 @@
 package com.mss301.petclinic.common.clients.autoconfigure;
 
-import com.mss301.petclinic.common.clients.interceptor.JwtForwardInterceptor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -8,6 +7,8 @@ import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.web.client.RestClient;
+
+import com.mss301.petclinic.common.clients.interceptor.JwtForwardInterceptor;
 
 /**
  * Auto-config cho service-to-service HTTP client infrastructure.

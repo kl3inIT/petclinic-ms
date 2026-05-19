@@ -1,10 +1,11 @@
 package com.mss301.petclinic.auth.repository;
 
-import com.mss301.petclinic.auth.model.User;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.mss301.petclinic.auth.model.User;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 

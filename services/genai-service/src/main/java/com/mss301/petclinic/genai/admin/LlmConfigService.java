@@ -1,5 +1,12 @@
 package com.mss301.petclinic.genai.admin;
 
+import jakarta.annotation.PostConstruct;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.mss301.petclinic.genai.admin.dto.LlmConfigResponse;
 import com.mss301.petclinic.genai.admin.dto.SaveLlmConfigRequest;
 import com.mss301.petclinic.genai.admin.dto.ValidateLlmConfigRequest;
@@ -10,11 +17,6 @@ import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 import com.openai.models.chat.completions.ChatCompletion;
 import com.openai.models.chat.completions.ChatCompletionCreateParams;
-import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Source of truth cho LLM config.

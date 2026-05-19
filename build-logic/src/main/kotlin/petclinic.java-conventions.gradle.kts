@@ -1,9 +1,10 @@
 // Convention plugin #1: Java baseline.
-// Mọi module áp dụng plugin này sẽ có: Java 25 toolchain, UTF-8, JUnit 5, JaCoCo coverage.
+// Mọi module áp dụng plugin này sẽ có: Java 25 toolchain, UTF-8, JUnit 5, JaCoCo coverage, Spotless lint.
 
 plugins {
     java
     jacoco
+    id("com.diffplug.spotless")
 }
 
 // Đọc version catalog ở scope của precompiled script plugin (Gradle 9 syntax).
@@ -47,5 +48,36 @@ tasks.named<JacocoReport>("jacocoTestReport") {
     reports {
         xml.required.set(true)
         html.required.set(true)
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Spotless: enforce hygiene cơ bản, KHÔNG reformat code body.
+// - trimTrailingWhitespace: xoá space cuối dòng (lý do thật cho 1/3 PR diff bẩn).
+// - endWithNewline: file Java/yaml/md kết thúc bằng newline (POSIX, git diff sạch).
+// - removeUnusedImports: imports không dùng → xoá (giảm noise + class-loader warnings).
+// - importOrder: java → javax → jakarta → org → com → '' (rest), tạo thứ tự deterministic.
+//
+// KHÔNG dùng googleJavaFormat / palantirJavaFormat — vì sẽ reformat method bodies/braces/wrap,
+// tạo PR "format everything" lớn phá git blame. Decision: keep existing code style, only guard hygiene.
+// ────────────────────────────────────────────────────────────────────────────
+spotless {
+    java {
+        target("src/**/*.java")
+        trimTrailingWhitespace()
+        endWithNewline()
+        removeUnusedImports()
+        importOrder("java", "javax", "jakarta", "org", "com", "")
+        // tabsToSpaces 4 không bật — code đã uniform 4-space, bật sẽ no-op nhưng touch checksum.
+    }
+    kotlinGradle {
+        target("*.gradle.kts", "src/**/*.gradle.kts")
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    format("misc") {
+        target("*.md", "*.yml", "*.yaml", ".gitignore")
+        trimTrailingWhitespace()
+        endWithNewline()
     }
 }

@@ -1,12 +1,7 @@
 package com.mss301.petclinic.genai.admin;
 
-import com.mss301.petclinic.genai.admin.dto.LlmConfigResponse;
-import com.mss301.petclinic.genai.admin.dto.SaveLlmConfigRequest;
-import com.mss301.petclinic.genai.admin.dto.ValidateLlmConfigRequest;
-import com.mss301.petclinic.genai.admin.dto.ValidateLlmConfigResponse;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +9,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.mss301.petclinic.genai.admin.dto.LlmConfigResponse;
+import com.mss301.petclinic.genai.admin.dto.SaveLlmConfigRequest;
+import com.mss301.petclinic.genai.admin.dto.ValidateLlmConfigRequest;
+import com.mss301.petclinic.genai.admin.dto.ValidateLlmConfigResponse;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 

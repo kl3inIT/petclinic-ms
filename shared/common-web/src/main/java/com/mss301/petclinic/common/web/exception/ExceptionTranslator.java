@@ -1,5 +1,7 @@
 package com.mss301.petclinic.common.web.exception;
 
+import java.util.List;
+
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -8,8 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.util.List;
 
 /**
  * Trung tâm xử lý lỗi cho mọi service. Auto-wired bởi {@code PetClinicWebAutoConfiguration}.

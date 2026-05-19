@@ -1,8 +1,8 @@
 package com.mss301.petclinic.genai.chat;
 
-import jakarta.validation.constraints.NotEmpty;
-
 import java.util.List;
+
+import jakarta.validation.constraints.NotEmpty;
 
 /**
  * Body Vercel AI SDK {@code useChat} POST khi dùng {@code TextStreamChatTransport}.

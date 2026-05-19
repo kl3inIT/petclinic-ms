@@ -1,12 +1,7 @@
 package com.mss301.petclinic.vets.controller;
 
-import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
-import com.mss301.petclinic.vets.dto.req.VetRequest;
-import com.mss301.petclinic.vets.dto.res.VetResponse;
-import com.mss301.petclinic.vets.service.VetService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -20,6 +15,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
+import com.mss301.petclinic.vets.dto.req.VetRequest;
+import com.mss301.petclinic.vets.dto.res.VetResponse;
+import com.mss301.petclinic.vets.service.VetService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/v1/vets")

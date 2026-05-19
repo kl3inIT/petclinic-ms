@@ -1,7 +1,8 @@
 package com.mss301.petclinic.common.events;
 
-import com.mss301.petclinic.common.events.config.EventsProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
+import com.mss301.petclinic.common.events.config.EventsProperties;
 
 /**
  * API publish event mức nghiệp vụ — service chỉ cần gọi {@code publish(event)},

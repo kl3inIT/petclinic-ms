@@ -1,6 +1,8 @@
 package com.mss301.petclinic.customers.model;
 
-import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,8 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 @Entity
 @Table(name = "owners")

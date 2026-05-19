@@ -1,5 +1,7 @@
 package com.mss301.petclinic.genai.rag;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -13,8 +15,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * Ingest knowledge base markdown vào VectorStore lúc startup.
