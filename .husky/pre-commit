@@ -1,1 +1,22 @@
+#!/usr/bin/env sh
+# pre-commit — auto-format files đang staged.
+#  1. FE: lint-staged chạy eslint + prettier per-file (config trong root package.json).
+#  2. Java/Gradle: spotlessApply với -PspotlessFiles để chỉ format files đã staged.
+#     Sau format → re-add lại để fix vào commit này (nếu không sẽ commit version cũ).
+
+set -e
+
+# 1. FE files (delegate to lint-staged)
 pnpm exec lint-staged
+
+# 2. Java + *.gradle.kts staged files → Spotless
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(java|gradle\.kts)$' || true)
+if [ -n "$STAGED_JAVA" ]; then
+    echo "→ spotless: formatting $(echo "$STAGED_JAVA" | wc -l | tr -d ' ') Java/Gradle file(s)"
+    # -PspotlessFiles nhận comma-separated ABSOLUTE paths (Spotless gradle docs).
+    # tr newline → comma, prepend $(pwd)/ để biến tương đối → tuyệt đối.
+    ABS_FILES=$(echo "$STAGED_JAVA" | sed "s|^|$(pwd)/|" | tr '\n' ',')
+    ./gradlew --no-daemon -q spotlessApply -PspotlessFiles="$ABS_FILES"
+    # Re-stage những file Spotless vừa đổi (nếu apply không touch file thì git add no-op).
+    echo "$STAGED_JAVA" | xargs git add
+fi
