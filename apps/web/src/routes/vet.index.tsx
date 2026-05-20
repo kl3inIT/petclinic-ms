@@ -6,11 +6,13 @@ import {
   Medal,
   MessageSquareQuote,
   Phone,
+  Sparkles,
   Star,
   TrendingUp,
   UserCircle,
 } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -26,12 +28,13 @@ import {
   useMyRecentRatings,
   useMySchedule,
 } from '@/features/vet-me/api';
+import { enableDemoMode } from '@/features/vet-me/mock';
+import { DemoBanner } from '@/features/vet-me/components/DemoBanner';
 import { EmptyState } from '@/features/vet-me/components/EmptyState';
 import { StarRating } from '@/features/vet-me/components/StarRating';
 import { VetPageHeader } from '@/features/vet-me/components/VetPageHeader';
 import {
   WORKDAY_LABEL,
-  WORKDAY_ORDER,
   WORKHOUR_LABEL,
   WORKHOUR_ORDER,
 } from '@/features/vets/labels';
@@ -70,8 +73,8 @@ function VetDashboard() {
               Tài khoản chưa liên kết với bác sĩ
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>
+          <CardContent className="space-y-4 text-sm">
+            <p className="text-muted-foreground">
               Token của bạn không có claim <code className="rounded bg-muted px-1 py-0.5">vetId</code>.
               Admin cần liên kết account với 1 vet entity:
             </p>
@@ -79,7 +82,27 @@ function VetDashboard() {
 {`UPDATE auth.users SET roles_csv = 'VET', vet_id = <id>
  WHERE username = '${username}';`}
             </pre>
-            <p>Sau đó đăng xuất + đăng nhập lại để cấp token mới.</p>
+            <p className="text-muted-foreground">Sau đó đăng xuất + đăng nhập lại để cấp token mới.</p>
+
+            <div className="rounded-md border border-violet-200 bg-gradient-to-br from-violet-50 to-pink-50 p-4">
+              <div className="mb-2 flex items-center gap-2 font-medium text-violet-900">
+                <Sparkles className="size-4" />
+                Hoặc xem trước UI với dữ liệu mẫu
+              </div>
+              <p className="mb-3 text-xs text-violet-700">
+                Bật chế độ demo để xem template /vet/* với hồ sơ + lịch trực +
+                đánh giá + huy hiệu mock. Không thay đổi gì ở backend.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-violet-300 bg-white text-violet-700 hover:bg-violet-100"
+                onClick={() => enableDemoMode()}
+              >
+                <Sparkles className="size-3.5" />
+                Bật chế độ demo
+              </Button>
+            </div>
           </CardContent>
         </Card>
       );

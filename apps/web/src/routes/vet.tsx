@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { useAuthStore } from '@/features/auth/store';
+import { DemoBanner } from '@/features/vet-me/components/DemoBanner';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
@@ -22,19 +23,14 @@ import { cn } from '@/lib/utils';
  */
 export const Route = createFileRoute('/vet')({
   beforeLoad: ({ location }) => {
-    const { accessToken, user } = useAuthStore.getState();
+    const { accessToken } = useAuthStore.getState();
     if (!accessToken) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: '/login', search: { redirect: location.href } });
     }
-    const roles = user?.roles ?? [];
-    const allowed =
-      roles.includes('VET') || roles.includes('STAFF') || roles.includes('ADMIN');
-    if (!allowed) {
-      // Customer/user thường → tự về trang chính.
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw redirect({ to: '/' });
-    }
+    // KHÔNG check role ở layout — endpoint /me sẽ tự return 400 nếu thiếu claim vetId.
+    // Cho phép user thường vào để bật demo mode (xem trước UI).
+    // Production gắt hơn có thể bật check role ở đây sau khi setup admin link xong.
   },
   component: VetLayout,
 });
@@ -164,6 +160,7 @@ function VetLayout() {
 
       <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-6xl">
+          <DemoBanner />
           <Outlet />
         </div>
       </main>

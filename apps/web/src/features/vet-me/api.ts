@@ -1,5 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
+import {
+  MOCK_BADGES,
+  MOCK_PROFILE,
+  MOCK_RATINGS,
+  MOCK_SCHEDULE,
+  MOCK_SUMMARY,
+  isDemoMode,
+  pageOf,
+} from './mock';
 
 /**
  * Phase K3 — manual hooks cho endpoint /api/v1/vets/me/* (vets-service Phase K2).
@@ -82,21 +91,40 @@ export const VET_ME_KEYS = {
 };
 
 // ─── Hooks ──────────────────────────────────────────────────────────────────────
+// Mỗi hook check isDemoMode() trong queryFn — bật demo → resolve mock thay vì
+// gọi API. Pattern này giữ shape `useQuery` consistent, không cần fake result object.
+
 export function useMyProfile() {
   return useQuery({
     queryKey: VET_ME_KEYS.profile,
-    queryFn: () =>
-      apiClient.get<VetMeProfile>('/api/v1/vets/me').then((r) => r.data),
+    queryFn: async () => {
+      if (isDemoMode()) return MOCK_PROFILE;
+      const { data } = await apiClient.get<VetMeProfile>('/api/v1/vets/me');
+      return data;
+    },
   });
 }
 
 export function useUpdateMyProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: UpdateVetMePayload) =>
-      apiClient
-        .patch<VetMeProfile>('/api/v1/vets/me', payload)
-        .then((r) => r.data),
+    mutationFn: async (payload: UpdateVetMePayload) => {
+      if (isDemoMode()) {
+        // Demo mode: không gọi API, merge mock + payload trả về luôn.
+        const current = qc.getQueryData<VetMeProfile>(VET_ME_KEYS.profile);
+        return {
+          ...(current ?? MOCK_PROFILE),
+          ...payload,
+          phoneNumber: payload.phoneNumber ?? current?.phoneNumber,
+          resume: payload.resume ?? current?.resume,
+        } as VetMeProfile;
+      }
+      const { data } = await apiClient.patch<VetMeProfile>(
+        '/api/v1/vets/me',
+        payload,
+      );
+      return data;
+    },
     onSuccess: (data) => {
       qc.setQueryData(VET_ME_KEYS.profile, data);
     },
@@ -106,56 +134,68 @@ export function useUpdateMyProfile() {
 export function useMySchedule() {
   return useQuery({
     queryKey: VET_ME_KEYS.schedule,
-    queryFn: () =>
-      apiClient
-        .get<WorkScheduleSlot[]>('/api/v1/vets/me/work-schedule')
-        .then((r) => r.data),
+    queryFn: async () => {
+      if (isDemoMode()) return MOCK_SCHEDULE;
+      const { data } = await apiClient.get<WorkScheduleSlot[]>(
+        '/api/v1/vets/me/work-schedule',
+      );
+      return data;
+    },
   });
 }
 
 export function useMyRatings(page: number, size = 10) {
   return useQuery({
     queryKey: VET_ME_KEYS.ratings(page),
-    queryFn: () =>
-      apiClient
-        .get<PageEnvelope<RatingItem>>('/api/v1/vets/me/ratings', {
-          params: { page, size, sort: 'rateDate,desc' },
-        })
-        .then((r) => r.data),
+    queryFn: async () => {
+      if (isDemoMode()) return pageOf(MOCK_RATINGS, page, size);
+      const { data } = await apiClient.get<PageEnvelope<RatingItem>>(
+        '/api/v1/vets/me/ratings',
+        { params: { page, size, sort: 'rateDate,desc' } },
+      );
+      return data;
+    },
   });
 }
 
 export function useMyRatingsSummary() {
   return useQuery({
     queryKey: VET_ME_KEYS.summary,
-    queryFn: () =>
-      apiClient
-        .get<RatingSummary>('/api/v1/vets/me/ratings/summary')
-        .then((r) => r.data),
+    queryFn: async () => {
+      if (isDemoMode()) return MOCK_SUMMARY;
+      const { data } = await apiClient.get<RatingSummary>(
+        '/api/v1/vets/me/ratings/summary',
+      );
+      return data;
+    },
   });
 }
 
 export function useMyBadges(page: number, size = 12) {
   return useQuery({
     queryKey: VET_ME_KEYS.badges(page),
-    queryFn: () =>
-      apiClient
-        .get<PageEnvelope<BadgeItem>>('/api/v1/vets/me/badges', {
-          params: { page, size, sort: 'awardedDate,desc' },
-        })
-        .then((r) => r.data),
+    queryFn: async () => {
+      if (isDemoMode()) return pageOf(MOCK_BADGES, page, size);
+      const { data } = await apiClient.get<PageEnvelope<BadgeItem>>(
+        '/api/v1/vets/me/badges',
+        { params: { page, size, sort: 'awardedDate,desc' } },
+      );
+      return data;
+    },
   });
 }
 
-/** Top N rating mới nhất — dùng cho widget dashboard. Reuse keys.ratings(0). */
+/** Top N rating mới nhất — dùng cho widget dashboard. */
 export function useMyRecentRatings(limit = 5) {
   return useQuery({
     queryKey: ['/api/v1/vets/me/ratings/recent', limit] as const,
-    queryFn: () =>
-      apiClient
-        .get<PageEnvelope<RatingItem>>('/api/v1/vets/me/ratings', {
-          params: { page: 0, size: limit, sort: 'rateDate,desc' },
-        })
-        .then((r) => r.data.content),
+    queryFn: async () => {
+      if (isDemoMode()) return MOCK_RATINGS.slice(0, limit);
+      const { data } = await apiClient.get<PageEnvelope<RatingItem>>(
+        '/api/v1/vets/me/ratings',
+        { params: { page: 0, size: limit, sort: 'rateDate,desc' } },
+      );
+      return data.content;
+    },
   });
 }
