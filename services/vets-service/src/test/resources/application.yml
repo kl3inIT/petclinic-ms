@@ -37,6 +37,11 @@ petclinic:
       jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
       issuer: petclinic-test
       audience: petclinic-test
+  # Phase G — common-events autoconfig require RabbitMQ. Test KHÔNG có broker
+  # (không spin RabbitMQTestcontainer), nên tắt event publishing hoàn toàn.
+  # ObjectProvider<EventPublisher> trong RatingServiceImpl sẽ return null → skip publish.
+  events:
+    enabled: false
   # Phase E2 — dummy storage props cho smoke test (context load). Integration test
   # qua Testcontainers MinIO sẽ override 4 prop này via @DynamicPropertySource.
   storage:
