@@ -296,6 +296,8 @@ services:
       - "9182:9182"
     depends_on:
       postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      minio: { condition: service_healthy }
       config-server: { condition: service_healthy }
       discovery-server: { condition: service_healthy }
     environment:
@@ -304,6 +306,8 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
+      MINIO_ENDPOINT: http://minio:9000
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
