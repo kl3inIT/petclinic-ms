@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/changes/001-init-visits.yaml
   - include:
       file: db/changelog/changes/004-seed-dev-data.yaml
+  - include:
+      file: db/changelog/changes/005-notification-saga.yaml

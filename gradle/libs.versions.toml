@@ -52,6 +52,14 @@ spring-boot-docker-compose             = { module = "org.springframework.boot:sp
 # đều quản lý bởi spring-boot-dependencies BOM (Boot 4.0.x) — không pin.
 micrometer-tracing-bridge-otel         = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
 opentelemetry-exporter-otlp            = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
+# Prometheus scrape format — expose /actuator/prometheus. Version từ Spring Boot BOM.
+# Áp dụng cho mọi Spring service qua convention plugin → Prometheus 1 scrape config thống nhất.
+micrometer-registry-prometheus         = { module = "io.micrometer:micrometer-registry-prometheus" }
+
+# Resilience4j Bulkhead — semaphore concurrency limit per downstream. Spring Cloud CircuitBreaker
+# abstraction KHÔNG cover bulkhead → dùng Resilience4j thẳng. Version theo BOM resilience4j-spring-boot3
+# (đã có trên classpath qua starter-circuitbreaker-resilience4j → 2.3.0).
+resilience4j-bulkhead                  = { module = "io.github.resilience4j:resilience4j-bulkhead", version = "2.3.0" }
 
 # --- API docs ---
 springdoc-openapi-starter-webmvc-ui    = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }

@@ -9,22 +9,32 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.mss301.petclinic.common.security.endpoints.EndpointSecurityCustomizer;
+import com.mss301.petclinic.common.security.endpoints.SecurityEndpointsProperties;
+
 /**
- * Vets-service security — override default chain ở common-security để khai báo
- * role-based access cho từng endpoint TẠI MỘT NƠI (single source of truth).
+ * Vets-service security — declarative RBAC từ {@code config-repo/vets-service.yml} qua
+ * {@link EndpointSecurityCustomizer}, PLUS 2 nhóm rule hardcoded không fit YAML pattern.
  *
- * <h4>Ma trận quyền</h4>
- * <ul>
- *   <li>{@code GET /api/v1/vets/**}, {@code GET /api/v1/specialties/**} — authenticated (mọi USER xem được)</li>
- *   <li>{@code POST /api/v1/vets} — STAFF | ADMIN (tạo vet mới)</li>
- *   <li>{@code PATCH /api/v1/vets/**} — STAFF | ADMIN (sửa name + specialties)</li>
- *   <li>{@code DELETE /api/v1/vets/**} — ADMIN (hard delete)</li>
- *   <li><strong>Default non-GET</strong> trên {@code /vets/**} → STAFF|ADMIN; trên {@code /specialties/**} → ADMIN.
- *       Endpoint mới (vd. PUT tương lai) mặc định an toàn — KHÔNG để USER access nếu dev quên.</li>
- * </ul>
+ * <h4>Hardcoded rules — lý do</h4>
+ * <ol>
+ *   <li><b>Phase K /me endpoints</b> — cần VET+STAFF+ADMIN (3 role). Helper
+ *       {@code customRoles} chỉ support single role + ADMIN; staffEndpoints chỉ STAFF+ADMIN.
+ *       Hardcode 2 dòng đơn giản hơn extend helper.</li>
+ *   <li><b>Sub-resource DELETE</b> ({@code /vets/{id}/educations/**}, work-schedule, ratings,
+ *       badges, photo, album) — STAFF có quyền. Helper apply admin bucket TRƯỚC staff →
+ *       pattern broad {@code DELETE /vets/**} (admin-only) sẽ match sub-resource trước,
+ *       STAFF bị block. Hardcode sub-resource DELETE TRƯỚC apply() để specificity win.</li>
+ * </ol>
  *
- * <h4>Bean ưu tiên</h4>
- * Service tự khai báo bean này → common-security {@code @ConditionalOnMissingBean} tự lùi.
+ * <h4>Filter chain order</h4>
+ * <ol>
+ *   <li>Infra endpoints permitAll (actuator, swagger)</li>
+ *   <li>Phase K /me hardcoded — VET+STAFF+ADMIN</li>
+ *   <li>Sub-resource DELETE hardcoded — STAFF+ADMIN</li>
+ *   <li>{@link EndpointSecurityCustomizer#apply} áp public/admin/staff/user từ YAML</li>
+ *   <li>{@code anyRequest().authenticated()} — safety net</li>
+ * </ol>
  */
 @Configuration
 public class VetsSecurityConfig {
@@ -32,63 +42,50 @@ public class VetsSecurityConfig {
     @Bean
     public SecurityFilterChain vetsSecurityFilterChain(
             HttpSecurity http,
-            JwtAuthenticationConverter jwtAuthConverter
-    ) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
+            JwtAuthenticationConverter jwtAuthConverter,
+            SecurityEndpointsProperties endpoints)
+            throws Exception {
+        http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // Public — infra endpoints
-                        .requestMatchers(
-                                "/actuator/health/**",
-                                "/actuator/info",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
+                .authorizeHttpRequests(auth -> {
+                    // Infra — public
+                    auth.requestMatchers(
+                                    "/actuator/health/**",
+                                    "/actuator/info",
+                                    "/v3/api-docs/**",
+                                    "/swagger-ui/**",
+                                    "/swagger-ui.html")
+                            .permitAll();
 
-                        // Phase K — endpoint /me cho ROLE_VET. Phải khai báo TRƯỚC rule
-                        // catch-all `/api/v1/vets/**` bên dưới (Spring Security: first match wins).
-                        // Service đọc vetId từ JWT claim — KHÔNG cần resource-level check.
-                        .requestMatchers(HttpMethod.GET, "/api/v1/vets/me", "/api/v1/vets/me/**")
-                            .hasAnyRole("VET", "STAFF", "ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/vets/me")
-                            .hasAnyRole("VET", "STAFF", "ADMIN")
+                    // Phase K — /me endpoints (multi-role VET+STAFF+ADMIN, hardcoded vì
+                    // customRoles helper chỉ support role+ADMIN). Phải khai báo TRƯỚC YAML
+                    // rule /vets/** để first-match-wins.
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/vets/me", "/api/v1/vets/me/**")
+                            .hasAnyRole("VET", "STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.PATCH, "/api/v1/vets/me")
+                            .hasAnyRole("VET", "STAFF", "ADMIN");
 
-                        // Write — explicit rules trước (thứ tự matter: cụ thể trước, broad sau)
-                        // Sub-resource (education, work-schedule, ...): STAFF được delete vì
-                        // lifecycle riêng, không gây mất audit nghiêm trọng như hard-delete cả vet
-                        // record. Pattern phải khai báo TRƯỚC rule DELETE /vets/** → ADMIN bên dưới.
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/educations/**")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/work-schedule/**")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/ratings/**")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/badges/**")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/photo")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/album/**")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vets/**")
-                            .hasRole("ADMIN")
+                    // Sub-resource DELETE — STAFF (lifecycle riêng, không hard-delete vet record).
+                    // Hardcoded TRƯỚC apply() để win first-match vs YAML admin rule
+                    // DELETE /api/v1/vets/** (admin-only).
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/educations/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/work-schedule/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/ratings/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/badges/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/photo")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/album/**")
+                            .hasAnyRole("STAFF", "ADMIN");
 
-                        // Read — chỉ GET (KHÔNG dùng catch-all .authenticated() để tránh
-                        // bypass khi dev thêm PUT/POST/PATCH mới mà quên rule cụ thể)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/vets/**", "/api/v1/specialties/**")
-                            .authenticated()
+                    // General role rules từ YAML
+                    EndpointSecurityCustomizer.apply(auth, endpoints);
 
-                        // Default guard cho mọi non-GET còn lại — secure by default:
-                        //   vets/**       → STAFF|ADMIN (covers POST, PATCH, future PUT)
-                        //   specialties/** → ADMIN (catalog management)
-                        .requestMatchers("/api/v1/vets/**")
-                            .hasAnyRole("STAFF", "ADMIN")
-                        .requestMatchers("/api/v1/specialties/**")
-                            .hasRole("ADMIN")
-
-                        .anyRequest().authenticated()
-                )
+                    auth.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(jwtAuthConverter)));
         return http.build();
     }

@@ -12,6 +12,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.mss301.petclinic.common.security.endpoints.EndpointSecurityCustomizer;
+import com.mss301.petclinic.common.security.endpoints.SecurityEndpointsProperties;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 
@@ -24,6 +26,10 @@ import com.nimbusds.jose.proc.SecurityContext;
  *   <li>{@link PasswordEncoder} — BCrypt 12 rounds</li>
  *   <li>Custom {@link SecurityFilterChain} — permit public auth + JWKS endpoints</li>
  * </ul>
+ *
+ * <p>RBAC rules (register/login/refresh permit, /me + /logout authenticated, admin endpoints)
+ * khai báo declarative ở {@code config-repo/auth-service.yml} và áp qua
+ * {@link EndpointSecurityCustomizer}.
  */
 @Configuration
 public class SecurityConfig {
@@ -31,26 +37,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain authSecurityFilterChain(
             HttpSecurity http,
-            JwtAuthenticationConverter jwtAuthConverter
-    ) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
+            JwtAuthenticationConverter jwtAuthConverter,
+            SecurityEndpointsProperties endpoints)
+            throws Exception {
+        http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // Public auth endpoints
-                        .requestMatchers(
-                                "/api/v1/auth/register",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/refresh"
-                        ).permitAll()
-                        // JWKS public — clients NEED public key để verify
-                        .requestMatchers("/.well-known/jwks.json").permitAll()
-                        // Actuator + springdoc
-                        .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter)));
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(
+                                    "/actuator/health/**",
+                                    "/actuator/info",
+                                    "/v3/api-docs/**",
+                                    "/swagger-ui/**",
+                                    "/swagger-ui.html")
+                            .permitAll();
+                    EndpointSecurityCustomizer.apply(auth, endpoints);
+                    auth.anyRequest().authenticated();
+                })
+                .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(jwtAuthConverter)));
         return http.build();
     }
 

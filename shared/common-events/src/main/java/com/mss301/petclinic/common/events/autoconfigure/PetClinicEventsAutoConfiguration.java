@@ -35,7 +35,15 @@ public class PetClinicEventsAutoConfiguration {
 
     /**
      * Đăng ký bean MessageConverter default — Boot AMQP autoconfig sẽ tự gắn vào
-     * RabbitTemplate (xem {@code RabbitAutoConfiguration#rabbitTemplate}).
+     * RabbitTemplate + container factory cho @RabbitListener.
+     *
+     * <p><b>Cross-language deserialization:</b> Spring AMQP 4 mặc định ưu tiên kiểu inferred
+     * từ parameter của @RabbitListener method khi kiểu đó concrete (không abstract/interface).
+     * Cơ chế này áp dụng đúng cho việc consume event từ Go mailer (publisher KHÔNG set
+     * {@code __TypeId__} header). Không cần config thêm.
+     *
+     * <p>Reference: <a href="https://docs.spring.io/spring-amqp/reference/amqp/message-converters.html">
+     * Spring AMQP Message Converters — TypePrecedence section</a>.
      */
     @Bean
     @ConditionalOnMissingBean(MessageConverter.class)

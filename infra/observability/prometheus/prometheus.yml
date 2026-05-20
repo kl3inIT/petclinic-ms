@@ -1,0 +1,58 @@
+# Prometheus config cho petclinic-ms dev.
+#
+# Scrape /actuator/prometheus của mỗi Spring service trên mgmt port (9xxx). Spring services
+# tách traffic port (8xxx) và mgmt port (9xxx) → scrape không cùng kênh user traffic.
+#
+# Mailer-service (Go) chưa expose Prometheus metrics → bỏ qua. Thêm sau khi instrument
+# `promhttp.Handler()` trong service đó.
+#
+# Inside compose network, service DNS = service name → http://customers-service:9181/...
+# Bên ngoài compose (Prometheus chạy host network) thì dùng host.docker.internal:9181.
+
+global:
+  scrape_interval: 15s          # mặc định Prometheus; đủ tốt cho dev.
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: petclinic-ms
+    env: dev
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ─ Spring Cloud infra
+  - job_name: spring-services
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['config-server:9888']
+        labels: { service: config-server }
+      - targets: ['discovery-server:9761']
+        labels: { service: discovery-server }
+      - targets: ['admin-server:9185']
+        labels: { service: admin-server }
+      - targets: ['api-gateway:9080']
+        labels: { service: api-gateway }
+
+  # ─ Business services
+  - job_name: business-services
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['auth-service:9183']
+        labels: { service: auth-service }
+      - targets: ['customers-service:9181']
+        labels: { service: customers-service }
+      - targets: ['vets-service:9182']
+        labels: { service: vets-service }
+      - targets: ['visits-service:9184']
+        labels: { service: visits-service }
+
+  # ─ AI services
+  - job_name: ai-services
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['mcp-server:9187']
+        labels: { service: mcp-server }
+      - targets: ['genai-service:9188']
+        labels: { service: genai-service }

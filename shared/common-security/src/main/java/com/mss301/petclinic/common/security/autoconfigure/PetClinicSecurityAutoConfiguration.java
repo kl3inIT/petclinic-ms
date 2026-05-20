@@ -24,6 +24,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.mss301.petclinic.common.security.endpoints.SecurityEndpointsProperties;
 import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
 
 /**
@@ -45,7 +46,7 @@ import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
  */
 @AutoConfiguration
 @ConditionalOnClass({SecurityFilterChain.class, JwtDecoder.class})
-@EnableConfigurationProperties(PetClinicJwtProperties.class)
+@EnableConfigurationProperties({PetClinicJwtProperties.class, SecurityEndpointsProperties.class})
 public class PetClinicSecurityAutoConfiguration {
 
     @Bean

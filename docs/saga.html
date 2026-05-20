@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>petclinic-ms — Saga Pattern</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a; --bg-card: #1e293b; --bg-code: #0b1220;
+    --fg: #e2e8f0; --fg-dim: #94a3b8;
+    --accent: #38bdf8; --accent-2: #a78bfa; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.6; }
+  body { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 2.4em; margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 48px; }
+  h3 { color: var(--accent-2); margin-top: 28px; }
+  h4 { color: var(--fg-dim); margin-top: 20px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85em; }
+  .lede { color: var(--fg-dim); font-size: 1.1em; margin: 0 0 32px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; }
+  .card.ok { border-left: 4px solid var(--ok); }
+  .card.warn { border-left: 4px solid var(--warn); }
+  .card.bad { border-left: 4px solid var(--bad); }
+  .card.accent { border-left: 4px solid var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--bg-code); color: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.88em; }
+  pre { background: var(--bg-code); padding: 16px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); font-size: 0.85em; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: #e2e8f0; }
+  .file-label { display: inline-block; background: var(--accent); color: var(--bg); padding: 2px 10px; border-radius: 4px 4px 0 0; font-size: 0.75em; font-weight: 700; font-family: ui-monospace, monospace; margin-bottom: -1px; }
+  .mermaid { background: #f8fafc; padding: 24px; border-radius: 8px; margin: 16px 0; text-align: center; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--accent); font-weight: 600; }
+  td code { font-size: 0.85em; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 700;
+    background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .badge.warn { background: rgba(251,191,36,0.15); color: var(--warn); border-color: var(--warn); }
+  .badge.bad { background: rgba(248,113,113,0.15); color: var(--bad); border-color: var(--bad); }
+  .tldr { background: rgba(56,189,248,0.08); border: 1px solid var(--accent); border-radius: 6px; padding: 16px; margin: 16px 0; }
+  .tldr::before { content: "TL;DR"; display: block; color: var(--accent); font-weight: 700; font-size: 0.85em; letter-spacing: 1px; margin-bottom: 6px; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  hr { border: none; border-top: 1px dashed var(--border); margin: 32px 0; }
+  .toc { background: var(--bg-card); padding: 16px 20px 16px 40px; border-radius: 6px; }
+  .toc h3 { margin-top: 0; }
+  .toc ol { margin: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .compare { grid-template-columns: 1fr; } }
+  .state-machine { font-family: ui-monospace, monospace; background: var(--bg-code); padding: 16px; border-radius: 6px; white-space: pre; line-height: 1.4; font-size: 0.85em; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<h1>petclinic-ms — Saga Pattern</h1>
+<p class="lede">Choreography saga đảm bảo eventual consistency cross-service. Visits-service + Go mailer-service phối hợp qua RabbitMQ với compensating transaction khi notification fail.</p>
+
+<div class="toc">
+  <h3>Mục lục</h3>
+  <ol>
+    <li><a href="#why">Tại sao cần Saga?</a></li>
+    <li><a href="#concepts">Khái niệm cốt lõi</a></li>
+    <li><a href="#choreography-vs-orchestration">Choreography vs Orchestration</a></li>
+    <li><a href="#petclinic-flow">Flow trong petclinic-ms</a></li>
+    <li><a href="#implementation">Implementation chi tiết</a></li>
+    <li><a href="#best-practices">Best practices 2026</a></li>
+    <li><a href="#limitations">Hạn chế hiện tại + roadmap</a></li>
+    <li><a href="#references">Tham khảo</a></li>
+  </ol>
+</div>
+
+<div class="tldr">
+  Visits-service publish <code>VisitCompletedEvent</code> + ghi <code>NotificationSaga</code> row PENDING trong cùng <code>@Transactional</code>. Mailer (Go) gửi mail xong → publish <code>NotificationAck</code> (success) hoặc <code>NotificationFailed</code> (failure). Visits SagaHandler consume → đánh COMPLETED hoặc COMPENSATED + publish <code>VisitManualFollowUpRequiredEvent</code> nếu compensate (admin alert thay vì DB rollback). Compensation = real business action, không phải rollback DB.
+</div>
+
+<h2 id="why">1. Tại sao cần Saga?</h2>
+
+<div class="card warn">
+  <h4>Vấn đề: Distributed transaction không thể dùng ACID 2-Phase Commit</h4>
+  <p>Mỗi microservice có DB riêng. Khi 1 business flow đụng nhiều service (booking → payment → inventory → email), nếu 1 bước fail giữa chừng, bạn KHÔNG thể "ROLLBACK" như SQL monolith. 2PC tồn tại nhưng chậm, locking heavy, single point of failure.</p>
+</div>
+
+<div class="card ok">
+  <h4>Saga: chuỗi local transactions với compensating actions</h4>
+  <p>Mỗi service làm <b>local TX</b> trong DB của nó. Nếu bước cuối fail → các bước trước thực thi <b>compensating transaction</b> (undo business level, không phải SQL rollback).</p>
+  <p>Ví dụ: refund payment thay vì xóa row payment. Cancel inventory hold thay vì DELETE inventory_reservation. Mail apology thay vì un-send mail.</p>
+</div>
+
+<h2 id="concepts">2. Khái niệm cốt lõi</h2>
+
+<table>
+  <thead><tr><th>Khái niệm</th><th>Ý nghĩa</th></tr></thead>
+  <tbody>
+    <tr><td><b>Local transaction</b></td><td>Đơn vị work atomic trong 1 service / 1 DB. Saga step = local TX.</td></tr>
+    <tr><td><b>Compensating transaction</b></td><td>Business action undo local TX trước. KHÔNG phải SQL rollback — vì TX đã commit + có thể trigger side effects (event publish).</td></tr>
+    <tr><td><b>Saga state</b></td><td>PENDING → COMPLETED (happy path) hoặc PENDING → COMPENSATED (failure path). Lưu phân tán ở initiator service.</td></tr>
+    <tr><td><b>Idempotency</b></td><td>Mỗi step + compensation phải an toàn khi retry (broker at-least-once). Dedupe theo <code>eventId</code>.</td></tr>
+    <tr><td><b>Choreography</b></td><td>Không có orchestrator. Service tự listen event của nhau → trigger step kế.</td></tr>
+    <tr><td><b>Orchestration</b></td><td>Có 1 saga manager central. Gọi từng service, nhận response, quyết định step kế hoặc compensate.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="choreography-vs-orchestration">3. Choreography vs Orchestration</h2>
+
+<div class="compare">
+  <div class="card accent">
+    <h4>Choreography <span class="badge">petclinic-ms dùng cái này</span></h4>
+    <ul>
+      <li><b>Decentralized</b> — mỗi service publish event, các service khác listen.</li>
+      <li><b>Đơn giản</b> với flow ≤ 4-5 steps.</li>
+      <li><b>Khó debug</b> khi flow phình ra — không nhìn được "đang ở step nào" trong 1 chỗ.</li>
+      <li><b>Coupling event-based</b> — service phải biết event name + schema của nhau.</li>
+      <li>Tools: Spring AMQP + RabbitMQ (như petclinic), Kafka.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Orchestration <span class="badge warn">prod-grade cho flow lớn</span></h4>
+    <ul>
+      <li><b>Centralized</b> — 1 SagaManager workflow drive luồng.</li>
+      <li><b>Visibility cao</b> — query "saga X đang ở step nào?" 1 truy vấn.</li>
+      <li><b>Coupling tới orchestrator</b> — service chỉ là worker, không tự quyết.</li>
+      <li><b>Failure handling cleaner</b> — orchestrator biết exact step nào fail → compensate ngược order.</li>
+      <li>Tools 2026: <a href="https://temporal.io" target="_blank">Temporal</a>, <a href="https://eventuate.io" target="_blank">Eventuate Tram</a>, <a href="https://camunda.com" target="_blank">Camunda</a>, AWS Step Functions.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card warn">
+  <b>Industry rule of thumb (2026):</b> Choreography cho ≤ 5 steps + decoupled domain. Orchestration cho mọi flow lớn hơn hoặc khi cần observability cao (financial / compliance).
+</div>
+
+<h2 id="petclinic-flow">4. Flow trong petclinic-ms</h2>
+
+<h3>4.1. Happy path — mail gửi OK</h3>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant V as visits-service
+  participant DB as visits.DB
+  participant MQ as RabbitMQ
+  participant M as mailer-service (Go)
+  participant SMTP as Mailpit (SMTP)
+  V->>DB: BEGIN TX
+  V->>DB: visit.status = COMPLETED
+  V->>DB: INSERT NotificationSaga (status=PENDING)
+  V->>MQ: publish visit.completed
+  V->>DB: COMMIT
+  MQ->>M: deliver visit.completed
+  M->>SMTP: send mail
+  SMTP-->>M: 250 OK
+  M->>MQ: publish visit.notification.ack
+  MQ->>V: deliver notification.ack
+  V->>DB: UPDATE saga SET status=COMPLETED
+</div>
+
+<h3>4.2. Failure path — mail fail vĩnh viễn</h3>
+
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant V as visits-service
+  participant DB as visits.DB
+  participant MQ as RabbitMQ
+  participant M as mailer-service (Go)
+  participant SMTP as Mailpit (SMTP)
+  participant Admin as admin alert consumer
+  V->>DB: visit.status = COMPLETED + saga PENDING
+  V->>MQ: publish visit.completed
+  MQ->>M: deliver
+  M->>SMTP: send mail
+  SMTP-->>M: 550 mailbox not found
+  M->>MQ: publish visit.notification.failed
+  MQ->>V: deliver notification.failed
+  V->>DB: UPDATE saga SET status=COMPENSATED
+  V->>MQ: publish visit.manual-followup-required
+  MQ->>Admin: alert (ops/vet liên hệ tay)
+</div>
+
+<h3>4.3. State machine của NotificationSaga</h3>
+
+<div class="state-machine">PENDING ──ack───────▶ COMPLETED      (happy path, terminal)
+   │
+   └──ack-failed────▶ COMPENSATED   (compensation triggered, terminal)
+</div>
+
+<p>Không có CANCELLED — saga không bị cancel giữa chừng. Mọi saga đều resolve qua 1 trong 2 đường.</p>
+
+<h2 id="implementation">5. Implementation chi tiết</h2>
+
+<h3>5.1. Shared module — generic envelopes</h3>
+
+<div class="file-label">shared/common-events/src/main/java/.../saga/NotificationAck.java</div>
+<pre><code>public record NotificationAck(
+    UUID eventId, String eventType, Instant occurredAt, String source,
+    UUID originalEventId,    // correlation tới event gốc
+    String domain,           // "visit" | "user" | "invoice"
+    String entityId,         // domain entity ID (string để generic)
+    String recipient
+) {
+    public String routingKey() { return domain + ".notification.ack"; }
+}
+</code></pre>
+
+<p>Lý do generic: 1 envelope dùng cho mọi saga notification (visit, user, invoice...). Mailer publish 1 type, mọi service initiator bind queue với routing pattern domain của mình.</p>
+
+<h3>5.2. Initiator — visits-service</h3>
+
+<div class="file-label">visits-service/.../service/impl/VisitServiceImpl.java</div>
+<pre><code>@Transactional
+public VisitResponse complete(Long id, CompleteVisitRequest req) {
+    Visit v = loadOrThrow(id);
+    v.complete(req.diagnosis(), req.treatment(), req.fee());   // status = COMPLETED
+    publishCompleted(v);                                        // saga start + event publish
+    return VisitResponse.from(v);
+}
+
+private void publishCompleted(Visit v) {
+    // ... build VisitCompletedEvent ...
+    sagaRepo.save(NotificationSaga.start(
+        event.eventId(), v.getId(), "visit.completed.notification"));
+    publisher.publish(event);
+    // ⚠️ Dual-write: nếu broker fail sau DB commit → saga PENDING orphan.
+    //    Prod cần Transactional Outbox (xem §7).
+}
+</code></pre>
+
+<h3>5.3. Notifier — Go mailer publish ack/failed</h3>
+
+<div class="file-label">mailer-service/cmd/mailer/main.go</div>
+<pre><code>sendErr := m.Send(ctx, ev.CustomerEmail, ...)
+publishSagaAck(ctx, cons, "visit", strconv.FormatInt(ev.VisitID, 10),
+    ev.EventID, ev.CustomerEmail, sendErr, log)
+// trả nil dù mail fail — saga event đã publish, không double-signal qua DLQ
+return nil
+
+// publishSagaAck quyết định ack vs failed dựa trên sendErr
+func publishSagaAck(...) {
+    if sendErr == nil {
+        cons.Publish(ctx, "visit.notification.ack", NotificationAck{...})
+    } else {
+        cons.Publish(ctx, "visit.notification.failed", NotificationFailed{
+            ...,
+            ErrorMessage: sendErr.Error(),
+        })
+    }
+}
+</code></pre>
+
+<h3>5.4. Saga handler — compensating transaction</h3>
+
+<div class="file-label">visits-service/.../saga/NotificationSagaHandler.java</div>
+<pre><code>@RabbitListener(queues = "visits.visit.notification.ack")
+@Transactional
+public void onNotificationAck(NotificationAck payload) {
+    NotificationSaga saga = sagaRepo.findByEventId(payload.originalEventId()).orElseThrow(...);
+    if (saga.getStatus() != SagaStatus.PENDING) return;   // idempotent
+    saga.markCompleted();
+}
+
+@RabbitListener(queues = "visits.visit.notification.failed")
+@Transactional
+public void onNotificationFailed(NotificationFailed payload) {
+    NotificationSaga saga = sagaRepo.findByEventId(payload.originalEventId()).orElseThrow(...);
+    if (saga.getStatus() != SagaStatus.PENDING) return;
+    saga.markCompensated(payload.errorMessage());
+
+    // Compensating action: business-level, NOT DB rollback
+    publisher.publish(VisitManualFollowUpRequiredEvent.of(
+        visitId, payload.originalEventId(), payload.errorMessage(),
+        customerId, username, email));
+}
+</code></pre>
+
+<div class="card ok">
+  <p><b>Compensation = business action.</b> Visit đã <code>COMPLETED</code> (vet đã khám xong) — KHÔNG thể "uncomplete". Compensation là <i>mitigation</i>: alert ops liên hệ khách hàng thủ công. Đây là pattern phổ biến cho non-financial saga.</p>
+</div>
+
+<h3>5.5. Queue topology</h3>
+
+<table>
+  <thead><tr><th>Queue</th><th>Routing key</th><th>Consumer</th></tr></thead>
+  <tbody>
+    <tr><td><code>mailer.visit.completed</code></td><td><code>visit.completed</code></td><td>mailer-service (Go)</td></tr>
+    <tr><td><code>visits.visit.notification.ack</code></td><td><code>visit.notification.ack</code></td><td>visits SagaHandler</td></tr>
+    <tr><td><code>visits.visit.notification.failed</code></td><td><code>visit.notification.failed</code></td><td>visits SagaHandler</td></tr>
+  </tbody>
+</table>
+
+<p>Convention: <code>&lt;service&gt;.&lt;routingKey&gt;</code>. Mỗi queue có DLQ riêng (<code>.dlq</code> suffix) qua <code>x-dead-letter-exchange</code> trên RabbitMQ.</p>
+
+<h2 id="best-practices">6. Best practices 2026</h2>
+
+<table>
+  <thead><tr><th>Best practice</th><th>Status petclinic-ms</th></tr></thead>
+  <tbody>
+    <tr><td>Choreography ≤ 4-5 steps</td><td><span class="badge">✓ 2 steps (visits→mailer→visits)</span></td></tr>
+    <tr><td>Consumer idempotency (dedupe theo eventId)</td><td><span class="badge">✓ findByEventId + markCompleted/Compensated check status</span></td></tr>
+    <tr><td>Compensation là business action, không DB rollback</td><td><span class="badge">✓ Publish admin alert event</span></td></tr>
+    <tr><td>Tolerant Reader (cross-language schema evolution)</td><td><span class="badge">✓ Java record + Go struct cùng JSON shape</span></td></tr>
+    <tr><td>Type inference (Spring AMQP 4 default INFERRED)</td><td><span class="badge">✓ Listener param type wins over __TypeId__</span></td></tr>
+    <tr><td>Per-step retry với exponential backoff</td><td><span class="badge warn">○ RabbitMQ retry default, không custom</span></td></tr>
+    <tr><td>DLQ + saga state monitoring</td><td><span class="badge warn">○ DLQ có; alert PENDING stale chưa có</span></td></tr>
+    <tr><td>Transactional Outbox (atomic DB + publish)</td><td><span class="badge bad">✗ Dual-write — documented as roadmap</span></td></tr>
+    <tr><td>Saga timeout/stuck detection</td><td><span class="badge bad">✗ Cần scheduled job query PENDING &gt; 5min</span></td></tr>
+  </tbody>
+</table>
+
+<h3>6.1. Transactional Outbox (chưa làm — TODO prod)</h3>
+
+<div class="card warn">
+  <p>Hiện tại <code>publishCompleted()</code> save saga row + publish event trong cùng <code>@Transactional</code>. Tuy nhiên:</p>
+  <ul>
+    <li>DB commit OK + broker publish FAIL → saga PENDING orphan</li>
+    <li>DB rollback + broker publish OK → mailer ack saga không tồn tại</li>
+  </ul>
+  <p><b>Fix:</b> Bảng <code>outbox_events</code> trong cùng DB. Service ghi event vào outbox trong TX (atomic). Background poller (Spring <code>@Scheduled</code> hoặc Debezium CDC) đọc outbox, publish broker, đánh dấu <code>published_at</code>.</p>
+  <pre><code>CREATE TABLE outbox_events (
+  id BIGSERIAL PRIMARY KEY,
+  aggregate_id VARCHAR(64) NOT NULL,
+  event_type VARCHAR(80) NOT NULL,
+  routing_key VARCHAR(120) NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  published_at TIMESTAMPTZ
+);
+CREATE INDEX idx_outbox_unpublished ON outbox_events (created_at) WHERE published_at IS NULL;</code></pre>
+</div>
+
+<h2 id="limitations">7. Hạn chế hiện tại + roadmap</h2>
+
+<table>
+  <thead><tr><th>Gap</th><th>Mitigation hiện tại</th><th>Hướng fix prod</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Dual-write (publish ngoài DB TX)</td>
+      <td>Log warning khi publish fail; saga PENDING vẫn DB-consistent</td>
+      <td>Transactional Outbox + poller hoặc Debezium CDC</td>
+    </tr>
+    <tr>
+      <td>Saga stuck (PENDING vĩnh viễn)</td>
+      <td>Manual DB query</td>
+      <td><code>@Scheduled</code> job query <code>PENDING AND created_at &lt; now() - INTERVAL '5min'</code> → alert</td>
+    </tr>
+    <tr>
+      <td>Mail retry chỉ 1 lần (Rabbit default)</td>
+      <td>Fail → publish notification.failed ngay</td>
+      <td>Configure Rabbit <code>x-message-ttl</code> + retry exchange + max-retries</td>
+    </tr>
+    <tr>
+      <td>Choreography hard-coded routing</td>
+      <td>Convention <code>&lt;domain&gt;.notification.&lt;ack|failed&gt;</code></td>
+      <td>Khi flow ≥ 5 steps → migrate sang Temporal/Eventuate</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="references">8. Tham khảo</h2>
+
+<ul>
+  <li><a href="https://microservices.io/patterns/data/saga.html" target="_blank">Chris Richardson — Saga Pattern</a> (canonical reference)</li>
+  <li><a href="https://microservices.io/patterns/data/transactional-outbox.html" target="_blank">Microservices.io — Transactional Outbox</a></li>
+  <li><a href="https://learn.microsoft.com/en-us/azure/architecture/patterns/saga" target="_blank">Microsoft Azure — Saga Design Pattern</a></li>
+  <li><a href="https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/saga.html" target="_blank">AWS Prescriptive Guidance — Saga patterns</a></li>
+  <li><a href="https://temporal.io/blog/mastering-saga-patterns-for-distributed-transactions-in-microservices" target="_blank">Temporal — Mastering Saga Patterns</a></li>
+  <li><a href="https://docs.spring.io/spring-amqp/reference/amqp/message-converters.html" target="_blank">Spring AMQP — Message Converters (TypePrecedence)</a></li>
+  <li><a href="https://github.com/eventuate-tram/eventuate-tram-sagas" target="_blank">Eventuate Tram Sagas (Spring Boot saga library)</a></li>
+</ul>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default',
+    flowchart: { curve: 'basis' },
+    sequence: { actorMargin: 50, useMaxWidth: true }
+  });
+</script>
+
+</body>
+</html>

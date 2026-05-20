@@ -62,3 +62,27 @@ resilience4j:
         timeout-duration: 3s
       auth-service:
         timeout-duration: 3s
+
+# RBAC — Least Privilege (slide MSS301 #70). Hybrid pattern:
+#   1) URL coarse-grained — declarative ở YAML này (apply qua EndpointSecurityCustomizer)
+#   2) Per-instance fine-grained — @PreAuthorize ở Controller (vd "USER chỉ cancel visit của mình")
+#
+# VET là domain-specific role (clinical user) → custom-roles bucket. ADMIN tự động cover
+# qua hierarchy implicit trong customizer.
+petclinic:
+  security:
+    endpoints:
+      # Authenticated user — list + detail + book + cancel. Per-instance ownership
+      # check là @PreAuthorize ở controller, không phải URL pattern.
+      user:
+        - { method: GET,   path: /api/v1/visits/** }
+        - { method: POST,  path: /api/v1/visits }
+        - { method: PATCH, path: /api/v1/visits/*/cancel }
+      # Custom domain role — vet hoặc admin start/complete visit (write clinical data)
+      custom-roles:
+        VET:
+          - { method: PATCH, path: /api/v1/visits/*/start }
+          - { method: PATCH, path: /api/v1/visits/*/complete }
+      # Staff vận hành (admin + cancel cho người khác — fallback support cho USER)
+      staff:
+        - { method: PATCH, path: /api/v1/visits/*/start }       # staff cũng start được
