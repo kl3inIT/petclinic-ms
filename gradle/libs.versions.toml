@@ -65,6 +65,7 @@ spring-boot-testcontainers             = { module = "org.springframework.boot:sp
 testcontainers-postgresql              = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 testcontainers-junit-jupiter           = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
 testcontainers-minio                   = { module = "org.testcontainers:testcontainers-minio", version.ref = "testcontainers" }
+testcontainers-rabbitmq                = { module = "org.testcontainers:testcontainers-rabbitmq", version.ref = "testcontainers" }
 
 # --- AWS S3 SDK v2 (S3-compatible: AWS, MinIO, Cloudflare R2, ...) ---
 aws-sdk-s3                             = { module = "software.amazon.awssdk:s3", version.ref = "awsSdk" }

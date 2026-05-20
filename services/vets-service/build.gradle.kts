@@ -28,5 +28,6 @@ dependencies {
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.minio)
+    testImplementation(libs.testcontainers.rabbitmq)        // Phase G — broker IT
     testImplementation(libs.spring.security.test)
 }
