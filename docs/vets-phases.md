@@ -22,11 +22,13 @@
 | **G** | Publish `vet.rating.added` event lên RabbitMQ + RatingEventPublishIT (RabbitMQContainer) | ✅ Done | `5b1690f` | `68d39a1` |
 | **H (vets-side)** | GET `/work-schedule/check` endpoint + 4 IT — visits-side chưa làm | ✅ Done | `b23ac86` | — |
 | **J (prep)** | FE labels + Zod schemas + admin/vets list page (detail page 6-tab: pending, cần regen orval) | 🚧 Partial | `b2feb2d`, `30ddbad` | — |
+| **K** | Role VET portal full-stack — auth migration + JWT claim, `/vets/me/*` endpoints, FE `/vet/*` 5 page | ✅ Done | `2e94ab1` (K1), `a0495c9` (K2), `ed9a5ab` (K3) | — |
 
-**Tổng test hiện tại**: 84 IT pass (76 cũ + 8 mới):
+**Tổng test hiện tại**: 91 IT pass (76 cũ + 15 mới):
 - F.1: `addVetRating_sameCustomerTwice_upsertsInPlaceAndCountIsOne`, `listTopRatedVets_sameAvgSameCount_tiebreakByVetIdAsc`
 - G: `addRating_insertCase_publishesEventWithUpdatedFalse`, `addRating_upsertUpdateCase_publishesEventWithUpdatedTrue`
 - H: `checkVetAvailability_slotExists_returnsAvailableTrue`, `checkVetAvailability_slotNotExists_returnsAvailableFalse`, `checkVetAvailability_vetNotFound_returns404`, `checkVetAvailability_invalidEnum_returns400`
+- K: 7 IT cho `VetMeController` (happy path 6 endpoint + missing claim 400 + unauthenticated 401)
 
 ---
 
@@ -249,6 +251,16 @@
 - Sửa `RemoteClientsFacade` thêm `@CircuitBreaker` cho method này, fallback returns `false` (fail-closed — over-booking nguy hiểm hơn cản trở 1 booking).
 - IT visits-side: stub vets-service hoặc Testcontainers wiremock; verify cả 2 path (available → book OK, unavailable → 400).
 
+**Phase K — Role VET portal** ✅ ĐÃ XONG (3 commit `2e94ab1`, `a0495c9`, `ed9a5ab`):
+- K1 auth: migration `004-add-vet-link` (column `users.vet_id BIGINT NULL`) + `User.vetId` field + `JwtTokenProvider` thêm claim `vetId` nếu non-null
+- K2 vets-service: `VetMeController` 6 endpoint shortcut (`/me`, `/me/work-schedule`, `/me/ratings`, `/me/ratings/summary`, `/me/badges`) — resolve vetId từ JWT principal, KHÔNG path param. Security rule mới TRƯỚC catch-all `/vets/**`: GET `/vets/me/**` + PATCH `/vets/me` → `VET|STAFF|ADMIN`. 7 IT.
+- K3 FE: route `/vet/*` với layout sidebar + 5 page (dashboard / hồ sơ / lịch trực / đánh giá / huy hiệu). Manual hook wrap `apiClient` + TanStack Query trong `features/vet-me/api.ts` (do orval chưa regen). Login redirect theo role: VET → /vet, ADMIN|STAFF → /admin.
+
+**Phase K — chưa làm (priority MED):**
+- IT integration end-to-end: register user → admin link vet_id → login lại → GET /me trả profile của vet đó
+- FE: nav link cross-portal (vet đôi khi cần xem /admin/vets/{otherVetId} đối chiếu — hiện chặn vì layout vet sidebar không có link admin)
+- Seed dev: tạo migration auth-service seed 1 user `vet1@petclinic.local` role VET vet_id=1 (cần hardcode BCrypt hash hoặc CommandLineRunner profile dev)
+
 **Phase J — UI page (priority MED):**
 - Tạo `apps/web/src/routes/admin.vets.$id.tsx` với 6 tab (Info / Education / Schedule / Ratings / Album / Badges) — pattern theo Owners CRUD (Phase 7B).
 - Mỗi tab gọi hook từ `lib/api/generated/vets/vets.ts` — **chạy `pnpm fetch:openapi && pnpm generate:api` trước** để xuất hook cho sub-resource mới (hiện file generated chỉ có CRUD Vet cơ bản, chưa có education/rating/badge/photo/album/work-schedule).
@@ -271,6 +283,9 @@
 2. **Event payload**: denormalized chỉ những gì publisher có sẵn — KHÔNG include vetName, customerEmail (tránh cross-service call lúc publish). Consumer tự lookup nếu cần.
 3. **`updated` flag** trên event — consumer có thể skip notification cho UPSERT (tránh spam khi customer chỉnh score liên tục).
 4. **Test profile tắt events** (`petclinic.events.enabled=false`) — không cần broker cho IT thường. Test publish riêng (chưa làm) sẽ override property.
+5. **Phase K — Role VET architecture**: KHÔNG tạo schema riêng cho user-vet link. Chọn 1 column `auth.users.vet_id BIGINT NULL` (loose 1-1 mapping, không FK cross-schema). JWT carry claim `vetId` → vets-service `/me/*` resolve KHÔNG cần extra DB lookup.
+6. **Phase K — KHÔNG có `/me` cho mutation sub-resource**: chỉ READ qua /me (profile/schedule/ratings/badges). Vet sửa PATCH /me cho profile, KHÔNG sửa rating/badge/schedule (admin/customer là source of truth).
+7. **Phase K — FE dùng manual hook** thay orval generated: tận dụng /me endpoint mới mà KHÔNG cần regen orval (cần gateway + Node). Dev sau khi regen có thể swap, signature gần như giống.
 
 ---
 
