@@ -11,11 +11,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.mss301.petclinic.vets.dto.req.WorkScheduleRequest;
+import com.mss301.petclinic.vets.dto.res.VetAvailabilityResponse;
 import com.mss301.petclinic.vets.dto.res.WorkScheduleSlotResponse;
+import com.mss301.petclinic.vets.model.WorkHour;
+import com.mss301.petclinic.vets.model.Workday;
 import com.mss301.petclinic.vets.service.WorkScheduleService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -68,5 +72,21 @@ public class WorkScheduleController {
     @Operation(summary = "Clear all work-schedule slots of a vet")
     public void clearVetWorkSchedule(@PathVariable Long vetId) {
         service.clearAll(vetId);
+    }
+
+    @GetMapping("/check")
+    @Operation(
+            summary = "Check vet availability at (workday, workHour)",
+            description = "Phase H — visits-service gọi trước khi bookVisit để chống " +
+                          "double-booking. Trả {available: true|false}. " +
+                          "Invalid enum value → 400 ProblemDetail. " +
+                          "Vet không tồn tại → 404."
+    )
+    public VetAvailabilityResponse checkVetAvailability(
+            @PathVariable Long vetId,
+            @RequestParam Workday workday,
+            @RequestParam WorkHour workHour
+    ) {
+        return VetAvailabilityResponse.of(service.isAvailable(vetId, workday, workHour));
     }
 }

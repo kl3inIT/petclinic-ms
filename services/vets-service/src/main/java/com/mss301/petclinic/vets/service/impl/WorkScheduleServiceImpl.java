@@ -12,7 +12,10 @@ import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.vets.dto.req.WorkScheduleRequest;
 import com.mss301.petclinic.vets.dto.res.WorkScheduleSlotResponse;
 import com.mss301.petclinic.vets.exception.VetNotFoundException;
+import com.mss301.petclinic.vets.model.WorkHour;
 import com.mss301.petclinic.vets.model.WorkScheduleSlot;
+import com.mss301.petclinic.vets.model.WorkScheduleSlotId;
+import com.mss301.petclinic.vets.model.Workday;
 import com.mss301.petclinic.vets.repository.VetRepository;
 import com.mss301.petclinic.vets.repository.WorkScheduleSlotRepository;
 import com.mss301.petclinic.vets.service.WorkScheduleService;
@@ -83,6 +86,16 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     public void clearAll(Long vetId) {
         ensureVetExists(vetId);
         scheduleRepository.deleteAllByVetId(vetId);
+    }
+
+    /**
+     * Phase H — check vet có lịch trực tại (workday, workHour) hay không.
+     * Composite PK = (vetId, workday, workHour) → existsById đủ nhanh (PK index lookup).
+     */
+    @Override
+    public boolean isAvailable(Long vetId, Workday workday, WorkHour workHour) {
+        ensureVetExists(vetId);
+        return scheduleRepository.existsById(new WorkScheduleSlotId(vetId, workday, workHour));
     }
 
     private void ensureVetExists(Long vetId) {

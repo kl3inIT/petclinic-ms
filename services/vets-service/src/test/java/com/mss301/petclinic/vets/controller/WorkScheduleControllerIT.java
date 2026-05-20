@@ -210,6 +210,66 @@ class WorkScheduleControllerIT {
                 .andExpect(status().isNotFound());
     }
 
+    // ---------- CHECK availability (Phase H) ----------
+
+    @Test
+    void checkVetAvailability_slotExists_returnsAvailableTrue() throws Exception {
+        Long vetId = firstVetId();
+        putSchedule(vetId, """
+                {
+                  "slots": [
+                    {"workday": "MONDAY", "workHour": "HOUR_9_10"}
+                  ]
+                }
+                """);
+
+        mvc.perform(get("/api/v1/vets/{vetId}/work-schedule/check", vetId)
+                        .param("workday", "MONDAY")
+                        .param("workHour", "HOUR_9_10")
+                        .with(staff()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(true));
+    }
+
+    @Test
+    void checkVetAvailability_slotNotExists_returnsAvailableFalse() throws Exception {
+        Long vetId = firstVetId();
+        // Schedule chỉ có MONDAY 9h → check TUESDAY 14h phải false
+        putSchedule(vetId, """
+                {
+                  "slots": [
+                    {"workday": "MONDAY", "workHour": "HOUR_9_10"}
+                  ]
+                }
+                """);
+
+        mvc.perform(get("/api/v1/vets/{vetId}/work-schedule/check", vetId)
+                        .param("workday", "TUESDAY")
+                        .param("workHour", "HOUR_14_15")
+                        .with(staff()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(false));
+    }
+
+    @Test
+    void checkVetAvailability_vetNotFound_returns404() throws Exception {
+        mvc.perform(get("/api/v1/vets/{vetId}/work-schedule/check", 999_999L)
+                        .param("workday", "MONDAY")
+                        .param("workHour", "HOUR_9_10")
+                        .with(staff()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void checkVetAvailability_invalidEnum_returns400() throws Exception {
+        Long vetId = firstVetId();
+        mvc.perform(get("/api/v1/vets/{vetId}/work-schedule/check", vetId)
+                        .param("workday", "INVALID_DAY")
+                        .param("workHour", "HOUR_9_10")
+                        .with(staff()))
+                .andExpect(status().isBadRequest());
+    }
+
     // ---------- DELETE clear ----------
 
     @Test
