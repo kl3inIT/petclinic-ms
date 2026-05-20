@@ -25,10 +25,18 @@ export const Route = createFileRoute('/')({
   component: LandingPage,
 });
 
+// Map role → landing CTA / "Trang của tôi" link. Trước đây chỉ phân biệt USER vs others
+// → VET bị đẩy về /admin/visits (CodeRabbit review). VET phải về /vet.
+function roleHome(roles: string[] | undefined): string {
+  if (!roles?.length) return '/login';
+  if (roles.includes('USER')) return '/customer/book';
+  if (roles.includes('VET')) return '/vet';
+  return '/admin/visits';
+}
+
 function LandingPage() {
   const user = useAuthStore((s) => s.user);
-  const isCustomer = user?.roles?.includes('USER') ?? false;
-  const ctaHref = user ? (isCustomer ? '/customer/book' : '/admin/visits') : '/login';
+  const ctaHref = user ? roleHome(user.roles) : '/login';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-[#f6f7fc] to-white">
@@ -88,7 +96,15 @@ function SiteHeader({ user }: HeaderProps) {
           </Button>
           {user ? (
             <Button asChild size="sm">
-              <Link to={user.roles.includes('USER') ? '/customer' : '/admin'}>
+              <Link
+                to={
+                  user.roles.includes('USER')
+                    ? '/customer'
+                    : user.roles.includes('VET')
+                      ? '/vet'
+                      : '/admin'
+                }
+              >
                 Trang của tôi
               </Link>
             </Button>

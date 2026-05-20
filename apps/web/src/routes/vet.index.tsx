@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
   CalendarDays,
+  CalendarRange,
   ChevronRight,
   LayoutDashboard,
-  Medal,
   MessageSquareQuote,
   Phone,
   Sparkles,
@@ -33,26 +33,15 @@ import { EmptyState } from '@/features/vet-me/components/EmptyState';
 import { StarRating } from '@/features/vet-me/components/StarRating';
 import { VetPageHeader } from '@/features/vet-me/components/VetPageHeader';
 import {
+  JS_DAY_TO_WORKDAY,
   WORKDAY_LABEL,
   WORKHOUR_LABEL,
   WORKHOUR_ORDER,
 } from '@/features/vets/labels';
-import type { WorkScheduleSlotResponseWorkday } from '@/lib/api/generated/model';
 
 export const Route = createFileRoute('/vet/')({
   component: VetDashboard,
 });
-
-/** JS Date.getDay(): 0=Sunday..6=Saturday → map sang enum BE Workday. */
-const JS_DAY_TO_WORKDAY: Record<number, string> = {
-  0: 'SUNDAY',
-  1: 'MONDAY',
-  2: 'TUESDAY',
-  3: 'WEDNESDAY',
-  4: 'THURSDAY',
-  5: 'FRIDAY',
-  6: 'SATURDAY',
-};
 
 function VetDashboard() {
   const username = useAuthStore((s) => s.user?.username) ?? '<your-username>';
@@ -119,8 +108,7 @@ function VetDashboard() {
 
   const profile = profileQuery.data;
   const summary = summaryQuery.data;
-  const todayWorkday = (JS_DAY_TO_WORKDAY[new Date().getDay()] ??
-    'MONDAY') as WorkScheduleSlotResponseWorkday;
+  const todayWorkday = JS_DAY_TO_WORKDAY[new Date().getDay()] ?? 'MONDAY';
   const todaySlots = (scheduleQuery.data ?? [])
     .filter((s) => s.workday === todayWorkday)
     .sort(
@@ -175,7 +163,7 @@ function VetDashboard() {
           tint="emerald"
         />
         <StatCard
-          icon={Medal}
+          icon={CalendarRange}
           label="Tổng khung tuần"
           value={
             scheduleQuery.isLoading

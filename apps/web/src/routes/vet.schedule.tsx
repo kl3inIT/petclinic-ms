@@ -8,21 +8,13 @@ import { useMySchedule } from '@/features/vet-me/api';
 import { VetPageHeader } from '@/features/vet-me/components/VetPageHeader';
 import { EmptyState } from '@/features/vet-me/components/EmptyState';
 import {
+  JS_DAY_TO_WORKDAY,
   WORKDAY_LABEL,
   WORKDAY_ORDER,
   WORKHOUR_LABEL,
   WORKHOUR_ORDER,
 } from '@/features/vets/labels';
-
-const JS_DAY_TO_WORKDAY: Record<number, string> = {
-  0: 'SUNDAY',
-  1: 'MONDAY',
-  2: 'TUESDAY',
-  3: 'WEDNESDAY',
-  4: 'THURSDAY',
-  5: 'FRIDAY',
-  6: 'SATURDAY',
-};
+import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/vet/schedule')({
   component: VetSchedulePage,
@@ -79,10 +71,10 @@ function VetSchedulePage() {
                     return (
                       <th
                         key={d}
-                        className={
-                          'border-b bg-muted/50 px-3 py-2.5 text-center font-medium ' +
-                          (isToday ? 'bg-primary/10 text-primary' : '')
-                        }
+                        className={cn(
+                          'border-b px-3 py-2.5 text-center font-medium',
+                          isToday ? 'bg-primary/10 text-primary' : 'bg-muted/50',
+                        )}
                       >
                         <div className="flex flex-col items-center gap-0.5">
                           <span>{WORKDAY_LABEL[d]}</span>
@@ -109,13 +101,11 @@ function VetSchedulePage() {
                       return (
                         <td
                           key={d}
-                          className={
-                            'border-b px-3 py-2 text-center ' +
-                            (isToday ? 'bg-primary/5 ' : '') +
-                            (isOn
-                              ? 'font-medium text-emerald-700'
-                              : 'text-muted-foreground/30')
-                          }
+                          className={cn(
+                            'border-b px-3 py-2 text-center',
+                            isToday && 'bg-primary/5',
+                            isOn ? 'font-medium text-emerald-700' : 'text-muted-foreground/30',
+                          )}
                         >
                           {isOn ? (
                             <span className="inline-flex size-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">

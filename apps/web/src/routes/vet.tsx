@@ -21,16 +21,24 @@ import { cn } from '@/lib/utils';
  * STAFF/ADMIN dùng /me cho debug). User không có claim {@code vetId} → service
  * /me sẽ trả 400 missing-vet-id → page hiển thị error state.
  */
+// Role gate: VET là role mặc định. ADMIN/STAFF cho debug (admin link sang vet entity).
+// CUSTOMER không có quyền vào portal — redirect về /customer.
+// CodeRabbit review (PR #11, 2026-05-20) flag việc cho mọi user login vào portal
+// gây nhầm UX. Demo mode tách riêng: bật qua URL ?demo=1 trên /login hoặc /.
+const VET_PORTAL_ROLES = ['VET', 'ADMIN', 'STAFF'] as const;
+
 export const Route = createFileRoute('/vet')({
   beforeLoad: ({ location }) => {
-    const { accessToken } = useAuthStore.getState();
+    const { accessToken, user } = useAuthStore.getState();
     if (!accessToken) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: '/login', search: { redirect: location.href } });
     }
-    // KHÔNG check role ở layout — endpoint /me sẽ tự return 400 nếu thiếu claim vetId.
-    // Cho phép user thường vào để bật demo mode (xem trước UI).
-    // Production gắt hơn có thể bật check role ở đây sau khi setup admin link xong.
+    const hasAccess = user?.roles?.some((r) => VET_PORTAL_ROLES.includes(r as never));
+    if (!hasAccess) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw redirect({ to: '/' });
+    }
   },
   component: VetLayout,
 });

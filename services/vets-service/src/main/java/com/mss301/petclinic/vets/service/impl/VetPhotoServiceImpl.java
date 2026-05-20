@@ -2,6 +2,7 @@ package com.mss301.petclinic.vets.service.impl;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,9 +64,12 @@ public class VetPhotoServiceImpl implements VetPhotoService {
         // state cũ (xoá nếu là insert mới). Không revert được thành state trước-upload cho
         // case update (object cũ đã bị overwrite), nhưng tránh được state inconsistency tệ
         // nhất: DB metadata cũ + MinIO content mới. Re-upload sẽ retry idempotent.
-        boolean isNew = photoRepository.findById(vetId).isEmpty();
+        // Single findById giảm race window (CodeRabbit review): concurrent upload khác
+        // không thể insert giữa 2 query rồi xoá MinIO object oan.
+        Optional<VetPhoto> existing = photoRepository.findById(vetId);
+        boolean isNew = existing.isEmpty();
         try {
-            VetPhoto photo = photoRepository.findById(vetId)
+            VetPhoto photo = existing
                     .orElseGet(() -> new VetPhoto(vetId, key, file.getContentType(), file.getSize()));
             photo.setObjectKey(key);
             photo.setContentType(file.getContentType());

@@ -59,14 +59,22 @@ public class VetMeController {
 
     /** Đọc vetId từ JWT, throw 400 nếu user chưa link với vet entity. */
     private static Long resolveVetId(Jwt jwt) {
-        Long vetId = jwt.getClaim("vetId");
-        if (vetId == null) {
+        // NimbusJwtDecoder dùng Jackson — JSON number nhỏ (< 2^31) decode thành Integer,
+        // số lớn thành Long. Cast trực tiếp `Long` → ClassCastException ở prod với vetId
+        // nhỏ. Nhận qua Number rồi longValue() handle cả Integer/Long/Short/BigInteger.
+        Object raw = jwt.getClaim("vetId");
+        if (raw == null) {
             throw new BadRequestAlertException(
                     "Token không có claim 'vetId' — account chưa được link với vet entity. " +
                     "Admin cần update auth.users.vet_id rồi user login lại.",
                     "vet-me", "missing-vet-id");
         }
-        return vetId;
+        if (!(raw instanceof Number n)) {
+            throw new BadRequestAlertException(
+                    "Claim 'vetId' phải là số, got: " + raw.getClass().getSimpleName(),
+                    "vet-me", "invalid-vet-id-type");
+        }
+        return n.longValue();
     }
 
     @GetMapping

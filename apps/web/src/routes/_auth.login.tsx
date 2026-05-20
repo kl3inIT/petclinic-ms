@@ -66,9 +66,7 @@ function LoginPage() {
     >
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold">Đăng nhập</h1>
-        <p className="text-sm text-muted-foreground">
-          Truy cập PetClinic admin portal
-        </p>
+        <p className="text-sm text-muted-foreground">Đăng nhập vào PetClinic</p>
       </div>
 
       <form.Field

@@ -19,8 +19,6 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     long countByVetId(Long vetId);
 
-    boolean existsByVetIdAndCustomerName(Long vetId, String customerName);
-
     Optional<Rating> findByVetIdAndCustomerName(Long vetId, String customerName);
 
     /**
@@ -32,16 +30,17 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     /**
      * Top-N vet theo average score (chỉ active vet, có ít nhất 1 rating).
-     * Cross-entity aggregate qua JPQL — Rating không có @ManyToOne Vet, dùng implicit join
-     * trên scalar vetId. SQL Postgres tự sinh JOIN.
+     * Cross-entity aggregate qua JPQL — Rating không có @ManyToOne Vet, dùng JOIN explicit
+     * trên scalar vetId. CodeRabbit review (PR #11) suggest explicit JOIN thay cho implicit
+     * cross-join `FROM Vet v, Rating r` để rõ ý đồ + tuân JPA standard.
      *
      * <p>Trả {@code Object[]}: vetId, firstName, lastName, ratingCount, averageScore.
      * Service map sang record.</p>
      */
     @Query("""
             SELECT v.id, v.firstName, v.lastName, COUNT(r), AVG(r.score)
-            FROM Vet v, Rating r
-            WHERE r.vetId = v.id AND v.active = true
+            FROM Vet v JOIN Rating r ON r.vetId = v.id
+            WHERE v.active = true
             GROUP BY v.id, v.firstName, v.lastName
             ORDER BY AVG(r.score) DESC, COUNT(r) DESC, v.id ASC
             """)

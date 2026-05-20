@@ -36,6 +36,21 @@ export const WORKDAY_ORDER: WorkScheduleSlotResponseWorkday[] = [
   'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
 ];
 
+/**
+ * Map JS Date.getDay() (0=Sunday..6=Saturday) sang enum BE Workday.
+ * Dùng chung giữa vet.index.tsx (today's schedule highlight) và vet.schedule.tsx
+ * (current-day header highlight). Lưu ở labels.ts để 1 source of truth.
+ */
+export const JS_DAY_TO_WORKDAY: Record<number, WorkScheduleSlotResponseWorkday> = {
+  0: 'SUNDAY',
+  1: 'MONDAY',
+  2: 'TUESDAY',
+  3: 'WEDNESDAY',
+  4: 'THURSDAY',
+  5: 'FRIDAY',
+  6: 'SATURDAY',
+};
+
 // ─── WorkHour (Phase C) — slot 1 giờ từ 8h đến 20h ──────────────────────────────
 export const WORKHOUR_LABEL: Record<WorkScheduleSlotResponseWorkHour, string> = {
   HOUR_8_9: '8 - 9h',

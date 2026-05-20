@@ -31,7 +31,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
@@ -58,9 +57,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *       TransactionSynchronizationManager.registerSynchronization.</li>
  * </ol>
  */
+// KHÔNG dùng @Transactional ở class level: test transaction rollback → afterCommit hook
+// trong RatingServiceImpl.publishRatingAddedAfterCommit() KHÔNG fire → event không publish
+// → assertion fail "Phải nhận được vet.rating.added message trong 5s". CodeRabbit review
+// (PR #11, 2026-05-20) phát hiện. Data isolation giữa các test handle qua explicit cleanup
+// trong @BeforeEach (ratingRepository.deleteAll).
 @SpringBootTest
 @Testcontainers
-@Transactional
 @TestPropertySource(properties = {
         "petclinic.events.enabled=true",
         // Test queue riêng để consume event verify — khác queue prod ("vets.rating.added" etc.)
@@ -100,6 +103,7 @@ class RatingEventPublishIT {
     @Autowired ObjectMapper om;
     @Autowired RabbitTemplate rabbitTemplate;
     @Autowired RabbitAdmin rabbitAdmin;
+    @Autowired com.mss301.petclinic.vets.repository.RatingRepository ratingRepository;
 
     static final String TEST_QUEUE = "vets.test.rating.added";
 
@@ -107,8 +111,10 @@ class RatingEventPublishIT {
 
     @BeforeAll
     static void awaitBrokerReady() {
-        // RabbitMQContainer.start() chờ port open nhưng không đợi đầy đủ — đôi khi
-        // first AMQP connection vẫn fail. Sleep ngắn để tránh flaky.
+        // Wait.forLogMessage trên RabbitMQContainer đã đảm bảo broker accept TCP, nhưng
+        // RabbitMQ broker đôi khi còn boot vhost/exchange metadata sau khi log "Server
+        // startup complete". Sleep ngắn để tránh first AMQP RPC fail với
+        // ShutdownSignalException.
         Awaitility.await().atMost(Duration.ofSeconds(5)).pollDelay(Duration.ofSeconds(1))
                 .until(() -> true);
     }
@@ -117,13 +123,26 @@ class RatingEventPublishIT {
     void setUp() {
         mvc = webAppContextSetup(wac).apply(springSecurity()).build();
 
+        // KHÔNG @Transactional ở class level → phải explicit cleanup giữa tests.
+        // Xoá ratings cũ trước mỗi test, nếu không UPSERT-update case sẽ thấy rating cũ
+        // từ test trước → assertion fail. Vet seed data từ Liquibase không touch.
+        ratingRepository.deleteAll();
+
         // Declare test queue + binding (idempotent). Cần exchange tồn tại — autoconfig
         // PetClinicEventsAutoConfiguration đã declare khi context load.
+        // Retry declare để chống ShutdownSignalException trên first connection ở CI
+        // (broker chưa fully ready dù port open + log "startup complete").
         Queue queue = new Queue(TEST_QUEUE, false, false, true); // non-durable, auto-delete
         TopicExchange exchange = new TopicExchange("petclinic.events");
         Binding binding = BindingBuilder.bind(queue).to(exchange).with("vet.rating.added");
-        rabbitAdmin.declareQueue(queue);
-        rabbitAdmin.declareBinding(binding);
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(15))
+                .pollInterval(Duration.ofMillis(500))
+                .ignoreExceptions()
+                .untilAsserted(() -> {
+                    rabbitAdmin.declareQueue(queue);
+                    rabbitAdmin.declareBinding(binding);
+                });
         // Drain bất kỳ message còn sót từ test trước (cùng queue name)
         while (rabbitTemplate.receive(TEST_QUEUE, 50L) != null) { /* drain */ }
     }
