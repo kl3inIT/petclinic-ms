@@ -69,3 +69,34 @@ type VisitCompleted struct {
 	// Fee: BigDecimal bên Java → JSON string. Dùng string để giữ precision.
 	Fee string `json:"fee"`
 }
+
+// NotificationAck — generic envelope phát ra khi notification gửi THÀNH CÔNG.
+// Routing key convention: "<domain>.notification.ack" (vd "visit.notification.ack").
+// Match Java common-events.saga.NotificationAck record — Tolerant Reader cross-language.
+//
+// originalEventId = UUID event gốc đã trigger saga (vd VisitCompleted.EventID).
+// Service initiator (visits-service) lookup NotificationSaga row qua field này → idempotent apply.
+type NotificationAck struct {
+	EventID         string    `json:"eventId"`
+	EventType       string    `json:"eventType"`
+	OccurredAt      time.Time `json:"occurredAt"`
+	Source          string    `json:"source"`
+	OriginalEventID string    `json:"originalEventId"`
+	Domain          string    `json:"domain"`    // "visit" | "user" | ...
+	EntityID        string    `json:"entityId"`  // domain entity ID (string để cross-language safe)
+	Recipient       string    `json:"recipient"`
+}
+
+// NotificationFailed — generic envelope khi notification fail vĩnh viễn.
+// Routing: "<domain>.notification.failed". Trigger compensating transaction tại initiator.
+type NotificationFailed struct {
+	EventID         string    `json:"eventId"`
+	EventType       string    `json:"eventType"`
+	OccurredAt      time.Time `json:"occurredAt"`
+	Source          string    `json:"source"`
+	OriginalEventID string    `json:"originalEventId"`
+	Domain          string    `json:"domain"`
+	EntityID        string    `json:"entityId"`
+	Recipient       string    `json:"recipient"`
+	ErrorMessage    string    `json:"errorMessage"`
+}

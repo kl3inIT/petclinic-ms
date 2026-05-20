@@ -1,5 +1,6 @@
 package com.mss301.petclinic.gateway.config;
 
+import static com.mss301.petclinic.gateway.config.BulkheadFilterFunctions.bulkhead;
 import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.setPath;
 import static org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions.circuitBreaker;
 import static org.springframework.cloud.gateway.server.mvc.filter.LoadBalancerFilterFunctions.lb;
@@ -15,6 +16,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
 
+import io.github.resilience4j.bulkhead.BulkheadRegistry;
+
 /**
  * Gateway routes — functional API (canonical pattern cho Spring Cloud Gateway 5.x WebMVC).
  *
@@ -26,8 +29,14 @@ import org.springframework.web.servlet.function.ServerResponse;
  * <ol>
  *   <li>{@code rateLimit(...)} — per-IP token bucket (chỉ áp lên auth public routes)</li>
  *   <li>{@code lb("service")} — Spring Cloud LoadBalancer resolve qua Eureka</li>
+ *   <li>{@code bulkhead(...)} — concurrency limit per downstream (fail-fast trước CB)</li>
  *   <li>{@code circuitBreaker(...)} — fallback nếu downstream lỗi</li>
  * </ol>
+ *
+ * <h4>Why bulkhead BEFORE circuit breaker?</h4>
+ * Nếu CB trước: 1 burst 200 req → 200 inflight → 200 ăn CB call count → CB trip dù service OK.
+ * Bulkhead trước: 200 burst → 195 reject ngay (503), 5 đi tiếp → CB chỉ thấy 5 call thực tế.
+ * Tách 2 failure mode: "overload" vs "service hỏng".
  */
 @Configuration
 public class GatewayRoutesConfig {
@@ -37,11 +46,18 @@ public class GatewayRoutesConfig {
     // khi 1 service trip CB (vd. /admin/llm/test với api-key chậm) → block toàn bộ routes khác
     // (chat, customers, vets...) trong 30s OPEN window. Per-service isolation đúng pattern.
 
+    private final BulkheadRegistry bulkheadRegistry;
+
+    public GatewayRoutesConfig(BulkheadRegistry bulkheadRegistry) {
+        this.bulkheadRegistry = bulkheadRegistry;
+    }
+
     @Bean
     public RouterFunction<ServerResponse> customersServiceRoute() {
         return route("customers-service")
                 .route(path("/api/v1/owners/**").or(path("/api/v1/pets/**")), http())
                 .filter(lb("customers-service"))
+                .filter(bulkhead(bulkheadRegistry, "customersBulkhead"))
                 .filter(circuitBreaker(c -> c.setId("customersCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
@@ -51,6 +67,7 @@ public class GatewayRoutesConfig {
         return route("vets-service")
                 .route(path("/api/v1/vets/**").or(path("/api/v1/specialties/**")), http())
                 .filter(lb("vets-service"))
+                .filter(bulkhead(bulkheadRegistry, "vetsBulkhead"))
                 .filter(circuitBreaker(c -> c.setId("vetsCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
@@ -60,6 +77,7 @@ public class GatewayRoutesConfig {
         return route("visits-service")
                 .route(path("/api/v1/visits/**"), http())
                 .filter(lb("visits-service"))
+                .filter(bulkhead(bulkheadRegistry, "visitsBulkhead"))
                 .filter(circuitBreaker(c -> c.setId("visitsCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
@@ -67,12 +85,14 @@ public class GatewayRoutesConfig {
     /**
      * AI chat — Phase 12b. JWT-protected ở downstream (genai-service security config).
      * CB scope rộng vì downstream call OpenRouter có thể chậm/lỗi không kiểm soát được.
+     * Bulkhead SIẾT NHẤT: 5 concurrent — LLM call tốn $$$ + chậm + OpenRouter rate limit.
      */
     @Bean
     public RouterFunction<ServerResponse> genaiServiceRoute() {
         return route("genai-service")
                 .route(path("/api/v1/ai/**").or(path("/api/v1/admin/llm/**")), http())
                 .filter(lb("genai-service"))
+                .filter(bulkhead(bulkheadRegistry, "genaiBulkhead"))
                 .filter(circuitBreaker(c -> c.setId("genaiCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
@@ -90,6 +110,7 @@ public class GatewayRoutesConfig {
                         .or(path("/api/v1/auth/refresh")), http())
                 .filter(limiter.asFilter())
                 .filter(lb("auth-service"))
+                .filter(bulkhead(bulkheadRegistry, "authBulkhead"))
                 .filter(circuitBreaker(cb -> cb.setId("authCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
@@ -103,6 +124,7 @@ public class GatewayRoutesConfig {
         return route("auth-protected")
                 .route(path("/api/v1/auth/me").or(path("/api/v1/auth/logout")), http())
                 .filter(lb("auth-service"))
+                .filter(bulkhead(bulkheadRegistry, "authBulkhead"))
                 .filter(circuitBreaker(cb -> cb.setId("authCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }

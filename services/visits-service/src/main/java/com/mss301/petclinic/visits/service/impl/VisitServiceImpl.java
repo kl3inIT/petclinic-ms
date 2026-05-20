@@ -31,6 +31,8 @@ import com.mss301.petclinic.visits.model.Visit;
 import com.mss301.petclinic.visits.model.VisitStatus;
 import com.mss301.petclinic.visits.repository.VisitRepository;
 import com.mss301.petclinic.visits.repository.VisitSpecifications;
+import com.mss301.petclinic.visits.saga.NotificationSaga;
+import com.mss301.petclinic.visits.saga.NotificationSagaRepository;
 import com.mss301.petclinic.visits.service.VisitService;
 
 @Service
@@ -46,13 +48,17 @@ public class VisitServiceImpl implements VisitService {
     private final RemoteClientsFacade remoteClients;
     /** Optional — broker có thể disabled (test profile) hoặc tạm down. */
     private final ObjectProvider<EventPublisher> events;
+    /** Saga state — track notification choreography per VisitCompletedEvent. Null khi broker disabled. */
+    private final NotificationSagaRepository sagaRepo;
 
     public VisitServiceImpl(VisitRepository repository,
                             RemoteClientsFacade remoteClients,
-                            ObjectProvider<EventPublisher> events) {
+                            ObjectProvider<EventPublisher> events,
+                            NotificationSagaRepository sagaRepo) {
         this.repository = repository;
         this.remoteClients = remoteClients;
         this.events = events;
+        this.sagaRepo = sagaRepo;
     }
 
     @Override
@@ -175,12 +181,25 @@ public class VisitServiceImpl implements VisitService {
             UserSummary user = remoteClients.fetchUser(v.getCustomerUserId());
             PetSummary pet = remoteClients.fetchPet(v.getPetId());
             VetSummary vet = remoteClients.fetchVet(v.getVetId());
-            publisher.publish(VisitCompletedEvent.of(
+            VisitCompletedEvent event = VisitCompletedEvent.of(
                     v.getId(), v.getScheduledAt(), Instant.now(),
                     user.id(), user.username(), user.email(),
                     pet.id(), pet.name(),
                     vet.id(), vet.firstName() + " " + vet.lastName(),
-                    v.getDiagnosis(), v.getTreatment(), v.getFee()));
+                    v.getDiagnosis(), v.getTreatment(), v.getFee());
+
+            // Saga state — record TRƯỚC publish để mailer ack arrive nhanh hơn vẫn match được row.
+            // Cùng @Transactional với Visit.complete() → atomic giữa DB write của Visit + saga.
+            //
+            // ⚠️ KHÔNG fully atomic với broker (dual-write problem):
+            //   - DB commit OK + broker publish FAIL → saga PENDING orphan, không bao giờ resolve
+            //   - DB commit FAIL + broker publish OK → mailer ack nhưng saga row không tồn tại
+            // Production cần Transactional Outbox: ghi event vào bảng outbox cùng TX,
+            // poller riêng publish → broker với retry. Reference: microservices.io/patterns/data/transactional-outbox
+            sagaRepo.save(NotificationSaga.start(
+                    event.eventId(), v.getId(), "visit.completed.notification"));
+
+            publisher.publish(event);
         } catch (RuntimeException ex) {
             log.warn("Publish visit.completed failed (visit={}): {}", v.getId(), ex.getMessage());
         }
