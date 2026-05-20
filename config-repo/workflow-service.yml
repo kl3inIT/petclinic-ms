@@ -1,0 +1,17 @@
+# Workflow — Camunda 8 remote engine client + job workers.
+# Camunda 8 không chạy embedded trong workflow-service và không tạo ACT_* tables.
+camunda:
+  client:
+    mode: self-managed
+    auth:
+      method: none
+    grpc-address: ${CAMUNDA_GRPC_ADDRESS:http://localhost:26500}
+    rest-address: ${CAMUNDA_REST_ADDRESS:http://localhost:8088}
+    operate:
+      username: ${CAMUNDA_OPERATE_USERNAME:admin}
+      password: ${CAMUNDA_OPERATE_PASSWORD:admin}
+
+petclinic:
+  workflow:
+    vets-service-base-url: http://vets-service
+    visits-service-base-url: http://visits-service

@@ -28,14 +28,15 @@
             <option value="$PROJECT_DIR$/services/discovery-server" />
             <option value="$PROJECT_DIR$/services/vets-service" />
             <option value="$PROJECT_DIR$/services/visits-service" />
+            <option value="$PROJECT_DIR$/services/workflow-service" />
             <option value="$PROJECT_DIR$/shared" />
             <option value="$PROJECT_DIR$/shared/common-clients" />
+            <option value="$PROJECT_DIR$/shared/common-events" />
             <option value="$PROJECT_DIR$/shared/common-jpa" />
             <option value="$PROJECT_DIR$/shared/common-security" />
             <option value="$PROJECT_DIR$/shared/common-web" />
           </set>
         </option>
-        <option name="myGradleHome" value="" />
       </GradleProjectSettings>
     </option>
   </component>

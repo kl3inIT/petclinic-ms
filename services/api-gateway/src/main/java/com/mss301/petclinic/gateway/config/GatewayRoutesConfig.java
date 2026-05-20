@@ -62,6 +62,15 @@ public class GatewayRoutesConfig {
                 .build();
     }
 
+    @Bean
+    public RouterFunction<ServerResponse> workflowServiceRoute() {
+        return route("workflow-service")
+                .route(path("/api/v1/workflows/**"), http())
+                .filter(lb("workflow-service"))
+                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
     /**
      * Auth PUBLIC endpoints — rate-limited per-IP (10 req/phút).
      * Chống brute-force (login), mass signup (register), refresh-spam.
@@ -143,6 +152,15 @@ public class GatewayRoutesConfig {
                 .route(path("/v3/api-docs/visits"), http())
                 .before(setPath("/v3/api-docs"))
                 .filter(lb("visits-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsWorkflowRoute() {
+        return route("api-docs-workflow")
+                .route(path("/v3/api-docs/workflow"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("workflow-service"))
                 .build();
     }
 }

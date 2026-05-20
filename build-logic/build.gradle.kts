@@ -2,8 +2,9 @@
 // Khai báo dependency cho các convention plugin (file .gradle.kts trong src/main/kotlin).
 
 plugins {
-    // Cho phép viết Gradle plugin bằng Kotlin DSL trong src/main/kotlin/*.gradle.kts.
+    // Cho phép viết Gradle plugin bằng Kotlin.
     `kotlin-dsl`
+    `java-gradle-plugin`
 }
 
 dependencies {
@@ -20,3 +21,20 @@ dependencies {
 // Gradle 9 quirk: precompiled script plugin compile classpath cần Spring Boot plugin runtime
 // để `extensions.configure<SpringBootExtension>` resolve được type SpringBootExtension.
 // `implementation(libs.spring.boot.gradle.plugin)` ở trên đã đủ — không cần thêm gì.
+
+gradlePlugin {
+    plugins {
+        create("javaConventions") {
+            id = "petclinic.java-conventions"
+            implementationClass = "com.mss301.petclinic.buildlogic.JavaConventionsPlugin"
+        }
+        create("springBootService") {
+            id = "petclinic.spring-boot-service"
+            implementationClass = "com.mss301.petclinic.buildlogic.SpringBootServicePlugin"
+        }
+        create("sharedLibrary") {
+            id = "petclinic.shared-library"
+            implementationClass = "com.mss301.petclinic.buildlogic.SharedLibraryPlugin"
+        }
+    }
+}

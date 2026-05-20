@@ -1,0 +1,26 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 004-001-seed-dev-admin-user
+      author: mss301
+      preConditions:
+        onFail: MARK_RAN
+        not:
+          sqlCheck:
+            expectedResult: "1"
+            sql: SELECT COUNT(*) FROM auth.users WHERE username = 'admin'
+      changes:
+        - insert:
+            schemaName: auth
+            tableName: users
+            columns:
+              - column: { name: id, value: "00000000-0000-0000-0000-000000000001" }
+              - column: { name: username, value: "admin" }
+              - column: { name: email, value: "admin@petclinic.local" }
+              - column: { name: password, value: '$2a$12$B/gl9PNmZJnjdmPy9SqtfuKJQTmO0bHPyooq5OZpPqFQOSsnbc4Rm' }
+              - column: { name: roles_csv, value: "ADMIN,USER" }
+              - column: { name: enabled, valueBoolean: true }
+              - column: { name: created_by, value: "system" }
+              - column: { name: created_date, valueComputed: "CURRENT_TIMESTAMP" }
+              - column: { name: last_modified_by, value: "system" }
+              - column: { name: last_modified_date, valueComputed: "CURRENT_TIMESTAMP" }

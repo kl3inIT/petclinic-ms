@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
-import { LayoutDashboard, Users, PawPrint, Stethoscope, CalendarCheck, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, PawPrint, Stethoscope, CalendarCheck, Workflow, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { useAuthStore } from '@/features/auth/store';
@@ -21,7 +21,7 @@ export const Route = createFileRoute('/admin')({
 });
 
 interface NavItem {
-  to: '/admin' | '/admin/owners' | '/admin/pets' | '/admin/vets' | '/admin/visits';
+  to: '/admin' | '/admin/owners' | '/admin/pets' | '/admin/vets' | '/admin/visits' | '/admin/workflows';
   label: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
@@ -30,6 +30,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/admin/visits', label: 'Visits', icon: CalendarCheck },
+  { to: '/admin/workflows', label: 'Workflows', icon: Workflow },
   { to: '/admin/owners', label: 'Owners', icon: Users },
   { to: '/admin/pets', label: 'Pets', icon: PawPrint },
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },

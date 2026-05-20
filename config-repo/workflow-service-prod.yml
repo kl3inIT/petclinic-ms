@@ -1,0 +1,17 @@
+camunda:
+  client:
+    mode: self-managed
+    auth:
+      method: oidc
+      client-id: ${CAMUNDA_CLIENT_ID}
+      client-secret: ${CAMUNDA_CLIENT_SECRET}
+      issuer-url: ${CAMUNDA_ISSUER_URL}
+      audience: ${CAMUNDA_AUDIENCE}
+      scope: ${CAMUNDA_SCOPE:${CAMUNDA_AUDIENCE}}
+    grpc-address: ${CAMUNDA_GRPC_ADDRESS}
+    rest-address: ${CAMUNDA_REST_ADDRESS}
+
+logging:
+  level:
+    io.camunda: WARN
+    org.apache.camel: WARN

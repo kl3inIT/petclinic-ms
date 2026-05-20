@@ -1,0 +1,31 @@
+spring:
+  profiles:
+    active: test
+
+  docker:
+    compose:
+      enabled: false
+
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+petclinic:
+  auth:
+    jwt:
+      jwk-set-uri: http://localhost:8183/.well-known/jwks.json
+
+camunda:
+  client:
+    enabled: false
+    worker:
+      defaults:
+        enabled: false
