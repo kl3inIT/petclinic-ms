@@ -18,11 +18,15 @@
 | **E2** | Photo + Album (MinIO + multipart) | ✅ Done | `5942050` | `8aaa67b` |
 | **I** | MinIO orphan-cleanup scheduled job | ✅ Done | `018212f` | `2256c33` |
 | **F** | Rating customerName lấy từ JWT (anti-spoof) | ✅ Done | `7387418` | `d943cc6` |
-| **F.1** | Review fixes: rating UPSERT + unique constraint, top-rated tiebreak, getSummary 1-query, photo/album orphan cleanup | ✅ Done | _session 2026-05-20_ | — |
-| **G** | Publish `vet.rating.added` event lên RabbitMQ | ✅ Done (core) — IT broker pending | _session 2026-05-20_ | — |
-| **J (partial)** | FE Vietnamese labels + Zod schemas cho vets sub-resource (UI page mới: pending) | 🚧 Partial | _session 2026-05-20_ | — |
+| **F.1** | Review fixes: rating UPSERT + unique constraint, top-rated tiebreak, getSummary 1-query, photo/album orphan cleanup | ✅ Done | `8585967` | — |
+| **G** | Publish `vet.rating.added` event lên RabbitMQ + RatingEventPublishIT (RabbitMQContainer) | ✅ Done | `5b1690f` | `68d39a1` |
+| **H (vets-side)** | GET `/work-schedule/check` endpoint + 4 IT — visits-side chưa làm | ✅ Done | `b23ac86` | — |
+| **J (prep)** | FE labels + Zod schemas + admin/vets list page (detail page 6-tab: pending, cần regen orval) | 🚧 Partial | `b2feb2d`, `30ddbad` | — |
 
-**Tổng test hiện tại**: 78 IT pass (76 cũ + 2 mới: `addVetRating_sameCustomerTwice_upsertsInPlaceAndCountIsOne`, `listTopRatedVets_sameAvgSameCount_tiebreakByVetIdAsc`). Phase G test broker chưa thêm — cần RabbitMQTestcontainer riêng (xem section "Còn lại cần làm" cuối file).
+**Tổng test hiện tại**: 84 IT pass (76 cũ + 8 mới):
+- F.1: `addVetRating_sameCustomerTwice_upsertsInPlaceAndCountIsOne`, `listTopRatedVets_sameAvgSameCount_tiebreakByVetIdAsc`
+- G: `addRating_insertCase_publishesEventWithUpdatedFalse`, `addRating_upsertUpdateCase_publishesEventWithUpdatedTrue`
+- H: `checkVetAvailability_slotExists_returnsAvailableTrue`, `checkVetAvailability_slotNotExists_returnsAvailableFalse`, `checkVetAvailability_vetNotFound_returns404`, `checkVetAvailability_invalidEnum_returns400`
 
 ---
 
@@ -237,10 +241,13 @@
 
 ### ⏳ Còn cần làm
 
-**Phase G — broker IT (priority HIGH):**
-- Thêm `services/vets-service/src/test/java/.../RatingEventPublishIT.java` với `@Testcontainers RabbitMQContainer` (artifactId `testcontainers-rabbitmq`) — verify message landed đúng exchange `petclinic.events`, routing key `vet.rating.added`, payload có đầy đủ field + `updated` flag đúng.
-- Set `@TestPropertySource(properties = "petclinic.events.enabled=true")` override mặc định trong test profile.
-- Verify `afterCommit`: test 1 case throw exception SAU `ratingRepository.save` để confirm event KHÔNG fire khi transaction rollback.
+**Phase G — broker IT**: ✅ ĐÃ XONG (commit `68d39a1`) — RatingEventPublishIT verify INSERT + UPSERT update case. Rollback case skip (đủ tin tưởng qua code review TransactionSynchronizationManager).
+
+**Phase H — visits-side (priority MED):**
+- Mở rộng `services/visits-service/.../client/VetsClient.java` thêm `@GetExchange("/api/v1/vets/{vetId}/work-schedule/check") boolean isVetAvailable(@PathVariable Long vetId, @RequestParam Workday workday, @RequestParam WorkHour workHour)`.
+- Sửa `VisitServiceImpl.bookVisit(...)`: derive (workday, workHour) từ `scheduledAt` (DayOfWeek → Workday, LocalTime.getHour() → WorkHour), gọi `vetsClient.isVetAvailable(...)`. Nếu false → throw `BadRequestAlertException("Vet không trống khung giờ này", "visit", "vet-unavailable")`.
+- Sửa `RemoteClientsFacade` thêm `@CircuitBreaker` cho method này, fallback returns `false` (fail-closed — over-booking nguy hiểm hơn cản trở 1 booking).
+- IT visits-side: stub vets-service hoặc Testcontainers wiremock; verify cả 2 path (available → book OK, unavailable → 400).
 
 **Phase J — UI page (priority MED):**
 - Tạo `apps/web/src/routes/admin.vets.$id.tsx` với 6 tab (Info / Education / Schedule / Ratings / Album / Badges) — pattern theo Owners CRUD (Phase 7B).
