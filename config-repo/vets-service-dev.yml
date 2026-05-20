@@ -7,6 +7,18 @@ spring:
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
+  # Phase G — publish vet.rating.added cần RabbitMQ.
+  # Phase E2 — MinIO storage. → bật cả `storage` + `mq` + `db`.
+  docker:
+    compose:
+      profiles:
+        active: ["db", "mq", "storage"]
+
+# Phase G — bật event publishing ở dev (test profile đã tắt qua application-test.yml).
+petclinic:
+  events:
+    enabled: ${PETCLINIC_EVENTS_ENABLED:true}
+
 logging:
   level:
     org.hibernate.SQL: INFO

@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import com.mss301.petclinic.vets.dto.req.VetRequest;
 import com.mss301.petclinic.vets.dto.res.VetResponse;
 import com.mss301.petclinic.vets.exception.VetNotFoundException;
 import com.mss301.petclinic.vets.model.Specialty;
+import com.mss301.petclinic.vets.model.Vet;
 import com.mss301.petclinic.vets.repository.SpecialtyRepository;
 import com.mss301.petclinic.vets.repository.VetRepository;
 import com.mss301.petclinic.vets.repository.VetSpecifications;
@@ -23,6 +25,8 @@ import com.mss301.petclinic.vets.service.VetService;
 @Service
 @Transactional(readOnly = true)
 public class VetServiceImpl implements VetService {
+
+    private static final String ENTITY_NAME = "vet";
 
     private final VetRepository vetRepository;
     private final SpecialtyRepository specialtyRepository;
@@ -33,8 +37,8 @@ public class VetServiceImpl implements VetService {
     }
 
     @Override
-    public Page<VetResponse> findAll(String lastName, Long specialtyId, Pageable pageable) {
-        return vetRepository.findAll(VetSpecifications.filter(lastName, specialtyId), pageable)
+    public Page<VetResponse> findAll(String lastName, Long specialtyId, Boolean active, Pageable pageable) {
+        return vetRepository.findAll(VetSpecifications.filter(lastName, specialtyId, active), pageable)
                 .map(VetResponse::from);
     }
 
@@ -52,7 +56,7 @@ public class VetServiceImpl implements VetService {
         if (request.specialtyNames() != null && !request.specialtyNames().isEmpty()) {
             vet.setSpecialties(resolveSpecialties(request.specialtyNames()));
         }
-        return VetResponse.from(vetRepository.save(vet));
+        return VetResponse.from(saveAndTranslateUniqueViolation(vet));
     }
 
     @Override
@@ -63,15 +67,32 @@ public class VetServiceImpl implements VetService {
 
         if (request.hasFirstName()) {
             if (request.firstName().isBlank()) {
-                throw new BadRequestAlertException("firstName must not be blank", "vet", "firstName-blank");
+                throw new BadRequestAlertException("firstName must not be blank", ENTITY_NAME, "firstName-blank");
             }
             vet.setFirstName(request.firstName());
         }
         if (request.hasLastName()) {
             if (request.lastName().isBlank()) {
-                throw new BadRequestAlertException("lastName must not be blank", "vet", "lastName-blank");
+                throw new BadRequestAlertException("lastName must not be blank", ENTITY_NAME, "lastName-blank");
             }
             vet.setLastName(request.lastName());
+        }
+        if (request.hasEmail()) {
+            if (request.email().isBlank()) {
+                throw new BadRequestAlertException("email must not be blank", ENTITY_NAME, "email-blank");
+            }
+            vet.setEmail(request.email());
+        }
+        if (request.hasPhoneNumber()) {
+            // empty string = clear phone — cho phép. Validate length đã có ở DTO create (Size 30).
+            vet.setPhoneNumber(request.phoneNumber().isBlank() ? null : request.phoneNumber());
+        }
+        if (request.hasActive()) {
+            vet.setActive(request.active());
+        }
+        if (request.hasResume()) {
+            // empty string = clear resume
+            vet.setResume(request.resume().isBlank() ? null : request.resume());
         }
         if (request.hasSpecialties()) {
             // Validate elements TRƯỚC khi gọi resolveSpecialties — tránh NPE toLowerCase()
@@ -79,7 +100,7 @@ public class VetServiceImpl implements VetService {
             if (request.specialtyNames().stream().anyMatch(n -> n == null || n.isBlank())) {
                 throw new BadRequestAlertException(
                         "specialtyNames must not contain null or blank values",
-                        "vet",
+                        ENTITY_NAME,
                         "specialty-name-invalid"
                 );
             }
@@ -88,7 +109,7 @@ public class VetServiceImpl implements VetService {
                     ? new HashSet<>()
                     : resolveSpecialties(request.specialtyNames()));
         }
-        return VetResponse.from(vetRepository.save(vet));
+        return VetResponse.from(saveAndTranslateUniqueViolation(vet));
     }
 
     @Override
@@ -98,6 +119,27 @@ public class VetServiceImpl implements VetService {
             throw new VetNotFoundException(id.toString());
         }
         vetRepository.deleteById(id);
+    }
+
+    /**
+     * Save và dịch DB unique violation (email trùng) thành 400 BadRequestAlertException
+     * thay vì để 500 leak constraint name ra client. Postgres unique constraint name = uk_vets_email
+     * (changeset 003-003) → check message contains.
+     */
+    private Vet saveAndTranslateUniqueViolation(Vet vet) {
+        try {
+            return vetRepository.saveAndFlush(vet);
+        } catch (DataIntegrityViolationException ex) {
+            String msg = ex.getMostSpecificCause().getMessage();
+            if (msg != null && msg.contains("uk_vets_email")) {
+                throw new BadRequestAlertException(
+                        "Email already in use: " + vet.getEmail(),
+                        ENTITY_NAME,
+                        "email-exists"
+                );
+            }
+            throw ex;
+        }
     }
 
     /**
@@ -115,7 +157,7 @@ public class VetServiceImpl implements VetService {
                     .collect(Collectors.toSet());
             throw new BadRequestAlertException(
                     "Unknown specialty names: " + missing,
-                    "vet",
+                    ENTITY_NAME,
                     "specialty-not-found"
             );
         }

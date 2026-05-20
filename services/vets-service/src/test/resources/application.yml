@@ -15,6 +15,20 @@ spring:
   liquibase:
     enabled: true
 
+  # Test tắt config-server → KHÔNG nhận hibernate.default_schema từ config-repo/vets-service.yml.
+  # Phải set thủ công ở đây, nếu không Hibernate query 'vets' table thay vì 'vets.vets' (schema.table)
+  # và fail với "relation vets does not exist".
+  jpa:
+    properties:
+      hibernate:
+        default_schema: vets
+
+  # Phase E2 — multipart limits cho upload test
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
 # JWT decoder property — required bởi common-security auto-config.
 # Test smoke chỉ load context, không decode JWT thật → dummy URL ok.
 petclinic:
@@ -23,3 +37,24 @@ petclinic:
       jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
       issuer: petclinic-test
       audience: petclinic-test
+  # Phase G — common-events autoconfig require RabbitMQ. Test KHÔNG có broker
+  # (không spin RabbitMQTestcontainer), nên tắt event publishing hoàn toàn.
+  # ObjectProvider<EventPublisher> trong RatingServiceImpl sẽ return null → skip publish.
+  events:
+    enabled: false
+  # Phase E2 — dummy storage props cho smoke test (context load). Integration test
+  # qua Testcontainers MinIO sẽ override 4 prop này via @DynamicPropertySource.
+  storage:
+    minio:
+      endpoint: http://localhost:9000
+      access-key: minioadmin
+      secret-key: minioadmin
+      bucket: avatars
+      presigned-ttl: PT1H
+      max-file-size-bytes: 10485760
+    # Phase I — disable schedule trong test. IT gọi runCleanup() trực tiếp qua autowired bean.
+    cleanup:
+      enabled: false
+      dry-run: false
+      cron: "0 0 3 * * *"
+      min-age: PT0S  # test: no grace window — orphan vừa upload cũng được xét luôn

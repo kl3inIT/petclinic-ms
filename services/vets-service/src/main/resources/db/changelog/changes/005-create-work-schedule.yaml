@@ -1,0 +1,39 @@
+databaseChangeLog:
+
+  # Phase C — vet_work_schedule: lịch trực hàng tuần của vet (Workday × WorkHour).
+  # Lookup table (KHÔNG audit) — slot có hay không là binary, lifecycle = ai sửa lần cuối
+  # đã được track ở vet record. PK ghép (vet_id, workday, work_hour) tự cover index cho
+  # query chính "list slot của 1 vet" (left-prefix), không cần index riêng.
+  # FK CASCADE: xoá vet → xoá luôn schedule.
+
+  - changeSet:
+      id: 005-001-create-table-work-schedule
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: vets
+            tableName: vet_work_schedule
+            columns:
+              - column:
+                  name: vet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_work_schedule_vet
+                    references: vets.vets(id)
+                    deleteCascade: true
+              - column:
+                  name: workday
+                  type: VARCHAR(15)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: work_hour
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            schemaName: vets
+            tableName: vet_work_schedule
+            columnNames: vet_id, workday, work_hour
+            constraintName: pk_vet_work_schedule

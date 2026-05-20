@@ -4,4 +4,18 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/002-add-auditing-columns.yaml
   - include:
+      file: db/changelog/changes/003-add-vet-contact.yaml
+  - include:
+      file: db/changelog/changes/004-create-education.yaml
+  - include:
+      file: db/changelog/changes/005-create-work-schedule.yaml
+  - include:
       file: db/changelog/changes/006-seed-dev-data.yaml
+  - include:
+      file: db/changelog/changes/007-create-ratings.yaml
+  - include:
+      file: db/changelog/changes/008-create-badges.yaml
+  - include:
+      file: db/changelog/changes/009-create-vet-media.yaml
+  - include:
+      file: db/changelog/changes/010-rating-unique-customer.yaml

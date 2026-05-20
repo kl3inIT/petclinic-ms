@@ -5,6 +5,7 @@
     <toRun name="customers-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="vets-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="visits-service" type="SpringBootApplicationConfigurationType" />
+    <toRun name="reviews-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="mailer-service" type="GoApplicationRunConfiguration" />
     <toRun name="admin-server" type="SpringBootApplicationConfigurationType" />
     <method v="2" />

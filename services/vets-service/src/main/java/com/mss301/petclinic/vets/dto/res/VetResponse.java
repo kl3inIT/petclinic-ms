@@ -9,6 +9,10 @@ public record VetResponse(
         Long id,
         String firstName,
         String lastName,
+        String email,
+        String phoneNumber,
+        boolean active,
+        String resume,
         List<SpecialtyResponse> specialties
 ) {
     public static VetResponse from(Vet vet) {
@@ -17,6 +21,15 @@ public record VetResponse(
                 .map(SpecialtyResponse::from)
                 .sorted(java.util.Comparator.comparing(SpecialtyResponse::name))
                 .toList();
-        return new VetResponse(vet.getId(), vet.getFirstName(), vet.getLastName(), specs);
+        return new VetResponse(
+                vet.getId(),
+                vet.getFirstName(),
+                vet.getLastName(),
+                vet.getEmail(),
+                vet.getPhoneNumber(),
+                vet.isActive(),
+                vet.getResume(),
+                specs
+        );
     }
 }

@@ -535,6 +535,163 @@
         }
       }
     },
+    "/api/v1/vets/me": {
+      "get": {
+        "tags": [
+          "Vet Me (self-service)"
+        ],
+        "summary": "Profile cua vet dang login",
+        "operationId": "getMyVetProfile",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Vet Me (self-service)"
+        ],
+        "summary": "Sua profile cua vet dang login (PATCH partial)",
+        "operationId": "updateMyVetProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/work-schedule": {
+      "get": {
+        "tags": [
+          "Vet Me (self-service)"
+        ],
+        "summary": "Lich truc cua vet dang login",
+        "operationId": "listMyWorkSchedule",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkScheduleSlotResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/ratings": {
+      "get": {
+        "tags": [
+          "Vet Me (self-service)"
+        ],
+        "summary": "Ratings customer cham cho vet dang login (paginated)",
+        "operationId": "listMyRatings",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageRatingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/ratings/summary": {
+      "get": {
+        "tags": [
+          "Vet Me (self-service)"
+        ],
+        "summary": "Summary ratings cua vet dang login (count, average, distribution)",
+        "operationId": "getMyRatingsSummary",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/badges": {
+      "get": {
+        "tags": [
+          "Vet Me (self-service)"
+        ],
+        "summary": "Badges cua vet dang login (paginated)",
+        "operationId": "listMyBadges",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageBadgeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/specialties": {
       "get": {
         "tags": [
@@ -1188,6 +1345,15 @@
             "type": "string",
             "minLength": 1
           },
+          "email": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "resume": {
+            "type": "string"
+          },
           "specialtyNames": {
             "type": "array",
             "items": {
@@ -1226,11 +1392,261 @@
           "lastName": {
             "type": "string"
           },
+          "email": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "resume": {
+            "type": "string"
+          },
           "specialties": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SpecialtyResponse"
             }
+          }
+        }
+      },
+      "UpdateVetRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "resume": {
+            "type": "string"
+          },
+          "specialtyNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        }
+      },
+      "WorkScheduleSlotResponse": {
+        "type": "object",
+        "properties": {
+          "workday": {
+            "type": "string",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ]
+          },
+          "workHour": {
+            "type": "string",
+            "enum": [
+              "HOUR_8_9",
+              "HOUR_9_10",
+              "HOUR_10_11",
+              "HOUR_11_12",
+              "HOUR_12_13",
+              "HOUR_13_14",
+              "HOUR_14_15",
+              "HOUR_15_16",
+              "HOUR_16_17",
+              "HOUR_17_18",
+              "HOUR_18_19",
+              "HOUR_19_20"
+            ]
+          }
+        },
+        "required": [
+          "workHour",
+          "workday"
+        ]
+      },
+      "RatingResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "rateDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RatingSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "average": {
+            "type": "number",
+            "format": "double"
+          },
+          "distribution": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        }
+      },
+      "PageRatingResponse": {
+        "type": "object",
+        "properties": {
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RatingResponse"
+            }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BadgeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string",
+            "enum": [
+              "ROOKIE",
+              "EXPERIENCED",
+              "MASTER",
+              "SURGERY_EXPERT",
+              "RESEARCH_AWARD",
+              "TOP_RATED"
+            ]
+          },
+          "awardedDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "PageBadgeResponse": {
+        "type": "object",
+        "properties": {
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BadgeResponse"
+            }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "empty": {
+            "type": "boolean"
           }
         }
       },

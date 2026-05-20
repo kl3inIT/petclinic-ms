@@ -1,0 +1,72 @@
+databaseChangeLog:
+
+  # Phase D — Ratings sub-resource. FK CASCADE để xoá vet kéo theo rating (consistent
+  # với education/work-schedule). CHECK constraint score 1-5 ở DB layer — defense-in-depth
+  # song song với @Min/@Max ở DTO (FE bypass validation cũng không thể insert dirty data).
+  # customerName tạm thời là string từ body — sau này nâng cấp lấy từ JWT principal
+  # (sub claim) qua method-level @PreAuthorize.
+
+  - changeSet:
+      id: 007-001-create-table-ratings
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: vets
+            tableName: ratings
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: vet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_ratings_vet
+                    references: vets.vets(id)
+                    deleteCascade: true
+              - column:
+                  name: score
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column: { name: description, type: TEXT }
+              - column:
+                  name: customer_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rate_date
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+                  constraints:
+                    nullable: false
+              # Audit columns — AbstractAuditingEntity fill qua Spring Data Auditing
+              - column: { name: created_by,         type: VARCHAR(50) }
+              - column: { name: created_date,       type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: last_modified_by,   type: VARCHAR(50) }
+              - column: { name: last_modified_date, type: TIMESTAMP WITH TIME ZONE }
+
+  - changeSet:
+      id: 007-002-add-score-check-constraint
+      author: mss301
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: ALTER TABLE vets.ratings ADD CONSTRAINT ck_ratings_score CHECK (score >= 1 AND score <= 5)
+
+  - changeSet:
+      id: 007-003-index-ratings-vet-id
+      author: mss301
+      changes:
+        # Query chính: WHERE vet_id = ? (list + count + avg). Index dramatically tăng tốc.
+        - createIndex:
+            schemaName: vets
+            tableName: ratings
+            indexName: idx_ratings_vet_id
+            columns:
+              - column: { name: vet_id }

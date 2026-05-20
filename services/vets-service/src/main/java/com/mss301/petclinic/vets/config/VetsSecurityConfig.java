@@ -2,6 +2,7 @@ package com.mss301.petclinic.vets.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -12,21 +13,27 @@ import com.mss301.petclinic.common.security.endpoints.EndpointSecurityCustomizer
 import com.mss301.petclinic.common.security.endpoints.SecurityEndpointsProperties;
 
 /**
- * Vets-service security — declarative RBAC từ {@code config-repo/vets-service.yml}.
+ * Vets-service security — declarative RBAC từ {@code config-repo/vets-service.yml} qua
+ * {@link EndpointSecurityCustomizer}, PLUS 2 nhóm rule hardcoded không fit YAML pattern.
  *
- * <p>Hardcoded rules trước đây đã chuyển sang YAML dưới prefix
- * {@code petclinic.security.endpoints.*}. Lý do refactor:
- * <ul>
- *   <li><b>Single source of truth</b> — đổi role không deploy code, chỉ pull config</li>
- *   <li><b>Slide MSS301 "Least Privilege"</b> — 1 YAML view cho ops/security team audit</li>
- *   <li><b>Consistency cross-service</b> — customers/visits/auth/genai dùng cùng pattern</li>
- * </ul>
- *
- * <h4>Filter chain</h4>
+ * <h4>Hardcoded rules — lý do</h4>
  * <ol>
- *   <li>Infra endpoints permitAll (actuator, swagger) — hardcoded vì không phải business RBAC</li>
- *   <li>{@link EndpointSecurityCustomizer#apply} áp public/admin/staff/user rules từ YAML</li>
- *   <li>{@code anyRequest().authenticated()} — safety net cho endpoint thiếu rule</li>
+ *   <li><b>Phase K /me endpoints</b> — cần VET+STAFF+ADMIN (3 role). Helper
+ *       {@code customRoles} chỉ support single role + ADMIN; staffEndpoints chỉ STAFF+ADMIN.
+ *       Hardcode 2 dòng đơn giản hơn extend helper.</li>
+ *   <li><b>Sub-resource DELETE</b> ({@code /vets/{id}/educations/**}, work-schedule, ratings,
+ *       badges, photo, album) — STAFF có quyền. Helper apply admin bucket TRƯỚC staff →
+ *       pattern broad {@code DELETE /vets/**} (admin-only) sẽ match sub-resource trước,
+ *       STAFF bị block. Hardcode sub-resource DELETE TRƯỚC apply() để specificity win.</li>
+ * </ol>
+ *
+ * <h4>Filter chain order</h4>
+ * <ol>
+ *   <li>Infra endpoints permitAll (actuator, swagger)</li>
+ *   <li>Phase K /me hardcoded — VET+STAFF+ADMIN</li>
+ *   <li>Sub-resource DELETE hardcoded — STAFF+ADMIN</li>
+ *   <li>{@link EndpointSecurityCustomizer#apply} áp public/admin/staff/user từ YAML</li>
+ *   <li>{@code anyRequest().authenticated()} — safety net</li>
  * </ol>
  */
 @Configuration
@@ -41,6 +48,7 @@ public class VetsSecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
+                    // Infra — public
                     auth.requestMatchers(
                                     "/actuator/health/**",
                                     "/actuator/info",
@@ -48,7 +56,34 @@ public class VetsSecurityConfig {
                                     "/swagger-ui/**",
                                     "/swagger-ui.html")
                             .permitAll();
+
+                    // Phase K — /me endpoints (multi-role VET+STAFF+ADMIN, hardcoded vì
+                    // customRoles helper chỉ support role+ADMIN). Phải khai báo TRƯỚC YAML
+                    // rule /vets/** để first-match-wins.
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/vets/me", "/api/v1/vets/me/**")
+                            .hasAnyRole("VET", "STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.PATCH, "/api/v1/vets/me")
+                            .hasAnyRole("VET", "STAFF", "ADMIN");
+
+                    // Sub-resource DELETE — STAFF (lifecycle riêng, không hard-delete vet record).
+                    // Hardcoded TRƯỚC apply() để win first-match vs YAML admin rule
+                    // DELETE /api/v1/vets/** (admin-only).
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/educations/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/work-schedule/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/ratings/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/badges/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/photo")
+                            .hasAnyRole("STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/album/**")
+                            .hasAnyRole("STAFF", "ADMIN");
+
+                    // General role rules từ YAML
                     EndpointSecurityCustomizer.apply(auth, endpoints);
+
                     auth.anyRequest().authenticated();
                 })
                 .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(jwtAuthConverter)));

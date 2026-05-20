@@ -1,0 +1,50 @@
+databaseChangeLog:
+
+  # Phase A — mở rộng Vet: email/phone/active/resume.
+  # email: NOT NULL UNIQUE. Để hỗ trợ DB đã có vet cũ không email, addColumn nullable trước,
+  # backfill bằng pattern `vet-<id>@petclinic.local`, rồi mới enforce NOT NULL + UNIQUE.
+  # Trên fresh DB (bảng rỗng), changeset backfill không update row nào — vô hại, vẫn idempotent.
+
+  - changeSet:
+      id: 003-001-add-vet-contact-columns
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: vets
+            tableName: vets
+            columns:
+              - column: { name: email,        type: VARCHAR(255) }
+              - column: { name: phone_number, type: VARCHAR(30) }
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column: { name: resume,       type: TEXT }
+
+  - changeSet:
+      id: 003-002-backfill-vet-email
+      author: mss301
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              UPDATE vets.vets
+              SET email = 'vet-' || id || '@petclinic.local'
+              WHERE email IS NULL
+
+  - changeSet:
+      id: 003-003-enforce-vet-email-constraints
+      author: mss301
+      changes:
+        - addNotNullConstraint:
+            schemaName: vets
+            tableName: vets
+            columnName: email
+            columnDataType: VARCHAR(255)
+        - addUniqueConstraint:
+            schemaName: vets
+            tableName: vets
+            columnNames: email
+            constraintName: uk_vets_email

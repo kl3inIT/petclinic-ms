@@ -49,6 +49,14 @@ public class User extends AbstractAuditingEntity {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /**
+     * Phase K — link tới vet entity (vets-service). NULL = user thường.
+     * Non-null → JWT có claim {@code vetId} → vets-service `/api/v1/vets/me/*` dùng claim này.
+     * KHÔNG FK constraint (cross-schema) — integrity check ở app layer khi admin link.
+     */
+    @Column(name = "vet_id", nullable = true)
+    private Long vetId;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -66,4 +74,7 @@ public class User extends AbstractAuditingEntity {
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public Long getVetId() { return vetId; }
+    public void setVetId(Long vetId) { this.vetId = vetId; }
 }

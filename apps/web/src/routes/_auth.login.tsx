@@ -34,7 +34,15 @@ function LoginPage() {
           user: { id: data.userId!, username: data.username!, roles: data.roles ?? [] },
         });
         toast.success(`Xin chào ${data.username}`);
-        void navigate({ to: search.redirect ?? '/admin' });
+        // Redirect theo role (Phase K). VET → /vet, ADMIN|STAFF → /admin, fallback /.
+        // URL search.redirect override role-based default (deep-link login).
+        const roles = data.roles ?? [];
+        const roleHome = roles.includes('VET')
+          ? '/vet'
+          : roles.includes('ADMIN') || roles.includes('STAFF')
+            ? '/admin'
+            : '/';
+        void navigate({ to: search.redirect ?? roleHome });
       },
       onError: () => {
         toast.error('Username hoặc password không đúng');
@@ -58,9 +66,7 @@ function LoginPage() {
     >
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold">Đăng nhập</h1>
-        <p className="text-sm text-muted-foreground">
-          Truy cập PetClinic admin portal
-        </p>
+        <p className="text-sm text-muted-foreground">Đăng nhập vào PetClinic</p>
       </div>
 
       <form.Field
