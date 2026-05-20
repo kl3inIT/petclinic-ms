@@ -59,14 +59,26 @@ public class VetPhotoServiceImpl implements VetPhotoService {
             throw new UncheckedIOException("Failed to read uploaded file for vet " + vetId, e);
         }
 
-        VetPhoto photo = photoRepository.findById(vetId)
-                .orElseGet(() -> new VetPhoto(vetId, key, file.getContentType(), file.getSize()));
-        photo.setObjectKey(key);
-        photo.setContentType(file.getContentType());
-        photo.setSizeBytes(file.getSize());
-        photo.setUploadedAt(java.time.OffsetDateTime.now());
-        VetPhoto saved = photoRepository.save(photo);
-        return VetPhotoResponse.from(saved, storage.presignedGet(key, props.presignedTtl()));
+        // Compensating cleanup: nếu DB save fail sau khi MinIO đã ghi → revert MinIO object về
+        // state cũ (xoá nếu là insert mới). Không revert được thành state trước-upload cho
+        // case update (object cũ đã bị overwrite), nhưng tránh được state inconsistency tệ
+        // nhất: DB metadata cũ + MinIO content mới. Re-upload sẽ retry idempotent.
+        boolean isNew = photoRepository.findById(vetId).isEmpty();
+        try {
+            VetPhoto photo = photoRepository.findById(vetId)
+                    .orElseGet(() -> new VetPhoto(vetId, key, file.getContentType(), file.getSize()));
+            photo.setObjectKey(key);
+            photo.setContentType(file.getContentType());
+            photo.setSizeBytes(file.getSize());
+            photo.setUploadedAt(java.time.OffsetDateTime.now());
+            VetPhoto saved = photoRepository.save(photo);
+            return VetPhotoResponse.from(saved, storage.presignedGet(key, props.presignedTtl()));
+        } catch (RuntimeException ex) {
+            if (isNew) {
+                try { storage.delete(key); } catch (RuntimeException ignored) { /* best-effort */ }
+            }
+            throw ex;
+        }
     }
 
     @Override

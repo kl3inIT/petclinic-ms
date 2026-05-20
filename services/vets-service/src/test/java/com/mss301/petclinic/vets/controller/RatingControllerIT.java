@@ -154,6 +154,37 @@ class RatingControllerIT {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void addVetRating_sameCustomerTwice_upsertsInPlaceAndCountIsOne() throws Exception {
+        Long vetId = firstVetId();
+
+        // Lần 1: rate 5 sao
+        String first = mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"score\": 5, \"description\": \"first\"}")
+                        .with(staff("alice")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long firstId = om.readTree(first).path("id").asLong();
+
+        // Lần 2: cùng alice rate lại vet đó với 2 sao → UPSERT, KHÔNG tạo row mới
+        String second = mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"score\": 2, \"description\": \"changed my mind\"}")
+                        .with(staff("alice")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value((int) firstId))   // cùng id → update không insert
+                .andExpect(jsonPath("$.score").value(2))
+                .andExpect(jsonPath("$.description").value("changed my mind"))
+                .andReturn().getResponse().getContentAsString();
+
+        // Summary chỉ count 1 — không bị spam
+        mvc.perform(get("/api/v1/vets/{vetId}/ratings/summary", vetId).with(staff()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(1))
+                .andExpect(jsonPath("$.average").value(2.0));
+    }
+
     // ---------- LIST + DELETE ----------
 
     @Test
@@ -276,6 +307,26 @@ class RatingControllerIT {
     void listTopRatedVets_limitOutOfRange_returns400() throws Exception {
         mvc.perform(get("/api/v1/vets/top-rated").param("limit", "0").with(staff()))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listTopRatedVets_sameAvgSameCount_tiebreakByVetIdAsc() throws Exception {
+        // 3 vet có cùng AVG=5.0 và cùng COUNT=1 → tiebreak theo id ASC (vetA < vetB < vetC).
+        // Nếu không có tertiary ORDER BY thì Postgres trả thứ tự không xác định.
+        Long vetA = firstVetId();
+        Long vetB = secondVetId();
+        Long vetC = thirdVetId();
+
+        addRating(vetA, 5, "alice");
+        addRating(vetB, 5, "bob");
+        addRating(vetC, 5, "carol");
+
+        mvc.perform(get("/api/v1/vets/top-rated").param("limit", "3").with(staff()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].vetId").value(vetA))
+                .andExpect(jsonPath("$[1].vetId").value(vetB))
+                .andExpect(jsonPath("$[2].vetId").value(vetC));
     }
 
     // ---------- helpers ----------

@@ -1,5 +1,6 @@
 package com.mss301.petclinic.vets.service.impl;
 
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,17 @@ public class RatingServiceImpl implements RatingService {
     @Transactional
     public RatingResponse create(Long vetId, RatingRequest request, String customerName) {
         ensureVetExists(vetId);
-        Rating saved = ratingRepository.save(request.toEntity(vetId, customerName));
+        // UPSERT: 1 customer chỉ có 1 rating per vet. POST trùng → update rating cũ.
+        // Unique constraint uk_ratings_vet_customer ở DB (changelog 010) là defense-in-depth.
+        Rating entity = ratingRepository.findByVetIdAndCustomerName(vetId, customerName)
+                .map(existing -> {
+                    existing.setScore(request.score());
+                    existing.setDescription(request.description());
+                    existing.setRateDate(OffsetDateTime.now());
+                    return existing;
+                })
+                .orElseGet(() -> request.toEntity(vetId, customerName));
+        Rating saved = ratingRepository.save(entity);
         return RatingResponse.from(saved);
     }
 
@@ -61,19 +72,23 @@ public class RatingServiceImpl implements RatingService {
     @Override
     public RatingSummaryResponse getSummary(Long vetId) {
         ensureVetExists(vetId);
-        long count = ratingRepository.countByVetId(vetId);
-        Double average = ratingRepository.findAverageScoreByVetId(vetId);
 
+        // 1 query GROUP BY score → derive count + average tại app layer (1 round-trip thay vì 3).
         // Fill đủ 5 key (1..5) với value mặc định 0 để FE không phải defensive null-check.
         Map<Integer, Long> distribution = new HashMap<>();
         for (int i = 1; i <= 5; i++) {
             distribution.put(i, 0L);
         }
+        long count = 0;
+        long weightedSum = 0;
         for (Object[] row : ratingRepository.findScoreDistributionByVetId(vetId)) {
             Integer score = (Integer) row[0];
             Long cnt = (Long) row[1];
             distribution.put(score, cnt);
+            count += cnt;
+            weightedSum += (long) score * cnt;
         }
+        Double average = (count == 0) ? null : (double) weightedSum / count;
 
         return new RatingSummaryResponse(count, average, distribution);
     }

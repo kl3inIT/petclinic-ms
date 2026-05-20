@@ -19,16 +19,13 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     long countByVetId(Long vetId);
 
-    /**
-     * Average score của 1 vet. {@code Double} (boxed) để phân biệt "0 rating" (null)
-     * và "average = 0.0" (impossible vì CHECK score >= 1).
-     */
-    @Query("SELECT AVG(r.score) FROM Rating r WHERE r.vetId = :vetId")
-    Double findAverageScoreByVetId(@Param("vetId") Long vetId);
+    boolean existsByVetIdAndCustomerName(Long vetId, String customerName);
+
+    Optional<Rating> findByVetIdAndCustomerName(Long vetId, String customerName);
 
     /**
-     * Distribution score (count theo từng giá trị 1-5). Trả 2 cột: score, count.
-     * Service map ra Map<Integer, Long> + fill 0 cho score thiếu.
+     * Tổng hợp count + avg + distribution trong 1 query (1 round-trip thay vì 3).
+     * Mỗi row: score (1..5), count. Service tính total + average từ rows.
      */
     @Query("SELECT r.score, COUNT(r) FROM Rating r WHERE r.vetId = :vetId GROUP BY r.score")
     List<Object[]> findScoreDistributionByVetId(@Param("vetId") Long vetId);
@@ -46,7 +43,7 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
             FROM Vet v, Rating r
             WHERE r.vetId = v.id AND v.active = true
             GROUP BY v.id, v.firstName, v.lastName
-            ORDER BY AVG(r.score) DESC, COUNT(r) DESC
+            ORDER BY AVG(r.score) DESC, COUNT(r) DESC, v.id ASC
             """)
     List<Object[]> findTopRatedVets(Pageable pageable);
 }

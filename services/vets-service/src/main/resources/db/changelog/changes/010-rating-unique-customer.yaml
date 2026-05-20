@@ -1,0 +1,32 @@
+databaseChangeLog:
+
+  # Phase F.1 — 1 customer chỉ rate 1 vet 1 lần. POST trùng → UPSERT (update score
+  # + description + rate_date). Chống thao túng điểm trung bình bằng cách spam POST
+  # cùng JWT subject. Service tự chuyển sang code path update khi đụng existing row,
+  # không rely DB exception — clean hơn và transaction-friendly.
+  #
+  # Migration này CÓ THỂ FAIL nếu data hiện tại đã có duplicate (vet_id, customer_name).
+  # Bước 010-001 dedupe trước (giữ row mới nhất theo id), 010-002 mới add unique.
+
+  - changeSet:
+      id: 010-001-dedupe-existing-ratings
+      author: mss301
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM vets.ratings r1
+              USING vets.ratings r2
+              WHERE r1.vet_id = r2.vet_id
+                AND r1.customer_name = r2.customer_name
+                AND r1.id < r2.id;
+
+  - changeSet:
+      id: 010-002-unique-rating-per-customer
+      author: mss301
+      changes:
+        - addUniqueConstraint:
+            schemaName: vets
+            tableName: ratings
+            columnNames: vet_id, customer_name
+            constraintName: uk_ratings_vet_customer

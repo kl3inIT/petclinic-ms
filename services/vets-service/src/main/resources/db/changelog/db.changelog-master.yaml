@@ -17,3 +17,5 @@ databaseChangeLog:
       file: db/changelog/changes/008-create-badges.yaml
   - include:
       file: db/changelog/changes/009-create-vet-media.yaml
+  - include:
+      file: db/changelog/changes/010-rating-unique-customer.yaml

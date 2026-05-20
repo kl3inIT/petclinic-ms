@@ -60,15 +60,27 @@ public class VetAlbumServiceImpl implements VetAlbumService {
         VetAlbumPhoto saved = albumRepository.saveAndFlush(entity);
 
         String key = "vets/album/" + vetId + "/" + saved.getId();
+        boolean uploaded = false;
         try {
-            storage.upload(key, file.getContentType(), file.getInputStream(), file.getSize());
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to read uploaded file for vet " + vetId, e);
+            try {
+                storage.upload(key, file.getContentType(), file.getInputStream(), file.getSize());
+                uploaded = true;
+            } catch (IOException e) {
+                throw new UncheckedIOException("Failed to read uploaded file for vet " + vetId, e);
+            }
+            saved.setObjectKey(key);
+            VetAlbumPhoto persisted = albumRepository.save(saved);
+            return VetAlbumPhotoResponse.from(persisted,
+                    storage.presignedGet(key, props.presignedTtl()));
+        } catch (RuntimeException ex) {
+            // DB save lần 2 fail (hoặc bất kỳ throw nào sau khi upload xong) → MinIO object
+            // orphan vì @Transactional sẽ rollback luôn cả saveAndFlush. Cleanup best-effort.
+            // Nếu cleanup fail → MinioOrphanCleanupJob lo phần còn lại.
+            if (uploaded) {
+                try { storage.delete(key); } catch (RuntimeException ignored) { /* best-effort */ }
+            }
+            throw ex;
         }
-        saved.setObjectKey(key);
-        VetAlbumPhoto persisted = albumRepository.save(saved);
-        return VetAlbumPhotoResponse.from(persisted,
-                storage.presignedGet(key, props.presignedTtl()));
     }
 
     @Override

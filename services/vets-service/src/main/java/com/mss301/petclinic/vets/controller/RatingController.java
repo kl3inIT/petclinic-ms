@@ -58,11 +58,14 @@ public class RatingController {
 
     @PostMapping
     @Operation(
-            summary = "Add rating to a vet",
+            summary = "Add or update rating of a vet (UPSERT)",
             description = "score 1-5 (out of range → 400 ProblemDetail). " +
                           "customerName lấy từ JWT claim 'username' (auth-service ký vào access token) " +
                           "— client không thể giả mạo identity. Vet không tồn tại → 404. " +
-                          "JWT thiếu claim 'username' → 400 (token version cũ → cần login lại)."
+                          "JWT thiếu claim 'username' → 400 (token version cũ → cần login lại). " +
+                          "POST lần thứ 2 của cùng customer trên cùng vet → UPSERT (update rating cũ + " +
+                          "đổi rateDate). Unique (vet_id, customer_name) ở DB layer. " +
+                          "Body field customerName (nếu có) bị Jackson silently ignore."
     )
     public ResponseEntity<RatingResponse> addVetRating(
             @PathVariable Long vetId,
