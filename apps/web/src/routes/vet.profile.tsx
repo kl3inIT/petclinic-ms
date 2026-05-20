@@ -39,8 +39,10 @@ function VetProfilePage() {
     onSubmit: ({ value }) =>
       updateMutation.mutate(
         {
-          phoneNumber: value.phoneNumber.trim() || undefined,
-          resume: value.resume.trim() || undefined,
+          data: {
+            phoneNumber: value.phoneNumber.trim() || undefined,
+            resume: value.resume.trim() || undefined,
+          },
         },
         {
           onSuccess: () => toast.success('Đã cập nhật hồ sơ'),

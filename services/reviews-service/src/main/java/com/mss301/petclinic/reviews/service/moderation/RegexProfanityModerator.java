@@ -42,19 +42,22 @@ public class RegexProfanityModerator implements ContentModerator {
     private static final Pattern NON_LETTER = Pattern.compile("[^a-z]");
 
     private final Set<String> longWords;   // ≥4 chars — substring match
-    private final List<Pattern> shortWordPatterns;  // ≤3 chars — word-boundary regex
+    private final List<ShortWord> shortWords;  // ≤3 chars — word-boundary regex
 
     public RegexProfanityModerator() {
         Set<String> all = loadWordList();
         this.longWords = all.stream()
+                .map(RegexProfanityModerator::flatWord)
                 .filter(w -> w.length() >= 4)
                 .collect(Collectors.toUnmodifiableSet());
-        this.shortWordPatterns = all.stream()
+        this.shortWords = all.stream()
+                .map(RegexProfanityModerator::normalizeBoundaryWord)
                 .filter(w -> w.length() <= 3 && !w.isEmpty())
-                .map(w -> Pattern.compile("(?<![a-z])" + Pattern.quote(w) + "(?![a-z])"))
+                .map(w -> new ShortWord(w,
+                        Pattern.compile("(?<![a-z])" + Pattern.quote(w) + "(?![a-z])")))
                 .toList();
         LOG.info("Loaded profanity list: {} long words, {} short words",
-                longWords.size(), shortWordPatterns.size());
+                longWords.size(), shortWords.size());
     }
 
     @Override
@@ -71,9 +74,9 @@ public class RegexProfanityModerator implements ContentModerator {
             }
         }
 
-        for (Pattern p : shortWordPatterns) {
-            if (p.matcher(boundaryText).find()) {
-                hits.add(p.pattern());
+        for (ShortWord w : shortWords) {
+            if (w.pattern().matcher(boundaryText).find()) {
+                hits.add(w.word());
             }
         }
 
@@ -101,6 +104,16 @@ public class RegexProfanityModerator implements ContentModerator {
                 .replace('7', 't')
                 .replace('8', 'b');
     }
+
+    private static String normalizeBoundaryWord(String s) {
+        return leet(deaccentLower(s.trim()));
+    }
+
+    private static String flatWord(String s) {
+        return NON_LETTER.matcher(normalizeBoundaryWord(s)).replaceAll("");
+    }
+
+    private record ShortWord(String word, Pattern pattern) {}
 
     private static Set<String> loadWordList() {
         try (InputStream in = new ClassPathResource(WORD_LIST_PATH).getInputStream()) {

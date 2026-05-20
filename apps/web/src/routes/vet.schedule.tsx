@@ -98,7 +98,7 @@ function VetSchedulePage() {
                 </tr>
               </thead>
               <tbody>
-                {WORKHOUR_ORDER.map((h, hIdx) => (
+                {WORKHOUR_ORDER.map((h) => (
                   <tr key={h} className="hover:bg-muted/30">
                     <td className="sticky left-0 z-10 border-b bg-background px-3 py-2 font-medium">
                       {WORKHOUR_LABEL[h]}

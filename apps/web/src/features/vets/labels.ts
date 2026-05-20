@@ -15,8 +15,14 @@
  * dưới đây sang import type tương ứng để TS check exhaustive.
  */
 
+import type {
+  BadgeResponseTitle,
+  WorkScheduleSlotResponseWorkHour,
+  WorkScheduleSlotResponseWorkday,
+} from '@/lib/api/generated/model';
+
 // ─── Workday (Phase C) ──────────────────────────────────────────────────────────
-export const WORKDAY_LABEL: Record<string, string> = {
+export const WORKDAY_LABEL: Record<WorkScheduleSlotResponseWorkday, string> = {
   MONDAY: 'Thứ Hai',
   TUESDAY: 'Thứ Ba',
   WEDNESDAY: 'Thứ Tư',
@@ -26,12 +32,12 @@ export const WORKDAY_LABEL: Record<string, string> = {
   SUNDAY: 'Chủ Nhật',
 };
 
-export const WORKDAY_ORDER: string[] = [
+export const WORKDAY_ORDER: WorkScheduleSlotResponseWorkday[] = [
   'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
 ];
 
 // ─── WorkHour (Phase C) — slot 1 giờ từ 8h đến 20h ──────────────────────────────
-export const WORKHOUR_LABEL: Record<string, string> = {
+export const WORKHOUR_LABEL: Record<WorkScheduleSlotResponseWorkHour, string> = {
   HOUR_8_9: '8 - 9h',
   HOUR_9_10: '9 - 10h',
   HOUR_10_11: '10 - 11h',
@@ -46,13 +52,13 @@ export const WORKHOUR_LABEL: Record<string, string> = {
   HOUR_19_20: '19 - 20h',
 };
 
-export const WORKHOUR_ORDER: string[] = [
+export const WORKHOUR_ORDER: WorkScheduleSlotResponseWorkHour[] = [
   'HOUR_8_9', 'HOUR_9_10', 'HOUR_10_11', 'HOUR_11_12', 'HOUR_12_13', 'HOUR_13_14',
   'HOUR_14_15', 'HOUR_15_16', 'HOUR_16_17', 'HOUR_17_18', 'HOUR_18_19', 'HOUR_19_20',
 ];
 
 // ─── BadgeTitle (Phase E1) ──────────────────────────────────────────────────────
-export const BADGE_TITLE_LABEL: Record<string, string> = {
+export const BADGE_TITLE_LABEL: Record<BadgeResponseTitle, string> = {
   ROOKIE: 'Tân binh',
   EXPERIENCED: 'Bác sĩ kinh nghiệm',
   MASTER: 'Bậc thầy',

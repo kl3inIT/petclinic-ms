@@ -39,7 +39,6 @@ clgt
 dcm
 ditme
 dume
-dume
 
 # Slurs (FR-CA — for compat với Champlain bad-words list)
 tabarnak

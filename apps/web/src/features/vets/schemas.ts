@@ -20,7 +20,6 @@ export const vetSchema = z.object({
   email: z.string().min(1, 'Bắt buộc').email('Email không hợp lệ').max(255),
   phoneNumber: z.string().max(30, 'Tối đa 30 ký tự'),
   resume: z.string().max(10_000, 'Tối đa 10000 ký tự'),
-  active: z.boolean(),
 });
 export type VetInput = z.infer<typeof vetSchema>;
 
@@ -47,9 +46,9 @@ export type RatingInput = z.infer<typeof ratingSchema>;
  */
 export const educationSchema = z
   .object({
-    schoolName: z.string().min(1, 'Bắt buộc').max(255),
+    schoolName: z.string().min(1, 'Bắt buộc').max(200),
     degree: z.string().min(1, 'Bắt buộc').max(100),
-    fieldOfStudy: z.string().max(100),
+    fieldOfStudy: z.string().max(150),
     startDate: z.string().min(1, 'Chọn ngày bắt đầu'),
     endDate: z.string(),
   })

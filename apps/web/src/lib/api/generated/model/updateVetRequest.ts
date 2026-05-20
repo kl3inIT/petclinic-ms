@@ -5,15 +5,13 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
-import type { SpecialtyResponse } from './specialtyResponse';
 
-export interface VetResponse {
-  id?: number;
+export interface UpdateVetRequest {
   firstName?: string;
   lastName?: string;
   email?: string;
   phoneNumber?: string;
   active?: boolean;
   resume?: string;
-  specialties?: SpecialtyResponse[];
+  specialtyNames?: string[];
 }

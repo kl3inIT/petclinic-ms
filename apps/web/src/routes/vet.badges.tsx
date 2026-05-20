@@ -9,9 +9,10 @@ import { useMyBadges } from '@/features/vet-me/api';
 import { VetPageHeader } from '@/features/vet-me/components/VetPageHeader';
 import { EmptyState } from '@/features/vet-me/components/EmptyState';
 import { BADGE_TITLE_LABEL } from '@/features/vets/labels';
+import type { BadgeResponseTitle } from '@/lib/api/generated/model';
 
 /** Catalog tất cả badge — match enum BadgeTitle BE. Dùng để render locked state. */
-const ALL_BADGES: { title: string; description: string }[] = [
+const ALL_BADGES: { title: BadgeResponseTitle; description: string }[] = [
   { title: 'ROOKIE', description: 'Hoàn thành 10 ca khám đầu tiên.' },
   { title: 'EXPERIENCED', description: 'Trên 100 ca khám với rating ≥ 4.0.' },
   { title: 'MASTER', description: 'Trên 500 ca khám, đánh giá xuất sắc.' },
@@ -29,7 +30,7 @@ function VetBadgesPage() {
   const listQuery = useMyBadges(page);
 
   // Set các badge title đã đạt — dùng để xác định locked badge
-  const earnedTitles = new Set((listQuery.data?.content ?? []).map((b) => b.title));
+  const earnedTitles = new Set((listQuery.data?.content ?? []).map((b) => b.title).filter(Boolean));
   const lockedBadges = ALL_BADGES.filter((b) => !earnedTitles.has(b.title));
 
   return (
@@ -75,12 +76,12 @@ function VetBadgesPage() {
                       <Medal className="size-5" />
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(b.awardedDate).toLocaleDateString('vi-VN')}
+                      {b.awardedDate ? new Date(b.awardedDate).toLocaleDateString('vi-VN') : '—'}
                     </span>
                   </div>
                   <div>
                     <div className="font-semibold">
-                      {BADGE_TITLE_LABEL[b.title] ?? b.title}
+                      {b.title ? BADGE_TITLE_LABEL[b.title] ?? b.title : '—'}
                     </div>
                     {b.description && (
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -95,7 +96,7 @@ function VetBadgesPage() {
         )}
 
         {/* Pagination — chỉ cho earned section */}
-        {listQuery.data && listQuery.data.totalPages > 1 && (
+        {listQuery.data && (listQuery.data.totalPages ?? 0) > 1 && (
           <div className="flex items-center justify-center gap-2 pt-2">
             <Button
               variant="outline"
@@ -107,14 +108,14 @@ function VetBadgesPage() {
               Trước
             </Button>
             <span className="text-sm text-muted-foreground">
-              Trang {page + 1} / {listQuery.data.totalPages}
+              Trang {page + 1} / {listQuery.data.totalPages ?? 1}
             </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={page + 1 >= listQuery.data.totalPages}
+              disabled={page + 1 >= (listQuery.data.totalPages ?? 1)}
               onClick={() =>
-                setPage((p) => (p + 1 < listQuery.data!.totalPages ? p + 1 : p))
+                setPage((p) => (p + 1 < (listQuery.data?.totalPages ?? 1) ? p + 1 : p))
               }
             >
               Sau

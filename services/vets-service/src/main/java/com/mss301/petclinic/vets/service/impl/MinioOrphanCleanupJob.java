@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,14 +24,13 @@ import com.mss301.petclinic.vets.service.StorageService;
  * upload và DB save. Cleanup chạy 3 AM hằng ngày (configurable qua
  * {@link StorageCleanupProperties#cron()}) — giờ idle để tránh đua với traffic thật.</p>
  *
- * <p>Bean chỉ được tạo khi {@code petclinic.storage.cleanup.enabled=true} (default).
- * Test profile set {@code false} để job không tự kích hoạt và can thiệp test khác.</p>
+ * <p>{@code petclinic.storage.cleanup.enabled=false} tắt schedule, nhưng vẫn giữ bean
+ * để integration test có thể gọi {@link #runCleanup()} trực tiếp.</p>
  *
  * <p><b>KHÔNG</b> đảo lại: DB row trỏ tới object S3 không tồn tại — đó là dấu hiệu data
  * corruption nghiêm trọng hơn, cần alert manual chứ không tự fix.</p>
  */
 @Component
-@ConditionalOnProperty(name = "petclinic.storage.cleanup.enabled", havingValue = "true", matchIfMissing = true)
 public class MinioOrphanCleanupJob {
 
     private static final Logger log = LoggerFactory.getLogger(MinioOrphanCleanupJob.class);
@@ -57,6 +55,9 @@ public class MinioOrphanCleanupJob {
 
     @Scheduled(cron = "${petclinic.storage.cleanup.cron:0 0 3 * * *}")
     public void scheduledCleanup() {
+        if (!cleanupProps.enabled()) {
+            return;
+        }
         runCleanup();
     }
 

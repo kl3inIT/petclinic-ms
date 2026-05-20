@@ -63,7 +63,8 @@ function VetsPage() {
       {isError && (
         <Card>
           <CardContent className="py-6 text-destructive">
-            Lỗi tải danh sách: {error?.message ?? 'unknown'}
+            Lỗi tải danh sách:{' '}
+            {error instanceof Error ? error.message : 'unknown'}
           </CardContent>
         </Card>
       )}

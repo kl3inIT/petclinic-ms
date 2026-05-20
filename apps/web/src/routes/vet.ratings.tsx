@@ -114,16 +114,16 @@ function VetRatingsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                       <div className="flex size-9 items-center justify-center rounded-full bg-muted text-sm font-medium uppercase">
-                        {r.customerName.charAt(0)}
+                        {(r.customerName ?? '?').charAt(0)}
                       </div>
                       <div>
-                        <div className="font-medium">{r.customerName}</div>
+                        <div className="font-medium">{r.customerName ?? '—'}</div>
                         <div className="text-xs text-muted-foreground">
-                          {new Date(r.rateDate).toLocaleString('vi-VN')}
+                          {r.rateDate ? new Date(r.rateDate).toLocaleString('vi-VN') : '—'}
                         </div>
                       </div>
                     </div>
-                    <StarRating score={r.score} size="md" />
+                    <StarRating score={r.score ?? 0} size="md" />
                   </div>
                   {r.description && (
                     <p className="ml-12 text-sm leading-relaxed text-muted-foreground">
@@ -138,7 +138,7 @@ function VetRatingsPage() {
       </Card>
 
       {/* Pagination */}
-      {listQuery.data && listQuery.data.totalPages > 1 && (
+      {listQuery.data && (listQuery.data.totalPages ?? 0) > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button
             variant="outline"
@@ -150,14 +150,14 @@ function VetRatingsPage() {
             Trước
           </Button>
           <span className="text-sm text-muted-foreground">
-            Trang {page + 1} / {listQuery.data.totalPages}
+            Trang {page + 1} / {listQuery.data.totalPages ?? 1}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={page + 1 >= listQuery.data.totalPages}
+            disabled={page + 1 >= (listQuery.data.totalPages ?? 1)}
             onClick={() =>
-              setPage((p) => (p + 1 < listQuery.data!.totalPages ? p + 1 : p))
+              setPage((p) => (p + 1 < (listQuery.data?.totalPages ?? 1) ? p + 1 : p))
             }
           >
             Sau

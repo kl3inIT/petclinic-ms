@@ -11,5 +11,8 @@ export interface VetRequest {
   firstName: string;
   /** @minLength 1 */
   lastName: string;
+  email?: string;
+  phoneNumber?: string;
+  resume?: string;
   specialtyNames?: string[];
 }

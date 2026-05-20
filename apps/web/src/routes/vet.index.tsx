@@ -29,7 +29,6 @@ import {
   useMySchedule,
 } from '@/features/vet-me/api';
 import { enableDemoMode } from '@/features/vet-me/mock';
-import { DemoBanner } from '@/features/vet-me/components/DemoBanner';
 import { EmptyState } from '@/features/vet-me/components/EmptyState';
 import { StarRating } from '@/features/vet-me/components/StarRating';
 import { VetPageHeader } from '@/features/vet-me/components/VetPageHeader';
@@ -38,6 +37,7 @@ import {
   WORKHOUR_LABEL,
   WORKHOUR_ORDER,
 } from '@/features/vets/labels';
+import type { WorkScheduleSlotResponseWorkday } from '@/lib/api/generated/model';
 
 export const Route = createFileRoute('/vet/')({
   component: VetDashboard,
@@ -110,7 +110,8 @@ function VetDashboard() {
     return (
       <Card>
         <CardContent className="py-6 text-destructive">
-          Lỗi tải hồ sơ: {profileQuery.error?.message ?? 'unknown'}
+          Lỗi tải hồ sơ:{' '}
+          {profileQuery.error instanceof Error ? profileQuery.error.message : 'unknown'}
         </CardContent>
       </Card>
     );
@@ -118,12 +119,14 @@ function VetDashboard() {
 
   const profile = profileQuery.data;
   const summary = summaryQuery.data;
-  const todayWorkday = JS_DAY_TO_WORKDAY[new Date().getDay()];
+  const todayWorkday = (JS_DAY_TO_WORKDAY[new Date().getDay()] ??
+    'MONDAY') as WorkScheduleSlotResponseWorkday;
   const todaySlots = (scheduleQuery.data ?? [])
     .filter((s) => s.workday === todayWorkday)
     .sort(
       (a, b) =>
-        WORKHOUR_ORDER.indexOf(a.workHour) - WORKHOUR_ORDER.indexOf(b.workHour),
+        WORKHOUR_ORDER.indexOf(a.workHour ?? '') -
+        WORKHOUR_ORDER.indexOf(b.workHour ?? ''),
     );
 
   const greeting = greetingByHour(new Date().getHours());
@@ -264,12 +267,12 @@ function VetDashboard() {
               <Skeleton className="h-32 w-full" />
             ) : todaySlots.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Hôm nay ({WORKDAY_LABEL[todayWorkday]}) bạn không có lịch trực.
+                Hôm nay ({WORKDAY_LABEL[todayWorkday] ?? todayWorkday}) bạn không có lịch trực.
               </p>
             ) : (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">
-                  {WORKDAY_LABEL[todayWorkday]} — {todaySlots.length} khung giờ
+                  {WORKDAY_LABEL[todayWorkday] ?? todayWorkday} — {todaySlots.length} khung giờ
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {todaySlots.map((s) => (
@@ -278,7 +281,7 @@ function VetDashboard() {
                       variant="outline"
                       className="border-emerald-300 bg-emerald-50 text-emerald-700"
                     >
-                      {WORKHOUR_LABEL[s.workHour]}
+                      {s.workHour ? WORKHOUR_LABEL[s.workHour] : '—'}
                     </Badge>
                   ))}
                 </div>
@@ -325,7 +328,7 @@ function VetDashboard() {
                       <span className="truncate font-medium">
                         {r.customerName}
                       </span>
-                      <StarRating score={r.score} />
+                      <StarRating score={r.score ?? 0} />
                     </div>
                     {r.description && (
                       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">

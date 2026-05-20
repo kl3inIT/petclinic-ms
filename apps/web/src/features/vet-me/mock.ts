@@ -8,7 +8,6 @@
  */
 import type {
   BadgeItem,
-  PageEnvelope,
   RatingItem,
   RatingSummary,
   VetMeProfile,
@@ -146,8 +145,9 @@ export const MOCK_SUMMARY: RatingSummary = (() => {
   const dist: Record<string, number> = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
   let sum = 0;
   for (const r of MOCK_RATINGS) {
-    dist[r.score.toString()] = (dist[r.score.toString()] ?? 0) + 1;
-    sum += r.score;
+    const score = r.score ?? 0;
+    dist[score.toString()] = (dist[score.toString()] ?? 0) + 1;
+    sum += score;
   }
   return {
     count: MOCK_RATINGS.length,
@@ -180,7 +180,7 @@ export const MOCK_BADGES: BadgeItem[] = [
   },
 ];
 
-export function pageOf<T>(items: T[], page: number, size: number): PageEnvelope<T> {
+export function pageOf<T>(items: T[], page: number, size: number) {
   const start = page * size;
   const slice = items.slice(start, start + size);
   return {

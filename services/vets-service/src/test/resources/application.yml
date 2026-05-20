@@ -54,7 +54,7 @@ petclinic:
       max-file-size-bytes: 10485760
     # Phase I — disable schedule trong test. IT gọi runCleanup() trực tiếp qua autowired bean.
     cleanup:
-      enabled: true
+      enabled: false
       dry-run: false
       cron: "0 0 3 * * *"
       min-age: PT0S  # test: no grace window — orphan vừa upload cũng được xét luôn
