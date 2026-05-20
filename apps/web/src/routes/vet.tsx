@@ -1,10 +1,11 @@
 import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
 import {
+  Award,
   CalendarDays,
   LayoutDashboard,
   LogOut,
-  Medal,
-  Star,
+  MessageSquareQuote,
+  Stethoscope,
   UserCircle,
 } from 'lucide-react';
 
@@ -49,8 +50,8 @@ const navItems: NavItem[] = [
   { to: '/vet', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
   { to: '/vet/profile', label: 'Hồ sơ cá nhân', icon: UserCircle },
   { to: '/vet/schedule', label: 'Lịch trực', icon: CalendarDays },
-  { to: '/vet/ratings', label: 'Đánh giá', icon: Star },
-  { to: '/vet/badges', label: 'Huy hiệu', icon: Medal },
+  { to: '/vet/ratings', label: 'Đánh giá', icon: MessageSquareQuote },
+  { to: '/vet/badges', label: 'Huy hiệu', icon: Award },
 ];
 
 function VetLayout() {
@@ -67,12 +68,53 @@ function VetLayout() {
   });
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 flex-col border-r bg-muted/30 md:flex">
-        <div className="flex h-16 items-center border-b px-4">
+    <div className="flex min-h-screen flex-col bg-muted/10 md:flex-row">
+      {/* Mobile top bar */}
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-card px-4 md:hidden">
+        <Link to="/vet" className="flex items-center gap-2">
+          <Logo size="sm" />
+          <span className="text-xs font-semibold text-primary">Vet portal</span>
+        </Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={logoutMutation.isPending}
+          onClick={() => logoutMutation.mutate()}
+        >
+          <LogOut className="size-4" />
+        </Button>
+      </header>
+
+      {/* Mobile horizontal nav */}
+      <nav className="flex overflow-x-auto border-b bg-card px-2 md:hidden">
+        {navItems.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            activeOptions={{ exact: item.exact ?? false }}
+            className="shrink-0 px-3 py-3 text-xs text-muted-foreground"
+            activeProps={{
+              className:
+                'border-b-2 border-primary text-primary font-medium',
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <item.icon className="size-3.5" />
+              {item.label}
+            </div>
+          </Link>
+        ))}
+      </nav>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r bg-card md:flex">
+        <div className="flex h-16 items-center gap-2 border-b px-5">
           <Link to="/vet" className="flex items-center gap-2">
             <Logo size="sm" />
           </Link>
+          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+            Vet portal
+          </span>
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
           {navItems.map((item) => (
@@ -81,10 +123,11 @@ function VetLayout() {
               to={item.to}
               activeOptions={{ exact: item.exact ?? false }}
               className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
+                'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
               )}
               activeProps={{
-                className: 'bg-accent text-accent-foreground font-medium',
+                className:
+                  'bg-primary/10 text-primary font-medium hover:bg-primary/15 hover:text-primary',
               }}
             >
               <item.icon className="size-4" />
@@ -93,8 +136,18 @@ function VetLayout() {
           ))}
         </nav>
         <div className="border-t p-3">
-          <div className="px-3 pb-2 text-xs text-muted-foreground">
-            BS. {user?.username ?? 'Anonymous'}
+          <div className="mb-1 flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
+            <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+              <Stethoscope className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium">
+                {user?.username ?? 'Anonymous'}
+              </div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Bác sĩ thú y
+              </div>
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -108,8 +161,11 @@ function VetLayout() {
           </Button>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto p-6">
-        <Outlet />
+
+      <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-6xl">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

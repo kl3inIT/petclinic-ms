@@ -146,3 +146,16 @@ export function useMyBadges(page: number, size = 12) {
         .then((r) => r.data),
   });
 }
+
+/** Top N rating mới nhất — dùng cho widget dashboard. Reuse keys.ratings(0). */
+export function useMyRecentRatings(limit = 5) {
+  return useQuery({
+    queryKey: ['/api/v1/vets/me/ratings/recent', limit] as const,
+    queryFn: () =>
+      apiClient
+        .get<PageEnvelope<RatingItem>>('/api/v1/vets/me/ratings', {
+          params: { page: 0, size: limit, sort: 'rateDate,desc' },
+        })
+        .then((r) => r.data.content),
+  });
+}
