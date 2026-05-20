@@ -130,9 +130,13 @@ class RatingEventPublishIT {
 
         // Declare test queue + binding (idempotent). Cần exchange tồn tại — autoconfig
         // PetClinicEventsAutoConfiguration đã declare khi context load.
-        // Retry declare để chống ShutdownSignalException trên first connection ở CI
-        // (broker chưa fully ready dù port open + log "startup complete").
-        Queue queue = new Queue(TEST_QUEUE, false, false, true); // non-durable, auto-delete
+        // Queue config: durable=true, exclusive=false, autoDelete=false.
+        // RabbitMQ 4.x reject transient_nonexcl_queues (durable=false + exclusive=false +
+        // autoDelete=true) với reply-code 541 INTERNAL_ERROR — feature deprecated/disabled
+        // mặc định. Dùng durable queue; RabbitMQContainer mới spawn mỗi test class run nên
+        // không leak giữa runs. exclusive=false để rabbitTemplate.receive() từ channel khác
+        // vẫn poll được message (CachingConnectionFactory share connection nhưng pool channels).
+        Queue queue = new Queue(TEST_QUEUE, true, false, false);
         TopicExchange exchange = new TopicExchange("petclinic.events");
         Binding binding = BindingBuilder.bind(queue).to(exchange).with("vet.rating.added");
         Awaitility.await()
