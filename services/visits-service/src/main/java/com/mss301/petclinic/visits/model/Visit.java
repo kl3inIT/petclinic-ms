@@ -1,7 +1,9 @@
 package com.mss301.petclinic.visits.model;
 
-import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
-import com.mss301.petclinic.visits.exception.IllegalVisitTransitionException;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,9 +14,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.UUID;
+import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
+import com.mss301.petclinic.visits.exception.IllegalVisitTransitionException;
 
 @Entity
 @Table(name = "visits")

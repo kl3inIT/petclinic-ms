@@ -11,8 +11,12 @@
 
 services:
 
+  # Postgres 18 + pgvector extension. Phase 12d RAG requires `CREATE EXTENSION vector`
+  # which standard `postgres:18-alpine` không có sẵn. `pgvector/pgvector:pg18` ship đầy đủ
+  # (Debian-based, kích cỡ lớn hơn ~50MB nhưng dev OK). Production: build custom image
+  # FROM postgres-alpine + pgvector via initdb script.
   postgres:
-    image: postgres:18-alpine
+    image: pgvector/pgvector:pg18
     container_name: petclinic-postgres
     profiles: ["db", "all"]
     environment:
@@ -115,6 +119,77 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  # Distributed tracing backend — Zipkin + zipkin-otel collector module.
+  # UI: http://localhost:9411 | OTLP HTTP: :9411/v1/traces
+  # ⚠️ Image `openzipkin/zipkin:3` KHÔNG ship OTLP collector. Module nằm trong repo riêng
+  # `openzipkin-contrib/zipkin-otel` và phân phối qua image này:
+  #   ghcr.io/openzipkin-contrib/zipkin-otel:latest
+  # Spring services ship span qua OTLP/HTTP, collector parse → in-memory storage → Lens UI.
+  zipkin:
+    image: ghcr.io/openzipkin-contrib/zipkin-otel:latest
+    container_name: petclinic-zipkin
+    profiles: ["obs", "all"]
+    ports:
+      - "9411:9411"
+    # NOTE: image distroless → KHÔNG có wget/curl cho HEALTHCHECK. Compose depends_on
+    # dùng `service_started` cho zipkin — span loss vài giây đầu khi exporter retry
+    # là acceptable cho dev.
+    restart: unless-stopped
+
+  # Metrics scrape backend — Prometheus pull /actuator/prometheus mỗi 15s.
+  # UI: http://localhost:9090  | Targets: /targets  | Graph: /graph
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: petclinic-prometheus
+    profiles: ["obs", "all"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d                 # dev: 7 ngày là đủ
+      - --web.enable-lifecycle                            # POST /-/reload áp config thay đổi
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+
+  # Metrics visualization. Provision datasource Prometheus + 1 default dashboard tự load.
+  # UI: http://localhost:3000  (admin/admin — đổi pwd lần đầu trừ khi env override)
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: petclinic-grafana
+    profiles: ["obs", "all"]
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"                   # dev: xem dashboard không cần login
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_INSTALL_PLUGINS: ""
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+
   # Tạo bucket mặc định lúc init, exit ngay sau khi xong.
   minio-init:
     image: minio/mc:latest
@@ -197,6 +272,354 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  # =================================================================
+  # Spring services — profile "apps" — build từ root Dockerfile + ARG SERVICE.
+  #
+  #   docker compose --profile all --profile apps up -d --build
+  #
+  # Thứ tự khởi động ràng buộc qua depends_on:
+  #   config-server → discovery-server → (auth, customers, vets, visits, admin) → api-gateway
+  #
+  # Mailer-service đã có Dockerfile riêng (Go) → giữ profile cũ, chỉ thêm depends_on lên rabbitmq.
+  # =================================================================
+
+  config-server:
+    build:
+      context: .
+      dockerfile: services/config-server/Dockerfile
+    image: petclinic-ms/config-server:latest
+    container_name: petclinic-config-server
+    profiles: ["apps"]
+    ports:
+      - "8888:8888"
+      - "9888:9888"
+    environment:
+      # `native` cần luôn active — config-server đọc filesystem thay vì Git.
+      # Spring Cloud Config 5 không có fallback "no-op" nữa: thiếu profile → fail.
+      SPRING_PROFILES_ACTIVE: native,dev
+      # Spring Boot Docker Compose Support phải tắt khi chạy TRONG container — sẽ vô hạn lồng.
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      # Tracing → Zipkin. Nếu profile `obs` không active, exporter retry với backoff
+      # và drop span (không crash) — log có thể nhiễu vài dòng connection-refused.
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9888/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  discovery-server:
+    build:
+      context: .
+      dockerfile: services/discovery-server/Dockerfile
+    image: petclinic-ms/discovery-server:latest
+    container_name: petclinic-discovery-server
+    profiles: ["apps"]
+    ports:
+      - "8761:8761"
+      - "9761:9761"
+    depends_on:
+      config-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    image: petclinic-ms/auth-service:latest
+    container_name: petclinic-auth-service
+    profiles: ["apps"]
+    ports:
+      - "8183:8183"
+      - "9183:9183"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9183/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  customers-service:
+    build: { context: ., dockerfile: services/customers-service/Dockerfile }
+    image: petclinic-ms/customers-service:latest
+    container_name: petclinic-customers-service
+    profiles: ["apps"]
+    ports:
+      - "8181:8181"
+      - "9181:9181"
+    depends_on:
+      postgres: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9181/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  vets-service:
+    build: { context: ., dockerfile: services/vets-service/Dockerfile }
+    image: petclinic-ms/vets-service:latest
+    container_name: petclinic-vets-service
+    profiles: ["apps"]
+    ports:
+      - "8182:8182"
+      - "9182:9182"
+    depends_on:
+      postgres: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9182/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  visits-service:
+    build: { context: ., dockerfile: services/visits-service/Dockerfile }
+    image: petclinic-ms/visits-service:latest
+    container_name: petclinic-visits-service
+    profiles: ["apps"]
+    ports:
+      - "8184:8184"
+      - "9184:9184"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+      customers-service: { condition: service_healthy }
+      vets-service: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9184/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  api-gateway:
+    build: { context: ., dockerfile: services/api-gateway/Dockerfile }
+    image: petclinic-ms/api-gateway:latest
+    container_name: petclinic-api-gateway
+    profiles: ["apps"]
+    ports:
+      - "8180:8180"
+      - "9080:9080"
+    depends_on:
+      auth-service: { condition: service_healthy }
+      customers-service: { condition: service_healthy }
+      vets-service: { condition: service_healthy }
+      visits-service: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  admin-server:
+    build: { context: ., dockerfile: services/admin-server/Dockerfile }
+    image: petclinic-ms/admin-server:latest
+    container_name: petclinic-admin-server
+    profiles: ["apps"]
+    ports:
+      - "8185:8185"
+      - "9185:9185"
+    depends_on:
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9185/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  mcp-server:
+    build: { context: ., dockerfile: services/mcp-server/Dockerfile }
+    image: petclinic-ms/mcp-server:latest
+    container_name: petclinic-mcp-server
+    profiles: ["apps"]
+    ports:
+      - "8187:8187"
+      - "9187:9187"
+    depends_on:
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+      customers-service: { condition: service_healthy }
+      vets-service: { condition: service_healthy }
+      visits-service: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9187/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  genai-service:
+    build: { context: ., dockerfile: services/genai-service/Dockerfile }
+    image: petclinic-ms/genai-service:latest
+    container_name: petclinic-genai-service
+    profiles: ["apps"]
+    ports:
+      - "8188:8188"
+      - "9188:9188"
+    depends_on:
+      postgres: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+      mcp-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic?currentSchema=genai
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+      # LLM provider — env-driven Phase 12b, admin DB Phase 12c.
+      PETCLINIC_LLM_BASE_URL: ${PETCLINIC_LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      PETCLINIC_LLM_API_KEY: ${PETCLINIC_LLM_API_KEY:-}
+      PETCLINIC_LLM_CHAT_MODEL: ${PETCLINIC_LLM_CHAT_MODEL:-anthropic/claude-3.5-haiku}
+      # Phase 12d — embedding (RAG). Để trống → EmbeddingConfig skip, ChatClient không có RAG.
+      PETCLINIC_EMBEDDING_BASE_URL: ${PETCLINIC_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      PETCLINIC_EMBEDDING_API_KEY: ${PETCLINIC_EMBEDDING_API_KEY:-}
+      PETCLINIC_EMBEDDING_MODEL: ${PETCLINIC_EMBEDDING_MODEL:-text-embedding-3-small}
+      # AES-GCM key cho encrypt apiKey lưu DB. Trống → ephemeral key (dev only).
+      PETCLINIC_CRYPTO_KEY: ${PETCLINIC_CRYPTO_KEY:-}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9188/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    restart: unless-stopped
+
+  # Mailer (Go) — đã có Dockerfile riêng tại services/mailer-service/.
+  # Kéo lên profile "apps" để full-stack `--profile all --profile apps up` cover luôn.
+  mailer-service:
+    build:
+      context: ./services/mailer-service
+      dockerfile: Dockerfile
+    image: petclinic-ms/mailer-service:latest
+    container_name: petclinic-mailer-service
+    profiles: ["apps"]
+    ports:
+      - "8186:8186"
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      mailpit: { condition: service_started }
+      admin-server: { condition: service_healthy }
+    environment:
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672/
+      REDIS_ADDR: redis:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      ADMIN_SERVER_URL: http://admin-server:8185
+      ADMIN_PUBLIC_HOST: mailer-service
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8186/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: unless-stopped
+
+
 volumes:
   postgres_data:
     name: petclinic-postgres-data
@@ -206,7 +629,14 @@ volumes:
     name: petclinic-redis-data
   minio_data:
     name: petclinic-minio-data
+
   camunda_data:
     name: petclinic-camunda-data
   camunda_elasticsearch_data:
     name: petclinic-camunda-elasticsearch-data
+
+  prometheus_data:
+    name: petclinic-prometheus-data
+  grafana_data:
+    name: petclinic-grafana-data
+

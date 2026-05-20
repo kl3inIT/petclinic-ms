@@ -1,6 +1,9 @@
 package com.mss301.petclinic.auth.model;
 
-import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -9,9 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 /**
  * User domain entity.

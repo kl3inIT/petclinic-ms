@@ -1,6 +1,8 @@
 package com.mss301.petclinic.auth.model;
 
-import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
+import java.time.Instant;
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,8 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
-import java.time.Instant;
-import java.util.UUID;
+import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 /**
  * Opaque refresh token. Raw token KHÔNG bao giờ lưu — chỉ SHA-256 hash. Khi user gọi /refresh,

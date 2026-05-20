@@ -1,0 +1,356 @@
+name: CI
+
+# Workflow gồm 4 job song song:
+#  1. gradle-build   — verify build + test cho 5 Spring service + 5 shared module.
+#  2. fe-check       — typecheck + lint + build FE React (apps/web).
+#  3. go-build       — go build + vet mailer-service.
+#  4. docker-build   — matrix build 6 image (5 Spring + admin-server). Chỉ on push main/tag.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write           # push image lên ghcr.io khi tag
+  security-events: write    # upload Trivy SARIF lên GitHub Security tab
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================================================
+  # Job 1 — Gradle build + test (5 Spring service + 5 shared module)
+  # ===========================================================================
+  gradle-build:
+    name: Gradle build + test (JDK 25)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Spotless check (Java import order + whitespace + EOL)
+        run: ./gradlew --no-daemon spotlessCheck
+
+      - name: Build + test + aggregate coverage
+        run: ./gradlew --no-daemon build jacocoAggregatedReport
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: gradle-test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+          retention-days: 7
+
+      # Coverage XML aggregate cho Codecov / SonarCloud upload. Hiện chỉ artifact.
+      # Khi enable Codecov: thêm step codecov/codecov-action@v5 với token.
+      - name: Upload JaCoCo aggregated coverage
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: jacoco-aggregated-coverage
+          path: build/reports/jacoco/jacocoAggregatedReport/
+          retention-days: 14
+
+  # ===========================================================================
+  # Job 2 — Frontend typecheck + lint + build
+  # ===========================================================================
+  fe-check:
+    name: FE (pnpm typecheck + lint + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # NOTE: pnpm workspace — `pnpm-lock.yaml` ở repo ROOT (apps/web là workspace member).
+    # Install + cache-dep-path đều ở root; typecheck/lint/build filter qua workspace name.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Order MATTERS: setup-node auto-detect pnpm-lock.yaml → cần pnpm cho cache.
+      # Cài pnpm TRƯỚC, rồi setup-node mới resolve được.
+      # KHÔNG set `version:` — action đọc từ ROOT package.json `packageManager`
+      # field (single source of truth). Set version gây ERR_PNPM_BAD_PM_VERSION.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          # pnpm-lock.yaml ở repo root (workspace single lockfile)
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck FE
+        run: pnpm --filter @petclinic/web typecheck
+
+      - name: Lint FE
+        run: pnpm --filter @petclinic/web lint
+
+      - name: Build FE
+        run: pnpm --filter @petclinic/web build
+
+  # ===========================================================================
+  # Job 2b — Playwright E2E smoke (FE-only, không spin BE container).
+  # Tách job riêng để fail-fast vẫn build được FE; cache pnpm dùng chung.
+  # ===========================================================================
+  fe-e2e:
+    name: FE E2E (Playwright smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [fe-check]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      # Playwright cache theo version để tránh re-download Chromium mỗi run.
+      - name: Get Playwright version
+        id: pw-version
+        working-directory: apps/web
+        run: |
+          VERSION=$(pnpm exec playwright --version | awk '{print $2}')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @petclinic/web exec playwright install --with-deps chromium
+
+      - name: Install Playwright OS deps only (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @petclinic/web exec playwright install-deps chromium
+
+      - name: Run E2E smoke
+        run: pnpm --filter @petclinic/web test:e2e
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
+
+  # ===========================================================================
+  # Job 3 — Go build + vet + test (mailer-service)
+  # ===========================================================================
+  go-build:
+    name: Go build + vet (mailer-service)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/mailer-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go 1.26
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache-dependency-path: services/mailer-service/go.sum
+
+      - name: Verify deps
+        run: go mod verify
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
+  # ===========================================================================
+  # Job 4 — Docker buildx matrix (6 service Spring + 1 admin + Go mailer)
+  # Chỉ chạy on push main + tag — không tốn CI minute cho mỗi PR.
+  # Push lên ghcr.io khi tag `v*`; chỉ build/cache khi push main (verify Dockerfile vẫn ok).
+  # ===========================================================================
+  docker-build:
+    name: Docker build matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [gradle-build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - config-server
+          - discovery-server
+          - api-gateway
+          - auth-service
+          - customers-service
+          - vets-service
+          - visits-service
+          - admin-server
+          - mcp-server
+          - genai-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/petclinic-ms-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build (and push on tag, load locally for scan)
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          # Load thêm 1 local tag `petclinic-scan:${service}` để Trivy scan offline.
+          # KHÔNG load khi tag release vì push registry trực tiếp.
+          load: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            petclinic-scan:${{ matrix.service }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+
+      # Trivy CVE scan local image. `exit-code: 0` — KHÔNG fail build, chỉ
+      # surface vào Security tab + artifact. Đổi '1' khi muốn enforce.
+      # `ignore-unfixed: true` — bỏ qua vuln không có patch, focus actionable.
+      - name: Trivy scan
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: petclinic-scan:${{ matrix.service }}
+          format: 'sarif'
+          output: 'trivy-${{ matrix.service }}.sarif'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '0'
+          vuln-type: 'os,library'
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db
+
+      - name: Upload Trivy SARIF
+        if: ${{ always() && !startsWith(github.ref, 'refs/tags/v') }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-${{ matrix.service }}.sarif'
+          category: 'trivy-${{ matrix.service }}'
+
+  # ===========================================================================
+  # Job 5 — Go mailer Docker build (file riêng services/mailer-service/Dockerfile)
+  # ===========================================================================
+  docker-build-mailer:
+    name: Docker build mailer-service (Go)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [go-build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/petclinic-ms-mailer-service
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build (and push on tag)
+        uses: docker/build-push-action@v7
+        with:
+          context: services/mailer-service
+          file: services/mailer-service/Dockerfile
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=mailer
+          cache-to: type=gha,scope=mailer,mode=max

@@ -1,5 +1,7 @@
 package com.mss301.petclinic.common.web.exception;
 
+import java.util.List;
+
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -8,8 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.util.List;
 
 /**
  * Trung tâm xử lý lỗi cho mọi service. Auto-wired bởi {@code PetClinicWebAutoConfiguration}.
@@ -55,6 +55,21 @@ public class ExceptionTranslator {
         return ResponseEntity.badRequest()
                 .header(ALERT_HEADER, "error." + ex.getErrorKey())
                 .header(PARAMS_HEADER, ex.getEntityName())
+                .body(pd);
+    }
+
+    /**
+     * Downstream service unhealthy (circuit OPEN, timeout, connection refused).
+     * RFC 9457 + Retry-After header (RFC 7231 §7.1.3) để client biết khoảng cách thử lại.
+     */
+    @ExceptionHandler(ExternalServiceUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleServiceUnavailable(ExternalServiceUnavailableException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+        pd.setType(ErrorConstants.SERVICE_UNAVAILABLE_TYPE);
+        pd.setTitle("Service unavailable");
+        pd.setProperty("serviceName", ex.getServiceName());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
                 .body(pd);
     }
 

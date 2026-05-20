@@ -1,0 +1,202 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Up",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "up{job=~\"spring-services|business-services|ai-services\", service=~\"$application\"}",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "DOWN", "color": "red" } }, "type": "value" },
+            { "options": { "1": { "text": "UP", "color": "green" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Uptime",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "process_uptime_seconds{application=~\"$application\"}",
+          "legendFormat": "{{application}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM heap used",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum by (application) (jvm_memory_used_bytes{application=~\"$application\", area=\"heap\"})",
+          "legendFormat": "{{application}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU usage (process)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "process_cpu_usage{application=~\"$application\"}",
+          "legendFormat": "{{application}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Live threads",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads{application=~\"$application\"}",
+          "legendFormat": "{{application}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "GC pause (rate, p95)",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "rate(jvm_gc_pause_seconds_sum{application=~\"$application\"}[1m])",
+          "legendFormat": "{{application}} sum/sec",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Log events (per level)",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "sum by (level) (rate(logback_events_total{application=~\"$application\"}[1m]))",
+          "legendFormat": "{{level}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP requests rate (by status class)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "sum by (status, application) (rate(http_server_requests_seconds_count{application=~\"$application\"}[1m]))",
+          "legendFormat": "{{application}} {{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP latency (p95 by URI)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{application=~\"$application\"}[5m])))",
+          "legendFormat": "{{uri}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "HikariCP active connections",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 28 },
+      "id": 10,
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{application=~\"$application\"}",
+          "legendFormat": "{{application}} {{pool}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Tomcat sessions / threads busy",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 28 },
+      "id": 11,
+      "targets": [
+        {
+          "expr": "tomcat_threads_busy_threads{application=~\"$application\"}",
+          "legendFormat": "{{application}} busy",
+          "refId": "A"
+        },
+        {
+          "expr": "tomcat_threads_current_threads{application=~\"$application\"}",
+          "legendFormat": "{{application}} current",
+          "refId": "B"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["petclinic", "spring-boot"],
+  "templating": {
+    "list": [
+      {
+        "name": "application",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": { "query": "label_values(jvm_memory_used_bytes, application)", "refId": "Prom-app-Variable-Query" },
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "PetClinic Overview",
+  "uid": "petclinic-overview",
+  "version": 1,
+  "weekStart": ""
+}

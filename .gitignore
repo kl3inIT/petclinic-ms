@@ -68,3 +68,10 @@ coverage/
 test-results/
 playwright-report/
 .playwright/
+
+### Postgres backups (scripts/backup-postgres.sh) ###
+backups/
+
+### JVM crash dumps ###
+hs_err_pid*.log
+replay_pid*.log

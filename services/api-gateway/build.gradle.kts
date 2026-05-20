@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.spring.boot.starter.web)
 
     implementation(libs.micrometer.tracing.bridge.otel)
+    runtimeOnly(libs.opentelemetry.exporter.otlp)
 
     testImplementation(libs.spring.boot.starter.test)
 }

@@ -1,9 +1,10 @@
 package com.mss301.petclinic.vets.dto.req;
 
-import com.mss301.petclinic.vets.model.Vet;
+import java.util.Set;
+
 import jakarta.validation.constraints.NotBlank;
 
-import java.util.Set;
+import com.mss301.petclinic.vets.model.Vet;
 
 public record VetRequest(
         @NotBlank String firstName,

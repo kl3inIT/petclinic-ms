@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -16,10 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { FieldError } from '@/lib/form/FieldError';
 
 import { useCompleteVisit } from '@/lib/api/generated/visits/visits';
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
-import { completeVisitSchema, type CompleteVisitInput } from '../schemas';
+import { completeVisitSchema } from '../schemas';
 
 interface Props {
   visit: VisitResponse | null;
@@ -29,21 +29,6 @@ interface Props {
 export function CompleteVisitDialog({ visit, onOpenChange }: Props) {
   const qc = useQueryClient();
   const open = visit !== null;
-
-  const form = useForm<CompleteVisitInput>({
-    resolver: zodResolver(completeVisitSchema),
-    defaultValues: { diagnosis: '', treatment: '', fee: 0 },
-  });
-
-  useEffect(() => {
-    if (visit) {
-      form.reset({
-        diagnosis: visit.diagnosis ?? '',
-        treatment: visit.treatment ?? '',
-        fee: visit.fee ?? 0,
-      });
-    }
-  }, [visit, form]);
 
   const completeMutation = useCompleteVisit({
     mutation: {
@@ -56,14 +41,47 @@ export function CompleteVisitDialog({ visit, onOpenChange }: Props) {
     },
   });
 
+  const visitId = visit?.id;
+
+  const form = useForm({
+    defaultValues: {
+      diagnosis: '',
+      treatment: '',
+      fee: 0,
+    },
+    validators: { onChange: completeVisitSchema },
+    onSubmit: ({ value }) => {
+      if (visitId === undefined) return;
+      completeMutation.mutate({
+        id: visitId,
+        data: {
+          diagnosis: value.diagnosis,
+          treatment: value.treatment || undefined,
+          fee: value.fee,
+        },
+      });
+    },
+  });
+
+  // Prefill khi dialog mở với visit hiện tại — reset thay vì set từng field tránh
+  // "uncontrolled → controlled" warning lúc visit chuyển từ null sang object.
+  useEffect(() => {
+    if (visit) {
+      form.reset({
+        diagnosis: visit.diagnosis ?? '',
+        treatment: visit.treatment ?? '',
+        fee: visit.fee ?? 0,
+      });
+    }
+  }, [visit, form]);
+
   if (!visit?.id) return null;
-  const visitId = visit.id;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Hoàn thành visit #{visitId}</DialogTitle>
+          <DialogTitle>Hoàn thành visit #{visit.id}</DialogTitle>
           <DialogDescription>
             Ghi chẩn đoán + phác đồ điều trị + chi phí. Email tóm tắt sẽ gửi cho khách.
           </DialogDescription>
@@ -71,56 +89,66 @@ export function CompleteVisitDialog({ visit, onOpenChange }: Props) {
 
         <form
           id="complete-visit-form"
-          onSubmit={form.handleSubmit((values) =>
-            completeMutation.mutate({
-              id: visitId,
-              data: {
-                diagnosis: values.diagnosis,
-                treatment: values.treatment || undefined,
-                fee: values.fee,
-              },
-            }),
-          )}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
           className="space-y-4"
         >
-          <div className="space-y-2">
-            <Label htmlFor="diagnosis">Chẩn đoán *</Label>
-            <Textarea
-              id="diagnosis"
-              rows={2}
-              placeholder="Vd: viêm da cơ địa..."
-              {...form.register('diagnosis')}
-            />
-            {form.formState.errors.diagnosis ? (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.diagnosis.message}
-              </p>
-            ) : null}
-          </div>
+          <form.Field
+            name="diagnosis"
+            children={(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Chẩn đoán *</Label>
+                <Textarea
+                  id={field.name}
+                  rows={2}
+                  placeholder="Vd: viêm da cơ địa..."
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                <FieldError field={field} />
+              </div>
+            )}
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="treatment">Điều trị</Label>
-            <Textarea
-              id="treatment"
-              rows={2}
-              placeholder="Vd: kháng sinh 7 ngày, kem bôi..."
-              {...form.register('treatment')}
-            />
-          </div>
+          <form.Field
+            name="treatment"
+            children={(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Điều trị</Label>
+                <Textarea
+                  id={field.name}
+                  rows={2}
+                  placeholder="Vd: kháng sinh 7 ngày, kem bôi..."
+                  value={field.state.value ?? ''}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                <FieldError field={field} />
+              </div>
+            )}
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="fee">Chi phí (VND)</Label>
-            <Input
-              id="fee"
-              type="number"
-              min={0}
-              step="1000"
-              {...form.register('fee', { valueAsNumber: true })}
-            />
-            {form.formState.errors.fee ? (
-              <p className="text-sm text-destructive">{form.formState.errors.fee.message}</p>
-            ) : null}
-          </div>
+          <form.Field
+            name="fee"
+            children={(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Chi phí (VND)</Label>
+                <Input
+                  id={field.name}
+                  type="number"
+                  min={0}
+                  step="1000"
+                  value={field.state.value ?? 0}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+                />
+                <FieldError field={field} />
+              </div>
+            )}
+          />
         </form>
 
         <DialogFooter>

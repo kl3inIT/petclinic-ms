@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: admin-server
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+server:
+  port: 8185                    # 8186=mailer (Go), 8187=mcp-server, 8188=genai, 8189=workflow.
+
+management:
+  server:
+    port: 9185                  # convention 9xxx — đồng nhất với các service khác.

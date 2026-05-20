@@ -1,7 +1,5 @@
 package com.mss301.petclinic.common.events.autoconfigure;
 
-import com.mss301.petclinic.common.events.EventPublisher;
-import com.mss301.petclinic.common.events.config.EventsProperties;
 import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -13,6 +11,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+
+import com.mss301.petclinic.common.events.EventPublisher;
+import com.mss301.petclinic.common.events.config.EventsProperties;
 
 /**
  * Autoconfig cho event infra:

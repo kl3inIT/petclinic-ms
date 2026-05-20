@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/002-add-auditing-columns.yaml
   - include:
       file: db/changelog/changes/003-add-pet-owner-id-mirror.yaml
+  - include:
+      file: db/changelog/changes/004-seed-dev-data.yaml

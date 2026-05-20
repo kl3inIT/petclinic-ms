@@ -1,0 +1,93 @@
+# .dockerignore root — áp cho mọi `docker build .` từ project root.
+#
+# Mục tiêu:
+#   1. Giảm build context — Docker daemon nhận ít file → upload nhanh, layer cache tốt hơn.
+#   2. Tránh leak file nhạy cảm (.env, .gitconfig, IDE settings).
+#   3. Tránh bị invalidate cache vô lý (build/, .gradle/ đổi mỗi local build).
+#
+# Lưu ý: KHÔNG ignore `Dockerfile`/`compose.yaml` — `--mount=type=bind` cần đọc lại file gốc.
+
+# --- Git & VCS ---
+.git
+.gitignore
+.gitattributes
+.github
+
+# --- IDE / Editor ---
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+.run
+.fleet
+.vimrc.local
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Build outputs (Java/Gradle) ---
+build/
+**/build/
+.gradle/
+**/.gradle/
+out/
+**/out/
+
+# --- Build outputs (Go) ---
+services/mailer-service/bin/
+services/mailer-service/dist/
+
+# --- Build outputs (Frontend) ---
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.vite/
+apps/web/coverage/
+
+# --- Logs / runtime ---
+*.log
+logs/
+**/logs/
+hs_err_pid*.log
+replay_pid*.log
+
+# --- Test artifacts ---
+**/test-results/
+**/jacoco/
+**/coverage/
+
+# --- Secrets / env (KHÔNG bao giờ commit, KHÔNG ship vào image) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+secrets/
+
+# --- Documentation / planning (image không cần) ---
+docs/
+*.md
+!README.md
+.planning/
+ROADMAP.md
+CONTRIBUTING.md
+CHANGELOG.md
+AGENTS.md
+CLAUDE.md
+
+# --- Docker meta (đề phòng infinite recursion) ---
+.dockerignore
+compose.override.yaml
+compose.override.yml
+
+# --- Misc ---
+*.bak
+*.swp
+*.tmp
+.cache
+node_modules

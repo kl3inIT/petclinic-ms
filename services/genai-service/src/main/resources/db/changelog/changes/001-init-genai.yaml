@@ -1,0 +1,66 @@
+# Spring AI 2.0.0-M6 JdbcChatMemoryRepository (Postgres dialect) yêu cầu bảng
+# `spring_ai_chat_memory` với columns: conversation_id, content, type, timestamp.
+#
+# Mặc định conversation_id VARCHAR(36) (UUID) — mở rộng lên 128 để chứa pattern
+# `u:<uuid>:t:<threadId>` (1+36+3+64 = ~104 chars).
+#
+# Spring AI có thể auto-create schema khi `JdbcChatMemoryRepository.initializeSchema(true)`,
+# nhưng project pattern là Liquibase manage hết → tự khai báo ở đây.
+
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-schema-genai
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS genai
+            dbms: postgresql
+
+  - changeSet:
+      id: 002-create-table-spring-ai-chat-memory
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: genai
+            tableName: spring_ai_chat_memory
+            columns:
+              - column:
+                  name: conversation_id
+                  type: VARCHAR(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: timestamp
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE genai.spring_ai_chat_memory
+              ADD CONSTRAINT spring_ai_chat_memory_type_check
+              CHECK (type IN ('USER', 'ASSISTANT', 'SYSTEM', 'TOOL'))
+            dbms: postgresql
+
+  - changeSet:
+      id: 003-index-spring-ai-chat-memory-conv-ts
+      author: mss301
+      changes:
+        - createIndex:
+            schemaName: genai
+            tableName: spring_ai_chat_memory
+            indexName: spring_ai_chat_memory_conv_ts_idx
+            columns:
+              - column:
+                  name: conversation_id
+              - column:
+                  name: timestamp

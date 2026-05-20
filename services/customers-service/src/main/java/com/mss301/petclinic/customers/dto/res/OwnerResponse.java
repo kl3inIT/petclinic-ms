@@ -1,10 +1,10 @@
 package com.mss301.petclinic.customers.dto.res;
 
-import com.mss301.petclinic.customers.model.Owner;
-import com.mss301.petclinic.customers.model.Pet;
-
 import java.time.LocalDate;
 import java.util.List;
+
+import com.mss301.petclinic.customers.model.Owner;
+import com.mss301.petclinic.customers.model.Pet;
 
 public record OwnerResponse(
         Long id,

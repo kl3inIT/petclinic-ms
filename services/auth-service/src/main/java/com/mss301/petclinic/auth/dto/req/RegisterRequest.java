@@ -1,13 +1,15 @@
 package com.mss301.petclinic.auth.dto.req;
 
-import com.mss301.petclinic.auth.model.User;
+import java.util.HashSet;
+import java.util.Set;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.HashSet;
-import java.util.Set;
+import com.mss301.petclinic.auth.model.User;
 
 public record RegisterRequest(
         @NotBlank @Size(min = 3, max = 100) String username,

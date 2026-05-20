@@ -1,0 +1,14 @@
+# Grafana datasource provisioning — auto-load Prometheus at startup.
+# Reload: file mounted readonly; nếu thay đổi → restart Grafana container.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090       # service DNS trong compose network
+    isDefault: true
+    editable: false                   # provisioned → UI không cho sửa, tránh drift
+    jsonData:
+      httpMethod: POST                # POST cho long query strings
+      timeInterval: 15s               # match scrape_interval

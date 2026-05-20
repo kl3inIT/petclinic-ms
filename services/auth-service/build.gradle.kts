@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.spring.cloud.starter.config)
 
     implementation(libs.micrometer.tracing.bridge.otel)
+    runtimeOnly(libs.opentelemetry.exporter.otlp)
     runtimeOnly(libs.postgresql)
 
     developmentOnly(libs.spring.boot.docker.compose)

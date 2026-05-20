@@ -1,11 +1,11 @@
 package com.mss301.petclinic.visits.dto.res;
 
-import com.mss301.petclinic.visits.model.Visit;
-import com.mss301.petclinic.visits.model.VisitStatus;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+
+import com.mss301.petclinic.visits.model.Visit;
+import com.mss301.petclinic.visits.model.VisitStatus;
 
 public record VisitResponse(
         Long id,

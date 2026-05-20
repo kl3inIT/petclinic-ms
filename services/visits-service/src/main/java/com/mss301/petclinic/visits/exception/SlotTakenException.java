@@ -1,8 +1,8 @@
 package com.mss301.petclinic.visits.exception;
 
-import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
-
 import java.io.Serial;
+
+import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 
 public class SlotTakenException extends BadRequestAlertException {
 

@@ -1,9 +1,10 @@
 package com.mss301.petclinic.customers.service;
 
-import com.mss301.petclinic.customers.dto.req.OwnerRequest;
-import com.mss301.petclinic.customers.dto.res.OwnerResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import com.mss301.petclinic.customers.dto.req.OwnerRequest;
+import com.mss301.petclinic.customers.dto.res.OwnerResponse;
 
 public interface OwnerService {
 

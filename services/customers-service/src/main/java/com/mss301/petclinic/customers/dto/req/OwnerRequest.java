@@ -1,7 +1,8 @@
 package com.mss301.petclinic.customers.dto.req;
 
-import com.mss301.petclinic.customers.model.Owner;
 import jakarta.validation.constraints.NotBlank;
+
+import com.mss301.petclinic.customers.model.Owner;
 
 public record OwnerRequest(
         @NotBlank String firstName,

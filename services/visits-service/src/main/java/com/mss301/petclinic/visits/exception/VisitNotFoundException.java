@@ -1,8 +1,8 @@
 package com.mss301.petclinic.visits.exception;
 
-import com.mss301.petclinic.common.web.exception.ResourceNotFoundException;
-
 import java.io.Serial;
+
+import com.mss301.petclinic.common.web.exception.ResourceNotFoundException;
 
 public class VisitNotFoundException extends ResourceNotFoundException {
 

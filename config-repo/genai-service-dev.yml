@@ -1,0 +1,17 @@
+# genai-service dev — datasource từ compose Postgres (schema genai).
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/petclinic?currentSchema=genai}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  docker:
+    compose:
+      profiles:
+        active: ["db"]
+
+logging:
+  level:
+    org.hibernate.SQL: INFO

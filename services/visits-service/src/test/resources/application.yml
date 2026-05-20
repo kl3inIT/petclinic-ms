@@ -1,0 +1,30 @@
+# Test overrides — Testcontainers Postgres + dummy JWT config.
+
+spring:
+  profiles:
+    active: test
+
+  docker:
+    compose:
+      enabled: false
+
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+
+  liquibase:
+    enabled: true
+
+# JWT decoder property — required bởi common-security auto-config.
+petclinic:
+  auth:
+    jwt:
+      jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
+      issuer: petclinic-test
+      audience: petclinic-test
+
+# Disable event publishing trong test — broker không có sẵn.
+# ObjectProvider<EventPublisher> sẽ getIfAvailable() return null → service skip publish.
+petclinic.events.enabled: false

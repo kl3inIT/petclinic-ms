@@ -1,6 +1,5 @@
 package com.mss301.petclinic.common.jpa.exception;
 
-import com.mss301.petclinic.common.web.exception.ErrorConstants;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.ConcurrencyFailureException;
@@ -9,6 +8,8 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import com.mss301.petclinic.common.web.exception.ErrorConstants;
 
 /**
  * Data-layer exception translator. Tách khỏi common-web's ExceptionTranslator vì

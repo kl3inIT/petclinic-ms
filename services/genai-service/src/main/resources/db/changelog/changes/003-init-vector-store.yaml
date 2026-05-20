@@ -1,0 +1,61 @@
+# Phase 12d — pgvector extension + RAG vector store.
+# Spring AI PgVectorStore default schema (modified table name + schema để consistent
+# với pattern "schema per service" trong project).
+#
+# ⚠️ pgvector extension cần CREATE EXTENSION quyền — Postgres user `postgres` (superuser
+# trong dev compose) đủ. Production có thể cần postgres-with-pgvector image.
+
+databaseChangeLog:
+  # Install pgvector vào schema `genai` thay vì default `public` — nhất quán với
+  # pattern "schema per service". JDBC currentSchema=genai chỉ resolve 1 schema,
+  # nên type `vector` phải nằm trong genai để Liquibase/PgVectorStore tìm được.
+  - changeSet:
+      id: 005-create-extension-vector
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE EXTENSION IF NOT EXISTS vector SCHEMA genai
+            dbms: postgresql
+
+  - changeSet:
+      id: 006-create-extension-hstore
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE EXTENSION IF NOT EXISTS hstore SCHEMA genai
+            dbms: postgresql
+
+  - changeSet:
+      id: 007-create-extension-uuid-ossp
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA genai
+            dbms: postgresql
+
+  # Bảng vector_store — pgvector requires `vector(N)` type, raw SQL because Liquibase
+  # YAML createTable không hỗ trợ vector type. N=1536 match default OpenAI 3-small;
+  # override khi swap embedding model qua property petclinic.ai.embedding.dimensions.
+  - changeSet:
+      id: 008-create-table-vector-store
+      author: mss301
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE IF NOT EXISTS genai.vector_store (
+                id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+                content TEXT NOT NULL,
+                metadata JSONB,
+                embedding VECTOR(1536) NOT NULL
+              )
+            dbms: postgresql
+
+  # HNSW index cho cosine similarity — Spring AI default distance type.
+  # HNSW > IVF cho recall trên dataset nhỏ + medium (FAQ ~100 chunks).
+  - changeSet:
+      id: 009-create-index-vector-store-hnsw
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE INDEX IF NOT EXISTS vector_store_embedding_hnsw_idx ON genai.vector_store USING HNSW (embedding vector_cosine_ops)
+            dbms: postgresql

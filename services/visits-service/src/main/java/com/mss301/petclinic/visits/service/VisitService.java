@@ -1,14 +1,15 @@
 package com.mss301.petclinic.visits.service;
 
+import java.time.Instant;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
 import com.mss301.petclinic.visits.model.VisitStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-
-import java.time.Instant;
-import java.util.UUID;
 
 public interface VisitService {
 

@@ -1,0 +1,60 @@
+databaseChangeLog:
+
+  # Seed 15 visits đa dạng status. Idempotent.
+  # customer_user_id dùng UUID từ auth.users (đã seed: datph, admin, admintest, datph123).
+  # KHÔNG FK sang auth schema — cross-service nên hardcode UUID OK.
+  # pet_id 1-20 + vet_id 1-5 → cần customers-service + vets-service seed chạy trước
+  # (nhưng Liquibase mỗi service chạy độc lập, nên seed này chỉ fail nếu visits DB
+  # chạy trước customers/vets — không xảy ra trong compose vì service start cùng lúc).
+
+  - changeSet:
+      id: 004-seed-visits
+      author: mss301
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM visits.visits
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO visits.visits
+                (pet_id, vet_id, customer_user_id, scheduled_at, status, reason, diagnosis, treatment, fee, created_date, last_modified_date)
+              VALUES
+                -- COMPLETED visits (past)
+                ( 1, 1, '69bd3ffa-f1f6-4f33-8803-12a96f0062ed', '2026-04-15 09:00+07', 'COMPLETED',
+                  'Annual checkup', 'Healthy', 'Vaccination booster',                  450000, NOW() - INTERVAL '34 days', NOW() - INTERVAL '34 days'),
+                ( 2, 2, '69bd3ffa-f1f6-4f33-8803-12a96f0062ed', '2026-04-20 14:30+07', 'COMPLETED',
+                  'Dental cleaning', 'Mild tartar buildup', 'Professional cleaning + fluoride',                                                  650000, NOW() - INTERVAL '29 days', NOW() - INTERVAL '29 days'),
+                ( 3, 4, '207c4d4d-145a-4f27-8d45-f7e77ded0176', '2026-04-22 10:00+07', 'COMPLETED',
+                  'X-ray follow-up', 'No fractures detected', 'Discharged',                                                                      550000, NOW() - INTERVAL '27 days', NOW() - INTERVAL '27 days'),
+                ( 5, 3, '5dbf29df-b6ff-4626-ac4e-1dd3bc7d6a3b', '2026-04-25 11:00+07', 'COMPLETED',
+                  'Bite wound', 'Infected wound left ear', 'Antibiotics + wound cleaning',                                                       780000, NOW() - INTERVAL '24 days', NOW() - INTERVAL '24 days'),
+                ( 7, 5, '86d0e6df-77b5-4d3c-8d6d-b3cedd3f09ff', '2026-05-01 15:00+07', 'COMPLETED',
+                  'Vomiting', 'Mild gastritis', 'Diet change + medication 7 days',                                                              600000, NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days'),
+                ( 8, 5, '86d0e6df-77b5-4d3c-8d6d-b3cedd3f09ff', '2026-05-08 16:30+07', 'COMPLETED',
+                  'Skin irritation', 'Mild dermatitis', 'Topical cream + e-collar',                                                              480000, NOW() - INTERVAL '11 days', NOW() - INTERVAL '11 days'),
+                (12, 2, '207c4d4d-145a-4f27-8d45-f7e77ded0176', '2026-05-10 09:30+07', 'COMPLETED',
+                  'Teeth check', 'Healthy', 'No treatment needed',                                                                              350000, NOW() - INTERVAL '9 days',  NOW() - INTERVAL '9 days'),
+
+                -- IN_PROGRESS visits (today, ongoing)
+                ( 4, 2, '69bd3ffa-f1f6-4f33-8803-12a96f0062ed', NOW() + INTERVAL '1 hour',  'IN_PROGRESS',
+                  'Tooth pain', NULL, NULL,                                                                                                     NULL, NOW(), NOW()),
+                (15, 4, '86d0e6df-77b5-4d3c-8d6d-b3cedd3f09ff', NOW() + INTERVAL '2 hours', 'IN_PROGRESS',
+                  'Limping right hind leg', NULL, NULL,                                                                                          NULL, NOW(), NOW()),
+
+                -- SCHEDULED visits (future)
+                ( 6, 1, '69bd3ffa-f1f6-4f33-8803-12a96f0062ed', NOW() + INTERVAL '1 day',  'SCHEDULED',
+                  'Annual vaccination', NULL, NULL,                                                                                              NULL, NOW(), NOW()),
+                ( 9, 3, '5dbf29df-b6ff-4626-ac4e-1dd3bc7d6a3b', NOW() + INTERVAL '2 days', 'SCHEDULED',
+                  'Spaying surgery consultation', NULL, NULL,                                                                                    NULL, NOW(), NOW()),
+                (10, 5, '207c4d4d-145a-4f27-8d45-f7e77ded0176', NOW() + INTERVAL '3 days', 'SCHEDULED',
+                  'General check-up', NULL, NULL,                                                                                                NULL, NOW(), NOW()),
+                (14, 2, '86d0e6df-77b5-4d3c-8d6d-b3cedd3f09ff', NOW() + INTERVAL '5 days', 'SCHEDULED',
+                  'Bird wing exam', NULL, NULL,                                                                                                  NULL, NOW(), NOW()),
+
+                -- CANCELLED visits
+                (16, 4, '207c4d4d-145a-4f27-8d45-f7e77ded0176', '2026-05-05 13:00+07', 'CANCELLED',
+                  'Owner rescheduled', NULL, NULL,                                                                                               NULL, NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'),
+                (18, 1, '69bd3ffa-f1f6-4f33-8803-12a96f0062ed', '2026-05-12 08:00+07', 'CANCELLED',
+                  'Pet recovered before visit', NULL, NULL,                                                                                      NULL, NOW() - INTERVAL '7 days',  NOW() - INTERVAL '7 days')

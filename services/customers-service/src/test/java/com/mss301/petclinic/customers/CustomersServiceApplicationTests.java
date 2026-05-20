@@ -2,30 +2,29 @@ package com.mss301.petclinic.customers;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.test.context.TestPropertySource;
 
+import com.mss301.petclinic.common.testing.AbstractPostgresIntegrationTest;
+
+/**
+ * Smoke test — verify Spring context khởi tạo + Liquibase chạy migration.
+ *
+ * Tái dùng {@link AbstractPostgresIntegrationTest} (singleton Postgres container) thay vì
+ * tự khai báo @Container per-class → context cache share giữa các test class.
+ */
 @SpringBootTest
-@Testcontainers
-class CustomersServiceApplicationTests {
-
-    /**
-     * Postgres container chạy thật (Docker required).
-     * {@code @ServiceConnection} tự inject jdbcUrl/user/pass vào Spring datasource —
-     * không cần {@code @DynamicPropertySource}.
-     * Liquibase chạy như production → test luôn validate cả schema migration.
-     */
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine")
-            .withDatabaseName("petclinic")
-            .withUsername("postgres")
-            .withPassword("postgres");
+@TestPropertySource(properties = {
+        "spring.cloud.config.enabled=false",
+        "spring.cloud.discovery.enabled=false",
+        "eureka.client.enabled=false",
+        "petclinic.auth.jwt.jwk-set-uri=http://localhost:0/jwks-not-used-in-test",
+        "spring.jpa.properties.hibernate.default_schema=customers",
+        "spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.yaml",
+})
+class CustomersServiceApplicationTests extends AbstractPostgresIntegrationTest {
 
     @Test
     void contextLoads() {
-        // Smoke test — Spring context khởi tạo + Liquibase chạy migration thành công.
+        // Boot context + Liquibase migration + Hibernate validate đều OK nếu test pass.
     }
 }

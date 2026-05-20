@@ -25,6 +25,15 @@ management:
   tracing:
     sampling:
       probability: 1.0                    # 100% trace — debug dễ
+  # Boot 4 OTLP exporter — ship span trực tiếp tới Zipkin 3.x (native OTLP receiver tại /v1/traces).
+  # OTLP_ENDPOINT env override khi chạy trong container (zipkin host name khác localhost).
+  # Property path Boot 4: `management.opentelemetry.tracing.export.otlp.endpoint` (Boot 3 path
+  # `management.otlp.tracing.endpoint` đã đổi trong Boot 4).
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTLP_ENDPOINT:http://localhost:9411/v1/traces}
 
 eureka:
   client:

@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: genai-service
+
+  # Force reactive — spring-cloud-starter-netflix-eureka-client / MCP autoconfig kéo theo
+  # spring-webmvc transitive. Spring Boot 4 autodetect ưu tiên servlet khi cả 2 stack có
+  # trên classpath → ConfigServletWebServerApplicationContext, conflict @EnableWebFluxSecurity
+  # với @EnableWebSecurity (cùng "conversionServicePostProcessor"). Set explicit để pick WebFlux.
+  main:
+    web-application-type: reactive
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Exclude phải nằm trong jar — config-server property source load SAU autoconfig phase
+  # ở Spring Boot 4. Để config-server thì OpenAiEmbeddingAutoConfiguration vẫn fire.
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+server:
+  port: 8188                    # 8187=mcp-server. Next free.
+
+management:
+  server:
+    port: 9188

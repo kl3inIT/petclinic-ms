@@ -1,0 +1,44 @@
+# mcp-server — shared (env-agnostic) config.
+# Env-specific override → mcp-server-<profile>.yml.
+
+spring:
+  ai:
+    # ⚠️ Spring AI 2.0.0-M6 — phải TẮT mọi auto-config chat/embedding/image/audio:
+    # starter spring-ai-openai (kéo qua mcp transitively) eager-create các ChatModel /
+    # EmbeddingModel bean ở boot → require apiKey, không có thì boot fail. mcp-server
+    # KHÔNG dùng LLM (chỉ expose tools) → disable hết, an toàn.
+    model:
+      chat: none
+      embedding: none
+      embedding.text: none
+      embedding.multimodal: none
+      image: none
+      audio.speech: none
+      audio.transcription: none
+      moderation: none
+    mcp:
+      server:
+        # STREAMABLE = stateless HTTP (modern, kế thừa SSE — recommended). Endpoint
+        # mặc định: /mcp (override qua streamable-http.mcp-endpoint).
+        protocol: STREAMABLE
+        name: petclinic-mcp-server
+        version: 0.1.0
+        type: SYNC                # Sync mode — blocking + virtual threads stack toàn project
+        instructions: |
+          Petclinic MCP server. Tools exposed:
+          - Customers domain (owners + pets): listOwners, getOwner, getPet
+          - Vets domain: listVets, getVet, findVetsBySpecialty
+          - Visits domain: searchVisits, getVisit (read-only — booking/cancel cần JWT, dời Phase 12b)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Thêm mcp-related actuator endpoints khi Spring AI cung cấp (M6 chưa có chuyên dụng).
+        # Đã inherit từ application.yml: health/info/metrics/prometheus/loggers/...
+        include: "*"
+
+logging:
+  level:
+    org.springframework.ai: DEBUG          # learning project — log mọi LLM/MCP interaction
+    com.mss301.petclinic.mcp: DEBUG

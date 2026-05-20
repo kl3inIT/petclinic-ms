@@ -1,9 +1,9 @@
 package com.mss301.petclinic.auth.events;
 
-import com.mss301.petclinic.common.events.DomainEvent;
-
 import java.time.Instant;
 import java.util.UUID;
+
+import com.mss301.petclinic.common.events.DomainEvent;
 
 /**
  * Phát ra sau khi tạo user thành công.

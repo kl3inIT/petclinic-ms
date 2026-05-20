@@ -1,0 +1,61 @@
+databaseChangeLog:
+
+  # Seed 10 owners + 20 pets cho dev/demo. Idempotent qua preCondition: chỉ chạy
+  # nếu owners table rỗng (giúp re-run safe sau khi xoá DB hoặc khi muốn reset).
+  # Tên + thành phố Vietnamese cho domain phù hợp.
+
+  - changeSet:
+      id: 004-001-seed-owners
+      author: mss301
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM customers.owners
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO customers.owners (first_name, last_name, address, city, telephone) VALUES
+                ('Anh',    'Nguyễn',   '12 Lê Lợi',           'Hồ Chí Minh', '0901111001'),
+                ('Bình',   'Trần',     '45 Hai Bà Trưng',     'Hà Nội',      '0901111002'),
+                ('Chi',    'Lê',       '78 Nguyễn Huệ',       'Đà Nẵng',     '0901111003'),
+                ('Dương',  'Phạm',     '23 Trần Phú',         'Nha Trang',   '0901111004'),
+                ('Hà',     'Hoàng',    '101 Quang Trung',     'Huế',         '0901111005'),
+                ('Khang',  'Vũ',       '56 Phạm Ngũ Lão',     'Hồ Chí Minh', '0901111006'),
+                ('Linh',   'Đặng',     '9 Lý Tự Trọng',       'Hải Phòng',   '0901111007'),
+                ('Minh',   'Bùi',      '88 Nguyễn Trãi',      'Hà Nội',      '0901111008'),
+                ('Ngọc',   'Đỗ',       '34 Bà Triệu',         'Cần Thơ',     '0901111009'),
+                ('Phong',  'Ngô',      '67 Đinh Tiên Hoàng',  'Hồ Chí Minh', '0901111010')
+
+  - changeSet:
+      id: 004-002-seed-pets
+      author: mss301
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM customers.pets
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO customers.pets (name, birth_date, type, owner_id) VALUES
+                ('Milu',     '2023-04-15', 'dog',    1),
+                ('Bông',     '2022-11-02', 'cat',    1),
+                ('Tom',      '2024-01-20', 'cat',    2),
+                ('Lucky',    '2021-07-30', 'dog',    3),
+                ('Coco',     '2023-09-12', 'rabbit', 3),
+                ('Mochi',    '2024-03-05', 'cat',    4),
+                ('Bruno',    '2020-12-18', 'dog',    5),
+                ('Ginger',   '2023-06-22', 'cat',    5),
+                ('Pumpkin',  '2024-05-10', 'hamster',6),
+                ('Rex',      '2022-08-14', 'dog',    7),
+                ('Snowy',    '2023-02-28', 'cat',    7),
+                ('Buddy',    '2021-10-03', 'dog',    8),
+                ('Whiskers', '2023-12-11', 'cat',    8),
+                ('Mango',    '2022-04-07', 'bird',   9),
+                ('Daisy',    '2024-02-19', 'dog',    9),
+                ('Simba',    '2023-08-25', 'cat',    10),
+                ('Charlie',  '2021-05-30', 'dog',    10),
+                ('Nala',     '2024-06-14', 'cat',    2),
+                ('Oreo',     '2023-11-08', 'hamster',6),
+                ('Peanut',   '2022-09-21', 'rabbit', 4)

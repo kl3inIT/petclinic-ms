@@ -22,6 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const GATEWAY = process.env.GATEWAY_URL ?? 'http://localhost:8180';
 const SERVICES = ['auth', 'customers', 'vets', 'visits', 'workflow'] as const;
+const SERVICES = ['auth', 'customers', 'vets', 'visits', 'genai'] as const;
 const OUTPUT = resolve(__dirname, '../openapi/petclinic-api.json');
 
 interface OpenApiSpec {

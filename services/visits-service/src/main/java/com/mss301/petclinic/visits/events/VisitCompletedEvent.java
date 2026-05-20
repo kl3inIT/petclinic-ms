@@ -1,10 +1,10 @@
 package com.mss301.petclinic.visits.events;
 
-import com.mss301.petclinic.common.events.DomainEvent;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+
+import com.mss301.petclinic.common.events.DomainEvent;
 
 /**
  * Phát ra sau khi vet hoàn thành khám.

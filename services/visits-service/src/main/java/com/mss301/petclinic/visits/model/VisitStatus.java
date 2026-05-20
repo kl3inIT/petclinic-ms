@@ -1,9 +1,9 @@
 package com.mss301.petclinic.visits.model;
 
-import com.mss301.petclinic.common.jpa.enums.OrderedEnum;
-
 import java.util.HashSet;
 import java.util.Set;
+
+import com.mss301.petclinic.common.jpa.enums.OrderedEnum;
 
 /**
  * State machine cho Visit. Implement {@link OrderedEnum} (extends {@code IdentifiedEnum}) để:

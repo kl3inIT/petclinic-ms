@@ -1,5 +1,12 @@
 package com.mss301.petclinic.auth.service.impl;
 
+import java.util.UUID;
+
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.mss301.petclinic.auth.dto.req.LoginRequest;
 import com.mss301.petclinic.auth.dto.req.RegisterRequest;
 import com.mss301.petclinic.auth.dto.res.AuthResponse;
@@ -16,12 +23,6 @@ import com.mss301.petclinic.auth.service.AuthService;
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.common.web.exception.ResourceNotFoundException;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)

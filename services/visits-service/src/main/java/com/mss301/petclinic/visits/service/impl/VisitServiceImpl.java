@@ -1,13 +1,25 @@
 package com.mss301.petclinic.visits.service.impl;
 
+import java.time.Instant;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
+
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
-import com.mss301.petclinic.visits.client.CustomersClient;
 import com.mss301.petclinic.visits.client.PetSummary;
+import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.UserSummary;
-import com.mss301.petclinic.visits.client.UsersClient;
 import com.mss301.petclinic.visits.client.VetSummary;
-import com.mss301.petclinic.visits.client.VetsClient;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
@@ -20,19 +32,6 @@ import com.mss301.petclinic.visits.model.VisitStatus;
 import com.mss301.petclinic.visits.repository.VisitRepository;
 import com.mss301.petclinic.visits.repository.VisitSpecifications;
 import com.mss301.petclinic.visits.service.VisitService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpClientErrorException;
-
-import java.time.Instant;
-import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -41,21 +40,18 @@ public class VisitServiceImpl implements VisitService {
     private static final Logger log = LoggerFactory.getLogger(VisitServiceImpl.class);
 
     private final VisitRepository repository;
-    private final CustomersClient customersClient;
-    private final VetsClient vetsClient;
-    private final UsersClient usersClient;
+    /** Cross-service calls qua bean tách riêng — bean boundary cần thiết để Spring AOP
+     *  intercept {@code @CircuitBreaker} (gọi {@code this.remoteClients.fetchPet(...)} trong cùng class
+     *  sẽ bypass proxy → annotation không kick in). */
+    private final RemoteClientsFacade remoteClients;
     /** Optional — broker có thể disabled (test profile) hoặc tạm down. */
     private final ObjectProvider<EventPublisher> events;
 
     public VisitServiceImpl(VisitRepository repository,
-                            CustomersClient customersClient,
-                            VetsClient vetsClient,
-                            UsersClient usersClient,
+                            RemoteClientsFacade remoteClients,
                             ObjectProvider<EventPublisher> events) {
         this.repository = repository;
-        this.customersClient = customersClient;
-        this.vetsClient = vetsClient;
-        this.usersClient = usersClient;
+        this.remoteClients = remoteClients;
         this.events = events;
     }
 
@@ -65,7 +61,7 @@ public class VisitServiceImpl implements VisitService {
         // Cross-service validation — reuse response cho event enrichment
         VetSummary vet;
         try {
-            vet = vetsClient.getVet(req.vetId());
+            vet = remoteClients.fetchVet(req.vetId());
         } catch (HttpClientErrorException.NotFound e) {
             throw new BadRequestAlertException(
                     "Vet không tồn tại: " + req.vetId(), "Visit", "vet-not-found");
@@ -73,7 +69,7 @@ public class VisitServiceImpl implements VisitService {
 
         PetSummary pet;
         try {
-            pet = customersClient.getPet(req.petId());
+            pet = remoteClients.fetchPet(req.petId());
         } catch (HttpClientErrorException.NotFound e) {
             throw new BadRequestAlertException(
                     "Pet không tồn tại: " + req.petId(), "Visit", "pet-not-found");
@@ -157,7 +153,9 @@ public class VisitServiceImpl implements VisitService {
             return;
         }
         try {
-            UserSummary user = usersClient.getUser(currentUserId);
+            // fetchUser qua circuit breaker — nếu auth-service down, publish fail
+            // → catch bên dưới, không rollback visit (event là best-effort).
+            UserSummary user = remoteClients.fetchUser(currentUserId);
             publisher.publish(VisitScheduledEvent.of(
                     saved.getId(), saved.getScheduledAt(), saved.getReason(),
                     user.id(), user.username(), user.email(),
@@ -174,9 +172,9 @@ public class VisitServiceImpl implements VisitService {
             return;
         }
         try {
-            UserSummary user = usersClient.getUser(v.getCustomerUserId());
-            PetSummary pet = customersClient.getPet(v.getPetId());
-            VetSummary vet = vetsClient.getVet(v.getVetId());
+            UserSummary user = remoteClients.fetchUser(v.getCustomerUserId());
+            PetSummary pet = remoteClients.fetchPet(v.getPetId());
+            VetSummary vet = remoteClients.fetchVet(v.getVetId());
             publisher.publish(VisitCompletedEvent.of(
                     v.getId(), v.getScheduledAt(), Instant.now(),
                     user.id(), user.username(), user.email(),

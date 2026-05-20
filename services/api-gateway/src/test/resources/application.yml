@@ -1,0 +1,30 @@
+# Test overrides — api-gateway contextLoads smoke test.
+
+spring:
+  profiles:
+    active: test
+
+  docker:
+    compose:
+      enabled: false
+
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+
+# JWT decoder property — required bởi common-security trên classpath.
+petclinic:
+  auth:
+    jwt:
+      jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
+      issuer: petclinic-test
+      audience: petclinic-test
+
+# Tắt Eureka client trong test — không có discovery server.
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false

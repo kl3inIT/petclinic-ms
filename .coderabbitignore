@@ -1,0 +1,63 @@
+# Files CodeRabbit should NOT review.
+# Path-glob format — same syntax as .gitignore.
+# Note: `.coderabbit.yaml > reviews.path_filters` is the primary mechanism; this file is
+# a fallback for repo-level ignore. Keep them in sync.
+
+# --- Generated / vendored code ---
+**/node_modules/
+**/dist/
+**/build/
+**/.gradle/
+**/target/
+**/coverage/
+**/.next/
+**/.turbo/
+**/.vite/
+
+# --- Lock files / package locks ---
+**/*.lock
+**/pnpm-lock.yaml
+**/package-lock.json
+**/yarn.lock
+
+# --- Gradle wrapper ---
+**/gradle-wrapper.jar
+**/gradle/wrapper/
+**/gradlew
+**/gradlew.bat
+
+# --- FE generated (orval OpenAPI client + TanStack router) ---
+apps/web/src/lib/api/generated/
+apps/web/openapi/
+apps/web/src/routeTree.gen.ts
+**/*.gen.ts
+
+# --- Binary / media assets ---
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.svg
+**/*.ico
+**/*.webp
+**/*.woff
+**/*.woff2
+**/*.ttf
+**/*.eot
+
+# --- IDE / OS ---
+**/.idea/
+**/.vscode/
+**/.DS_Store
+
+# --- Logs / crash dumps ---
+hs_err_pid*.log
+replay_pid*.log
+**/*.log
+
+# --- Local secrets (just in case — should be gitignored anyway) ---
+.env.local
+.env.*.local
+
+# --- Docs HTML (often large rendered output) ---
+docs/**/*.html

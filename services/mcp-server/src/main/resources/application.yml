@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: mcp-server
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Config Server pull → app + service-specific config từ config-repo/mcp-server*.yml
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+server:
+  port: 8187                    # 8185=admin, 8186=mailer (Go), 8187=mcp-server. Next free.
+
+management:
+  server:
+    port: 9187

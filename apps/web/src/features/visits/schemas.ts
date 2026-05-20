@@ -6,14 +6,8 @@ import { z } from 'zod';
  *   scheduledAt (Instant, future), reason (String, optional ≤ 500)
  */
 export const bookVisitSchema = z.object({
-  petId: z.coerce
-    .number({ message: 'Bắt buộc' })
-    .int()
-    .positive('Bắt buộc'),
-  vetId: z.coerce
-    .number({ message: 'Bắt buộc' })
-    .int()
-    .positive('Bắt buộc'),
+  petId: z.coerce.number({ message: 'Bắt buộc' }).int().positive('Bắt buộc'),
+  vetId: z.coerce.number({ message: 'Bắt buộc' }).int().positive('Bắt buộc'),
   // datetime-local sinh ra "YYYY-MM-DDTHH:MM" (no seconds, no zone) — chuyển sang ISO ở mutation.
   scheduledAt: z
     .string()
@@ -21,7 +15,8 @@ export const bookVisitSchema = z.object({
     .refine((v) => new Date(v).getTime() > Date.now(), {
       message: 'Phải là thời gian trong tương lai',
     }),
-  reason: z.string().max(500, 'Tối đa 500 ký tự').optional(),
+  // Empty string ở form-state; strip về undefined ở submit để không gửi key rỗng.
+  reason: z.string().max(500, 'Tối đa 500 ký tự'),
 });
 
 export type BookVisitInput = z.infer<typeof bookVisitSchema>;
@@ -29,11 +24,8 @@ export type BookVisitInput = z.infer<typeof bookVisitSchema>;
 /** Complete Visit — diagnosis @NotBlank bên BE, treatment optional, fee ≥ 0. */
 export const completeVisitSchema = z.object({
   diagnosis: z.string().min(1, 'Bắt buộc').max(4000),
-  treatment: z.string().max(4000).optional(),
-  fee: z.coerce
-    .number({ message: 'Nhập số' })
-    .nonnegative('Phải ≥ 0')
-    .optional(),
+  treatment: z.string().max(4000),
+  fee: z.coerce.number({ message: 'Nhập số' }).nonnegative('Phải ≥ 0'),
 });
 
 export type CompleteVisitInput = z.infer<typeof completeVisitSchema>;

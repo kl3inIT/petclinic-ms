@@ -1,14 +1,14 @@
 import { Link, createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from '@tanstack/react-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldError } from '@/lib/form/FieldError';
 import { useLogin } from '@/lib/api/generated/authentication/authentication';
-import { loginSchema, type LoginValues } from '@/features/auth/schemas';
+import { loginSchema } from '@/features/auth/schemas';
 import { useAuthStore } from '@/features/auth/store';
 
 const searchSchema = z.object({
@@ -24,11 +24,6 @@ function LoginPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: '/_auth/login' });
   const setSession = useAuthStore((s) => s.setSession);
-
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { username: '', password: '' },
-  });
 
   const loginMutation = useLogin({
     mutation: {
@@ -47,46 +42,59 @@ function LoginPage() {
     },
   });
 
+  const form = useForm({
+    defaultValues: { username: '', password: '' },
+    validators: { onChange: loginSchema },
+    onSubmit: ({ value }) => loginMutation.mutate({ data: value }),
+  });
+
   return (
     <form
-      onSubmit={form.handleSubmit((values) => loginMutation.mutate({ data: values }))}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void form.handleSubmit();
+      }}
       className="space-y-5"
     >
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold">Đăng nhập</h1>
-        <p className="text-sm text-muted-foreground">
-          Truy cập PetClinic admin portal
-        </p>
+        <p className="text-sm text-muted-foreground">Truy cập PetClinic admin portal</p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
-        <Input
-          id="username"
-          autoComplete="username"
-          {...form.register('username')}
-        />
-        {form.formState.errors.username ? (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.username.message}
-          </p>
-        ) : null}
-      </div>
+      <form.Field
+        name="username"
+        children={(field) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Username</Label>
+            <Input
+              id={field.name}
+              autoComplete="username"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            <FieldError field={field} />
+          </div>
+        )}
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          {...form.register('password')}
-        />
-        {form.formState.errors.password ? (
-          <p className="text-sm text-destructive">
-            {form.formState.errors.password.message}
-          </p>
-        ) : null}
-      </div>
+      <form.Field
+        name="password"
+        children={(field) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Password</Label>
+            <Input
+              id={field.name}
+              type="password"
+              autoComplete="current-password"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+            />
+            <FieldError field={field} />
+          </div>
+        )}
+      />
 
       <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
         {loginMutation.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}

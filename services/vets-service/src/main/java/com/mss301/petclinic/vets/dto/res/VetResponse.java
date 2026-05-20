@@ -1,9 +1,9 @@
 package com.mss301.petclinic.vets.dto.res;
 
-import com.mss301.petclinic.vets.model.Vet;
-
 import java.util.List;
 import java.util.Set;
+
+import com.mss301.petclinic.vets.model.Vet;
 
 public record VetResponse(
         Long id,

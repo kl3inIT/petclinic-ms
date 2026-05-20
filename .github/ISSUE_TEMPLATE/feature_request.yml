@@ -1,0 +1,37 @@
+name: Feature request
+description: Đề xuất chức năng / cải tiến mới
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: Mô tả vấn đề user gặp phải HOẶC gap trong system. Đừng nhảy thẳng vào solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Sketch design + alternative đã loại bỏ + lý do.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Single service (low blast radius)
+        - Multi-service (medium blast radius)
+        - Shared module / infra (high blast radius)
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Bullet checklist demonstrate feature đã done.

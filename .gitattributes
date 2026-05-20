@@ -1,0 +1,23 @@
+# Enforce line endings — quan trọng cho shell scripts chạy trong Docker Linux container.
+# Windows checkout với `core.autocrlf=true` mặc định convert mọi text → CRLF, làm
+# gradlew/sh script báo "/bin/sh: ./gradlew: not found" vì shebang `#!/bin/sh\r` invalid.
+
+# Shell scripts — LUÔN LF
+*.sh        text eol=lf
+gradlew     text eol=lf
+
+# Windows batch — luôn CRLF
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Mọi file text khác — auto theo platform, repo store LF
+*           text=auto
+
+# Binary — không touch
+*.jar       binary
+*.png       binary
+*.jpg       binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.zip       binary

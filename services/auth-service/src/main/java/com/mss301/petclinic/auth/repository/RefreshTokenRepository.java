@@ -1,13 +1,14 @@
 package com.mss301.petclinic.auth.repository;
 
-import com.mss301.petclinic.auth.model.RefreshToken;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
-import java.util.UUID;
+import com.mss301.petclinic.auth.model.RefreshToken;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
 

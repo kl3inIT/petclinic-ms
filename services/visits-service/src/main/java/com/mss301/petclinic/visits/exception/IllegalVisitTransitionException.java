@@ -1,9 +1,9 @@
 package com.mss301.petclinic.visits.exception;
 
+import java.io.Serial;
+
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.visits.model.VisitStatus;
-
-import java.io.Serial;
 
 public class IllegalVisitTransitionException extends BadRequestAlertException {
 

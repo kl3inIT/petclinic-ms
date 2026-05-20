@@ -25,6 +25,7 @@ include(":shared:common-jpa")
 include(":shared:common-security")
 include(":shared:common-clients")
 include(":shared:common-events")
+include(":shared:common-testing")
 include(":services:discovery-server")
 include(":services:config-server")
 include(":services:api-gateway")
@@ -32,4 +33,10 @@ include(":services:auth-service")
 include(":services:customers-service")
 include(":services:vets-service")
 include(":services:visits-service")
+
 include(":services:workflow-service")
+
+include(":services:admin-server")
+include(":services:mcp-server")
+include(":services:genai-service")
+

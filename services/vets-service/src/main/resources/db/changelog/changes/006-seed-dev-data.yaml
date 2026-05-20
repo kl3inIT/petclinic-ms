@@ -1,0 +1,52 @@
+databaseChangeLog:
+
+  # Seed 5 vets + vet_specialties assignment. 4 specialties đã có sẵn changeset 005
+  # (radiology=1, surgery=2, dentistry=3, internal medicine=4).
+  # Idempotent: chỉ chạy nếu vets table rỗng.
+
+  - changeSet:
+      id: 006-001-seed-vets
+      author: mss301
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM vets.vets
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO vets.vets (first_name, last_name) VALUES
+                ('Thanh',  'Nguyễn'),
+                ('Hương',  'Trần'),
+                ('Quân',   'Lê'),
+                ('Mai',    'Phạm'),
+                ('Hùng',   'Vũ')
+
+  - changeSet:
+      id: 006-002-seed-vet-specialties
+      author: mss301
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM vets.vet_specialties
+      changes:
+        # Thanh Nguyễn: radiology + surgery
+        # Hương Trần: dentistry
+        # Quân Lê: surgery + internal medicine
+        # Mai Phạm: radiology
+        # Hùng Vũ: internal medicine + dentistry
+        - sql:
+            sql: >-
+              INSERT INTO vets.vet_specialties (vet_id, specialty_id)
+              SELECT v.id, s.id FROM vets.vets v, vets.specialties s
+              WHERE (v.first_name, v.last_name, s.name) IN (
+                ('Thanh',  'Nguyễn', 'radiology'),
+                ('Thanh',  'Nguyễn', 'surgery'),
+                ('Hương',  'Trần',   'dentistry'),
+                ('Quân',   'Lê',     'surgery'),
+                ('Quân',   'Lê',     'internal medicine'),
+                ('Mai',    'Phạm',   'radiology'),
+                ('Hùng',   'Vũ',     'internal medicine'),
+                ('Hùng',   'Vũ',     'dentistry')
+              )

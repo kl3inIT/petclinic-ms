@@ -1,10 +1,10 @@
 {
   "name": "petclinic-ms",
   "private": true,
-  "packageManager": "pnpm@11.0.8",
+  "packageManager": "pnpm@10.15.1",
   "engines": {
     "node": ">=22.0.0",
-    "pnpm": "11.0.8"
+    "pnpm": ">=10.0.0"
   },
   "scripts": {
     "dev": "turbo run dev",
@@ -18,9 +18,24 @@
     "web:typecheck": "pnpm --filter @petclinic/web typecheck",
     "web:test": "pnpm --filter @petclinic/web test",
     "web:generate:api": "pnpm --filter @petclinic/web generate:api",
-    "format": "prettier --write \"{apps,packages}/**/*.{ts,tsx,json,md,css}\""
+    "format": "prettier --write \"{apps,packages}/**/*.{ts,tsx,json,md,css}\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/web/**/*.{ts,tsx,js,jsx}": [
+      "pnpm --filter @petclinic/web exec eslint --max-warnings 0 --fix",
+      "prettier --write"
+    ],
+    "apps/web/**/*.{json,css,md}": [
+      "prettier --write"
+    ],
+    "{apps,packages}/**/*.{ts,tsx,json,css,md}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "turbo": "^2.9.14"

@@ -1,0 +1,33 @@
+# Test overrides — auth-service tests.
+# auth-service là JWT ISSUER (tự sinh RSA keypair in-memory), KHÔNG cần jwk-set-uri
+# theo common-security pattern. Tuy nhiên common-security auto-config vẫn yêu cầu
+# property tồn tại — dummy value để bean wiring pass.
+
+spring:
+  profiles:
+    active: test
+
+  docker:
+    compose:
+      enabled: false
+
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+
+  liquibase:
+    enabled: true
+
+petclinic:
+  auth:
+    jwt:
+      jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
+      issuer: petclinic-test
+      audience: petclinic-test
+    access-token-ttl: PT15M
+    refresh-token-ttl: P7D
+
+# Disable event publishing trong test (auth emit user.registered event).
+petclinic.events.enabled: false

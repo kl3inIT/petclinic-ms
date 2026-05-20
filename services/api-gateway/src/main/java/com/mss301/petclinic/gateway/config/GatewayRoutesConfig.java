@@ -1,19 +1,19 @@
 package com.mss301.petclinic.gateway.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.function.RouterFunction;
-import org.springframework.web.servlet.function.ServerResponse;
-
-import java.net.URI;
-import java.time.Duration;
-
 import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.setPath;
 import static org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions.circuitBreaker;
 import static org.springframework.cloud.gateway.server.mvc.filter.LoadBalancerFilterFunctions.lb;
 import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 import static org.springframework.cloud.gateway.server.mvc.predicate.GatewayRequestPredicates.path;
+
+import java.net.URI;
+import java.time.Duration;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerResponse;
 
 /**
  * Gateway routes — functional API (canonical pattern cho Spring Cloud Gateway 5.x WebMVC).
@@ -33,14 +33,16 @@ import static org.springframework.cloud.gateway.server.mvc.predicate.GatewayRequ
 public class GatewayRoutesConfig {
 
     private static final URI FALLBACK_URI = URI.create("forward:/fallback");
-    private static final String CB_ID = "defaultCircuitBreaker";
+    // Per-service CB ID — KHÔNG share. Trước đây dùng "defaultCircuitBreaker" cho tất cả routes,
+    // khi 1 service trip CB (vd. /admin/llm/test với api-key chậm) → block toàn bộ routes khác
+    // (chat, customers, vets...) trong 30s OPEN window. Per-service isolation đúng pattern.
 
     @Bean
     public RouterFunction<ServerResponse> customersServiceRoute() {
         return route("customers-service")
                 .route(path("/api/v1/owners/**").or(path("/api/v1/pets/**")), http())
                 .filter(lb("customers-service"))
-                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .filter(circuitBreaker(c -> c.setId("customersCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 
@@ -49,7 +51,7 @@ public class GatewayRoutesConfig {
         return route("vets-service")
                 .route(path("/api/v1/vets/**").or(path("/api/v1/specialties/**")), http())
                 .filter(lb("vets-service"))
-                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .filter(circuitBreaker(c -> c.setId("vetsCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 
@@ -58,7 +60,7 @@ public class GatewayRoutesConfig {
         return route("visits-service")
                 .route(path("/api/v1/visits/**"), http())
                 .filter(lb("visits-service"))
-                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .filter(circuitBreaker(c -> c.setId("visitsCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 
@@ -67,7 +69,20 @@ public class GatewayRoutesConfig {
         return route("workflow-service")
                 .route(path("/api/v1/workflows/**"), http())
                 .filter(lb("workflow-service"))
-                .filter(circuitBreaker(c -> c.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .filter(circuitBreaker(c -> c.setId("workflowCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
+    /**
+     * AI chat — Phase 12b. JWT-protected ở downstream (genai-service security config).
+     * CB scope rộng vì downstream call OpenRouter có thể chậm/lỗi không kiểm soát được.
+     */
+    @Bean
+    public RouterFunction<ServerResponse> genaiServiceRoute() {
+        return route("genai-service")
+                .route(path("/api/v1/ai/**").or(path("/api/v1/admin/llm/**")), http())
+                .filter(lb("genai-service"))
+                .filter(circuitBreaker(c -> c.setId("genaiCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 
@@ -84,7 +99,7 @@ public class GatewayRoutesConfig {
                         .or(path("/api/v1/auth/refresh")), http())
                 .filter(limiter.asFilter())
                 .filter(lb("auth-service"))
-                .filter(circuitBreaker(cb -> cb.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .filter(circuitBreaker(cb -> cb.setId("authCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 
@@ -97,7 +112,7 @@ public class GatewayRoutesConfig {
         return route("auth-protected")
                 .route(path("/api/v1/auth/me").or(path("/api/v1/auth/logout")), http())
                 .filter(lb("auth-service"))
-                .filter(circuitBreaker(cb -> cb.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .filter(circuitBreaker(cb -> cb.setId("authCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 
@@ -110,7 +125,7 @@ public class GatewayRoutesConfig {
         return route("jwks")
                 .route(path("/.well-known/jwks.json"), http())
                 .filter(lb("auth-service"))
-                .filter(circuitBreaker(cb -> cb.setId(CB_ID).setFallbackUri(FALLBACK_URI.toString())))
+                .filter(circuitBreaker(cb -> cb.setId("authCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 
@@ -161,6 +176,15 @@ public class GatewayRoutesConfig {
                 .route(path("/v3/api-docs/workflow"), http())
                 .before(setPath("/v3/api-docs"))
                 .filter(lb("workflow-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsGenaiRoute() {
+        return route("api-docs-genai")
+                .route(path("/v3/api-docs/genai"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("genai-service"))
                 .build();
     }
 }

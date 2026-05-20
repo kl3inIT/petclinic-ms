@@ -38,16 +38,12 @@ updates:
           - "org.liquibase:*"
           - "com.h2database:*"
 
-  - package-ecosystem: "gradle"
-    directory: "/build-logic"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 99
-    labels:
-      - "dependencies"
-      - "build-logic"
-    commit-message:
-      prefix: "deps(build-logic)"
+  # build-logic là included build dùng CHUNG version catalog ở root
+  # (`from(files("../gradle/libs.versions.toml"))`). Không khai báo entry
+  # riêng cho /build-logic vì Dependabot sandbox không resolve được path `..`
+  # → "The updater encountered one or more errors". Update plugin version
+  # (spring-boot-gradle-plugin, spring-dep-management-plugin) đã được entry
+  # root xử lý qua libs.versions.toml.
 
   # ─────────────────────────────────────────────────────────
   # Docker — compose.yaml ở root (Postgres image)
@@ -65,7 +61,7 @@ updates:
       prefix: "deps(docker)"
 
   # ─────────────────────────────────────────────────────────
-  # GitHub Actions — sẽ áp dụng khi có workflow trong .github/workflows/
+  # GitHub Actions — scan các action ref trong .github/workflows/.
   # ─────────────────────────────────────────────────────────
 
   - package-ecosystem: "github-actions"

@@ -1,9 +1,10 @@
 package com.mss301.petclinic.common.web.openapi;
 
+import org.springdoc.core.customizers.OpenApiCustomizer;
+
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
-import org.springdoc.core.customizers.OpenApiCustomizer;
 
 /**
  * Mặc định OpenAPI info cho tất cả service. Service muốn override title/description thì tạo

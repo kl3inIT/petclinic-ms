@@ -16,6 +16,16 @@ testcontainers     = "2.0.5"            # 2.x đổi artifactId pattern `testcon
 # API docs
 springdoc          = "3.0.3"            # OpenAPI/Swagger UI — version riêng cho Spring Boot 4
 
+# Spring Boot Admin (codecentric) — UI quản trị + monitoring cho 5 Spring services.
+# 4.0.4 fix variables.css template — expose colors trực tiếp thay vì T(...)/bean method
+# (#5251) → tương thích Thymeleaf 3.1.4+ stricter SpEL trên CSS template.
+springBootAdmin    = "4.0.4"
+
+# Spring AI 2.0.0-M6 — latest milestone (May 2026). M6 → GA churn còn có thể có break;
+# vì vậy chỉ dùng trong 2 service: mcp-server (expose tools) + genai-service (chat).
+# OpenRouter routing dùng OpenAI adapter với base-url override → 1 SDK đa-provider.
+springAi           = "2.0.0-M6"
+
 # Test
 junit              = "6.0.3"
 
@@ -37,11 +47,18 @@ spring-boot-starter-liquibase          = { module = "org.springframework.boot:sp
 spring-boot-docker-compose             = { module = "org.springframework.boot:spring-boot-docker-compose" }
 
 # --- Observability ---
-micrometer-tracing-bridge-otel         = { module = "io.micrometer:micrometer-tracing-bridge-otel" }   # version từ BOM
-# Note: chưa add OTLP exporter — chưa có Tempo backend. TraceId vẫn được generate vào MDC để log.
+# Bridge: chuyển Micrometer Observation → OpenTelemetry SDK (đã có sẵn span/context propagation).
+# Exporter: ship trace OTLP/HTTP → Zipkin 3.x native receiver tại :9411/v1/traces. Version cả 2
+# đều quản lý bởi spring-boot-dependencies BOM (Boot 4.0.x) — không pin.
+micrometer-tracing-bridge-otel         = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
+opentelemetry-exporter-otlp            = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
+# Prometheus scrape format — expose /actuator/prometheus. Version từ Spring Boot BOM.
+# Áp dụng cho mọi Spring service qua convention plugin → Prometheus 1 scrape config thống nhất.
+micrometer-registry-prometheus         = { module = "io.micrometer:micrometer-registry-prometheus" }
 
 # --- API docs ---
 springdoc-openapi-starter-webmvc-ui    = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+springdoc-openapi-starter-webflux-ui   = { module = "org.springdoc:springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
 
 # --- DB ---
 postgresql                             = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
@@ -63,9 +80,31 @@ spring-cloud-starter-config            = { module = "org.springframework.cloud:s
 spring-cloud-config-server             = { module = "org.springframework.cloud:spring-cloud-config-server" }
 spring-cloud-starter-circuitbreaker-resilience4j = { module = "org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j" }
 
+# --- Spring Boot Admin ---
+spring-boot-admin-starter-server       = { module = "de.codecentric:spring-boot-admin-starter-server", version.ref = "springBootAdmin" }
+
+# --- Spring AI 2.0.0-M6 ---
+# BOM import qua dependencyManagement trong module-level build.gradle.kts (mcp-server, genai-service).
+# Starter version managed by BOM — KHÔNG pin trên từng artifact.
+spring-ai-bom                          = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
+spring-ai-starter-mcp-server-webmvc    = { module = "org.springframework.ai:spring-ai-starter-mcp-server-webmvc" }
+spring-ai-starter-mcp-client           = { module = "org.springframework.ai:spring-ai-starter-mcp-client" }
+# Spring AI 2.0 chia thành 2 artifact: `spring-ai-openai` (low-level api beans) + starter
+# (autoconfig + ChatClient + spring-ai-client-chat). genai-service cần STARTER để có
+# ChatClient + ToolCallbackProvider auto-pickup.
+spring-ai-starter-model-openai         = { module = "org.springframework.ai:spring-ai-starter-model-openai" }
+# Chat memory repository module — 2.0 rename: thêm `.repository.` vào package + artifact
+# (upgrade-notes nói "spring-ai-model-chat-memory-*" → "spring-ai-model-chat-memory-repository-*").
+spring-ai-starter-model-chat-memory-repository-jdbc = { module = "org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc" }
+spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
+# RAG advisor module — QuestionAnswerAdvisor + VectorStoreChatMemoryAdvisor. Tách riêng từ core.
+spring-ai-advisors-vector-store        = { module = "org.springframework.ai:spring-ai-advisors-vector-store" }
+
 # --- Plugin artifacts (dùng trong build-logic) ---
 spring-boot-gradle-plugin              = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
 spring-dep-management-plugin           = { module = "io.spring.gradle:dependency-management-plugin", version.ref = "springDepMgmt" }
+# Spotless: format/lint Java. Áp whitespace-only rules (KHÔNG reformat code body).
+spotless-gradle-plugin                 = { module = "com.diffplug.spotless:spotless-plugin-gradle", version = "7.0.4" }
 
 # --- Camunda 8 ---
 camunda-spring-boot-starter            = { module = "io.camunda:camunda-spring-boot-starter", version.ref = "camunda" }

@@ -1,5 +1,7 @@
 package com.mss301.petclinic.common.clients.interceptor;
 
+import java.io.IOException;
+
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
@@ -7,8 +9,6 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-
-import java.io.IOException;
 
 /**
  * Forward Bearer JWT của caller request sang downstream service call.

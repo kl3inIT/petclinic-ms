@@ -1,0 +1,64 @@
+name: Bug report
+description: Báo lỗi reproducible trong code / infra petclinic-ms
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn đã report. Vui lòng cung cấp thông tin dưới để triage nhanh.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component affected
+      multiple: true
+      options:
+        - api-gateway
+        - auth-service
+        - customers-service
+        - vets-service
+        - visits-service
+        - genai-service
+        - mcp-server
+        - admin-server
+        - config-server
+        - discovery-server
+        - mailer-service (Go)
+        - shared modules
+        - apps/web (FE)
+        - infra (compose / Dockerfile / CI)
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Bước CHÍNH XÁC + payload curl / button click để reproduce.
+      placeholder: |
+        1. `docker compose --profile all --profile apps up -d`
+        2. `curl -X POST http://localhost:8180/api/v1/...`
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stack trace
+      description: `docker logs petclinic-<service>` hoặc browser console — paste vào đây, code-fence.
+      render: shell
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit SHA / branch
+      placeholder: "main @ f2bf10d hoặc branch nhat-anh"

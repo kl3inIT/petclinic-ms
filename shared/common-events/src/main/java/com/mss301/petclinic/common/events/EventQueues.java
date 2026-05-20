@@ -1,12 +1,13 @@
 package com.mss301.petclinic.common.events;
 
-import com.mss301.petclinic.common.events.config.EventsProperties;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
+
+import com.mss301.petclinic.common.events.config.EventsProperties;
 
 /**
  * Helper khai báo consumer queue + DLQ một dòng, tránh copy-paste boilerplate AMQP.

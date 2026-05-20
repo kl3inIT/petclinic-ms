@@ -1,9 +1,11 @@
 package com.mss301.petclinic.common.security.autoconfigure;
 
-import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
+import java.util.List;
+
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,11 +18,13 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import java.util.List;
+import com.mss301.petclinic.common.security.jwt.PetClinicJwtProperties;
 
 /**
  * Common security auto-config — RSA + JWKS pattern (production-grade từ đầu).
@@ -46,6 +50,7 @@ public class PetClinicSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public JwtDecoder jwtDecoder(PetClinicJwtProperties props) {
         if (props.jwkSetUri() == null || props.jwkSetUri().isBlank()) {
             throw new IllegalStateException(
@@ -54,6 +59,21 @@ public class PetClinicSecurityAutoConfiguration {
             );
         }
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(props.jwkSetUri()).build();
+        decoder.setJwtValidator(buildValidators(props));
+        return decoder;
+    }
+
+    /** Reactive variant — WebFlux services (genai-service Phase 12e SSE streaming). */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
+    public ReactiveJwtDecoder reactiveJwtDecoder(PetClinicJwtProperties props) {
+        if (props.jwkSetUri() == null || props.jwkSetUri().isBlank()) {
+            throw new IllegalStateException(
+                    "petclinic.auth.jwt.jwk-set-uri is required when common-security is on classpath."
+            );
+        }
+        NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withJwkSetUri(props.jwkSetUri()).build();
         decoder.setJwtValidator(buildValidators(props));
         return decoder;
     }
@@ -89,6 +109,7 @@ public class PetClinicSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public SecurityFilterChain defaultSecurityFilterChain(
             HttpSecurity http,
             JwtAuthenticationConverter jwtAuthConverter

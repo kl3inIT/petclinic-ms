@@ -19,3 +19,13 @@ spring:
 
   liquibase:
     enabled: true                           # vẫn validate migration là phần của test
+
+# JWT decoder property — PetClinicSecurityAutoConfiguration require non-blank.
+# Test KHÔNG actually decode JWT (contextLoads chỉ smoke test bean wiring).
+# NimbusJwtDecoder.withJwkSetUri() lazy fetch — URL không cần resolve được.
+petclinic:
+  auth:
+    jwt:
+      jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
+      issuer: petclinic-test
+      audience: petclinic-test

@@ -1,13 +1,12 @@
 package com.mss301.petclinic.visits.controller;
 
-import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
-import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
-import com.mss301.petclinic.visits.dto.res.VisitResponse;
-import com.mss301.petclinic.visits.model.VisitStatus;
-import com.mss301.petclinic.visits.service.VisitService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
 import jakarta.validation.Valid;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -24,10 +23,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
+import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
+import com.mss301.petclinic.visits.dto.res.VisitResponse;
+import com.mss301.petclinic.visits.model.VisitStatus;
+import com.mss301.petclinic.visits.service.VisitService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Visits API. Authorization rules:

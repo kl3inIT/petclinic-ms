@@ -14,33 +14,51 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
-# Resilience4j defaults cho cross-service calls
-# (Spring Cloud CircuitBreaker auto-wire khi spring-cloud-starter-circuitbreaker-resilience4j có classpath)
+# Resilience4j cho cross-service calls trong VisitServiceImpl.
+# Instance name = `@CircuitBreaker(name="...")` trong code → keep tên đồng bộ.
+#
+# Failure semantics:
+#   * 4xx (NotFound, BadRequest...) — service HEALTHY, data missing → ignore, không count failure.
+#   * 5xx, IOException, timeout — service UNHEALTHY → count, fallback.
+#
+# Sliding window 10 call, threshold 50% → 5/10 fail → OPEN 30s → HALF_OPEN cho 3 call test.
+# Cần ≥ 5 call (minimum-number-of-calls) mới đánh giá — tránh OPEN ngay với traffic thấp.
 resilience4j:
   circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        # Service healthy nhưng data 404 — KHÔNG phải tín hiệu fault. Không trigger fallback.
+        # Eureka LB throw IllegalStateException("No instances available"), RestClient throw
+        # ResourceAccessException, downstream 5xx → HttpServerErrorException... muôn hình vạn
+        # trạng nên dùng `ignore-exceptions` whitelist sau đó cho phép R4j count mặc định mọi
+        # exception còn lại là failure. KHÔNG dùng `record-exceptions` (whitelist hẹp dễ miss).
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException$NotFound
+          - org.springframework.web.client.HttpClientErrorException$BadRequest
+          - org.springframework.web.client.HttpClientErrorException$Unauthorized
+          - org.springframework.web.client.HttpClientErrorException$Forbidden
+          - com.mss301.petclinic.common.web.exception.BadRequestAlertException
     instances:
       customers-service:
-        slidingWindowSize: 10
-        failureRateThreshold: 50
-        waitDurationInOpenState: 30s
-        permittedNumberOfCallsInHalfOpenState: 3
+        base-config: default
       vets-service:
-        slidingWindowSize: 10
-        failureRateThreshold: 50
-        waitDurationInOpenState: 30s
+        base-config: default
+      auth-service:
+        base-config: default
+
+  # Cap call duration — không cho block lâu hơn 3s (default 30s là quá thương downstream).
+  # Vượt → TimeoutException → recorded failure → đẩy CB về OPEN nhanh.
   timelimiter:
     instances:
       customers-service:
-        timeoutDuration: 3s
+        timeout-duration: 3s
       vets-service:
-        timeoutDuration: 3s
-  retry:
-    instances:
-      customers-service:
-        maxAttempts: 3
-        waitDuration: 200ms
-        exponentialBackoffMultiplier: 2.0
-      vets-service:
-        maxAttempts: 3
-        waitDuration: 200ms
-        exponentialBackoffMultiplier: 2.0
+        timeout-duration: 3s
+      auth-service:
+        timeout-duration: 3s

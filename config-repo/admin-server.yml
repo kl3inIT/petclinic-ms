@@ -1,0 +1,36 @@
+# Spring Boot Admin Server — env-agnostic.
+# Dashboard UI ở root path; tự discover Spring services qua Eureka.
+# Mailer Go self-register qua HTTP POST /instances (xem mailer-service/cmd/mailer/main.go).
+
+spring:
+  # Basic auth — dev default admin/admin. Prod inject qua ENV.
+  security:
+    user:
+      name: ${ADMIN_USER:admin}
+      password: ${ADMIN_PASSWORD:admin}
+      roles: ADMIN
+
+  boot:
+    admin:
+      server:
+        # Wire SBA dùng Eureka làm nguồn discovery — DiscoveryClientConverter map Eureka instance
+        # → SBA Instance (healthUrl, managementUrl) tự động.
+        # 5 Spring service: discovered automatically.
+        enabled: true
+      # Tần suất scrape health/info từ instances.
+      monitor:
+        status-interval: 10s
+        info-interval: 60s
+
+# SBA tự là Eureka client → instance hiển thị trong Eureka registry, nhưng KHÔNG cần các service
+# khác gọi admin-server (no business logic). preferIpAddress + status-page-url để Eureka biết link.
+eureka:
+  instance:
+    status-page-url-path: /actuator/info
+    health-check-url-path: /actuator/health
+
+# Cho phép SBA scrape chính nó (admin tự monitor mình).
+management:
+  endpoint:
+    health:
+      show-details: always

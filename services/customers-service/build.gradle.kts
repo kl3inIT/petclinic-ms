@@ -14,14 +14,14 @@ dependencies {
     implementation(libs.spring.cloud.starter.netflix.eureka.client)
     implementation(libs.spring.cloud.starter.config)
     implementation(libs.micrometer.tracing.bridge.otel)
+    runtimeOnly(libs.opentelemetry.exporter.otlp)
     runtimeOnly(libs.postgresql)
 
     // bootRun trong dev tự start/stop container theo compose.yaml.
     // KHÔNG kích hoạt lúc package/prod build — chỉ developmentOnly.
     developmentOnly(libs.spring.boot.docker.compose)
 
-    testImplementation(libs.spring.boot.starter.test)
-    testImplementation(libs.spring.boot.testcontainers)
-    testImplementation(libs.testcontainers.postgresql)
-    testImplementation(libs.testcontainers.junit.jupiter)
+    // Shared test fixtures: AbstractPostgresIntegrationTest + JwtTestSupport + Spring test stack.
+    // common-testing api-exposes starter-test + testcontainers + security-test → không cần redeclare.
+    testImplementation(project(":shared:common-testing"))
 }
