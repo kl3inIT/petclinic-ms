@@ -64,14 +64,17 @@ public class VetMeController {
         // nhỏ. Nhận qua Number rồi longValue() handle cả Integer/Long/Short/BigInteger.
         Object raw = jwt.getClaim("vetId");
         if (raw == null) {
+            // Generic message — không expose DB schema (auth.users + vet_id cột) cho client.
+            // CodeRabbit review (PR #11, 2026-05-20): error message KHÔNG được leak internal
+            // structure. Detail dành cho admin (xem log server-side).
             throw new BadRequestAlertException(
-                    "Token không có claim 'vetId' — account chưa được link với vet entity. " +
-                    "Admin cần update auth.users.vet_id rồi user login lại.",
+                    "Tài khoản chưa được liên kết với hồ sơ bác sĩ. " +
+                    "Vui lòng liên hệ quản trị viên.",
                     "vet-me", "missing-vet-id");
         }
         if (!(raw instanceof Number n)) {
             throw new BadRequestAlertException(
-                    "Claim 'vetId' phải là số, got: " + raw.getClass().getSimpleName(),
+                    "Claim 'vetId' phải là số.",
                     "vet-me", "invalid-vet-id-type");
         }
         return n.longValue();
