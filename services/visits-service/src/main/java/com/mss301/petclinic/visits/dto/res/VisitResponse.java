@@ -17,7 +17,8 @@ public record VisitResponse(
         String reason,
         String diagnosis,
         String treatment,
-        BigDecimal fee
+        BigDecimal fee,
+        Long processInstanceKey
 ) {
     public static VisitResponse from(Visit v) {
         return new VisitResponse(
@@ -30,7 +31,8 @@ public record VisitResponse(
                 v.getReason(),
                 v.getDiagnosis(),
                 v.getTreatment(),
-                v.getFee()
+                v.getFee(),
+                v.getProcessInstanceKey()
         );
     }
 }

@@ -42,6 +42,9 @@ public class VisitsSecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
+                        // Internal callback từ workflow-service — dùng X-Workflow-Token, không JWT.
+                        .requestMatchers("/internal/**").permitAll()
+
                         // Write — role-restricted
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/visits/*/complete")
                             .hasAnyRole("VET", "ADMIN")

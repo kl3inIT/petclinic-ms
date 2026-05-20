@@ -31,6 +31,11 @@ public class WorkflowSecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+                        // Start process instance — cho phép mọi user đã xác thực.
+                        // visits-service gọi endpoint này khi booking (forward JWT của booking user).
+                        // Authorization "ai được book" đã kiểm soát ở visits-service.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/workflows/instances").authenticated()
+                        // Các write operations khác (terminate, complete task) — chỉ staff trở lên.
                         .requestMatchers(HttpMethod.POST, "/api/v1/workflows/**").hasAnyRole("ADMIN", "STAFF", "VET")
                         .requestMatchers("/api/v1/workflows/**").authenticated()
                         .anyRequest().authenticated()

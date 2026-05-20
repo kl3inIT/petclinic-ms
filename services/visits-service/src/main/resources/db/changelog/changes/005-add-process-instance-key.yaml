@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-process-instance-key
+      author: petclinic
+      changes:
+        - addColumn:
+            schemaName: visits
+            tableName: visits
+            columns:
+              - column:
+                  name: process_instance_key
+                  type: BIGINT
+                  constraints:
+                    nullable: true

@@ -1,4 +1,10 @@
 # Visits — env-agnostic config.
+petclinic:
+  workflow:
+    # Phải khớp với petclinic.workflow.callback-token bên workflow-service.
+    # Override qua env var PETCLINIC_WORKFLOW_CALLBACK_TOKEN trong prod.
+    callback-token: ${PETCLINIC_WORKFLOW_CALLBACK_TOKEN:petclinic-workflow-secret}
+
 # Datasource creds + URL khác env → visits-service-<profile>.yml.
 
 spring:

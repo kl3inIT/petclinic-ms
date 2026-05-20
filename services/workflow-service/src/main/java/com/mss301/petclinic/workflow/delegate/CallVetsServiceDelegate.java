@@ -1,10 +1,7 @@
 package com.mss301.petclinic.workflow.delegate;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mss301.petclinic.workflow.config.WorkflowProperties;
-import io.camunda.client.annotation.JobWorker;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
@@ -12,7 +9,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.util.Map;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mss301.petclinic.workflow.config.WorkflowProperties;
+
+import io.camunda.client.annotation.JobWorker;
 
 /**
  * Camunda 8 job worker — gọi vets-service qua LoadBalancer (Eureka).

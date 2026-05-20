@@ -40,6 +40,7 @@ class SpringBootServicePlugin : Plugin<Project> {
 
         dependencies {
             add("implementation", libs.library("spring-boot-starter-actuator"))
+            add("runtimeOnly", libs.library("micrometer-registry-prometheus"))
         }
         }
     }

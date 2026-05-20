@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCheck, X, ClipboardList, Calendar, User } from 'lucide-react';
+import {
+  CheckCheck,
+  X,
+  ClipboardList,
+  Calendar,
+  User,
+  Play,
+  Stethoscope as StethoIcon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -24,8 +33,12 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  approveVisit,
   completeUserTask,
+  completeVisitExam,
   getWorkflowInstance,
+  rejectVisit,
+  startVisitExam,
   type UserTask,
 } from '@/features/workflows/api';
 
@@ -37,15 +50,30 @@ interface UserTaskDialogProps {
 function formatDate(iso?: string) {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('vi-VN', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   });
 }
 
 function formatValue(v: unknown): string {
   if (v === null || v === undefined) return '—';
-  if (typeof v === 'object') return JSON.stringify(v);
-  return String(v);
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint') {
+    return v.toString();
+  }
+  if (typeof v === 'symbol') return v.description ?? v.toString();
+  if (typeof v === 'function') return '[function]';
+
+  const serialized = JSON.stringify(v);
+  return serialized ?? '—';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // ── Doctor-confirmation specific UI ─────────────────────────────────────────
@@ -97,6 +125,153 @@ function DoctorConfirmPanel({
   );
 }
 
+// ── Visit-booking: Duyệt lịch hẹn ────────────────────────────────────────
+
+function ApproveVisitPanel({
+  visitId,
+  isPending,
+  onApprove,
+  onReject,
+}: {
+  visitId: number;
+  isPending: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Visit #{visitId} — Staff/manager xem xét và duyệt hoặc từ chối lịch hẹn này.
+      </p>
+      <div className="flex gap-2">
+        <Button
+          className="flex-1 bg-green-600 text-white hover:bg-green-700"
+          disabled={isPending}
+          onClick={onApprove}
+        >
+          <CheckCheck className="size-4" />
+          Duyệt lịch hẹn
+        </Button>
+        <Button
+          variant="destructive"
+          className="flex-1"
+          disabled={isPending}
+          onClick={onReject}
+        >
+          <X className="size-4" />
+          Từ chối
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Visit-booking: Bắt đầu khám ──────────────────────────────────────────
+
+function StartExamPanel({
+  visitId,
+  isPending,
+  onStart,
+}: {
+  visitId: number;
+  isPending: boolean;
+  onStart: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Visit #{visitId} — Bác sĩ xác nhận bắt đầu khám. Visit sẽ chuyển sang IN_PROGRESS.
+      </p>
+      <Button
+        className="w-full bg-blue-600 hover:bg-blue-700"
+        disabled={isPending}
+        onClick={onStart}
+      >
+        <Play className="size-4" />
+        {isPending ? 'Đang xử lý…' : 'Bắt đầu khám'}
+      </Button>
+    </div>
+  );
+}
+
+// ── Visit-booking: Hoàn thành khám ───────────────────────────────────────
+
+function CompleteExamPanel({
+  visitId,
+  isPending,
+  onComplete,
+}: {
+  visitId: number;
+  isPending: boolean;
+  onComplete: (diagnosis: string, treatment: string, fee: number) => void;
+}) {
+  const [diagnosis, setDiagnosis] = useState('');
+  const [treatment, setTreatment] = useState('');
+  const [fee, setFee] = useState('');
+
+  const handleSubmit = () => {
+    if (!diagnosis.trim() || !treatment.trim() || !fee) {
+      toast.error('Vui lòng điền đầy đủ chẩn đoán, phác đồ và phí khám');
+      return;
+    }
+    const feeNum = parseFloat(fee);
+    if (isNaN(feeNum) || feeNum < 0) {
+      toast.error('Phí khám không hợp lệ');
+      return;
+    }
+    onComplete(diagnosis.trim(), treatment.trim(), feeNum);
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Visit #{visitId} — Bác sĩ nhập kết quả khám. Visit sẽ chuyển sang COMPLETED.
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor="diagnosis" className="text-xs text-muted-foreground">
+          Chẩn đoán *
+        </Label>
+        <Textarea
+          id="diagnosis"
+          value={diagnosis}
+          onChange={(e) => setDiagnosis(e.target.value)}
+          rows={2}
+          placeholder="Nhập chẩn đoán bệnh..."
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="treatment" className="text-xs text-muted-foreground">
+          Phác đồ điều trị *
+        </Label>
+        <Textarea
+          id="treatment"
+          value={treatment}
+          onChange={(e) => setTreatment(e.target.value)}
+          rows={2}
+          placeholder="Nhập phác đồ điều trị..."
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="fee" className="text-xs text-muted-foreground">
+          Phí khám (VNĐ) *
+        </Label>
+        <Input
+          id="fee"
+          type="number"
+          min="0"
+          value={fee}
+          onChange={(e) => setFee(e.target.value)}
+          placeholder="150000"
+        />
+      </div>
+      <Button className="w-full" disabled={isPending} onClick={handleSubmit}>
+        <StethoIcon className="size-4" />
+        {isPending ? 'Đang xử lý…' : 'Hoàn thành khám'}
+      </Button>
+    </div>
+  );
+}
+
 // ── Generic variable-output UI ────────────────────────────────────────────
 
 function GenericCompletePanel({
@@ -111,9 +286,13 @@ function GenericCompletePanel({
 
   const handleComplete = () => {
     try {
-      const vars = JSON.parse(json.trim() || '{}');
+      const parsed: unknown = JSON.parse(json.trim() || '{}');
+      if (!isRecord(parsed)) {
+        setJsonError('JSON phải là object');
+        return;
+      }
       setJsonError(null);
-      onComplete(vars);
+      onComplete(parsed);
     } catch {
       setJsonError('JSON không hợp lệ');
     }
@@ -128,7 +307,10 @@ function GenericCompletePanel({
         <Textarea
           id="taskVars"
           value={json}
-          onChange={(e) => { setJson(e.target.value); setJsonError(null); }}
+          onChange={(e) => {
+            setJson(e.target.value);
+            setJsonError(null);
+          }}
           className="font-mono text-xs"
           rows={5}
           placeholder='{ "approved": true, "notes": "ok" }'
@@ -154,17 +336,88 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
     enabled: !!task.processInstanceKey,
   });
 
+  const visitId = instance?.variables?.visitId as number | undefined;
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ['user-tasks'] });
+    void queryClient.invalidateQueries({
+      predicate: (q) => {
+        const first = q.queryKey[0];
+        return typeof first === 'string' && first.startsWith('/api/v1/visits');
+      },
+    });
+  };
+
   const completeMutation = useMutation({
-    mutationFn: (vars: Record<string, unknown>) => completeUserTask(task.userTaskKey, vars),
+    mutationFn: (vars: Record<string, unknown>) =>
+      completeUserTask(task.userTaskKey, vars),
     onSuccess: () => {
       toast.success('Task đã hoàn thành');
-      queryClient.invalidateQueries({ queryKey: ['user-tasks'] });
+      invalidate();
       onClose();
     },
     onError: (e: Error) => toast.error(e.message || 'Không thể complete task'),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: () => approveVisit(visitId!),
+    onSuccess: () => {
+      toast.success('Đã duyệt lịch hẹn');
+      invalidate();
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message || 'Duyệt thất bại'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: () => rejectVisit(visitId!),
+    onSuccess: () => {
+      toast.success('Đã từ chối lịch hẹn');
+      invalidate();
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message || 'Từ chối thất bại'),
+  });
+
+  const startMutation = useMutation({
+    mutationFn: () => startVisitExam(visitId!),
+    onSuccess: () => {
+      toast.success('Đã bắt đầu khám');
+      invalidate();
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message || 'Bắt đầu thất bại'),
+  });
+
+  const completeExamMutation = useMutation({
+    mutationFn: ({
+      diagnosis,
+      treatment,
+      fee,
+    }: {
+      diagnosis: string;
+      treatment: string;
+      fee: number;
+    }) => completeVisitExam(visitId!, diagnosis, treatment, fee),
+    onSuccess: () => {
+      toast.success('Hoàn thành khám thành công');
+      invalidate();
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message || 'Hoàn thành thất bại'),
+  });
+
+  const isAnyPending =
+    completeMutation.isPending ||
+    approveMutation.isPending ||
+    rejectMutation.isPending ||
+    startMutation.isPending ||
+    completeExamMutation.isPending;
+
   const isConfirmTask = task.elementId === 'ConfirmByDoctor';
+  const isApproveTask = task.elementId === 'UserTask_Approve';
+  const isStartTask = task.elementId === 'UserTask_StartVisit';
+  const isCompleteTask = task.elementId === 'UserTask_CompleteVisit';
 
   const handleApprove = (notes: string) =>
     completeMutation.mutate({ doctorApproved: true, doctorNotes: notes });
@@ -181,7 +434,10 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <ClipboardList className="size-5 text-muted-foreground" />
             {task.name ?? task.elementId ?? 'User Task'}
-            <Badge variant="outline" className="border-amber-300 text-amber-600 text-[10px]">
+            <Badge
+              variant="outline"
+              className="border-amber-300 text-[10px] text-amber-600"
+            >
               PENDING
             </Badge>
           </DialogTitle>
@@ -199,16 +455,22 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <User className="size-3.5 shrink-0" />
             <span>Assignee:</span>
-            <span className="font-medium text-foreground">{task.assignee ?? 'Unassigned'}</span>
+            <span className="font-medium text-foreground">
+              {task.assignee ?? 'Unassigned'}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Calendar className="size-3.5 shrink-0" />
             <span>Created:</span>
-            <span className="font-medium text-foreground">{formatDate(task.creationDate)}</span>
+            <span className="font-medium text-foreground">
+              {formatDate(task.creationDate)}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <code className="text-[10px]">key</code>
-            <span className="font-mono text-[10px] text-foreground">{task.userTaskKey}</span>
+            <span className="font-mono text-[10px] text-foreground">
+              {task.userTaskKey}
+            </span>
           </div>
         </div>
 
@@ -217,7 +479,7 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
         {/* Process variables (context) */}
         {Object.keys(variables).length > 0 && (
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
               Process Variables
             </p>
             <div className="max-h-40 overflow-y-auto rounded-md border">
@@ -247,10 +509,37 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
 
         {/* Completion form */}
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {isConfirmTask ? 'Quyết định của Bác sĩ' : 'Complete Task'}
+          <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            {isConfirmTask || isApproveTask
+              ? 'Quyết định'
+              : isStartTask
+                ? 'Bắt đầu khám'
+                : isCompleteTask
+                  ? 'Kết quả khám'
+                  : 'Complete Task'}
           </p>
-          {isConfirmTask ? (
+          {isApproveTask && visitId ? (
+            <ApproveVisitPanel
+              visitId={visitId}
+              isPending={isAnyPending}
+              onApprove={() => approveMutation.mutate()}
+              onReject={() => rejectMutation.mutate()}
+            />
+          ) : isStartTask && visitId ? (
+            <StartExamPanel
+              visitId={visitId}
+              isPending={isAnyPending}
+              onStart={() => startMutation.mutate()}
+            />
+          ) : isCompleteTask && visitId ? (
+            <CompleteExamPanel
+              visitId={visitId}
+              isPending={isAnyPending}
+              onComplete={(diagnosis, treatment, fee) =>
+                completeExamMutation.mutate({ diagnosis, treatment, fee })
+              }
+            />
+          ) : isConfirmTask ? (
             <DoctorConfirmPanel
               isPending={completeMutation.isPending}
               onApprove={handleApprove}

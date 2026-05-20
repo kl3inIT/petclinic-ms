@@ -9,7 +9,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties(prefix = "petclinic.workflow")
 public record WorkflowProperties(
         @DefaultValue("http://vets-service") String vetsServiceBaseUrl,
-        @DefaultValue("http://visits-service") String visitsServiceBaseUrl
+        @DefaultValue("http://visits-service") String visitsServiceBaseUrl,
+        @DefaultValue("petclinic-workflow-secret") String callbackToken
 ) {
 
     public String vetsListUrl() {

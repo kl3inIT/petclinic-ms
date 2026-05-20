@@ -135,7 +135,10 @@ export async function listProcessInstances(processDefinitionId?: string, state?:
   const params: Record<string, string> = {};
   if (processDefinitionId) params.processDefinitionId = processDefinitionId;
   if (state) params.state = state;
-  const { data } = await apiClient.get<ProcessInstanceSummary[]>('/api/v1/workflows/instances', { params });
+  const { data } = await apiClient.get<ProcessInstanceSummary[]>(
+    '/api/v1/workflows/instances',
+    { params },
+  );
   return data;
 }
 
@@ -182,7 +185,37 @@ export async function completeUserTask(
   userTaskKey: string,
   variables: Record<string, unknown> = {},
 ) {
-  await apiClient.post(`/api/v1/workflows/tasks/${encodeURIComponent(userTaskKey)}/complete`, {
-    variables,
+  await apiClient.post(
+    `/api/v1/workflows/tasks/${encodeURIComponent(userTaskKey)}/complete`,
+    {
+      variables,
+    },
+  );
+}
+
+// ── Visit workflow domain actions ──────────────────────────────────────────
+
+export async function approveVisit(visitId: number) {
+  await apiClient.post(`/api/v1/workflows/visits/${visitId}/approve`);
+}
+
+export async function rejectVisit(visitId: number) {
+  await apiClient.post(`/api/v1/workflows/visits/${visitId}/reject`);
+}
+
+export async function startVisitExam(visitId: number) {
+  await apiClient.post(`/api/v1/workflows/visits/${visitId}/start`);
+}
+
+export async function completeVisitExam(
+  visitId: number,
+  diagnosis: string,
+  treatment: string,
+  fee: number,
+) {
+  await apiClient.post(`/api/v1/workflows/visits/${visitId}/complete`, {
+    diagnosis,
+    treatment,
+    fee,
   });
 }

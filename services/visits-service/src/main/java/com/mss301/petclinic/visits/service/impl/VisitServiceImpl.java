@@ -1,6 +1,7 @@
 package com.mss301.petclinic.visits.service.impl;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -20,6 +21,9 @@ import com.mss301.petclinic.visits.client.PetSummary;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.UserSummary;
 import com.mss301.petclinic.visits.client.VetSummary;
+import com.mss301.petclinic.visits.client.WorkflowServiceClient;
+import com.mss301.petclinic.visits.client.WorkflowStartRequest;
+import com.mss301.petclinic.visits.client.WorkflowStartResponse;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
@@ -46,13 +50,17 @@ public class VisitServiceImpl implements VisitService {
     private final RemoteClientsFacade remoteClients;
     /** Optional — broker có thể disabled (test profile) hoặc tạm down. */
     private final ObjectProvider<EventPublisher> events;
+    /** Optional — workflow-service có thể chưa start hoặc down. Booking vẫn thành công. */
+    private final ObjectProvider<WorkflowServiceClient> workflowClient;
 
     public VisitServiceImpl(VisitRepository repository,
                             RemoteClientsFacade remoteClients,
-                            ObjectProvider<EventPublisher> events) {
+                            ObjectProvider<EventPublisher> events,
+                            ObjectProvider<WorkflowServiceClient> workflowClient) {
         this.repository = repository;
         this.remoteClients = remoteClients;
         this.events = events;
+        this.workflowClient = workflowClient;
     }
 
     @Override
@@ -90,6 +98,7 @@ public class VisitServiceImpl implements VisitService {
         }
 
         publishScheduled(saved, pet, vet, currentUserId);
+        startWorkflowProcess(saved);
         return VisitResponse.from(saved);
     }
 
@@ -163,6 +172,30 @@ public class VisitServiceImpl implements VisitService {
                     vet.id(), vet.firstName() + " " + vet.lastName()));
         } catch (RuntimeException ex) {
             log.warn("Publish visit.scheduled failed (visit={}): {}", saved.getId(), ex.getMessage());
+        }
+    }
+
+    /**
+     * Best-effort — nếu workflow-service down, booking vẫn thành công.
+     * Visit sẽ không có processInstanceKey và không được Camunda điều phối.
+     * Fallback: dùng public /start và /complete endpoints trực tiếp.
+     */
+    private void startWorkflowProcess(Visit saved) {
+        try {
+            WorkflowServiceClient client = workflowClient.getIfAvailable();
+            if (client == null) {
+                log.debug("WorkflowServiceClient not available — skipping process start for visit {}", saved.getId());
+                return;
+            }
+            WorkflowStartRequest req = new WorkflowStartRequest(
+                    "visit-booking",
+                    Map.of("visitId", saved.getId())
+            );
+            WorkflowStartResponse resp = client.startProcess(req);
+            saved.setProcessInstanceKey(Long.parseLong(resp.processInstanceKey()));
+            log.info("Started workflow process {} for visit {}", resp.processInstanceKey(), saved.getId());
+        } catch (Exception ex) {
+            log.warn("Failed to start workflow process for visit {}: {}", saved.getId(), ex.getMessage());
         }
     }
 

@@ -15,3 +15,5 @@ petclinic:
   workflow:
     vets-service-base-url: http://vets-service
     visits-service-base-url: http://visits-service
+    # Phải khớp với petclinic.workflow.callback-token bên visits-service.
+    callback-token: ${PETCLINIC_WORKFLOW_CALLBACK_TOKEN:petclinic-workflow-secret}

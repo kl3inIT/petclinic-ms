@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+                  id="Definitions_VisitBookingV2"
+                  targetNamespace="http://mss301.petclinic/workflow">
+
+  <!--
+    Visit Booking v2 — thêm bước duyệt lịch hẹn trước khi khám.
+    Cùng process ID "visit-booking" → Camunda đăng ký version 2.
+    Lịch đặt MỚI chạy v2, lịch đang chạy v1 tiếp tục v1 (không ảnh hưởng).
+
+    Biến process:
+      visitId   (number) — truyền từ visits-service khi booking
+      approved  (boolean) — staff nhập khi complete "Duyệt lịch hẹn"
+      diagnosis, treatment, fee — bác sĩ nhập khi complete "Hoàn thành khám"
+  -->
+  <bpmn:process id="visit-booking" name="Visit Booking v2 - Có duyệt" isExecutable="true">
+
+    <bpmn:startEvent id="Start" name="Lịch hẹn đã đặt">
+      <bpmn:outgoing>Flow_to_Approval</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- THÊM MỚI so với v1: staff/manager duyệt lịch hẹn trước khi bắt đầu -->
+    <bpmn:userTask id="UserTask_Approve" name="Duyệt lịch hẹn">
+      <bpmn:extensionElements>
+        <zeebe:userTask/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_Approval</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Gateway: approved=true → tiếp tục, approved=false → hủy -->
+    <bpmn:exclusiveGateway id="Gateway_Approved" name="Được duyệt?">
+      <bpmn:incoming>Flow_to_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- ── Nhánh ĐỒNG Ý ─────────────────────────────────────────────── -->
+
+    <bpmn:userTask id="UserTask_StartVisit" name="Bắt đầu khám">
+      <bpmn:extensionElements>
+        <zeebe:userTask/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_InProgress</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="ServiceTask_MarkInProgress" name="Chuyển sang IN_PROGRESS">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:visit:transition"/>
+        <zeebe:ioMapping>
+          <zeebe:input source="= visitId" target="visitId"/>
+          <zeebe:input source="= &quot;IN_PROGRESS&quot;" target="targetStatus"/>
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_InProgress</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_CompleteTask</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:userTask id="UserTask_CompleteVisit" name="Hoàn thành khám">
+      <bpmn:extensionElements>
+        <zeebe:userTask/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_CompleteTask</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_Completed</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="ServiceTask_MarkCompleted" name="Chuyển sang COMPLETED">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:visit:transition"/>
+        <zeebe:ioMapping>
+          <zeebe:input source="= visitId" target="visitId"/>
+          <zeebe:input source="= &quot;COMPLETED&quot;" target="targetStatus"/>
+          <zeebe:input source="= diagnosis" target="diagnosis"/>
+          <zeebe:input source="= treatment" target="treatment"/>
+          <zeebe:input source="= fee" target="fee"/>
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_Completed</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Done" name="Hoàn tất">
+      <bpmn:incoming>Flow_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ── Nhánh TỪ CHỐI ─────────────────────────────────────────────── -->
+
+    <bpmn:serviceTask id="ServiceTask_Cancel" name="Hủy lịch hẹn">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:visit:transition"/>
+        <zeebe:ioMapping>
+          <zeebe:input source="= visitId" target="visitId"/>
+          <zeebe:input source="= &quot;CANCELLED&quot;" target="targetStatus"/>
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_Cancelled</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_Cancelled" name="Đã hủy">
+      <bpmn:incoming>Flow_to_Cancelled</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ── Sequence flows ────────────────────────────────────────────── -->
+
+    <bpmn:sequenceFlow id="Flow_to_Approval"   sourceRef="Start"             targetRef="UserTask_Approve"/>
+    <bpmn:sequenceFlow id="Flow_to_Gateway"    sourceRef="UserTask_Approve"   targetRef="Gateway_Approved"/>
+
+    <bpmn:sequenceFlow id="Flow_Yes" name="Đồng ý" sourceRef="Gateway_Approved" targetRef="UserTask_StartVisit">
+      <bpmn:conditionExpression>= approved = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_No" name="Từ chối" sourceRef="Gateway_Approved" targetRef="ServiceTask_Cancel">
+      <bpmn:conditionExpression>= approved = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_to_InProgress"   sourceRef="UserTask_StartVisit"       targetRef="ServiceTask_MarkInProgress"/>
+    <bpmn:sequenceFlow id="Flow_to_CompleteTask" sourceRef="ServiceTask_MarkInProgress" targetRef="UserTask_CompleteVisit"/>
+    <bpmn:sequenceFlow id="Flow_to_Completed"    sourceRef="UserTask_CompleteVisit"     targetRef="ServiceTask_MarkCompleted"/>
+    <bpmn:sequenceFlow id="Flow_to_End"          sourceRef="ServiceTask_MarkCompleted"  targetRef="End_Done"/>
+    <bpmn:sequenceFlow id="Flow_to_Cancelled"    sourceRef="ServiceTask_Cancel"         targetRef="End_Cancelled"/>
+
+  </bpmn:process>
+
+  <!-- ── BPMN DI (visual layout) ──────────────────────────────────────── -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_V2">
+    <bpmndi:BPMNPlane id="BPMNPlane_V2" bpmnElement="visit-booking">
+
+      <!-- Start -->
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start">
+        <dc:Bounds x="152" y="252" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="130" y="295" width="82" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Duyệt lịch hẹn -->
+      <bpmndi:BPMNShape id="UserTask_Approve_di" bpmnElement="UserTask_Approve">
+        <dc:Bounds x="250" y="230" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Gateway -->
+      <bpmndi:BPMNShape id="Gateway_Approved_di" bpmnElement="Gateway_Approved" isMarkerVisible="true">
+        <dc:Bounds x="415" y="245" width="50" height="50"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="405" y="302" width="70" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Nhánh đồng ý — hàng trên -->
+      <bpmndi:BPMNShape id="UserTask_StartVisit_di" bpmnElement="UserTask_StartVisit">
+        <dc:Bounds x="540" y="160" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_MarkInProgress_di" bpmnElement="ServiceTask_MarkInProgress">
+        <dc:Bounds x="700" y="160" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_CompleteVisit_di" bpmnElement="UserTask_CompleteVisit">
+        <dc:Bounds x="860" y="160" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_MarkCompleted_di" bpmnElement="ServiceTask_MarkCompleted">
+        <dc:Bounds x="1020" y="160" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Done_di" bpmnElement="End_Done">
+        <dc:Bounds x="1192" y="182" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="1188" y="225" width="44" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Nhánh từ chối — hàng dưới -->
+      <bpmndi:BPMNShape id="ServiceTask_Cancel_di" bpmnElement="ServiceTask_Cancel">
+        <dc:Bounds x="540" y="350" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Cancelled_di" bpmnElement="End_Cancelled">
+        <dc:Bounds x="712" y="372" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="706" y="415" width="48" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Edges -->
+      <bpmndi:BPMNEdge id="Flow_to_Approval_di" bpmnElement="Flow_to_Approval">
+        <di:waypoint x="188" y="270"/><di:waypoint x="250" y="270"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_Gateway_di" bpmnElement="Flow_to_Gateway">
+        <di:waypoint x="350" y="270"/><di:waypoint x="415" y="270"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Yes_di" bpmnElement="Flow_Yes">
+        <di:waypoint x="440" y="245"/><di:waypoint x="440" y="200"/><di:waypoint x="540" y="200"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="447" y="213" width="43" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_No_di" bpmnElement="Flow_No">
+        <di:waypoint x="440" y="295"/><di:waypoint x="440" y="390"/><di:waypoint x="540" y="390"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="447" y="363" width="48" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_InProgress_di" bpmnElement="Flow_to_InProgress">
+        <di:waypoint x="640" y="200"/><di:waypoint x="700" y="200"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_CompleteTask_di" bpmnElement="Flow_to_CompleteTask">
+        <di:waypoint x="800" y="200"/><di:waypoint x="860" y="200"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_Completed_di" bpmnElement="Flow_to_Completed">
+        <di:waypoint x="960" y="200"/><di:waypoint x="1020" y="200"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_End_di" bpmnElement="Flow_to_End">
+        <di:waypoint x="1120" y="200"/><di:waypoint x="1192" y="200"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_Cancelled_di" bpmnElement="Flow_to_Cancelled">
+        <di:waypoint x="640" y="390"/><di:waypoint x="712" y="390"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

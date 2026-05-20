@@ -1,18 +1,19 @@
 package com.mss301.petclinic.workflow.delegate;
 
-import org.apache.camel.CamelExecutionException;
-import org.apache.camel.Exchange;
-import org.apache.camel.ProducerTemplate;
-import io.camunda.client.api.response.ActivatedJob;
-import io.camunda.client.annotation.JobWorker;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import static com.mss301.petclinic.workflow.camel.HttpCallRoute.ROUTE_URI;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.mss301.petclinic.workflow.camel.HttpCallRoute.ROUTE_URI;
+import org.apache.camel.CamelExecutionException;
+import org.apache.camel.Exchange;
+import org.apache.camel.ProducerTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import io.camunda.client.annotation.JobWorker;
+import io.camunda.client.api.response.ActivatedJob;
 
 /**
  * Generic HTTP job worker qua Camel — URL/method/body cấu hình bằng custom headers hoặc variables.

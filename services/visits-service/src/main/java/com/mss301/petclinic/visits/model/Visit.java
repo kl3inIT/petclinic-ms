@@ -57,6 +57,9 @@ public class Visit extends AbstractAuditingEntity {
     @Version
     private Long version;
 
+    @Column(name = "process_instance_key")
+    private Long processInstanceKey;
+
     protected Visit() {
         // JPA
     }
@@ -111,4 +114,6 @@ public class Visit extends AbstractAuditingEntity {
     public String getTreatment() { return treatment; }
     public BigDecimal getFee() { return fee; }
     public Long getVersion() { return version; }
+    public Long getProcessInstanceKey() { return processInstanceKey; }
+    public void setProcessInstanceKey(Long processInstanceKey) { this.processInstanceKey = processInstanceKey; }
 }
