@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -77,7 +78,8 @@ public class VisitController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get visit detail")
+    @Operation(summary = "Get visit detail — owner hoặc STAFF/ADMIN/VET")
+    @PreAuthorize("@visitSecurity.canView(#id, authentication)")
     public VisitResponse getVisit(@PathVariable Long id) {
         return service.findById(id);
     }
@@ -96,7 +98,8 @@ public class VisitController {
     }
 
     @PatchMapping("/{id}/cancel")
-    @Operation(summary = "Cancel visit — USER chỉ hủy của mình; STAFF/ADMIN hủy được hết")
+    @Operation(summary = "Cancel visit — owner hoặc STAFF/ADMIN/VET")
+    @PreAuthorize("@visitSecurity.canCancel(#id, authentication)")
     public VisitResponse cancelVisit(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         return service.cancel(id, currentUserId(jwt), isPrivileged(jwt));
     }

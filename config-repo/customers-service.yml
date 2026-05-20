@@ -14,3 +14,28 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     # tracking ở `public` schema — xem CLAUDE.md (chicken-and-egg pattern)
+
+# RBAC — Least Privilege (slide MSS301 #70). Áp bởi EndpointSecurityCustomizer.
+# Customers data nhạy cảm (PII) → siết hơn vets:
+#   - Mọi USER xem được pet (FE owner page hiển thị pet của mình)
+#   - List owners + create/delete owner → STAFF/ADMIN (không cho self-signup tạo owner record)
+petclinic:
+  security:
+    endpoints:
+      # Authenticated USER xem được catalog pet (cho dropdown FE)
+      user:
+        - { method: GET, path: /api/v1/pets/** }
+        - { method: GET, path: /api/v1/owners/* }     # detail OK — leak ownerId là acceptable
+      # Staff vận hành owner records — tạo, list, xem detail
+      staff:
+        - { method: GET,  path: /api/v1/owners }
+        - { method: POST, path: /api/v1/owners }
+        - { method: PUT,  path: /api/v1/owners/** }
+        - { method: PATCH, path: /api/v1/owners/** }
+      # Admin only — hard delete + pet management (write)
+      admin:
+        - { method: DELETE, path: /api/v1/owners/** }
+        - { method: POST,   path: /api/v1/pets }
+        - { method: PUT,    path: /api/v1/pets/** }
+        - { method: PATCH,  path: /api/v1/pets/** }
+        - { method: DELETE, path: /api/v1/pets/** }

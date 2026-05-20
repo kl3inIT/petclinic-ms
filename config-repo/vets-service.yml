@@ -12,3 +12,25 @@ spring:
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+
+# RBAC — Least Privilege pattern (slide MSS301 #70).
+# Áp bởi EndpointSecurityCustomizer trong VetsSecurityConfig. Source of truth duy nhất
+# cho ai access endpoint nào — đổi role không sửa code, chỉ sửa YAML.
+#
+# Thứ tự apply trong customizer: public → admin → staff → user (specific trước, broad sau).
+petclinic:
+  security:
+    endpoints:
+      # Mọi user authenticated đều xem được catalog vet + specialty
+      user:
+        - { method: GET, path: /api/v1/vets/** }
+        - { method: GET, path: /api/v1/specialties/** }
+      # Staff (+ ADMIN qua role hierarchy implicit) tạo/sửa vet
+      staff:
+        - { method: POST,  path: /api/v1/vets }
+        - { method: PATCH, path: /api/v1/vets/** }
+        - { method: PUT,   path: /api/v1/vets/** }
+      # Admin only — hard delete + catalog management
+      admin:
+        - { method: DELETE, path: /api/v1/vets/** }
+        - { path: /api/v1/specialties/** }   # mọi non-GET trên specialties

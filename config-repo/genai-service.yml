@@ -96,6 +96,18 @@ petclinic:
 # KHÔNG ok cho prod (restart sẽ làm DB row unreadable).
 petclinic.crypto.key: ${PETCLINIC_CRYPTO_KEY:}
 
+# RBAC — Least Privilege (slide MSS301 #70). Reactive variant ở
+# ReactiveEndpointSecurityCustomizer (genai-service dùng WebFlux stack).
+petclinic:
+  security:
+    endpoints:
+      # USER+ — chat endpoints (USER nói chuyện với pet care AI)
+      user:
+        - { path: /api/v1/ai/** }
+      # Admin only — LLM config (BYOK API key, model selection, validate)
+      admin:
+        - { path: /api/v1/admin/llm/** }
+
 management:
   endpoints:
     web:

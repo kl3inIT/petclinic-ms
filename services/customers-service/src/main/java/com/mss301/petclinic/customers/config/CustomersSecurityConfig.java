@@ -1,4 +1,4 @@
-package com.mss301.petclinic.vets.config;
+package com.mss301.petclinic.customers.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,28 +12,20 @@ import com.mss301.petclinic.common.security.endpoints.EndpointSecurityCustomizer
 import com.mss301.petclinic.common.security.endpoints.SecurityEndpointsProperties;
 
 /**
- * Vets-service security — declarative RBAC từ {@code config-repo/vets-service.yml}.
+ * Customers-service security — declarative RBAC từ {@code config-repo/customers-service.yml}.
  *
- * <p>Hardcoded rules trước đây đã chuyển sang YAML dưới prefix
- * {@code petclinic.security.endpoints.*}. Lý do refactor:
- * <ul>
- *   <li><b>Single source of truth</b> — đổi role không deploy code, chỉ pull config</li>
- *   <li><b>Slide MSS301 "Least Privilege"</b> — 1 YAML view cho ops/security team audit</li>
- *   <li><b>Consistency cross-service</b> — customers/visits/auth/genai dùng cùng pattern</li>
- * </ul>
+ * <p>Customers chứa PII (full name, email, address, phone) → role gating chặt hơn vets:
+ * USER chỉ GET pet, STAFF list/create owner, ADMIN delete + manage pet catalog.
  *
- * <h4>Filter chain</h4>
- * <ol>
- *   <li>Infra endpoints permitAll (actuator, swagger) — hardcoded vì không phải business RBAC</li>
- *   <li>{@link EndpointSecurityCustomizer#apply} áp public/admin/staff/user rules từ YAML</li>
- *   <li>{@code anyRequest().authenticated()} — safety net cho endpoint thiếu rule</li>
- * </ol>
+ * <p>Per-instance ownership (vd "USER chỉ xem owner record của mình") chưa enforce
+ * tại tầng này — cần {@code @PreAuthorize("@ownerSecurity.isOwner(#id, authentication)")}
+ * ở controller. Hiện tại UI chỉ admin/staff dùng → coarse role-based đủ.
  */
 @Configuration
-public class VetsSecurityConfig {
+public class CustomersSecurityConfig {
 
     @Bean
-    public SecurityFilterChain vetsSecurityFilterChain(
+    public SecurityFilterChain customersSecurityFilterChain(
             HttpSecurity http,
             JwtAuthenticationConverter jwtAuthConverter,
             SecurityEndpointsProperties endpoints)
