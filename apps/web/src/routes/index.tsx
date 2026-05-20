@@ -54,8 +54,8 @@ interface HeaderProps {
 function SiteHeader({ user }: HeaderProps) {
   const nav = [
     { label: 'Trang chủ', href: '#home' },
-    { label: 'Dịch vụ', href: '#services' },
     { label: 'Về chúng tôi', href: '#about' },
+    { label: 'Dịch vụ', href: '#services' },
     { label: 'Khách hàng', href: '#testimonials' },
     { label: 'Liên hệ', href: '#contact' },
   ];
@@ -114,7 +114,7 @@ function Hero({ ctaHref }: { ctaHref: string }) {
   return (
     <section
       id="home"
-      className="relative overflow-hidden px-6 pt-12 pb-24 sm:pt-16"
+      className="relative scroll-mt-20 overflow-hidden px-6 pt-12 pb-24 sm:pt-16"
     >
       {/* paw decorations */}
       <PawDecor className="left-6 top-20 text-primary/30" rotate={-15} />
@@ -245,7 +245,7 @@ function WhyChooseUs() {
   ];
 
   return (
-    <section id="about" className="px-6 py-20">
+    <section id="about" className="scroll-mt-20 px-6 py-20">
       <div className="mx-auto max-w-6xl text-center">
         <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           VÌ SAO CHỌN CHÚNG TÔI?
@@ -313,7 +313,7 @@ function Services() {
   ];
 
   return (
-    <section id="services" className="bg-white px-6 py-20">
+    <section id="services" className="scroll-mt-20 bg-white px-6 py-20">
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
           <div className="mb-3 flex items-center justify-center gap-2 text-primary">
@@ -388,7 +388,7 @@ function Testimonials() {
   ];
 
   return (
-    <section id="testimonials" className="px-6 py-20">
+    <section id="testimonials" className="scroll-mt-20 px-6 py-20">
       <div className="mx-auto max-w-6xl">
         <div className="text-center">
           <div className="mb-3 flex items-center justify-center gap-2 text-primary">
@@ -446,7 +446,7 @@ function Testimonials() {
 
 function CtaBanner({ ctaHref }: { ctaHref: string }) {
   return (
-    <section id="contact" className="px-6 pb-20">
+    <section id="contact" className="scroll-mt-20 px-6 pb-20">
       <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary to-[#6e64b9] p-10 text-center text-white shadow-xl sm:p-14">
         <ShieldCheck className="mx-auto size-12 opacity-90" />
         <h2 className="mt-4 text-3xl font-extrabold sm:text-4xl">
