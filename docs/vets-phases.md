@@ -18,8 +18,11 @@
 | **E2** | Photo + Album (MinIO + multipart) | ✅ Done | `5942050` | `8aaa67b` |
 | **I** | MinIO orphan-cleanup scheduled job | ✅ Done | `018212f` | `2256c33` |
 | **F** | Rating customerName lấy từ JWT (anti-spoof) | ✅ Done | `7387418` | `d943cc6` |
+| **F.1** | Review fixes: rating UPSERT + unique constraint, top-rated tiebreak, getSummary 1-query, photo/album orphan cleanup | ✅ Done | _session 2026-05-20_ | — |
+| **G** | Publish `vet.rating.added` event lên RabbitMQ | ✅ Done (core) — IT broker pending | _session 2026-05-20_ | — |
+| **J (partial)** | FE Vietnamese labels + Zod schemas cho vets sub-resource (UI page mới: pending) | 🚧 Partial | _session 2026-05-20_ | — |
 
-**Tổng test hiện tại**: 76 IT pass (71 từ A-E + 5 MinioOrphanCleanupJobIT). Phase F giữ nguyên count RatingControllerIT (14 → 14: bỏ `blankCustomerName_returns400`, thêm `jwtMissingUsername_returns400` + `bodyCustomerNameField_isSilentlyIgnored`).
+**Tổng test hiện tại**: 78 IT pass (76 cũ + 2 mới: `addVetRating_sameCustomerTwice_upsertsInPlaceAndCountIsOne`, `listTopRatedVets_sameAvgSameCount_tiebreakByVetIdAsc`). Phase G test broker chưa thêm — cần RabbitMQTestcontainer riêng (xem section "Còn lại cần làm" cuối file).
 
 ---
 
@@ -200,8 +203,67 @@
 
 1. **Resume sau khi pull**: `git pull origin nhat-anh` → `./gradlew :services:vets-service:test` (cần Docker chạy).
 2. **Coverage report**: `./gradlew :services:vets-service:jacocoTestReport` → mở `services/vets-service/build/reports/jacoco/test/html/index.html`.
-3. **Phase A-E + I + F đã xong toàn bộ** — vets-service nghiệp vụ + security + operational hoàn chỉnh. 76 IT cover.
-4. **Optional future phases (chưa lên kế hoạch)** — xem flow chi tiết section "🗺️ Flow next phases" ngay bên dưới.
+3. **Phase A-E + I + F + F.1 + G đã xong** — vets-service nghiệp vụ + security + operational + event publishing hoàn chỉnh. 78 IT cover.
+4. **Phase J (partial)** — FE labels/schemas có sẵn (`apps/web/src/features/vets/`). UI page mới chưa làm.
+5. **Optional future phases** — xem section "🗺️ Flow next phases" + "📝 Session 2026-05-20 — đã update gì + còn gì" ngay bên dưới.
+
+---
+
+## 📝 Session 2026-05-20 — đã update gì + còn cần gì
+
+### ✅ Đã làm trong session
+
+**F.1 — Review fixes (8 issue):**
+- `RatingRepository.findTopRatedVets` thêm `v.id ASC` tertiary tiebreak — chống nondeterministic order khi 2 vet cùng AVG+COUNT
+- `RatingRepository` xoá `findAverageScoreByVetId` + `countByVetId` (duplicate), giữ `findScoreDistributionByVetId` + thêm `existsByVetIdAndCustomerName` + `findByVetIdAndCustomerName`
+- `RatingServiceImpl.getSummary` — gộp 3 query thành 1 (derive count + average từ distribution rows)
+- `RatingServiceImpl.create` — UPSERT semantic: cùng customer + cùng vet → update rating cũ thay vì insert duplicate
+- Liquibase `010-rating-unique-customer.yaml` — dedupe existing rồi add unique `(vet_id, customer_name)`
+- `RatingController.addVetRating` javadoc — note UPSERT + body customerName silently ignored
+- `VetPhotoServiceImpl.uploadPhoto` — compensating cleanup: nếu DB save fail sau khi MinIO ghi (insert case), xoá MinIO object best-effort
+- `VetAlbumServiceImpl.uploadPhoto` — try/catch quanh upload + save lần 2: nếu fail → xoá MinIO object best-effort (orphan job lo phần còn lại)
+- `RatingControllerIT` thêm 2 IT: `addVetRating_sameCustomerTwice_upsertsInPlaceAndCountIsOne` + `listTopRatedVets_sameAvgSameCount_tiebreakByVetIdAsc`
+
+**G — Event publishing:**
+- `build.gradle.kts` thêm `implementation(project(":shared:common-events"))`
+- `events/VetRatingAddedEvent.java` — record implements `DomainEvent`, routing key `vet.rating.added`, payload denormalized (ratingId, vetId, score, description, customerName, rateDate, **updated flag** — phân biệt INSERT vs UPSERT)
+- `RatingServiceImpl` inject `ObjectProvider<EventPublisher>`, publish trong `afterCommit` hook qua `TransactionSynchronizationManager` — tránh orphan event khi rollback
+- `test/resources/application.yml` set `petclinic.events.enabled: false` (test KHÔNG có broker)
+- `config-repo/vets-service-dev.yml` bật `petclinic.events.enabled: true` + compose profiles `[db, mq, storage]`
+
+**J (partial) — FE foundation:**
+- `apps/web/src/features/vets/labels.ts` — `WORKDAY_LABEL`, `WORKHOUR_LABEL`, `BADGE_TITLE_LABEL` + `scoreStars()` helper
+- `apps/web/src/features/vets/schemas.ts` — `vetSchema`, `ratingSchema`, `educationSchema`, `badgeSchema` (Zod)
+
+### ⏳ Còn cần làm
+
+**Phase G — broker IT (priority HIGH):**
+- Thêm `services/vets-service/src/test/java/.../RatingEventPublishIT.java` với `@Testcontainers RabbitMQContainer` (artifactId `testcontainers-rabbitmq`) — verify message landed đúng exchange `petclinic.events`, routing key `vet.rating.added`, payload có đầy đủ field + `updated` flag đúng.
+- Set `@TestPropertySource(properties = "petclinic.events.enabled=true")` override mặc định trong test profile.
+- Verify `afterCommit`: test 1 case throw exception SAU `ratingRepository.save` để confirm event KHÔNG fire khi transaction rollback.
+
+**Phase J — UI page (priority MED):**
+- Tạo `apps/web/src/routes/admin.vets.$id.tsx` với 6 tab (Info / Education / Schedule / Ratings / Album / Badges) — pattern theo Owners CRUD (Phase 7B).
+- Mỗi tab gọi hook từ `lib/api/generated/vets/vets.ts` — **chạy `pnpm fetch:openapi && pnpm generate:api` trước** để xuất hook cho sub-resource mới (hiện file generated chỉ có CRUD Vet cơ bản, chưa có education/rating/badge/photo/album/work-schedule).
+- Form: bind Zod schemas từ `features/vets/schemas.ts` + `@tanstack/react-form`.
+- Multipart upload (photo + album): cần config `bodyType: 'FormData'` trong `orval.config.ts` cho path matching `/photo` + `/album`.
+- Component `MediaUploader.tsx` — drag-drop preview + client-side validate (10MB, mime `image/*`).
+- Tab Schedule: 7 day × 12 hour grid checkbox → PUT replace toàn bộ (idempotent từ Phase C).
+- Tab Ratings: list + UPSERT semantic (POST trùng → silent update, không cần dialog "Bạn đã rate, sửa?").
+
+**Phase G — Outbox pattern (priority LOW — chỉ khi scale):**
+- Hiện tại publish best-effort (broker down → log warning, KHÔNG retry). Phù hợp cho rating/notification.
+- Nếu sau này có event "tiền" (vd `vet.tier.upgraded` ảnh hưởng billing), cần outbox pattern: lưu event vào bảng `vets.outbox_events` trong cùng transaction với rating, background job đọc + publish + mark sent.
+
+**Phase H — Vet schedule integration với visits-service (priority MED — đã có spec):**
+- Xem chi tiết section "Phase H" bên dưới — chưa start.
+
+### 🔑 Decision đã chốt trong session
+
+1. **Duplicate rating**: chọn unique `(vet_id, customer_name)` + UPSERT (không phải 409 Conflict reject) — UX mượt hơn, customer chỉ cần POST lại để đổi ý kiến.
+2. **Event payload**: denormalized chỉ những gì publisher có sẵn — KHÔNG include vetName, customerEmail (tránh cross-service call lúc publish). Consumer tự lookup nếu cần.
+3. **`updated` flag** trên event — consumer có thể skip notification cho UPSERT (tránh spam khi customer chỉnh score liên tục).
+4. **Test profile tắt events** (`petclinic.events.enabled=false`) — không cần broker cho IT thường. Test publish riêng (chưa làm) sẽ override property.
 
 ---
 
