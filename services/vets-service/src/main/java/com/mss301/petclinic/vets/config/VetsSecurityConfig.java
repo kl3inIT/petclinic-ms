@@ -47,6 +47,14 @@ public class VetsSecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
+                        // Phase K — endpoint /me cho ROLE_VET. Phải khai báo TRƯỚC rule
+                        // catch-all `/api/v1/vets/**` bên dưới (Spring Security: first match wins).
+                        // Service đọc vetId từ JWT claim — KHÔNG cần resource-level check.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/vets/me", "/api/v1/vets/me/**")
+                            .hasAnyRole("VET", "STAFF", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/vets/me")
+                            .hasAnyRole("VET", "STAFF", "ADMIN")
+
                         // Write — explicit rules trước (thứ tự matter: cụ thể trước, broad sau)
                         // Sub-resource (education, work-schedule, ...): STAFF được delete vì
                         // lifecycle riêng, không gây mất audit nghiêm trọng như hard-delete cả vet
