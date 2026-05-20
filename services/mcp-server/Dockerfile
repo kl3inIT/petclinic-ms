@@ -31,8 +31,10 @@ RUN --mount=type=cache,id=gradle-cache,target=/cache/.gradle,sharing=locked \
     ./gradlew :services:mcp-server:dependencies --no-daemon --console=plain
 
 # Shared src — mcp-server cần common-clients (RestClient + JwtForward) + common-web (ProblemDetail)
+# + common-security (JwtDecoder + JwtAuthenticationConverter + SecurityEndpointsProperties)
 COPY shared/common-clients/src shared/common-clients/src
 COPY shared/common-web/src shared/common-web/src
+COPY shared/common-security/src shared/common-security/src
 # Service src
 COPY services/mcp-server/src services/mcp-server/src
 
