@@ -54,20 +54,24 @@ public class JwtTokenProvider {
         Instant now = Instant.now();
         Instant expiresAt = now.plus(accessTokenTtl);
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .issuer(jwtProps.issuer())
                 .audience(List.of(jwtProps.audience()))
                 .subject(user.getId().toString())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
                 .claim("username", user.getUsername())
-                .claim("roles", user.getRoles())
-                .build();
+                .claim("roles", user.getRoles());
+        // Phase K — chỉ thêm claim vetId nếu user link vet. Vets-service đọc claim này
+        // cho endpoint /api/v1/vets/me/*. User thường (customer/admin) không có claim.
+        if (user.getVetId() != null) {
+            claimsBuilder.claim("vetId", user.getVetId());
+        }
 
         JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)
                 .keyId(rsaJwk.getKeyID())
                 .build();
-        String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+        String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claimsBuilder.build())).getTokenValue();
         return new IssuedToken(token, accessTokenTtl.toSeconds());
     }
 
