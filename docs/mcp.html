@@ -318,23 +318,57 @@ public String visitSummary(
     <tr><td>Code mode (#22)</td><td><span class="badge na">N/A</span></td><td>Client-side pattern (genai-service), không phải server</td></tr>
     <tr><td>Sampling / Elicitation</td><td><span class="badge na">N/A</span></td><td>STATELESS không support — trade-off đã chấp nhận</td></tr>
     <tr><td>Dynamic Client Registration (DCR)</td><td><span class="badge warn">○</span></td><td>auth-service hiện không expose DCR endpoint. Static client OK cho lab</td></tr>
+    <tr><td>MCP client JWT forwarding (Option C)</td><td><span class="badge">✓</span></td><td>McpSyncHttpClientRequestCustomizer + lazy init — genai-service forward user JWT xuống mcp-server</td></tr>
   </tbody>
 </table>
 
 <h2 id="client-flow">8. Client flow — how to consume</h2>
 
-<h3>Internal: genai-service</h3>
+<h3>Internal: genai-service (Option C — JWT forwarding)</h3>
+
+<p>Genai-service forward JWT của user đang chat xuống mcp-server qua
+<code>McpSyncHttpClientRequestCustomizer</code> (Spring AI 2.0-M6 ship sẵn).</p>
+
+<div class="file-label">genai-service/.../config/McpClientAuthConfig.java</div>
+<pre><code>static {
+    // Boot 4 + Reactor 3.5+ — bridge Reactor Context ↔ ThreadLocal cho SecurityContext.
+    Hooks.enableAutomaticContextPropagation();
+}
+
+@Bean
+McpSyncHttpClientRequestCustomizer mcpJwtForwarder() {
+    return (builder, method, endpoint, body, context) -> {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof JwtAuthenticationToken jwt && jwt.isAuthenticated()) {
+            builder.header("Authorization", "Bearer " + jwt.getToken().getTokenValue());
+        }
+    };
+}
+</code></pre>
+
+<div class="file-label">config-repo/genai-service.yml</div>
 <pre><code>spring:
   ai:
     mcp:
       client:
         type: SYNC
         request-timeout: 30s
+        initialized: false              # ← lazy init, defer tới khi có user JWT
+        toolcallback:
+          enabled: true
         streamable-http:
           connections:
             petclinic-mcp:
-              url: http://mcp-server:8187   # Eureka discovery via genai's RestClient
+              url: http://mcp-server:8187
 </code></pre>
+
+<div class="card warn">
+  <h4>Tại sao <code>initialized: false</code>?</h4>
+  <p>Spring AI MCP client mặc định khởi tạo lúc boot — tools/list discovery xảy ra ngay.
+  Nhưng lúc boot KHÔNG có user JWT → request 401. Set <code>false</code> → defer init
+  đến lần đầu user chat → SecurityContext có JWT → customizer forward đúng → mcp-server
+  validate OK → tool catalog load.</p>
+</div>
 
 <h3>External: Claude Desktop / Cursor / mcp-inspector</h3>
 <pre><code>{
