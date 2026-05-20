@@ -35,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -74,9 +75,14 @@ class RatingEventPublishIT {
             .withUsername("postgres")
             .withPassword("postgres");
 
+    // RabbitMQContainer mặc định wait theo port open, không guarantee broker đã accept
+    // AMQP connection. CI Linux runner load cao → first connection fail với
+    // ShutdownSignalException khi declareQueue ở @BeforeEach. Wait theo log "Server startup
+    // complete" để chắc broker ready trước khi Spring AMQP connect.
     @Container
     @ServiceConnection
-    static RabbitMQContainer rabbit = new RabbitMQContainer("rabbitmq:4-management");
+    static RabbitMQContainer rabbit = new RabbitMQContainer("rabbitmq:4-management")
+            .waitingFor(Wait.forLogMessage(".*Server startup complete.*", 1));
 
     /**
      * Bind test queue vào exchange `petclinic.events` với routing key `vet.rating.added`

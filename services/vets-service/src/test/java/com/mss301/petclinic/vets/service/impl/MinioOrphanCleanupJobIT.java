@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -53,9 +54,14 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  * <p>Test profile set {@code min-age: PT0S} → orphan vừa upload cũng được xét luôn.
  * Pattern setup MinIOContainer giống {@code VetPhotoControllerIT}.</p>
  */
+// @Import explicit: CI run từ 2026-05-20 phát hiện bean MinioOrphanCleanupJob không được
+// register dù có @Component (root cause chưa rõ — local pass, CI Linux runner fail). Force
+// register qua @Import để guard regression — harmless nếu component-scan đã pickup
+// (Spring sẽ dedupe bean definition theo type).
 @SpringBootTest
 @Testcontainers
 @Transactional
+@Import(MinioOrphanCleanupJob.class)
 class MinioOrphanCleanupJobIT {
 
     private static final String TEST_BUCKET = "test-cleanup";
