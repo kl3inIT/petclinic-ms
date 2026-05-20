@@ -34,7 +34,15 @@ function LoginPage() {
           user: { id: data.userId!, username: data.username!, roles: data.roles ?? [] },
         });
         toast.success(`Xin chào ${data.username}`);
-        void navigate({ to: search.redirect ?? '/admin' });
+        // Redirect theo role (Phase K). VET → /vet, ADMIN|STAFF → /admin, fallback /.
+        // URL search.redirect override role-based default (deep-link login).
+        const roles = data.roles ?? [];
+        const roleHome = roles.includes('VET')
+          ? '/vet'
+          : roles.includes('ADMIN') || roles.includes('STAFF')
+            ? '/admin'
+            : '/';
+        void navigate({ to: search.redirect ?? roleHome });
       },
       onError: () => {
         toast.error('Username hoặc password không đúng');
