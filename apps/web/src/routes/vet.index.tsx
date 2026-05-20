@@ -64,14 +64,12 @@ function VetDashboard() {
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <p className="text-muted-foreground">
-              Token của bạn không có claim <code className="rounded bg-muted px-1 py-0.5">vetId</code>.
-              Admin cần liên kết account với 1 vet entity:
+              Tài khoản <strong>{username}</strong> chưa được admin liên kết với hồ sơ
+              bác sĩ. Vui lòng liên hệ quản trị viên để được thiết lập.
             </p>
-            <pre className="overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs">
-{`UPDATE auth.users SET roles_csv = 'VET', vet_id = <id>
- WHERE username = '${username}';`}
-            </pre>
-            <p className="text-muted-foreground">Sau đó đăng xuất + đăng nhập lại để cấp token mới.</p>
+            <p className="text-xs text-muted-foreground">
+              Sau khi admin liên kết xong, đăng xuất + đăng nhập lại để cấp token mới.
+            </p>
 
             <div className="rounded-md border border-violet-200 bg-gradient-to-br from-violet-50 to-pink-50 p-4">
               <div className="mb-2 flex items-center gap-2 font-medium text-violet-900">

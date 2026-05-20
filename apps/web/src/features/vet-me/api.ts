@@ -127,13 +127,15 @@ export function useMyBadges(page: number, size = 12) {
 
 export function useMyRecentRatings(limit = 5) {
   const demo = isDemoMode();
-  return useListMyRatings<RatingResponse[]>(
+  return useListMyRatings(
     { pageable: { page: 0, size: limit, sort: ['rateDate,desc'] } },
     {
       query: {
         enabled: !demo,
-        initialData: demo ? pageOf(MOCK_RATINGS, 0, limit) : undefined,
-        select: (data) => data.content ?? [],
+        initialData: demo
+          ? (pageOf(MOCK_RATINGS, 0, limit) as PageRatingResponse)
+          : undefined,
+        select: (data): RatingResponse[] => data.content ?? [],
       },
     },
   );
