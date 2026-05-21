@@ -59,7 +59,7 @@ micrometer-registry-prometheus         = { module = "io.micrometer:micrometer-re
 # Resilience4j Bulkhead — semaphore concurrency limit per downstream. Spring Cloud CircuitBreaker
 # abstraction KHÔNG cover bulkhead → dùng Resilience4j thẳng. Version theo BOM resilience4j-spring-boot3
 # (đã có trên classpath qua starter-circuitbreaker-resilience4j → 2.3.0).
-resilience4j-bulkhead                  = { module = "io.github.resilience4j:resilience4j-bulkhead", version = "2.3.0" }
+resilience4j-bulkhead                  = { module = "io.github.resilience4j:resilience4j-bulkhead", version = "2.4.0" }
 
 # --- API docs ---
 springdoc-openapi-starter-webmvc-ui    = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
