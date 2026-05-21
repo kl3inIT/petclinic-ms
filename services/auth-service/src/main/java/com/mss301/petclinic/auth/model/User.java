@@ -57,6 +57,18 @@ public class User extends AbstractAuditingEntity {
     @Column(name = "vet_id", nullable = true)
     private Long vetId;
 
+    /**
+     * Phase L — link tới customer (owner) entity (customers-service). NULL = user không phải owner
+     * (vet/admin/staff). Non-null → JWT có claim {@code customerId} → visits-service /
+     * customers-service dùng claim này để enforce per-instance authorization (USER chỉ book/xem
+     * resource của mình).
+     *
+     * <p>Sync 2 chiều: mirror column {@code customers.owners.user_id}. Event-driven flow
+     * (user.registered → owner.created → cập nhật cả 2 column). KHÔNG FK cross-schema.
+     */
+    @Column(name = "customer_id", nullable = true, unique = true)
+    private Long customerId;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -77,4 +89,7 @@ public class User extends AbstractAuditingEntity {
 
     public Long getVetId() { return vetId; }
     public void setVetId(Long vetId) { this.vetId = vetId; }
+
+    public Long getCustomerId() { return customerId; }
+    public void setCustomerId(Long customerId) { this.customerId = customerId; }
 }
