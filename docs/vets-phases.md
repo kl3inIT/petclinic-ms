@@ -289,6 +289,109 @@
 
 ---
 
+## 🔍 Code review findings — chờ apply (2026-05-20)
+
+> Review PR #11 sau khi CI pass + 16 CodeRabbit findings đã fix. Còn 14 issue tự phát hiện — gom sửa 1 lần sau merge.
+> File path + line number + code before/after có sẵn — open file là sửa được.
+
+### 🔴 HIGH — phải sửa trước khi đụng tính năng VET tiếp
+
+**[H1] `VetController.updateVet` thiếu `@Valid`**
+`services/vets-service/.../controller/VetController.java:79`
+```java
+// SAI:
+public VetResponse updateVet(@PathVariable Long id, @RequestBody UpdateVetRequest request)
+// ĐÚNG:
+public VetResponse updateVet(@PathVariable Long id, @RequestBody @Valid UpdateVetRequest request)
+```
+Lý do: mọi `@Size/@Email/@Pattern` trên `UpdateVetRequest` đang bị vô hiệu hoá. `createVet` (line 66) có `@Valid`, update không → invalid input lọt vào service. Compare 2 method là rõ.
+
+**[H2] `vet.profile.tsx` không cho clear phone/resume** — bug UX visible
+`apps/web/src/routes/vet.profile.tsx:43-46`
+```ts
+// SAI (`|| undefined` → field bị drop khỏi JSON → BE skip):
+phoneNumber: value.phoneNumber.trim() || undefined,
+resume: value.resume.trim() || undefined,
+// ĐÚNG (BE đã support `""` = clear ở VetServiceImpl.java:87-88):
+phoneNumber: value.phoneNumber.trim(),
+resume: value.resume.trim(),
+```
+Lý do: vet xoá hết phone trong form → submit → refresh → phone cũ vẫn còn vì `undefined` = "không sửa". BE đã ready, chỉ FE gửi sai.
+
+### 🟠 MEDIUM — follow-up PR
+
+**[M1] `MinioOrphanCleanupJob.runCleanup` load toàn bộ entity vào RAM**
+`services/vets-service/.../service/impl/MinioOrphanCleanupJob.java:74-79`
+- Hiện `photoRepository.findAll().stream().map(p -> p.getObjectKey())` — hydrate full entity.
+- Fix: thêm `@Query("SELECT p.objectKey FROM VetPhoto p") List<String> findAllObjectKeys()` vào 2 repo, job dùng projection.
+- Scale 10K vet → vài MB heap mỗi cleanup. Cleanup chạy idle 3 AM, không cấp bách nhưng effort nhỏ.
+
+**[M2] `runCleanup` giữ DB connection trong suốt S3 sweep**
+Cùng file:68-87
+- `@Transactional(readOnly = true)` wrap cả method → S3 list + delete (network I/O lâu) vẫn trong tx → connection pool starvation nếu sweep mất phút.
+- Fix: snapshot keys từ DB trong tx riêng, sweep S3 ngoài tx.
+
+**[M3] `RatingServiceImpl.publishRatingAddedAfterCommit` không guard**
+`services/vets-service/.../service/impl/RatingServiceImpl.java:88`
+- Gọi `TransactionSynchronizationManager.registerSynchronization()` không check `isSynchronizationActive()` — refactor bỏ `@Transactional` ở caller → `IllegalStateException` runtime.
+- Fix: thêm guard + fallback publish ngay nếu không trong tx.
+
+**[M4] `VetServiceImpl.saveAndTranslateUniqueViolation` dùng string match**
+`services/vets-service/.../service/impl/VetServiceImpl.java:134`
+```java
+if (msg != null && msg.contains("uk_vets_email")) { ... } // fragile
+```
+- Fix: dùng `PSQLException.getSQLState() == "23505"` + `getServerErrorMessage().getConstraint()` typed API.
+- Rename constraint trong Liquibase → silent bypass, 500 leak ra client.
+
+**[M5] `vet.profile.tsx` `useEffect` có `form` trong deps có thể chạy mỗi render**
+`apps/web/src/routes/vet.profile.tsx:55-62`
+- Nếu `form` ref unstable → reset overwrites user input đang gõ.
+- Fix: `useRef(false)` flag `hydrated`, chỉ reset 1 lần khi data về.
+
+### 🟡 LOW — cosmetic, gom cleanup PR
+
+| # | File | Issue | Fix |
+|---|---|---|---|
+| L1 | `vet.tsx:37` | `r as never` cast | `(VET_PORTAL_ROLES as readonly string[]).includes(r)` |
+| L2 | `Vet.java` | Thiếu `@Version` optimistic lock | Add khi có incident (write rate thấp) |
+| L3 | `WorkScheduleServiceImpl.replaceAll` | Không re-fetch sau save | Add khi có DB trigger/default |
+| L4 | `vet.tsx` + `vet.index.tsx` | Role gate trùng (route guard + 400 UI) | Document trong header — 2 concern khác nhau |
+| L5 | `vet.ratings.tsx:25-30` | `dist[star.toString()]` fragile | Wrap helper `getDistCount(dist, star)` |
+| L6 | `vet.badges.tsx:128-129` | Locked badges chỉ show ở `page === 0` | Tách section riêng, không bind pagination |
+| L7 | `VetMeController.resolveVetId` | Không log khi missing claim | `log.warn("JWT missing vetId for sub={}", jwt.getSubject())` |
+
+### 🧪 Test cần thêm (gắn với HIGH fix)
+
+1. **`VetMeControllerTest`** — claim type variations:
+   - JWT `vetId: Integer` (số nhỏ) → resolve thành Long đúng
+   - JWT `vetId: Long` (> 2^31) → resolve đúng
+   - JWT `vetId: String` → 400 invalid-vet-id-type
+   - JWT thiếu claim → 400 missing-vet-id
+2. **`VetServiceImplTest.update`** — PATCH semantics:
+   - `phoneNumber: ""` → DB null (clear) — bảo vệ H2
+   - `phoneNumber: undefined` → DB giữ nguyên
+   - `phoneNumber: "0901..."` → DB update
+3. **`VetPhotoServiceImplTest`** — concurrent upload race:
+   - 2 request đồng thời cùng `vetId` → cả 2 success (idempotent overwrite)
+   - DB save fail giữa MinIO upload + save → cleanup MinIO object mới
+
+### 📋 Checklist apply
+
+- [ ] H1 — Add `@Valid` to `updateVet`
+- [ ] H2 — Fix profile clear-field
+- [ ] M1 — Projection query `findAllObjectKeys`
+- [ ] M2 — Tách DB tx khỏi S3 sweep
+- [ ] M3 — Guard `isSynchronizationActive`
+- [ ] M4 — Typed unique violation check
+- [ ] M5 — Fix `form.reset` deps
+- [ ] L1-L7 — Cosmetic
+- [ ] Test VetMeController claim types
+- [ ] Test update PATCH clear-vs-unset
+- [ ] Test VetPhoto race
+
+---
+
 ## 🗺️ Flow next phases — dev resume cheat sheet
 
 Mỗi phase ghi 4 mục: **(1) Mục tiêu** — đầu ra business, **(2) Đã có sẵn** — precondition project đã đáp ứng, **(3) Cần thêm** — code/infra/dep phải bổ sung, **(4) Bước làm**.
