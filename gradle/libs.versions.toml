@@ -27,7 +27,7 @@ springBootAdmin    = "4.0.4"
 springAi           = "2.0.0-M6"
 
 # Test
-junit              = "6.0.3"
+junit              = "6.1.0"
 
 # AWS SDK v2 — dùng cho S3-compatible storage (MinIO). Không quản lý bởi Spring Boot BOM,
 # pin tại đây. 2.30+ stable May 2026.
