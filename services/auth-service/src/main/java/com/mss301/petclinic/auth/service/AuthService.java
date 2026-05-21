@@ -18,4 +18,18 @@ public interface AuthService {
     void logout(UUID userId);
 
     UserResponse getCurrentUser(UUID userId);
+
+    /**
+     * Phase L — admin link user account ↔ customer (owner) entity.
+     *
+     * <p>Sau khi link, JWT phát hành lần kế tiếp sẽ carry claim {@code customerId}. User cần
+     * logout/login (hoặc refresh token) để nhận token mới.
+     *
+     * @param userId     user trong auth schema
+     * @param customerId owner id trong customers schema (KHÔNG verify cross-schema)
+     * @return user sau khi update
+     * @throws com.mss301.petclinic.common.web.exception.ResourceNotFoundException user không tồn tại
+     * @throws com.mss301.petclinic.common.web.exception.BadRequestAlertException customerId đã link user khác (uk_users_customer_id)
+     */
+    UserResponse linkCustomer(UUID userId, Long customerId);
 }

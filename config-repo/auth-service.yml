@@ -33,7 +33,8 @@ petclinic:
       user:
         - { method: GET,  path: /api/v1/auth/me }
         - { method: POST, path: /api/v1/auth/logout }
-      # Admin only — user management (xem audit log, list users)
+      # Admin only — user management (xem audit log, list users) + Phase L link customer
       admin:
-        - { method: GET, path: /api/v1/admin/users/** }
-        - { method: GET, path: /api/v1/admin/audit/** }
+        - { method: GET,   path: /api/v1/admin/users/** }
+        - { method: GET,   path: /api/v1/admin/audit/** }
+        - { method: PATCH, path: /api/v1/users/*/customer-link }

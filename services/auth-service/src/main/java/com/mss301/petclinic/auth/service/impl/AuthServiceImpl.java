@@ -3,6 +3,7 @@ package com.mss301.petclinic.auth.service.impl;
 import java.util.UUID;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -130,6 +131,45 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId.toString()));
         return UserResponse.from(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse linkCustomer(UUID userId, Long customerId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId.toString()));
+        user.setCustomerId(customerId);
+        try {
+            // saveAndFlush để dịch unique violation NGAY thay vì để bubble lên flush cuối tx
+            // (lúc đó stack trace không còn ở method này → hard debug).
+            User saved = userRepository.saveAndFlush(user);
+            // Audit TRƯỚC khi return — actor lấy từ SecurityContext (admin đang login).
+            // null safe: nếu không có SecurityContext (test/internal call) → adminId = null.
+            audit.customerLinked(currentAdminId(), saved.getId(), customerId);
+            return UserResponse.from(saved);
+        } catch (DataIntegrityViolationException ex) {
+            String msg = ex.getMostSpecificCause().getMessage();
+            if (msg != null && msg.contains("uk_users_customer_id")) {
+                throw new BadRequestAlertException(
+                        "Customer " + customerId + " đã được link với user khác.",
+                        "User", "customer-already-linked");
+            }
+            throw ex;
+        }
+    }
+
+    /** Lấy UUID của admin đang login từ SecurityContext. Null nếu không có (test/internal). */
+    private static UUID currentAdminId() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            return null;
+        }
+        try {
+            return UUID.fromString(auth.getName());
+        } catch (IllegalArgumentException ex) {
+            return null; // anonymous principal hoặc non-UUID name
+        }
     }
 
     private static class UserNotFoundException extends ResourceNotFoundException {

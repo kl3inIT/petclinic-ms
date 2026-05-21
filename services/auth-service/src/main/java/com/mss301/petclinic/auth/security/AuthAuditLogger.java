@@ -41,6 +41,7 @@ public class AuthAuditLogger {
     private static final String ACTION_REFRESH_FAILURE  = "authentication.token.refresh.failure";
     private static final String ACTION_LOGOUT_SUCCESS   = "authentication.logout.success";
     private static final String ACTION_EVENT_PUBLISH_FAILURE = "event.publish.failure";
+    private static final String ACTION_CUSTOMER_LINKED  = "authorization.customer.linked";
 
     public void loginSuccess(UUID userId, String username) {
         try {
@@ -116,6 +117,25 @@ public class AuthAuditLogger {
             MDC.put(K_USER_ID, userId.toString());
             log.info("Logout success");
         } finally {
+            clearAll();
+        }
+    }
+
+    /**
+     * Phase L — admin link user ↔ customer (owner). Audit trail bắt buộc vì là privilege escalation
+     * (user gain quyền truy cập pet/visit của customer). MDC carry adminId/targetUserId/customerId
+     * để search Loki/Elastic ngược.
+     */
+    public void customerLinked(UUID adminId, UUID targetUserId, Long customerId) {
+        try {
+            putBase(ACTION_CUSTOMER_LINKED, OUTCOME_SUCCESS);
+            if (adminId != null) MDC.put("actor.user.id", adminId.toString());
+            MDC.put(K_USER_ID, targetUserId.toString());
+            MDC.put("customer.id", customerId.toString());
+            log.info("Customer linked to user");
+        } finally {
+            MDC.remove("actor.user.id");
+            MDC.remove("customer.id");
             clearAll();
         }
     }
