@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
@@ -33,12 +33,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FieldError } from '@/lib/form/FieldError';
 import { cn } from '@/lib/utils';
+import { apiClient } from '@/lib/api/client';
 
 import { useBookVisit } from '@/lib/api/generated/visits/visits';
 import { useListPets } from '@/lib/api/generated/pets/pets';
 import { useListVets } from '@/lib/api/generated/vets/vets';
+import type { WorkScheduleSlotResponse } from '@/lib/api/generated/model';
 import { bookVisitSchema } from '@/features/visits/schemas';
-import { WORKHOUR_LABEL, WORKHOUR_ORDER } from '@/features/vets/labels';
+import {
+  JS_DAY_TO_WORKDAY,
+  WORKHOUR_LABEL,
+  WORKHOUR_ORDER,
+} from '@/features/vets/labels';
 
 export const Route = createFileRoute('/customer/book')({
   component: BookVisitPage,
@@ -185,9 +191,6 @@ function getVetDisplayData(v: { id?: number }, index: number) {
 
 function getSlotStatus(slot: string) {
   switch (slot) {
-    case 'HOUR_12_13':
-    case 'HOUR_18_19':
-      return { status: 'FULL', text: 'Đã đầy', colorClass: 'text-[#667085]' };
     case 'HOUR_13_14':
     case 'HOUR_17_18':
     case 'HOUR_19_20':
@@ -200,6 +203,13 @@ function getSlotStatus(slot: string) {
     default:
       return { status: 'MANY', text: 'Còn nhiều slot', colorClass: 'text-[#22C55E]' };
   }
+}
+
+async function listVetWorkSchedule(vetId: number) {
+  const { data } = await apiClient.get<WorkScheduleSlotResponse[]>(
+    `/api/v1/vets/${vetId}/work-schedule`,
+  );
+  return data;
 }
 
 function BookVisitPage() {
@@ -274,6 +284,26 @@ function BookVisitPage() {
     const originalIndex = vets.findIndex((v) => v.id === selectedVetRaw.id);
     return getVetDisplayData(selectedVetRaw, originalIndex >= 0 ? originalIndex : 0);
   }, [selectedVetRaw, vets]);
+
+  const vetScheduleQuery = useQuery({
+    queryKey: ['vet-work-schedule', values.vetId],
+    queryFn: () => listVetWorkSchedule(values.vetId),
+    enabled: values.vetId > 0,
+  });
+
+  const selectedWorkday = useMemo(() => {
+    if (!selectedDate) return null;
+    return JS_DAY_TO_WORKDAY[new Date(`${selectedDate}T00:00:00`).getDay()];
+  }, [selectedDate]);
+
+  const availableSlotKeys = useMemo(() => {
+    if (!selectedWorkday) return new Set<string>();
+    return new Set(
+      (vetScheduleQuery.data ?? [])
+        .filter((slot) => slot.workday === selectedWorkday)
+        .map((slot) => slot.workHour),
+    );
+  }, [selectedWorkday, vetScheduleQuery.data]);
 
   const availableSlots = useMemo(() => {
     if (!selectedDate) return [];
@@ -991,6 +1021,12 @@ function BookVisitPage() {
                                 <Stethoscope className="size-11 text-slate-300" />
                                 <span>Vui lòng chọn bác sĩ phụ trách trước</span>
                               </div>
+                            ) : vetScheduleQuery.isLoading ? (
+                              <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                  <Skeleton key={i} className="h-[68px] rounded-[18px]" />
+                                ))}
+                              </div>
                             ) : (
                               <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
                                 {availableSlots.map((slot) => {
@@ -1005,7 +1041,11 @@ function BookVisitPage() {
                                   const isPast = isToday && hour <= new Date().getHours();
 
                                   const slotInfo = getSlotStatus(slot);
-                                  const isDisabled = isPast || slotInfo.status === 'FULL';
+                                  const isInSchedule = availableSlotKeys.has(slot);
+                                  const isDisabled = isPast || !isInSchedule;
+                                  const slotText = isInSchedule
+                                    ? slotInfo.text
+                                    : 'Không có lịch';
 
                                   return (
                                     <button
@@ -1058,7 +1098,7 @@ function BookVisitPage() {
                                               : slotInfo.colorClass,
                                         )}
                                       >
-                                        {slotInfo.text}
+                                        {slotText}
                                       </span>
                                     </button>
                                   );
