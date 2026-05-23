@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useMyProfile, useUpdateMyProfile } from '@/features/vet-me/api';
+import { VetPageHeader } from '@/features/vet-me/components/VetPageHeader';
 import { FieldError } from '@/lib/form/FieldError';
 import { cn } from '@/lib/utils';
 
@@ -91,25 +92,14 @@ function VetProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600 shadow-sm">
-            <UserCircle className="size-7" />
-          </div>
-          <div>
-            <h1 className="text-2xl leading-tight font-bold text-slate-950">
-              Hồ sơ cá nhân
-            </h1>
-            <p className="mt-1 max-w-3xl text-sm text-slate-500">
-              Thông tin định danh do quản trị viên duy trì. Bạn có thể sửa số điện thoại
-              và tiểu sử.
-            </p>
-          </div>
-        </div>
-      </section>
+    <div className="relative space-y-5 overflow-hidden rounded-xl bg-[#fbfaff] p-3 sm:p-5 lg:p-6">
+      <VetPageHeader
+        icon={UserCircle}
+        title="Hồ sơ cá nhân"
+        subtitle="Thông tin định danh do quản trị viên duy trì. Bạn có thể sửa số điện thoại và tiểu sử."
+      />
 
-      <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-violet-50/70 px-4 py-3 text-sm text-slate-600">
+      <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm">
         <Info className="size-4 shrink-0 text-violet-600" />
         <span>
           Một số thông tin chỉ có thể được chỉnh sửa bởi quản trị viên PetClinic để đảm
@@ -118,13 +108,13 @@ function VetProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.9fr_1.65fr]">
-        <Card className="border-slate-200 bg-white shadow-sm">
-          <CardHeader className="px-5 pt-5 pb-3">
+        <Card className="border-slate-200/80 bg-white/90 shadow-sm">
+          <CardHeader className="border-b border-slate-100 px-5 py-4">
             <CardTitle className="text-base font-bold text-slate-950">
               Thông tin định danh
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="p-5">
             {profileQuery.isLoading ? (
               <IdentitySkeleton />
             ) : (
@@ -141,7 +131,7 @@ function VetProfilePage() {
                   </div>
                 </div>
 
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
                   <ReadField icon={Mail} label="Email" value={profile?.email} />
                   <ReadField
                     icon={Phone}
@@ -165,7 +155,7 @@ function VetProfilePage() {
                   />
                 </div>
 
-                <div className="space-y-3 border-t border-slate-100 pt-4">
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
                   <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
                     <Stethoscope className="size-4" />
                     Chuyên môn
@@ -178,7 +168,7 @@ function VetProfilePage() {
                         <Badge
                           key={specialty.id ?? specialty.name}
                           variant="secondary"
-                          className="rounded-md bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700"
+                          className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700"
                         >
                           {specialty.name}
                         </Badge>
@@ -187,7 +177,7 @@ function VetProfilePage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
                   <LockKeyhole className="size-3.5 shrink-0" />
                   <span>
                     Cần đổi tên hoặc email? Liên hệ quản trị viên để được hỗ trợ.
@@ -198,13 +188,13 @@ function VetProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-white shadow-sm">
-          <CardHeader className="px-5 pt-5 pb-3">
+        <Card className="border-slate-200/80 bg-white/90 shadow-sm">
+          <CardHeader className="border-b border-slate-100 px-5 py-4">
             <CardTitle className="text-base font-bold text-slate-950">
               Cập nhật thông tin
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-5 pb-5">
+          <CardContent className="p-5">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -220,7 +210,7 @@ function VetProfilePage() {
                       htmlFor={field.name}
                       className="flex items-center gap-2 text-sm font-medium text-slate-700"
                     >
-                      <Phone className="size-4 text-slate-500" />
+                      <Phone className="size-4 text-violet-600" />
                       Số điện thoại
                     </Label>
                     <Input
@@ -229,7 +219,7 @@ function VetProfilePage() {
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="0901000001"
-                      className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm"
+                      className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
                     />
                     <FieldError field={field} />
                     <p className="text-xs text-slate-500">
@@ -251,12 +241,12 @@ function VetProfilePage() {
                     </Label>
                     <Textarea
                       id={field.name}
-                      rows={6}
+                      rows={7}
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="Mô tả kinh nghiệm, chứng chỉ, lĩnh vực chuyên sâu, năm tốt nghiệp..."
-                      className="min-h-32 rounded-md border-slate-200 bg-white text-sm shadow-sm"
+                      className="min-h-40 rounded-md border-slate-200 bg-white text-sm shadow-sm focus-visible:ring-violet-300"
                     />
                     <FieldError field={field} />
                     <p className="text-xs text-slate-500">
@@ -311,9 +301,8 @@ function IdentitySkeleton() {
           <Skeleton className="h-6 w-28 rounded-full" />
         </div>
       </div>
-      <Skeleton className="h-14 w-full" />
-      <Skeleton className="h-14 w-full" />
-      <Skeleton className="h-20 w-full" />
+      <Skeleton className="h-28 w-full" />
+      <Skeleton className="h-24 w-full" />
     </div>
   );
 }
@@ -323,7 +312,7 @@ function StatusBadge({ active }: { active?: boolean }) {
     <Badge
       variant="outline"
       className={cn(
-        'mt-2 rounded-md px-2.5 py-1 text-xs font-semibold',
+        'mt-2 rounded-full px-3 py-1 text-xs font-semibold',
         active
           ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
           : 'border-slate-200 bg-slate-50 text-slate-600',
@@ -352,12 +341,10 @@ function ReadField({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[1rem_5.75rem_1fr_auto] items-center gap-3 py-4 text-sm">
+    <div className="grid grid-cols-[1rem_6rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 text-sm">
       <Icon className="size-4 text-slate-500" />
       <span className="text-xs font-semibold text-slate-500 uppercase">{label}</span>
-      <span className="min-w-0 font-medium break-words text-slate-900">
-        {value || '-'}
-      </span>
+      <span className="min-w-0 truncate font-medium text-slate-900">{value || '-'}</span>
       {action}
     </div>
   );

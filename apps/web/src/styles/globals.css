@@ -127,15 +127,19 @@
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
-  }
-  body::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
   }
 }
 
 /* Login background — Jmix petclinic style */
+.landing-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.landing-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 .auth-bg {
   background-image: url('/brand/login-background.svg');
   background-size: cover;

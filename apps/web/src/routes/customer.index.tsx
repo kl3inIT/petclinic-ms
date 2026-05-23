@@ -7,6 +7,7 @@ import {
   FilePenLine,
   PawPrint,
   Plus,
+  Sparkles,
   Stethoscope,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -70,20 +71,28 @@ function CustomerDashboard() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-white via-white to-violet-50/70 px-1 py-3">
-        <div className="relative z-10">
-          <h1 className="text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
-            Xin chào, {user?.username ?? 'customer@petclinic.local'} 👋
-          </h1>
-          <p className="mt-2 text-sm font-medium text-slate-500">
-            Theo dõi lịch khám, hồ sơ thú cưng và đặt lịch mới - tất cả ở một nơi.
-          </p>
+      <section className="relative overflow-hidden rounded-[28px] border border-violet-100 bg-gradient-to-r from-violet-50 via-white to-indigo-50 px-6 py-7 shadow-[0_16px_50px_rgba(124,108,245,0.10)]">
+        <div className="relative z-10 flex max-w-3xl items-start gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-600 shadow-sm">
+            <Sparkles className="size-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-slate-950 md:text-3xl">
+              Xin chào, {user?.username ?? 'customer@petclinic.local'} 👋
+            </h1>
+            <p className="mt-2 text-sm leading-6 font-medium text-slate-500">
+              Theo dõi lịch khám, hồ sơ thú cưng và đặt lịch mới - tất cả ở một nơi.
+            </p>
+          </div>
         </div>
-        <img
-          src="https://images.unsplash.com/photo-1518717758536-85ae29035b6d?w=520&q=80&auto=format&fit=crop"
-          alt=""
-          className="pointer-events-none absolute right-8 bottom-0 hidden h-32 w-72 rounded-t-[40px] object-cover object-top opacity-90 mix-blend-multiply lg:block"
-        />
+        <div className="pointer-events-none absolute top-1/2 right-8 hidden -translate-y-1/2 items-center gap-3 lg:flex">
+          <div className="flex size-24 items-center justify-center rounded-full bg-white/80 text-violet-500 shadow-sm">
+            <PawPrint className="size-11" />
+          </div>
+          <div className="flex size-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 shadow-sm">
+            <CalendarCheck className="size-8" />
+          </div>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-5 md:grid-cols-3">

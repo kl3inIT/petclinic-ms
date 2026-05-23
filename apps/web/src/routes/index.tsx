@@ -1,5 +1,11 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from 'framer-motion';
 import {
   PawPrint,
   Stethoscope,
@@ -47,6 +53,16 @@ function LandingPage() {
   const user = useAuthStore((s) => s.user);
   const ctaHref = user ? roleHome(user.roles) : '/login';
 
+  useEffect(() => {
+    document.documentElement.classList.add('landing-scrollbar-hidden');
+    document.body.classList.add('landing-scrollbar-hidden');
+
+    return () => {
+      document.documentElement.classList.remove('landing-scrollbar-hidden');
+      document.body.classList.remove('landing-scrollbar-hidden');
+    };
+  }, []);
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#FAFAFF] font-sans text-slate-900 selection:bg-violet-200 selection:text-violet-900">
       <SiteHeader user={user} ctaHref={ctaHref} />
@@ -80,10 +96,23 @@ function SiteHeader({ user, ctaHref }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+    let ticking = false;
+
+    const syncScrolledState = () => {
+      ticking = false;
+      const nextIsScrolled = window.scrollY > 20;
+      setIsScrolled((current) => (current === nextIsScrolled ? current : nextIsScrolled));
     };
-    window.addEventListener('scroll', handleScroll);
+
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(syncScrolledState);
+      }
+    };
+
+    syncScrolledState();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -101,7 +130,7 @@ function SiteHeader({ user, ctaHref }: HeaderProps) {
       className={cn(
         'fixed top-0 z-50 w-full border-b transition-all duration-300',
         isScrolled
-          ? 'border-slate-200/50 bg-white/80 py-3 shadow-sm backdrop-blur-lg'
+          ? 'border-white/45 bg-gradient-to-r from-white/70 via-white/55 to-violet-50/65 py-3 shadow-[0_10px_40px_rgba(15,23,42,0.10)] ring-1 ring-white/45 backdrop-blur-2xl backdrop-saturate-150'
           : 'border-transparent bg-transparent py-5',
       )}
     >
@@ -161,9 +190,20 @@ function SiteHeader({ user, ctaHref }: HeaderProps) {
 /* ────────────────────────────── Hero ────────────────────────────── */
 
 function Hero({ ctaHref }: { ctaHref: string }) {
+  const shouldReduceMotion = useReducedMotion();
   const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 500], [0, 100]);
-  const y2 = useTransform(scrollY, [0, 500], [0, -50]);
+  const heroImageY = useTransform(scrollY, [0, 500], [0, shouldReduceMotion ? 0 : 56]);
+  const heroCardY = useTransform(scrollY, [0, 500], [0, shouldReduceMotion ? 0 : -28]);
+  const smoothHeroImageY = useSpring(heroImageY, {
+    stiffness: 120,
+    damping: 28,
+    mass: 0.25,
+  });
+  const smoothHeroCardY = useSpring(heroCardY, {
+    stiffness: 120,
+    damping: 28,
+    mass: 0.25,
+  });
 
   return (
     <section
@@ -179,14 +219,14 @@ function Hero({ ctaHref }: { ctaHref: string }) {
 
       {/* Floating Paws */}
       <motion.div
-        animate={{ y: [0, -15, 0], rotate: [0, 5, 0] }}
+        animate={shouldReduceMotion ? undefined : { y: [0, -15, 0], rotate: [0, 5, 0] }}
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         className="absolute top-[25%] left-[10%] -z-10 hidden lg:block"
       >
         <PawPrint className="size-16 rotate-[-15deg] text-violet-200/60" />
       </motion.div>
       <motion.div
-        animate={{ y: [0, 20, 0], rotate: [0, -10, 0] }}
+        animate={shouldReduceMotion ? undefined : { y: [0, 20, 0], rotate: [0, -10, 0] }}
         transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
         className="absolute top-[15%] right-[15%] -z-10 hidden lg:block"
       >
@@ -268,20 +308,28 @@ function Hero({ ctaHref }: { ctaHref: string }) {
 
         {/* Right Image */}
         <div className="relative z-10 mt-10 lg:mt-0 lg:pl-10">
-          <motion.div style={{ y: y1 }} className="relative mx-auto max-w-[500px]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.15 }}
+            style={{ y: smoothHeroImageY, willChange: 'transform' }}
+            className="group relative mx-auto max-w-[500px]"
+          >
             {/* Main Image */}
             <div className="relative aspect-[4/5] overflow-hidden rounded-[40px] border-8 border-white bg-white shadow-2xl">
               <img
                 src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&q=80&auto=format&fit=crop"
                 alt="Chó và mèo đáng yêu"
                 className="h-full w-full object-cover"
+                decoding="async"
+                fetchPriority="high"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             </div>
 
             {/* Floating Elements */}
             <motion.div
-              style={{ y: y2 }}
+              style={{ y: smoothHeroCardY, willChange: 'transform' }}
               className="absolute -bottom-6 -left-10 hidden items-center gap-4 rounded-3xl border border-slate-100 bg-white px-6 py-5 shadow-xl md:flex"
             >
               <div className="flex -space-x-3">
@@ -289,11 +337,15 @@ function Hero({ ctaHref }: { ctaHref: string }) {
                   className="h-10 w-10 rounded-full border-2 border-white object-cover"
                   src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80"
                   alt="Customer"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <img
                   className="h-10 w-10 rounded-full border-2 border-white object-cover"
                   src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&q=80"
                   alt="Customer"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-violet-100 text-xs font-bold text-violet-700">
                   +2k
@@ -356,7 +408,7 @@ function TrustStats() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
+        viewport={{ once: false, amount: 0.22 }}
         transition={{ duration: 0.6 }}
         className="grid grid-cols-2 rounded-[32px] border border-slate-100/50 bg-white p-8 shadow-xl shadow-slate-200/40 backdrop-blur-xl md:grid-cols-4"
       >
@@ -432,7 +484,7 @@ function WhyChooseUs() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.22 }}
           className="mx-auto mb-16 max-w-2xl text-center"
         >
           <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
@@ -449,7 +501,7 @@ function WhyChooseUs() {
               key={f.title}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: false, amount: 0.22 }}
               transition={{ delay: i * 0.1 }}
               whileHover={{ y: -5 }}
               className="group rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-violet-100/50"
@@ -541,7 +593,7 @@ function Services() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.22 }}
           className="mx-auto mb-16 max-w-2xl text-center"
         >
           <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
@@ -558,7 +610,7 @@ function Services() {
               key={s.title}
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
+              viewport={{ once: false, amount: 0.22 }}
               transition={{ delay: i * 0.05 }}
               whileHover={{ y: -5 }}
               className="group relative overflow-hidden rounded-[32px] border border-slate-100 bg-[#FAFAFF] transition-all duration-300 hover:border-violet-100 hover:shadow-xl"
@@ -621,7 +673,7 @@ function Process() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.22 }}
           className="mx-auto mb-20 max-w-2xl text-center"
         >
           <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
@@ -634,11 +686,11 @@ function Process() {
 
         <div className="relative">
           {/* Connector Line */}
-          <div className="absolute top-1/2 right-[10%] left-[10%] hidden h-[2px] -translate-y-1/2 bg-slate-200 md:block">
+          <div className="absolute top-[calc(50%-2px)] right-[10%] left-[10%] hidden h-[2px] -translate-y-1/2 bg-slate-200 md:block">
             <motion.div
               initial={{ width: 0 }}
               whileInView={{ width: '100%' }}
-              viewport={{ once: true }}
+              viewport={{ once: false, amount: 0.22 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
               className="h-full bg-violet-400"
             />
@@ -650,7 +702,7 @@ function Process() {
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                viewport={{ once: false, amount: 0.22 }}
                 transition={{ delay: i * 0.2 }}
                 className="group relative flex flex-col items-center text-center"
               >
@@ -712,7 +764,7 @@ function FeaturedDoctors() {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: false, amount: 0.22 }}
           >
             <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
               Đội ngũ bác sĩ
@@ -732,7 +784,7 @@ function FeaturedDoctors() {
               key={t.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: false, amount: 0.22 }}
               transition={{ delay: i * 0.1 }}
               whileHover={{ y: -5 }}
               className="group overflow-hidden rounded-[32px] border border-slate-100 bg-[#FAFAFF] transition-all duration-300 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-100/50"
@@ -786,7 +838,7 @@ function PetCareJourney() {
         <motion.div
           initial={{ opacity: 0, x: -30 }}
           whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.22 }}
           className="lg:w-1/2"
         >
           <div className="mb-6 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-semibold text-violet-200 backdrop-blur-md">
@@ -825,7 +877,7 @@ function PetCareJourney() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.22 }}
           className="relative lg:w-1/2"
         >
           <div className="grid grid-cols-2 gap-4">
@@ -857,10 +909,47 @@ function PetCareJourney() {
 /* ─────────────────────────── Facilities ─────────────────────────── */
 
 function Facilities() {
+  const facilities = [
+    {
+      title: 'Phòng phẫu thuật vô trùng',
+      desc: 'Quy trình vô khuẩn, theo dõi gây mê và hồi sức sát sao.',
+      stat: 'ISO care',
+      icon: ShieldCheck,
+      img: 'https://images.unsplash.com/photo-1584432810601-6c7f27d2362b?w=900&q=80',
+      className: 'md:col-span-2',
+    },
+    {
+      title: 'Lab xét nghiệm',
+      desc: 'Trả kết quả nhanh cho các chỉ số máu, sinh hóa và ký sinh.',
+      stat: '30 phút',
+      icon: Activity,
+      img: 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?w=600&q=80',
+      className: '',
+    },
+    {
+      title: 'Grooming & Spa',
+      desc: 'Tắm, sấy, cắt tỉa và chăm da lông theo từng giống pet.',
+      stat: 'Gentle',
+      icon: Scissors,
+      img: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=600&q=80',
+      className: '',
+    },
+    {
+      title: 'Khu lưu trú tiện nghi',
+      desc: 'Không gian nghỉ riêng, camera theo dõi và lịch chăm sóc rõ ràng.',
+      stat: '24/7',
+      icon: PawPrint,
+      img: 'https://images.unsplash.com/photo-1541364983171-a8ba01e95cfc?w=900&q=80',
+      className: 'md:col-span-2',
+    },
+  ];
+
   return (
-    <section className="overflow-hidden bg-white py-24">
+    <section className="relative overflow-hidden bg-[#FAFAFF] py-24">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-violet-50/50 via-white/70 to-transparent" />
+      <div className="pointer-events-none absolute right-[10%] bottom-10 h-56 w-56 rounded-full bg-teal-100/40 blur-3xl" />
       <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto mb-16 max-w-2xl text-center">
+        <div className="relative z-10 mx-auto mb-14 max-w-2xl text-center">
           <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
             Cơ sở vật chất
           </p>
@@ -869,7 +958,47 @@ function Facilities() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="relative z-10 grid grid-cols-1 gap-5 md:grid-cols-3">
+          {facilities.map((facility, i) => (
+            <motion.article
+              key={facility.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.22 }}
+              transition={{ delay: i * 0.08 }}
+              className={cn(
+                'group relative overflow-hidden rounded-[28px] border border-slate-100 bg-white p-2 shadow-sm shadow-slate-200/80 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-violet-100/70',
+                facility.className,
+              )}
+            >
+              <img
+                src={facility.img}
+                className="h-56 w-full rounded-[22px] object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                alt={facility.title}
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="pointer-events-none absolute inset-x-2 top-2 h-56 rounded-[22px] bg-gradient-to-t from-slate-950/35 via-transparent to-transparent" />
+              <div className="absolute inset-x-5 top-5 flex items-center justify-between">
+                <div className="grid size-11 place-items-center rounded-2xl bg-white/90 text-violet-600 shadow-lg shadow-slate-900/10 backdrop-blur-md">
+                  <facility.icon className="size-5" />
+                </div>
+                <span className="rounded-full border border-white/60 bg-white/85 px-3 py-1 text-xs font-black tracking-wider text-violet-700 uppercase shadow-sm backdrop-blur-md">
+                  {facility.stat}
+                </span>
+              </div>
+
+              <div className="p-5">
+                <h3 className="text-xl font-black text-slate-950">{facility.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed font-medium text-slate-600">
+                  {facility.desc}
+                </p>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+
+        <div className="hidden grid-cols-1 gap-4 md:grid-cols-3">
           <div className="group relative h-64 overflow-hidden rounded-[32px] md:col-span-2">
             <img
               src="https://images.unsplash.com/photo-1584432810601-6c7f27d2362b?w=800&q=80"
@@ -960,7 +1089,7 @@ function Pricing({ ctaHref }: { ctaHref: string }) {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: false, amount: 0.22 }}
           className="mx-auto mb-16 max-w-2xl text-center"
         >
           <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
@@ -977,12 +1106,12 @@ function Pricing({ ctaHref }: { ctaHref: string }) {
               key={p.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: false, amount: 0.22 }}
               transition={{ delay: i * 0.1 }}
               className={cn(
                 'relative flex flex-col rounded-[40px] p-8 transition-all duration-300',
                 p.popular
-                  ? 'z-10 bg-violet-600 py-12 text-white shadow-2xl shadow-violet-600/30 md:scale-105'
+                  ? 'z-10 bg-violet-600 py-12 text-white shadow-2xl shadow-violet-600/30 hover:bg-violet-700 hover:shadow-violet-600/45 md:scale-105'
                   : 'border border-slate-100 bg-white text-slate-900 shadow-sm hover:shadow-xl',
               )}
             >
@@ -1077,7 +1206,7 @@ function Testimonials() {
               key={i}
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: false, amount: 0.22 }}
               transition={{ delay: i * 0.1 }}
               className="flex min-w-[85vw] snap-center flex-col rounded-[40px] border border-slate-100 bg-[#FAFAFF] p-8 sm:min-w-[400px] lg:min-w-0"
             >
@@ -1164,7 +1293,7 @@ function CtaBanner({ ctaHref }: { ctaHref: string }) {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true }}
+        viewport={{ once: false, amount: 0.22 }}
         className="relative mx-auto max-w-6xl overflow-hidden rounded-[48px] bg-gradient-to-br from-violet-600 via-violet-600 to-teal-500 p-10 shadow-2xl shadow-violet-600/20 lg:p-20"
       >
         <div className="pointer-events-none absolute top-0 right-0 h-full w-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />

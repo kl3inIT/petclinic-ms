@@ -60,8 +60,8 @@ function CustomerProfilePage() {
 
   return (
     <div className="w-full overflow-x-auto pb-2">
-      <div className="mx-auto w-full max-w-6xl min-w-0 lg:w-[1070px] lg:max-w-none lg:min-w-[1070px]">
-        <div className="grid items-start gap-8 lg:grid-cols-[190px_minmax(0,1fr)]">
+      <div className="mx-auto w-[1070px] max-w-none min-w-[1070px]">
+        <div className="grid grid-cols-[210px_828px] items-start gap-8">
           <ProfileSidebar />
 
           <div className="space-y-7">
@@ -75,7 +75,7 @@ function CustomerProfilePage() {
               <div className="mt-3 h-1 w-9 rounded-full bg-[#7C6CF5] shadow-[0_6px_14px_rgba(124,108,245,0.35)]" />
             </section>
 
-            <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <section className="grid grid-cols-[448px_360px] items-start gap-5">
               <div className="relative min-h-[504px] overflow-hidden rounded-[22px] border border-[#ECECF5] bg-white/95 p-5 shadow-[0_22px_60px_rgba(30,30,70,0.08)] backdrop-blur">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#F6F3FF] to-transparent" />
                 <div className="relative">

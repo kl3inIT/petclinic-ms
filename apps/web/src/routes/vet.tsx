@@ -1,9 +1,7 @@
 import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
 import {
   Award,
-  Bell,
   CalendarDays,
-  ChevronDown,
   LayoutDashboard,
   LogOut,
   MessageSquareQuote,
@@ -54,7 +52,6 @@ const navItems: NavItem[] = [
 function VetLayout() {
   const clear = useAuthStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
-  const displayName = user?.username ?? 'vet@petclinic.local';
 
   const logoutMutation = useLogout({
     mutation: {
@@ -66,8 +63,8 @@ function VetLayout() {
   });
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 md:flex-row">
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-card px-4 md:hidden">
+    <div className="flex min-h-screen flex-col bg-[#fbfaff] md:h-screen md:flex-row md:overflow-hidden">
+      <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b bg-white px-4 md:hidden">
         <Link to="/vet" className="flex items-center gap-2">
           <Logo size="sm" />
           <span className="text-xs font-semibold text-primary">Vet portal</span>
@@ -82,7 +79,7 @@ function VetLayout() {
         </Button>
       </header>
 
-      <nav className="flex overflow-x-auto border-b bg-card px-2 md:hidden">
+      <nav className="flex shrink-0 overflow-x-auto border-b bg-white px-2 md:hidden">
         {navItems.map((item) => (
           <Link
             key={item.to}
@@ -101,12 +98,12 @@ function VetLayout() {
         ))}
       </nav>
 
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
-        <div className="flex h-16 items-center gap-2 border-b px-5">
-          <Link to="/vet" className="flex items-center gap-2">
+      <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
+        <div className="flex h-16 items-center border-b px-4">
+          <Link to="/vet" className="flex min-w-0 flex-1 items-center gap-2">
             <Logo size="sm" />
           </Link>
-          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-primary uppercase">
+          <span className="ml-2 shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] leading-none font-semibold tracking-wide text-primary uppercase">
             Vet portal
           </span>
         </div>
@@ -129,13 +126,15 @@ function VetLayout() {
             </Link>
           ))}
         </nav>
-        <div className="border-t border-slate-200 p-3">
-          <div className="mb-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
-            <div className="flex size-9 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-600">
+        <div className="border-t p-3">
+          <div className="mb-1 flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2">
+            <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
               <Stethoscope className="size-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{displayName}</div>
+              <div className="truncate text-sm font-medium">
+                {user?.username ?? 'Anonymous'}
+              </div>
               <div className="text-[10px] tracking-wider text-muted-foreground uppercase">
                 Bác sĩ thú y
               </div>
@@ -154,43 +153,12 @@ function VetLayout() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="hidden h-16 shrink-0 items-center justify-end border-b border-slate-200 bg-white px-8 md:flex">
-          <div className="flex items-center gap-5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="relative rounded-full text-slate-600"
-              aria-label="Thông báo"
-            >
-              <Bell className="size-5" />
-              <span className="absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                2
-              </span>
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-violet-100 text-sm font-bold text-violet-600">
-                BS
-              </div>
-              <div className="leading-tight">
-                <div className="max-w-48 truncate text-sm font-bold text-slate-950">
-                  {displayName.includes('@') ? displayName : `BS. ${displayName}`}
-                </div>
-                <div className="text-xs text-slate-500">Bác sĩ thú y</div>
-              </div>
-              <ChevronDown className="size-4 text-slate-500" />
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl">
-            <DemoBanner />
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      <main className="min-w-0 flex-1 overflow-auto bg-[#fbfaff] p-4 sm:p-6 lg:p-8">
+        <div className="min-h-full w-full">
+          <DemoBanner />
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 }

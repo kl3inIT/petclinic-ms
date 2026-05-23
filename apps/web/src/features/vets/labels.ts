@@ -1,27 +1,9 @@
-/**
- * Vietnamese labels cho các enum/concept của vets-service. Orval không sinh i18n —
- * các Record này dùng trực tiếp trong UI (vd dropdown, badge label, schedule grid).
- *
- * Giữ in sync với enum BE:
- *  - Workday        → shared/common-jpa (theo Phase C)
- *  - WorkHour       → shared/common-jpa
- *  - BadgeTitle     → vets-service/model/BadgeTitle
- *
- * Khi BE thêm value mới, TypeScript sẽ báo missing key (Record<EnumType, string>) →
- * fail typecheck → buộc bổ sung — chủ ý làm vậy để không bỏ sót i18n.
- *
- * **Lưu ý**: Sau khi `pnpm fetch:openapi && pnpm generate:api` xuất các enum type
- * (`Workday`, `WorkHour`, `BadgeTitle`) vào `lib/api/generated/model/`, đổi `string`
- * dưới đây sang import type tương ứng để TS check exhaustive.
- */
-
 import type {
   BadgeResponseTitle,
   WorkScheduleSlotResponseWorkHour,
   WorkScheduleSlotResponseWorkday,
 } from '@/lib/api/generated/model';
 
-// ─── Workday (Phase C) ──────────────────────────────────────────────────────────
 export const WORKDAY_LABEL: Record<WorkScheduleSlotResponseWorkday, string> = {
   MONDAY: 'Thứ Hai',
   TUESDAY: 'Thứ Ba',
@@ -33,14 +15,15 @@ export const WORKDAY_LABEL: Record<WorkScheduleSlotResponseWorkday, string> = {
 };
 
 export const WORKDAY_ORDER: WorkScheduleSlotResponseWorkday[] = [
-  'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
 ];
 
-/**
- * Map JS Date.getDay() (0=Sunday..6=Saturday) sang enum BE Workday.
- * Dùng chung giữa vet.index.tsx (today's schedule highlight) và vet.schedule.tsx
- * (current-day header highlight). Lưu ở labels.ts để 1 source of truth.
- */
 export const JS_DAY_TO_WORKDAY: Record<number, WorkScheduleSlotResponseWorkday> = {
   0: 'SUNDAY',
   1: 'MONDAY',
@@ -51,7 +34,6 @@ export const JS_DAY_TO_WORKDAY: Record<number, WorkScheduleSlotResponseWorkday> 
   6: 'SATURDAY',
 };
 
-// ─── WorkHour (Phase C) — slot 1 giờ từ 8h đến 20h ──────────────────────────────
 export const WORKHOUR_LABEL: Record<WorkScheduleSlotResponseWorkHour, string> = {
   HOUR_8_9: '8 - 9h',
   HOUR_9_10: '9 - 10h',
@@ -68,11 +50,20 @@ export const WORKHOUR_LABEL: Record<WorkScheduleSlotResponseWorkHour, string> = 
 };
 
 export const WORKHOUR_ORDER: WorkScheduleSlotResponseWorkHour[] = [
-  'HOUR_8_9', 'HOUR_9_10', 'HOUR_10_11', 'HOUR_11_12', 'HOUR_12_13', 'HOUR_13_14',
-  'HOUR_14_15', 'HOUR_15_16', 'HOUR_16_17', 'HOUR_17_18', 'HOUR_18_19', 'HOUR_19_20',
+  'HOUR_8_9',
+  'HOUR_9_10',
+  'HOUR_10_11',
+  'HOUR_11_12',
+  'HOUR_12_13',
+  'HOUR_13_14',
+  'HOUR_14_15',
+  'HOUR_15_16',
+  'HOUR_16_17',
+  'HOUR_17_18',
+  'HOUR_18_19',
+  'HOUR_19_20',
 ];
 
-// ─── BadgeTitle (Phase E1) ──────────────────────────────────────────────────────
 export const BADGE_TITLE_LABEL: Record<BadgeResponseTitle, string> = {
   ROOKIE: 'Tân binh',
   EXPERIENCED: 'Bác sĩ kinh nghiệm',
@@ -82,8 +73,6 @@ export const BADGE_TITLE_LABEL: Record<BadgeResponseTitle, string> = {
   TOP_RATED: 'Bác sĩ được đánh giá cao',
 };
 
-// ─── Score star label (Phase D + F.1) ───────────────────────────────────────────
-/** Helper hiển thị score dạng "5 ⭐" cho UI nhẹ. */
 export function scoreStars(score: number): string {
   return `${score} ${'⭐'.repeat(score)}`;
 }

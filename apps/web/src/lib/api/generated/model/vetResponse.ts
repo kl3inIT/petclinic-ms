@@ -16,4 +16,6 @@ export interface VetResponse {
   active?: boolean;
   resume?: string;
   specialties?: SpecialtyResponse[];
+  photoUrl?: string;
+  averageRating?: number;
 }

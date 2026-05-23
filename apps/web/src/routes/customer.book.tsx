@@ -356,10 +356,10 @@ function BookVisitPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white py-6 font-sans text-[#171725] antialiased">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+    <div className="min-h-screen bg-transparent py-6 font-sans text-[#171725] antialiased">
+      <div className="mx-auto max-w-[1180px] px-4 sm:px-6">
         {/* Top Header Section with clean Notion/Stripe look */}
-        <div className="relative mb-10 flex items-center justify-between border-b border-[#ECECF5] pb-6">
+        <div className="relative mb-6 flex items-center justify-between px-1 py-2">
           <Button
             asChild
             variant="ghost"
@@ -395,10 +395,10 @@ function BookVisitPage() {
         </div>
 
         {/* Elegant Horizontal Stepper */}
-        <div className="mx-auto mb-12 max-w-[760px]">
+        <div className="mx-auto mb-8 max-w-[980px] px-2 py-2">
           <div className="relative flex items-center justify-between">
             {/* Animated Progress line */}
-            <div className="absolute top-[18px] left-0 -z-10 h-[3px] w-full rounded-full bg-[#ECECF5]">
+            <div className="absolute top-[18px] left-0 z-0 h-[2px] w-full rounded-full bg-[#ECECF5]">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] shadow-[0_2px_8px_rgba(124,108,245,0.3)] transition-all duration-500 ease-out"
                 style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
@@ -409,7 +409,10 @@ function BookVisitPage() {
               const isCompleted = step > s.id;
               const isActive = step === s.id;
               return (
-                <div key={s.id} className="flex flex-col items-center">
+                <div
+                  key={s.id}
+                  className="relative z-10 flex flex-col items-center bg-[#F8F8FF] px-3"
+                >
                   <div
                     className={cn(
                       'z-10 flex size-9 items-center justify-center rounded-full text-[14px] font-black shadow-sm ring-[6px] transition-all duration-300',
@@ -447,17 +450,17 @@ function BookVisitPage() {
             void form.handleSubmit();
           }}
           className={cn(
-            'grid items-start gap-10',
+            'grid items-start gap-6',
             step === 1
               ? 'mx-auto max-w-[1020px] grid-cols-1'
-              : 'grid-cols-1 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px]',
+              : 'grid-cols-1 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_330px]',
           )}
         >
           {/* Left Column: Booking Flow */}
           <div className="space-y-8">
             {/* STEP 1: Select Pet */}
             {step === 1 && (
-              <div className="space-y-8 rounded-[24px] border border-[#ECECF5] bg-white p-8 shadow-[0_20px_50px_rgba(124,108,245,0.02)] transition-all duration-300">
+              <div className="space-y-8 rounded-[24px] border border-violet-100 bg-white p-8 shadow-[0_16px_48px_rgba(31,41,55,0.07)] transition-all duration-300">
                 {/* Premium Banner with large spacing */}
                 <div className="relative flex flex-col items-center justify-between gap-8 overflow-hidden rounded-[20px] border border-[#ECECF5]/30 bg-gradient-to-r from-[#7C6CF5]/5 to-[#A99CFF]/5 p-8 md:flex-row">
                   <div className="z-10 space-y-3 text-center md:text-left">
@@ -731,12 +734,12 @@ function BookVisitPage() {
 
             {/* STEP 2: Doctor and Time Selection */}
             {step === 2 && (
-              <div className="space-y-8 transition-all duration-300">
+              <div className="space-y-5 transition-all duration-300">
                 {/* Active Selected Pet Info Bar */}
                 {selectedPet && (
-                  <div className="flex items-center justify-between rounded-[24px] border border-[#7C6CF5]/10 bg-gradient-to-r from-[#7C6CF5]/5 to-[#A99CFF]/5 p-5 shadow-sm">
-                    <div className="flex items-center gap-4.5">
-                      <div className="size-16 shrink-0 overflow-hidden rounded-2xl border border-[#ECECF5] bg-white shadow-sm">
+                  <div className="flex items-center justify-between rounded-[20px] border border-violet-100 bg-white/95 p-4 shadow-[0_10px_28px_rgba(31,41,55,0.05)]">
+                    <div className="flex items-center gap-4">
+                      <div className="size-14 shrink-0 overflow-hidden rounded-2xl border border-[#ECECF5] bg-white shadow-sm">
                         <img
                           src={getPetPhoto(selectedPet)}
                           alt={selectedPet.name}
@@ -786,23 +789,23 @@ function BookVisitPage() {
                 )}
 
                 {/* Main Selector Box */}
-                <div className="space-y-10 rounded-[24px] border border-[#ECECF5] bg-white p-8 shadow-[0_20px_50px_rgba(124,108,245,0.02)]">
+                <div className="space-y-7 rounded-[22px] border border-violet-100 bg-white p-5 shadow-[0_16px_48px_rgba(31,41,55,0.07)]">
                   {/* 1. Chọn bác sĩ phụ trách */}
                   <form.Field
                     name="vetId"
                     children={(field) => (
                       <div className="space-y-6">
                         <div className="space-y-1">
-                          <h3 className="text-2xl font-black tracking-tight text-[#171725]">
+                          <h3 className="text-xl font-black tracking-tight text-[#171725]">
                             1. Chọn bác sĩ phụ trách
                           </h3>
-                          <p className="text-[14px] font-semibold text-[#667085]">
+                          <p className="text-[13px] font-semibold text-[#667085]">
                             Đội ngũ bác sĩ chuyên khoa cao cấp sẵn sàng chăm sóc cho bé.
                           </p>
                         </div>
 
                         {vetsQuery.isLoading ? (
-                          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {Array.from({ length: 2 }).map((_, i) => (
                               <Skeleton
                                 key={i}
@@ -827,7 +830,7 @@ function BookVisitPage() {
                                     setSelectedTimeSlot(null);
                                   }}
                                   className={cn(
-                                    'group relative flex gap-4 rounded-[20px] border bg-white p-5 text-left transition-all duration-300',
+                                    'group relative flex min-h-[136px] gap-3 rounded-[18px] border bg-white p-4 text-left transition-all duration-300',
                                     isSelected
                                       ? 'z-10 scale-[1.02] border-[#7C6CF5] shadow-[0_20px_40px_rgba(124,108,245,0.08)] ring-4 ring-[#7C6CF5]/10'
                                       : 'border-[#ECECF5] hover:scale-[1.01] hover:border-[#7C6CF5]/30 hover:shadow-[0_12px_25px_rgba(0,0,0,0.02)]',
@@ -840,7 +843,7 @@ function BookVisitPage() {
                                   )}
 
                                   {/* Doctor Image - LARGE */}
-                                  <div className="relative h-[112px] w-[84px] shrink-0 overflow-hidden rounded-2xl border border-[#ECECF5] shadow-sm">
+                                  <div className="relative h-[104px] w-[76px] shrink-0 overflow-hidden rounded-2xl border border-[#ECECF5] shadow-sm">
                                     <img
                                       src={vetData.photoUrl}
                                       alt={vetData.name}
@@ -851,14 +854,14 @@ function BookVisitPage() {
                                   {/* Doctor Details */}
                                   <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
                                     <div>
-                                      <h4 className="text-[16px] leading-snug font-extrabold whitespace-nowrap text-[#171725]">
+                                      <h4 className="text-[14px] leading-snug font-extrabold text-[#171725]">
                                         {vetData.name}
                                       </h4>
-                                      <p className="mt-1.5 text-[13px] font-semibold text-[#667085]">
+                                      <p className="mt-1 text-[12px] font-semibold text-[#667085]">
                                         {vetData.specialty}
                                       </p>
 
-                                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px]">
+                                      <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[12px]">
                                         <Star className="size-4 fill-[#F59E0B] text-[#F59E0B]" />
                                         <span className="font-extrabold text-[#171725]">
                                           {vetData.rating.toFixed(1)}
@@ -868,7 +871,7 @@ function BookVisitPage() {
                                         </span>
                                       </div>
 
-                                      <p className="mt-1 text-[12px] font-bold text-[#667085]/60">
+                                      <p className="mt-1 text-[11px] font-bold text-[#667085]/60">
                                         {vetData.experience}
                                       </p>
                                     </div>
@@ -926,23 +929,23 @@ function BookVisitPage() {
                   <form.Field
                     name="scheduledAt"
                     children={(field) => (
-                      <div className="space-y-6 border-t border-[#ECECF5] pt-8">
+                      <div className="space-y-5 border-t border-[#ECECF5] pt-6">
                         <div className="space-y-1">
-                          <h3 className="text-2xl font-black tracking-tight text-[#171725]">
+                          <h3 className="text-xl font-black tracking-tight text-[#171725]">
                             2. Chọn thời gian khám
                           </h3>
-                          <p className="text-[14px] font-semibold text-[#667085]">
+                          <p className="text-[13px] font-semibold text-[#667085]">
                             Lựa chọn ngày lành và khung giờ phù hợp nhất với bạn.
                           </p>
                         </div>
 
-                        <div className="grid items-start gap-8 md:grid-cols-[300px_1fr]">
+                        <div className="grid items-start gap-5 md:grid-cols-[280px_1fr]">
                           {/* Calendar Picker Card */}
                           <div className="shrink-0 space-y-3.5">
                             <h4 className="text-[13px] font-bold tracking-wider text-[#667085] uppercase">
                               Chọn ngày
                             </h4>
-                            <div className="mx-auto w-full max-w-[300px] rounded-[24px] border border-[#ECECF5] bg-[#FAFAFF]/50 p-5 shadow-sm md:mx-0">
+                            <div className="mx-auto w-full max-w-[280px] rounded-[18px] border border-[#ECECF5] bg-[#FAFAFF]/50 p-4 shadow-sm md:mx-0">
                               <div className="mb-4 flex items-center justify-between">
                                 <Button
                                   variant="ghost"
@@ -974,7 +977,7 @@ function BookVisitPage() {
                                 <div>T7</div>
                                 <div>CN</div>
                               </div>
-                              <div className="grid grid-cols-7 justify-items-center gap-y-2.5">
+                              <div className="grid grid-cols-7 justify-items-center gap-y-2">
                                 {calendarDays.map((day, idx) => {
                                   if (!day)
                                     return <div key={idx} className="size-8"></div>;
@@ -994,7 +997,7 @@ function BookVisitPage() {
                                         field.handleChange('');
                                       }}
                                       className={cn(
-                                        'flex size-8.5 items-center justify-center rounded-full text-[13px] font-bold shadow-sm transition-all',
+                                        'flex size-8 items-center justify-center rounded-full text-[12px] font-bold shadow-sm transition-all',
                                         isPast
                                           ? 'cursor-not-allowed bg-transparent text-slate-300 shadow-none'
                                           : isSelected
@@ -1022,7 +1025,7 @@ function BookVisitPage() {
                                 <span>Vui lòng chọn bác sĩ phụ trách trước</span>
                               </div>
                             ) : vetScheduleQuery.isLoading ? (
-                              <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {Array.from({ length: 6 }).map((_, i) => (
                                   <Skeleton key={i} className="h-[68px] rounded-[18px]" />
                                 ))}
@@ -1067,7 +1070,7 @@ function BookVisitPage() {
                                         field.handleChange(isoStr);
                                       }}
                                       className={cn(
-                                        'flex h-[68px] flex-col items-center justify-center rounded-[18px] border p-3 shadow-sm transition-all',
+                                        'flex h-[58px] flex-col items-center justify-center rounded-[14px] border p-2 shadow-sm transition-all',
                                         isDisabled
                                           ? 'cursor-not-allowed border-[#ECECF5] bg-[#FAFAFF] opacity-50'
                                           : isSelected
@@ -1077,7 +1080,7 @@ function BookVisitPage() {
                                     >
                                       <span
                                         className={cn(
-                                          'text-[14px] font-extrabold tracking-wide',
+                                          'text-[12px] font-extrabold tracking-wide',
                                           isSelected
                                             ? 'text-white'
                                             : isDisabled
@@ -1090,7 +1093,7 @@ function BookVisitPage() {
 
                                       <span
                                         className={cn(
-                                          'mt-1 text-[10px] font-black tracking-wider uppercase',
+                                          'mt-0.5 text-[9px] font-black tracking-wider uppercase',
                                           isSelected
                                             ? 'text-white/80'
                                             : isDisabled
@@ -1130,7 +1133,7 @@ function BookVisitPage() {
                         <div className="flex flex-col items-center border-t border-[#ECECF5]/50 pt-6">
                           <Button
                             type="button"
-                            className="h-12 w-full gap-1.5 rounded-xl bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] font-extrabold text-white shadow-[0_8px_25px_rgba(124,108,245,0.3)] transition-all hover:opacity-95 hover:shadow-[0_10px_30px_rgba(124,108,245,0.35)]"
+                            className="h-11 w-full gap-1.5 rounded-xl bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] font-extrabold text-white shadow-[0_8px_25px_rgba(124,108,245,0.3)] transition-all hover:opacity-95 hover:shadow-[0_10px_30px_rgba(124,108,245,0.35)]"
                             disabled={values.vetId === 0 || !values.scheduledAt}
                             onClick={() => setStep(3)}
                           >
@@ -1149,7 +1152,7 @@ function BookVisitPage() {
 
             {/* STEP 3: Confirmation Detail */}
             {step === 3 && (
-              <div className="space-y-6 rounded-[24px] border border-[#ECECF5] bg-white p-8 shadow-[0_20px_50px_rgba(124,108,245,0.02)] transition-all duration-300 animate-in fade-in">
+              <div className="space-y-6 rounded-[24px] border border-violet-100 bg-white p-8 shadow-[0_16px_48px_rgba(31,41,55,0.07)] transition-all duration-300 animate-in fade-in">
                 <div className="flex items-center justify-between border-b border-[#ECECF5]/50 pb-4.5">
                   <div>
                     <h2 className="text-2xl font-black tracking-tight text-[#171725]">
@@ -1227,11 +1230,11 @@ function BookVisitPage() {
           {/* Right Sidebar: Dynamic Booking Info Summary (Steps 2 and 3) */}
           {step > 1 && (
             <div className="lg:col-span-1">
-              <div className="sticky top-8 space-y-6 duration-400 animate-in fade-in slide-in-from-right-4">
+              <div className="sticky top-6 space-y-4 duration-400 animate-in fade-in slide-in-from-right-4">
                 {/* Floating Summary Card */}
-                <div className="relative overflow-hidden rounded-[24px] border border-[#ECECF5] bg-white shadow-[0_20px_50px_rgba(124,108,245,0.03)]">
+                <div className="relative overflow-hidden rounded-[22px] border border-violet-100 bg-white shadow-[0_16px_48px_rgba(31,41,55,0.07)]">
                   {/* Decorative Header Illustration matching Dribbble style */}
-                  <div className="relative flex h-28 items-center justify-center border-b border-[#ECECF5]/50 bg-gradient-to-tr from-[#7C6CF5]/5 to-[#A99CFF]/5">
+                  <div className="relative flex h-24 items-center justify-center border-b border-[#ECECF5]/50 bg-gradient-to-tr from-[#7C6CF5]/5 to-[#A99CFF]/5">
                     <svg
                       className="relative z-10 h-20 w-32 object-contain"
                       viewBox="0 0 120 80"
@@ -1276,19 +1279,19 @@ function BookVisitPage() {
                     </div>
                   </div>
 
-                  <div className="p-6">
-                    <h3 className="mb-6 text-[18px] font-black tracking-tight text-[#171725]">
+                  <div className="p-5">
+                    <h3 className="mb-5 text-[17px] font-black tracking-tight text-[#171725]">
                       Thông tin đặt khám
                     </h3>
 
-                    <div className="space-y-6">
+                    <div className="space-y-5">
                       {/* Pet detail */}
                       <div>
                         <h4 className="mb-2 text-[11px] font-black tracking-widest text-[#7C6CF5] uppercase">
                           Thú cưng
                         </h4>
                         {selectedPet ? (
-                          <div className="flex items-center gap-3.5 rounded-2xl border border-[#ECECF5] bg-white p-3 shadow-sm">
+                          <div className="flex items-center gap-3 rounded-2xl border border-[#ECECF5] bg-white p-3 shadow-sm">
                             <div className="size-11 shrink-0 overflow-hidden rounded-xl border border-[#ECECF5]">
                               <img
                                 src={getPetPhoto(selectedPet)}
@@ -1398,11 +1401,11 @@ function BookVisitPage() {
                       </div>
 
                       {/* Price box with Dribbble-level typography */}
-                      <div className="mt-4 rounded-[20px] border border-[#7C6CF5]/10 bg-gradient-to-br from-[#7C6CF5]/5 to-[#A99CFF]/5 p-4.5 shadow-sm">
+                      <div className="mt-3 rounded-[18px] border border-[#7C6CF5]/10 bg-gradient-to-br from-[#7C6CF5]/5 to-[#A99CFF]/5 p-4 shadow-sm">
                         <h4 className="mb-1.5 text-[11px] font-black tracking-widest text-[#667085] uppercase">
                           Phí khám dự kiến
                         </h4>
-                        <div className="text-3xl font-black tracking-tight text-[#7C6CF5]">
+                        <div className="text-2xl font-black tracking-tight text-[#7C6CF5]">
                           150.000đ
                         </div>
                         <div className="mt-2.5 flex items-center gap-1.5 text-[10.5px] font-black tracking-wider text-[#667085] uppercase">
@@ -1415,7 +1418,7 @@ function BookVisitPage() {
                 </div>
 
                 {/* Core values list */}
-                <div className="space-y-1.5 rounded-[24px] border border-[#ECECF5] bg-white p-4 shadow-sm">
+                <div className="space-y-1.5 rounded-[24px] border border-violet-100 bg-white p-4 shadow-[0_10px_30px_rgba(31,41,55,0.05)]">
                   <div className="flex items-center gap-3.5 rounded-xl bg-white p-3 transition-all hover:bg-[#FAFAFF]">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#7C6CF5]/10 text-[#7C6CF5]">
                       <ShieldCheck className="size-5 stroke-[2.5px]" />
