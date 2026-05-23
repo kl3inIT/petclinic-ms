@@ -326,30 +326,30 @@ function BookVisitPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white py-6 font-sans text-[#171725] antialiased">
+    <div className="min-h-screen bg-white py-2 font-sans text-slate-900 antialiased">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        {/* Top Header Section with clean Notion/Stripe look */}
-        <div className="relative mb-10 flex items-center justify-between border-b border-[#ECECF5] pb-6">
+        {/* Top Header */}
+        <div className="mb-8 flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
           <Button
             asChild
             variant="ghost"
-            className="-ml-2 gap-2 rounded-xl font-semibold text-[#667085] transition-colors hover:text-[#171725]"
+            className="-ml-2 gap-2 rounded-lg font-medium text-slate-600 transition-colors hover:text-slate-950"
           >
             <Link to="/customer">
-              <ArrowLeft className="size-4 text-[#667085]" /> Quay lại
+              <ArrowLeft className="size-4 text-slate-500" /> Quay lại
             </Link>
           </Button>
 
-          <div className="absolute left-1/2 -translate-x-1/2 text-center">
-            <div className="flex items-center justify-center gap-2.5">
-              <span className="flex size-10 items-center justify-center rounded-[12px] bg-gradient-to-tr from-[#7C6CF5] to-[#A99CFF] text-white shadow-[0_8px_20px_rgba(124,108,245,0.25)]">
-                <PawPrint className="size-5.5 fill-white" />
+          <div className="min-w-0 sm:text-center">
+            <div className="flex items-center gap-2.5 sm:justify-center">
+              <span className="flex size-9 items-center justify-center rounded-lg bg-[#7C6CF5] text-white">
+                <PawPrint className="size-5" />
               </span>
-              <h1 className="text-[22px] font-extrabold tracking-tight text-[#171725]">
+              <h1 className="text-xl font-bold tracking-tight text-slate-950">
                 Đặt lịch khám
               </h1>
             </div>
-            <p className="mt-2 text-[12px] font-bold tracking-wider text-[#667085] uppercase">
+            <p className="mt-1 text-sm font-medium text-slate-500">
               {step === 1
                 ? '3 bước đơn giản — chọn thú cưng, chọn bác sĩ & thời gian, xác nhận.'
                 : `Bước ${step}/3: ${STEPS[step - 1]?.label}`}
@@ -358,19 +358,18 @@ function BookVisitPage() {
 
           <Button
             variant="outline"
-            className="h-10 gap-1.5 rounded-full border-[#ECECF5] px-5 font-bold text-[#7C6CF5] shadow-sm transition-all hover:bg-[#7C6CF5]/5"
+            className="h-9 gap-1.5 rounded-lg border-slate-200 px-4 font-medium text-slate-700 hover:bg-slate-50"
           >
-            <HelpCircle className="size-4.5 text-[#7C6CF5]" /> Cần hỗ trợ
+            <HelpCircle className="size-4 text-slate-500" /> Cần hỗ trợ
           </Button>
         </div>
 
-        {/* Elegant Horizontal Stepper */}
-        <div className="mx-auto mb-12 max-w-[760px]">
+        {/* Horizontal Stepper */}
+        <div className="mx-auto mb-8 max-w-[720px]">
           <div className="relative flex items-center justify-between">
-            {/* Animated Progress line */}
-            <div className="absolute top-[18px] left-0 -z-10 h-[3px] w-full rounded-full bg-[#ECECF5]">
+            <div className="absolute top-[16px] left-0 -z-10 h-px w-full bg-slate-200">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] shadow-[0_2px_8px_rgba(124,108,245,0.3)] transition-all duration-500 ease-out"
+                className="h-full bg-[#7C6CF5] transition-all duration-300"
                 style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
               />
             </div>
@@ -382,12 +381,12 @@ function BookVisitPage() {
                 <div key={s.id} className="flex flex-col items-center">
                   <div
                     className={cn(
-                      'z-10 flex size-9 items-center justify-center rounded-full text-[14px] font-black shadow-sm ring-[6px] transition-all duration-300',
+                      'z-10 flex size-8 items-center justify-center rounded-full border text-sm font-semibold ring-4 ring-white transition-colors',
                       isCompleted
-                        ? 'bg-[#7C6CF5] text-white ring-white'
+                        ? 'border-[#7C6CF5] bg-[#7C6CF5] text-white'
                         : isActive
-                          ? 'bg-gradient-to-tr from-[#7C6CF5] to-[#A99CFF] text-white shadow-[0_4px_12px_rgba(124,108,245,0.25)] ring-[#7C6CF5]/10'
-                          : 'border-2 border-[#ECECF5] bg-white text-[#667085] ring-white',
+                          ? 'border-[#7C6CF5] bg-white text-[#7C6CF5]'
+                          : 'border-slate-200 bg-white text-slate-500',
                     )}
                   >
                     {isCompleted ? (
@@ -398,8 +397,8 @@ function BookVisitPage() {
                   </div>
                   <span
                     className={cn(
-                      'mt-2.5 text-[12px] font-bold tracking-wider uppercase transition-colors duration-300',
-                      isActive ? 'text-[#171725]' : 'text-[#667085]',
+                      'mt-2 text-xs font-medium transition-colors duration-300',
+                      isActive ? 'text-slate-950' : 'text-slate-500',
                     )}
                   >
                     {s.label}
@@ -417,31 +416,30 @@ function BookVisitPage() {
             void form.handleSubmit();
           }}
           className={cn(
-            'grid items-start gap-10',
+            'grid items-start gap-6',
             step === 1
-              ? 'mx-auto max-w-[1020px] grid-cols-1'
-              : 'grid-cols-1 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_430px]',
+              ? 'mx-auto max-w-[980px] grid-cols-1'
+              : 'grid-cols-1 lg:grid-cols-[1fr_360px]',
           )}
         >
           {/* Left Column: Booking Flow */}
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* STEP 1: Select Pet */}
             {step === 1 && (
-              <div className="space-y-8 rounded-[24px] border border-[#ECECF5] bg-white p-8 shadow-[0_20px_50px_rgba(124,108,245,0.02)] transition-all duration-300">
-                {/* Premium Banner with large spacing */}
-                <div className="relative flex flex-col items-center justify-between gap-8 overflow-hidden rounded-[20px] border border-[#ECECF5]/30 bg-gradient-to-r from-[#7C6CF5]/5 to-[#A99CFF]/5 p-8 md:flex-row">
-                  <div className="z-10 space-y-3 text-center md:text-left">
-                    <h2 className="text-[24px] font-black tracking-tight text-[#171725]">
+              <div className="space-y-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300">
+                <div className="flex flex-col justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 p-5 md:flex-row md:items-center">
+                  <div className="space-y-1.5 text-left">
+                    <h2 className="text-xl font-semibold tracking-tight text-slate-950">
                       Chọn bé thú cưng cần khám
                     </h2>
-                    <p className="text-[14.5px] font-semibold text-[#667085]">
+                    <p className="text-sm font-medium text-slate-500">
                       Vui lòng lựa chọn một bé từ danh sách hồ sơ bên dưới.
                     </p>
                   </div>
 
                   {/* Inline Cute Pet Vector Illustration */}
                   <svg
-                    className="z-10 h-36 w-56 shrink-0 object-contain"
+                    className="hidden"
                     viewBox="0 0 200 130"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
@@ -527,16 +525,16 @@ function BookVisitPage() {
                   </svg>
 
                   {/* Decorative background glow */}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[#7C6CF5]/10 to-transparent"></div>
+                  <div className="hidden" />
                 </div>
 
                 {/* Filter and Add Block with premium input styling */}
                 <div className="flex flex-col items-center justify-between gap-5 sm:flex-row">
                   <div className="relative w-full sm:max-w-md">
-                    <Search className="absolute top-1/2 left-4 size-4.5 -translate-y-1/2 text-[#667085]" />
+                    <Search className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-slate-400" />
                     <Input
                       placeholder="Tìm kiếm thú cưng..."
-                      className="h-12 rounded-xl border-[#ECECF5] bg-[#FAFAFF] pl-11 text-[14.5px] font-semibold shadow-sm transition-all focus-visible:bg-white focus-visible:ring-[#7C6CF5]"
+                      className="h-10 rounded-lg border-slate-200 bg-white pl-10 text-sm font-medium focus-visible:ring-[#7C6CF5]"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -544,7 +542,7 @@ function BookVisitPage() {
                   <Button
                     asChild
                     variant="outline"
-                    className="h-12 w-full rounded-xl border-[#7C6CF5]/30 px-6 font-bold text-[#7C6CF5] transition-all hover:bg-[#7C6CF5]/5 sm:w-auto"
+                    className="h-10 w-full rounded-lg border-slate-200 px-4 font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
                   >
                     <Link to="/customer/pets">
                       <Plus className="mr-1.5 size-4.5 stroke-[2.5px]" /> Thêm thú cưng
@@ -561,16 +559,13 @@ function BookVisitPage() {
                       {petsQuery.isLoading ? (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                           {Array.from({ length: 4 }).map((_, i) => (
-                            <Skeleton
-                              key={i}
-                              className="h-[160px] w-full rounded-[24px]"
-                            />
+                            <Skeleton key={i} className="h-[142px] w-full rounded-lg" />
                           ))}
                         </div>
                       ) : filteredPets.length === 0 ? (
-                        <div className="flex flex-col items-center gap-3 rounded-[24px] border-2 border-dashed border-[#ECECF5] bg-[#FAFAFF] py-16 text-center">
+                        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
                           <PawPrint className="size-16 text-slate-300" />
-                          <p className="text-lg font-extrabold text-[#667085]">
+                          <p className="text-base font-semibold text-slate-600">
                             Không tìm thấy thú cưng nào
                           </p>
                         </div>
@@ -591,51 +586,51 @@ function BookVisitPage() {
                                 type="button"
                                 onClick={() => field.handleChange(p.id ?? 0)}
                                 className={cn(
-                                  'group relative flex gap-5 rounded-[24px] border bg-white p-6 text-left transition-all duration-300',
+                                  'group relative flex gap-4 rounded-lg border bg-white p-4 text-left transition-colors duration-200',
                                   isSelected
-                                    ? 'z-10 scale-[1.02] border-[#7C6CF5] shadow-[0_20px_40px_rgba(124,108,245,0.08)] ring-4 ring-[#7C6CF5]/10'
-                                    : 'border-[#ECECF5] hover:scale-[1.01] hover:border-[#7C6CF5]/30 hover:shadow-[0_12px_25px_rgba(0,0,0,0.02)]',
+                                    ? 'border-[#7C6CF5] bg-[#7C6CF5]/[0.03] ring-2 ring-[#7C6CF5]/10'
+                                    : 'border-slate-200 hover:border-[#7C6CF5]/40',
                                 )}
                               >
                                 {isSelected && (
-                                  <div className="absolute top-4.5 right-4.5 flex size-6 items-center justify-center rounded-full bg-[#7C6CF5] text-white shadow-md animate-in zoom-in-50">
+                                  <div className="absolute top-4 right-4 flex size-5 items-center justify-center rounded-full bg-[#7C6CF5] text-white animate-in zoom-in-50">
                                     <CheckCircle2 className="size-4.5 stroke-[3px]" />
                                   </div>
                                 )}
 
                                 {/* LARGE Pet Photo */}
-                                <div className="relative size-28 shrink-0 overflow-hidden rounded-2xl border border-[#ECECF5] shadow-sm">
+                                <div className="relative size-24 shrink-0 overflow-hidden rounded-lg border border-slate-200">
                                   <img
                                     src={displayPhoto}
                                     alt={p.name}
-                                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    className="h-full w-full object-cover"
                                   />
                                 </div>
 
                                 {/* Info Box */}
                                 <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
                                   <div>
-                                    <h4 className="truncate pr-6 text-xl leading-snug font-extrabold text-[#171725]">
+                                    <h4 className="truncate pr-6 text-base leading-snug font-semibold text-slate-950">
                                       {p.name}
                                     </h4>
 
-                                    <p className="mt-2 flex items-center gap-1.5 text-[13px] font-bold text-[#667085]">
-                                      <PawPrint className="size-4 text-[#667085]" />
+                                    <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-slate-500">
+                                      <PawPrint className="size-4 text-slate-400" />
                                       {p.type ?? 'Khác'} • {displayBreed}
                                     </p>
 
-                                    <p className="mt-1 text-[13px] font-semibold text-[#667085]">
+                                    <p className="mt-1 text-sm font-medium text-slate-500">
                                       {age} • {gender}
                                     </p>
                                   </div>
 
                                   {/* Vaccination Badge */}
-                                  <div className="mt-3.5 inline-flex w-fit items-center gap-1 rounded-full border border-[#22C55E]/20 bg-[#22C55E]/10 px-3 py-0.5 text-[11px] font-extrabold text-[#22C55E] shadow-sm">
+                                  <div className="mt-3 inline-flex w-fit items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
                                     <ShieldCheck className="size-4 fill-[#22C55E]/10 text-[#22C55E]" />{' '}
                                     Đã tiêm vaccine
                                   </div>
 
-                                  <p className="mt-2.5 text-[11px] font-bold text-[#667085]/60">
+                                  <p className="mt-2 text-xs font-medium text-slate-400">
                                     #{p.id} • {p.birthDate ?? 'N/A'}
                                   </p>
                                 </div>
@@ -647,24 +642,24 @@ function BookVisitPage() {
 
                       {/* Stepper Pagination Control */}
                       {(petsQuery.data?.totalPages ?? 0) > 1 && (
-                        <div className="mt-8 flex items-center justify-center gap-4 border-t border-[#ECECF5] pt-5">
+                        <div className="mt-6 flex items-center justify-center gap-3 border-t border-slate-200 pt-5">
                           <Button
                             variant="outline"
                             size="icon"
-                            className="size-10 rounded-full border-[#ECECF5] text-[#171725] shadow-sm transition-all hover:border-[#7C6CF5]/30"
+                            className="size-9 rounded-lg border-slate-200 text-slate-700 transition-colors hover:border-[#7C6CF5]/40"
                             disabled={petPage === 0}
                             onClick={() => setPetPage((p) => Math.max(0, p - 1))}
                           >
                             <ChevronLeft className="size-5.5 stroke-[2.5px]" />
                           </Button>
-                          <span className="text-[13.5px] font-bold text-[#667085]">
+                          <span className="text-sm font-medium text-slate-500">
                             Hiển thị {filteredPets.length} /{' '}
                             {petsQuery.data?.totalElements} thú cưng
                           </span>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="size-10 rounded-full border-[#ECECF5] text-[#171725] shadow-sm transition-all hover:border-[#7C6CF5]/30"
+                            className="size-9 rounded-lg border-slate-200 text-slate-700 transition-colors hover:border-[#7C6CF5]/40"
                             disabled={petPage >= (petsQuery.data?.totalPages ?? 1) - 1}
                             onClick={() => setPetPage((p) => p + 1)}
                           >
@@ -678,18 +673,18 @@ function BookVisitPage() {
                 />
 
                 {/* Footer Controls */}
-                <div className="flex items-center justify-between border-t border-[#ECECF5] pt-6">
+                <div className="flex items-center justify-between border-t border-slate-200 pt-5">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => navigate({ to: '/customer' })}
-                    className="h-12 rounded-xl border-[#ECECF5] px-6 font-bold text-[#667085] transition-colors hover:bg-slate-50 hover:text-[#171725]"
+                    className="h-11 rounded-lg border-slate-200 px-5 font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    <ArrowLeft className="mr-1.5 size-4 text-[#667085]" /> Quay lại
+                    <ArrowLeft className="mr-1.5 size-4 text-slate-500" /> Quay lại
                   </Button>
                   <Button
                     type="button"
-                    className="h-12 rounded-xl bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] px-9 font-extrabold text-white shadow-[0_8px_25px_rgba(124,108,245,0.3)] transition-all hover:opacity-95 hover:shadow-[0_10px_30px_rgba(124,108,245,0.35)]"
+                    className="h-11 rounded-lg bg-[#7C6CF5] px-7 font-semibold text-white hover:bg-[#6D5EE8]"
                     disabled={values.petId === 0}
                     onClick={() => setStep(2)}
                   >
@@ -704,9 +699,9 @@ function BookVisitPage() {
               <div className="space-y-8 transition-all duration-300">
                 {/* Active Selected Pet Info Bar */}
                 {selectedPet && (
-                  <div className="flex items-center justify-between rounded-[24px] border border-[#7C6CF5]/10 bg-gradient-to-r from-[#7C6CF5]/5 to-[#A99CFF]/5 p-5 shadow-sm">
-                    <div className="flex items-center gap-4.5">
-                      <div className="size-16 shrink-0 overflow-hidden rounded-2xl border border-[#ECECF5] bg-white shadow-sm">
+                  <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="size-12 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
                         <img
                           src={getPetPhoto(selectedPet)}
                           alt={selectedPet.name}
@@ -715,7 +710,7 @@ function BookVisitPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg leading-snug font-black text-[#171725]">
+                          <h3 className="text-base leading-snug font-semibold text-slate-950">
                             {selectedPet.name}
                           </h3>
                           <button
@@ -727,17 +722,17 @@ function BookVisitPage() {
                           </button>
                         </div>
                         <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-                          <span className="flex items-center gap-1.5 rounded-full border border-[#ECECF5] bg-white px-3 py-0.5 text-[11px] font-bold text-[#667085] shadow-sm">
-                            <PawPrint className="size-3 text-[#667085]" />{' '}
+                          <span className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-500">
+                            <PawPrint className="size-3 text-slate-400" />{' '}
                             {selectedPet.type ?? 'Khác'}
                           </span>
-                          <span className="flex items-center gap-1.5 rounded-full border border-[#ECECF5] bg-white px-3 py-0.5 text-[11px] font-bold text-[#667085] shadow-sm">
-                            <Clock className="size-3 text-[#667085]" />{' '}
+                          <span className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-500">
+                            <Clock className="size-3 text-slate-400" />{' '}
                             {selectedPet.birthDate
                               ? `${new Date().getFullYear() - parseInt(selectedPet.birthDate.substring(0, 4))} tuổi`
                               : 'N/A'}
                           </span>
-                          <span className="flex items-center gap-1.5 rounded-full border border-emerald-100/30 bg-emerald-50 px-3 py-0.5 text-[11px] font-black text-[#22C55E] shadow-sm">
+                          <span className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
                             <ShieldCheck className="size-3 fill-emerald-100 text-[#22C55E]" />{' '}
                             Đã tiêm vắc-xin
                           </span>
@@ -748,7 +743,7 @@ function BookVisitPage() {
                       type="button"
                       variant="ghost"
                       onClick={() => setStep(1)}
-                      className="gap-1.5 rounded-xl px-4 py-2 font-extrabold text-[#7C6CF5] transition-colors hover:bg-[#7C6CF5]/5 hover:text-[#7C6CF5]/80"
+                      className="gap-1.5 rounded-lg px-3 py-2 font-medium text-[#7C6CF5] transition-colors hover:bg-[#7C6CF5]/5 hover:text-[#7C6CF5]/80"
                     >
                       <RefreshCcw className="size-4.5 stroke-[2.5px]" /> Đổi thú cưng
                     </Button>
@@ -756,17 +751,17 @@ function BookVisitPage() {
                 )}
 
                 {/* Main Selector Box */}
-                <div className="space-y-10 rounded-[24px] border border-[#ECECF5] bg-white p-8 shadow-[0_20px_50px_rgba(124,108,245,0.02)]">
+                <div className="space-y-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                   {/* 1. Chọn bác sĩ phụ trách */}
                   <form.Field
                     name="vetId"
                     children={(field) => (
                       <div className="space-y-6">
                         <div className="space-y-1">
-                          <h3 className="text-2xl font-black tracking-tight text-[#171725]">
+                          <h3 className="text-xl font-semibold tracking-tight text-slate-950">
                             1. Chọn bác sĩ phụ trách
                           </h3>
-                          <p className="text-[14px] font-semibold text-[#667085]">
+                          <p className="text-sm font-medium text-slate-500">
                             Đội ngũ bác sĩ chuyên khoa cao cấp sẵn sàng chăm sóc cho bé.
                           </p>
                         </div>
@@ -774,10 +769,7 @@ function BookVisitPage() {
                         {vetsQuery.isLoading ? (
                           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             {Array.from({ length: 2 }).map((_, i) => (
-                              <Skeleton
-                                key={i}
-                                className="h-[140px] w-full rounded-[24px]"
-                              />
+                              <Skeleton key={i} className="h-[132px] w-full rounded-lg" />
                             ))}
                           </div>
                         ) : (
@@ -797,48 +789,48 @@ function BookVisitPage() {
                                     setSelectedTimeSlot(null);
                                   }}
                                   className={cn(
-                                    'group relative flex gap-4 rounded-[20px] border bg-white p-5 text-left transition-all duration-300',
+                                    'group relative flex gap-4 rounded-lg border bg-white p-4 text-left transition-colors duration-200',
                                     isSelected
-                                      ? 'z-10 scale-[1.02] border-[#7C6CF5] shadow-[0_20px_40px_rgba(124,108,245,0.08)] ring-4 ring-[#7C6CF5]/10'
-                                      : 'border-[#ECECF5] hover:scale-[1.01] hover:border-[#7C6CF5]/30 hover:shadow-[0_12px_25px_rgba(0,0,0,0.02)]',
+                                      ? 'border-[#7C6CF5] bg-[#7C6CF5]/[0.03] ring-2 ring-[#7C6CF5]/10'
+                                      : 'border-slate-200 hover:border-[#7C6CF5]/40',
                                   )}
                                 >
                                   {isSelected && (
-                                    <div className="absolute top-4 right-4 z-10 flex size-5.5 items-center justify-center rounded-full bg-[#7C6CF5] text-white shadow-sm animate-in zoom-in-50">
+                                    <div className="absolute top-4 right-4 z-10 flex size-5 items-center justify-center rounded-full bg-[#7C6CF5] text-white animate-in zoom-in-50">
                                       <CheckCircle2 className="size-3.5 stroke-[3px]" />
                                     </div>
                                   )}
 
                                   {/* Doctor Image - LARGE */}
-                                  <div className="relative h-[112px] w-[84px] shrink-0 overflow-hidden rounded-2xl border border-[#ECECF5] shadow-sm">
+                                  <div className="relative h-[104px] w-[78px] shrink-0 overflow-hidden rounded-lg border border-slate-200">
                                     <img
                                       src={vetData.photoUrl}
                                       alt={vetData.name}
-                                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                      className="h-full w-full object-cover"
                                     />
                                   </div>
 
                                   {/* Doctor Details */}
                                   <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
                                     <div>
-                                      <h4 className="text-[16px] leading-snug font-extrabold whitespace-nowrap text-[#171725]">
+                                      <h4 className="text-base leading-snug font-semibold whitespace-nowrap text-slate-950">
                                         {vetData.name}
                                       </h4>
-                                      <p className="mt-1.5 text-[13px] font-semibold text-[#667085]">
+                                      <p className="mt-1.5 text-sm font-medium text-slate-500">
                                         {vetData.specialty}
                                       </p>
 
                                       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px]">
                                         <Star className="size-4 fill-[#F59E0B] text-[#F59E0B]" />
-                                        <span className="font-extrabold text-[#171725]">
+                                        <span className="font-semibold text-slate-950">
                                           {vetData.rating.toFixed(1)}
                                         </span>
-                                        <span className="font-semibold whitespace-nowrap text-[#667085]">
+                                        <span className="font-medium whitespace-nowrap text-slate-500">
                                           ({vetData.reviews} đánh giá)
                                         </span>
                                       </div>
 
-                                      <p className="mt-1 text-[12px] font-bold text-[#667085]/60">
+                                      <p className="mt-1 text-xs font-medium text-slate-400">
                                         {vetData.experience}
                                       </p>
                                     </div>
@@ -847,7 +839,7 @@ function BookVisitPage() {
                                       {vetData.tags.map((tag) => (
                                         <span
                                           key={tag}
-                                          className="inline-flex items-center rounded-full border border-[#7C6CF5]/20 bg-[#7C6CF5]/10 px-2.5 py-0.5 text-[9.5px] font-black tracking-wider text-[#7C6CF5] uppercase"
+                                          className="inline-flex items-center rounded-full border border-[#7C6CF5]/20 bg-[#7C6CF5]/10 px-2.5 py-0.5 text-xs font-medium text-[#7C6CF5]"
                                         >
                                           {tag}
                                         </span>
@@ -866,19 +858,19 @@ function BookVisitPage() {
                             <Button
                               variant="outline"
                               size="icon"
-                              className="size-9 rounded-full border-[#ECECF5] text-[#171725] shadow-sm"
+                              className="size-9 rounded-lg border-slate-200 text-slate-700"
                               disabled={vetPage === 0}
                               onClick={() => setVetPage((p) => Math.max(0, p - 1))}
                             >
                               <ChevronLeft className="size-4.5 stroke-[2.5px]" />
                             </Button>
-                            <span className="text-[13px] font-bold text-[#667085]">
+                            <span className="text-sm font-medium text-slate-500">
                               Trang {vetPage + 1} / {vetsQuery.data?.totalPages}
                             </span>
                             <Button
                               variant="outline"
                               size="icon"
-                              className="size-9 rounded-full border-[#ECECF5] text-[#171725] shadow-sm"
+                              className="size-9 rounded-lg border-slate-200 text-slate-700"
                               disabled={vetPage >= (vetsQuery.data?.totalPages ?? 1) - 1}
                               onClick={() => setVetPage((p) => p + 1)}
                             >
@@ -896,12 +888,12 @@ function BookVisitPage() {
                   <form.Field
                     name="scheduledAt"
                     children={(field) => (
-                      <div className="space-y-6 border-t border-[#ECECF5] pt-8">
+                      <div className="space-y-6 border-t border-slate-200 pt-8">
                         <div className="space-y-1">
-                          <h3 className="text-2xl font-black tracking-tight text-[#171725]">
+                          <h3 className="text-xl font-semibold tracking-tight text-slate-950">
                             2. Chọn thời gian khám
                           </h3>
-                          <p className="text-[14px] font-semibold text-[#667085]">
+                          <p className="text-sm font-medium text-slate-500">
                             Lựa chọn ngày lành và khung giờ phù hợp nhất với bạn.
                           </p>
                         </div>
@@ -909,33 +901,33 @@ function BookVisitPage() {
                         <div className="grid items-start gap-8 md:grid-cols-[300px_1fr]">
                           {/* Calendar Picker Card */}
                           <div className="shrink-0 space-y-3.5">
-                            <h4 className="text-[13px] font-bold tracking-wider text-[#667085] uppercase">
+                            <h4 className="text-sm font-semibold text-slate-700">
                               Chọn ngày
                             </h4>
-                            <div className="mx-auto w-full max-w-[300px] rounded-[24px] border border-[#ECECF5] bg-[#FAFAFF]/50 p-5 shadow-sm md:mx-0">
+                            <div className="mx-auto w-full max-w-[300px] rounded-lg border border-slate-200 bg-slate-50 p-4 md:mx-0">
                               <div className="mb-4 flex items-center justify-between">
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="size-8.5 rounded-full text-[#667085] transition-all hover:bg-white"
+                                  className="size-8 rounded-lg text-slate-500 hover:bg-white"
                                   onClick={handlePrevMonth}
                                 >
                                   <ChevronLeft className="size-5 stroke-[2.5px]" />
                                 </Button>
-                                <span className="text-[14.5px] font-extrabold text-[#171725]">
+                                <span className="text-sm font-semibold text-slate-950">
                                   Tháng {new Date(selectedDate).getMonth() + 1}{' '}
                                   {new Date(selectedDate).getFullYear()}
                                 </span>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="size-8.5 rounded-full text-[#667085] transition-all hover:bg-white"
+                                  className="size-8 rounded-lg text-slate-500 hover:bg-white"
                                   onClick={handleNextMonth}
                                 >
                                   <ChevronRight className="size-5 stroke-[2.5px]" />
                                 </Button>
                               </div>
-                              <div className="mb-3.5 grid grid-cols-7 text-center text-[11.5px] font-black tracking-wider text-[#667085]/60 uppercase">
+                              <div className="mb-3 grid grid-cols-7 text-center text-xs font-medium text-slate-400">
                                 <div>T2</div>
                                 <div>T3</div>
                                 <div>T4</div>
@@ -964,12 +956,12 @@ function BookVisitPage() {
                                         field.handleChange('');
                                       }}
                                       className={cn(
-                                        'flex size-8.5 items-center justify-center rounded-full text-[13px] font-bold shadow-sm transition-all',
+                                        'flex size-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
                                         isPast
                                           ? 'cursor-not-allowed bg-transparent text-slate-300 shadow-none'
                                           : isSelected
-                                            ? 'scale-110 bg-[#7C6CF5] text-white shadow-[0_6px_15px_rgba(124,108,245,0.3)]'
-                                            : 'border border-[#ECECF5] bg-white text-[#171725] hover:bg-white',
+                                            ? 'bg-[#7C6CF5] text-white'
+                                            : 'border border-slate-200 bg-white text-slate-900 hover:border-[#7C6CF5]/40',
                                       )}
                                     >
                                       {day}
@@ -982,12 +974,12 @@ function BookVisitPage() {
 
                           {/* Time Slots Picker Card */}
                           <div className="w-full space-y-3.5">
-                            <h4 className="text-[13px] font-bold tracking-wider text-[#667085] uppercase">
+                            <h4 className="text-sm font-semibold text-slate-700">
                               Chọn khung giờ
                             </h4>
 
                             {values.vetId === 0 ? (
-                              <div className="flex h-[270px] w-full flex-col items-center justify-center gap-2 rounded-[24px] border-2 border-dashed border-[#ECECF5] bg-[#FAFAFF]/50 p-10 text-center text-[14.5px] font-extrabold text-[#667085]">
+                              <div className="flex h-[250px] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm font-semibold text-slate-500">
                                 <Stethoscope className="size-11 text-slate-300" />
                                 <span>Vui lòng chọn bác sĩ phụ trách trước</span>
                               </div>
@@ -1027,22 +1019,22 @@ function BookVisitPage() {
                                         field.handleChange(isoStr);
                                       }}
                                       className={cn(
-                                        'flex h-[68px] flex-col items-center justify-center rounded-[18px] border p-3 shadow-sm transition-all',
+                                        'flex h-[64px] flex-col items-center justify-center rounded-lg border p-3 transition-colors',
                                         isDisabled
-                                          ? 'cursor-not-allowed border-[#ECECF5] bg-[#FAFAFF] opacity-50'
+                                          ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-50'
                                           : isSelected
-                                            ? 'border-[#7C6CF5] bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] text-white shadow-[0_8px_20px_rgba(124,108,245,0.25)]'
-                                            : 'border-[#ECECF5] bg-white text-[#171725] hover:border-[#7C6CF5]/30 hover:shadow-sm',
+                                            ? 'border-[#7C6CF5] bg-[#7C6CF5] text-white'
+                                            : 'border-slate-200 bg-white text-slate-900 hover:border-[#7C6CF5]/40',
                                       )}
                                     >
                                       <span
                                         className={cn(
-                                          'text-[14px] font-extrabold tracking-wide',
+                                          'text-sm font-semibold',
                                           isSelected
                                             ? 'text-white'
                                             : isDisabled
                                               ? 'text-slate-400'
-                                              : 'text-[#171725]',
+                                              : 'text-slate-900',
                                         )}
                                       >
                                         {WORKHOUR_LABEL[slot]}
@@ -1050,7 +1042,7 @@ function BookVisitPage() {
 
                                       <span
                                         className={cn(
-                                          'mt-1 text-[10px] font-black tracking-wider uppercase',
+                                          'mt-1 text-[10px] font-medium',
                                           isSelected
                                             ? 'text-white/80'
                                             : isDisabled
@@ -1067,7 +1059,7 @@ function BookVisitPage() {
                             )}
 
                             {/* Color Legend with elegant design */}
-                            <div className="mt-4.5 flex items-center gap-5 border-t border-[#ECECF5]/50 pt-4.5 text-[11.5px] font-black tracking-wide text-[#667085] uppercase">
+                            <div className="mt-4 flex items-center gap-4 border-t border-slate-200 pt-4 text-xs font-medium text-slate-500">
                               <span className="flex items-center gap-1.5">
                                 <span className="size-2.5 rounded-full bg-[#22C55E] shadow-sm"></span>{' '}
                                 Còn nhiều slot
@@ -1077,7 +1069,7 @@ function BookVisitPage() {
                                 Còn ít slot
                               </span>
                               <span className="flex items-center gap-1.5">
-                                <span className="size-2.5 rounded-full bg-[#667085]/40 shadow-sm"></span>{' '}
+                                <span className="size-2.5 rounded-full bg-slate-300"></span>{' '}
                                 Đã đầy
                               </span>
                             </div>
@@ -1087,16 +1079,16 @@ function BookVisitPage() {
                         </div>
 
                         {/* Footer Next Button inside main selector box */}
-                        <div className="flex flex-col items-center border-t border-[#ECECF5]/50 pt-6">
+                        <div className="flex flex-col items-center border-t border-slate-200 pt-5">
                           <Button
                             type="button"
-                            className="h-12 w-full gap-1.5 rounded-xl bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] font-extrabold text-white shadow-[0_8px_25px_rgba(124,108,245,0.3)] transition-all hover:opacity-95 hover:shadow-[0_10px_30px_rgba(124,108,245,0.35)]"
+                            className="h-11 w-full gap-1.5 rounded-lg bg-[#7C6CF5] font-semibold text-white hover:bg-[#6D5EE8]"
                             disabled={values.vetId === 0 || !values.scheduledAt}
                             onClick={() => setStep(3)}
                           >
                             Tiếp tục <ArrowRight className="size-4.5 stroke-[2.5px]" />
                           </Button>
-                          <p className="mt-3.5 text-center text-[11px] font-bold tracking-widest text-[#667085] uppercase">
+                          <p className="mt-3 text-center text-xs font-medium text-slate-500">
                             Bạn sẽ xác nhận lại thông tin ở bước tiếp theo
                           </p>
                         </div>
@@ -1109,13 +1101,13 @@ function BookVisitPage() {
 
             {/* STEP 3: Confirmation Detail */}
             {step === 3 && (
-              <div className="space-y-6 rounded-[24px] border border-[#ECECF5] bg-white p-8 shadow-[0_20px_50px_rgba(124,108,245,0.02)] transition-all duration-300 animate-in fade-in">
-                <div className="flex items-center justify-between border-b border-[#ECECF5]/50 pb-4.5">
+              <div className="space-y-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 animate-in fade-in">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                   <div>
-                    <h2 className="text-2xl font-black tracking-tight text-[#171725]">
+                    <h2 className="text-xl font-semibold tracking-tight text-slate-950">
                       Xác nhận thông tin
                     </h2>
-                    <p className="mt-1 text-[14.5px] font-semibold text-[#667085]">
+                    <p className="mt-1 text-sm font-medium text-slate-500">
                       Vui lòng cung cấp lý do khám và xác nhận lịch hẹn của bạn.
                     </p>
                   </div>
@@ -1127,14 +1119,14 @@ function BookVisitPage() {
                     <div className="space-y-3">
                       <Label
                         htmlFor={field.name}
-                        className="text-sm font-extrabold tracking-wide text-[#171725]"
+                        className="text-sm font-semibold text-slate-900"
                       >
                         Lý do khám (tuỳ chọn)
                       </Label>
                       <Textarea
                         id={field.name}
                         rows={4}
-                        className="resize-none rounded-xl border-[#ECECF5] bg-[#FAFAFF]/50 p-4 text-[14.5px] font-semibold shadow-sm focus-visible:bg-white focus-visible:ring-[#7C6CF5]"
+                        className="resize-none rounded-lg border-slate-200 bg-white p-4 text-sm font-medium focus-visible:ring-[#7C6CF5]"
                         placeholder="VD: Bé bỏ ăn 2 ngày, có dấu hiệu mệt mỏi, cần tiêm vắc-xin định kỳ…"
                         value={field.state.value ?? ''}
                         onBlur={field.handleBlur}
@@ -1146,13 +1138,13 @@ function BookVisitPage() {
                 />
 
                 {/* Warning Card */}
-                <div className="flex items-start gap-3.5 rounded-[20px] border border-[#F59E0B]/20 bg-[#F59E0B]/5 p-5 text-[13.5px] text-[#F59E0B] shadow-sm">
+                <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
                   <div className="mt-0.5 shrink-0 text-[#F59E0B]">
                     <HelpCircle className="size-5" />
                   </div>
-                  <div className="space-y-1 font-semibold text-[#171725]/85">
-                    <p className="font-black text-[#F59E0B]">Lưu ý quan trọng</p>
-                    <p className="leading-relaxed text-[#667085]">
+                  <div className="space-y-1 font-medium text-slate-700">
+                    <p className="font-semibold text-amber-800">Lưu ý quan trọng</p>
+                    <p className="leading-relaxed text-slate-600">
                       Phí khám sẽ được thông báo chính xác sau khi bác sĩ hoàn thành đánh
                       giá. Việc đặt lịch trên hệ thống <b>chưa phát sinh thanh toán</b>{' '}
                       ngay lúc này.
@@ -1161,19 +1153,19 @@ function BookVisitPage() {
                 </div>
 
                 {/* Footer Controls */}
-                <div className="mt-6 flex flex-col items-center gap-4 border-t border-[#ECECF5] pt-6 sm:flex-row">
+                <div className="mt-6 flex flex-col items-center gap-3 border-t border-slate-200 pt-5 sm:flex-row">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setStep(2)}
-                    className="h-12 w-full rounded-xl border-[#ECECF5] px-8 font-bold text-[#667085] transition-colors hover:bg-slate-50 hover:text-[#171725] sm:w-auto"
+                    className="h-11 w-full rounded-lg border-slate-200 px-6 font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
                   >
-                    <ArrowLeft className="mr-1.5 size-4 text-[#667085]" /> Quay lại
+                    <ArrowLeft className="mr-1.5 size-4 text-slate-500" /> Quay lại
                   </Button>
                   <Button
                     type="submit"
                     size="lg"
-                    className="h-12 w-full flex-1 gap-1.5 rounded-xl bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] text-[15px] font-extrabold text-white shadow-[0_8px_25px_rgba(124,108,245,0.3)] transition-all hover:opacity-95 hover:shadow-[0_10px_30px_rgba(124,108,245,0.35)]"
+                    className="h-11 w-full flex-1 gap-1.5 rounded-lg bg-[#7C6CF5] text-sm font-semibold text-white hover:bg-[#6D5EE8]"
                     disabled={bookMutation.isPending}
                   >
                     <CalendarCheck className="size-5 fill-white/10" />
@@ -1188,68 +1180,27 @@ function BookVisitPage() {
           {step > 1 && (
             <div className="lg:col-span-1">
               <div className="sticky top-8 space-y-6 duration-400 animate-in fade-in slide-in-from-right-4">
-                {/* Floating Summary Card */}
-                <div className="relative overflow-hidden rounded-[24px] border border-[#ECECF5] bg-white shadow-[0_20px_50px_rgba(124,108,245,0.03)]">
-                  {/* Decorative Header Illustration matching Dribbble style */}
-                  <div className="relative flex h-28 items-center justify-center border-b border-[#ECECF5]/50 bg-gradient-to-tr from-[#7C6CF5]/5 to-[#A99CFF]/5">
-                    <svg
-                      className="relative z-10 h-20 w-32 object-contain"
-                      viewBox="0 0 120 80"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle cx="48" cy="45" r="18" fill="#F59E0B" />
-                      <ellipse cx="48" cy="51" rx="8" ry="6" fill="#FFFBEB" />
-                      <circle cx="48" cy="48" r="2.5" fill="#1E293B" />
-                      <circle cx="42" cy="42" r="1.8" fill="#1E293B" />
-                      <circle cx="54" cy="42" r="1.8" fill="#1E293B" />
-                      <path
-                        d="M31 35C29 40 29 50 33 52C37 54 38 45 38 38C38 31 34 30 31 35Z"
-                        fill="#D97706"
-                      />
-                      <path
-                        d="M65 35C67 40 67 50 63 52C59 54 58 45 58 38C58 31 62 30 65 35Z"
-                        fill="#D97706"
-                      />
-                      <circle cx="78" cy="48" r="13" fill="#94A3B8" />
-                      <path d="M67 42L63 30L74 38Z" fill="#64748B" />
-                      <path d="M89 42L93 30L82 38Z" fill="#64748B" />
-                      <ellipse cx="74" cy="46" rx="1.5" ry="2" fill="#1E293B" />
-                      <ellipse cx="82" cy="46" rx="1.5" ry="2" fill="#1E293B" />
-                      <path d="M77 49L79 49L78 50.5Z" fill="#FDA4AF" />
-                      <circle
-                        cx="63"
-                        cy="58"
-                        r="10"
-                        fill="#7C6CF5"
-                        stroke="white"
-                        strokeWidth="2"
-                      />
-                      <path
-                        d="M63 61.5L62.2 60.7C59.3 58.1 57.4 56.4 57.4 54.3C57.4 52.6 58.7 51.3 60.4 51.3C61.4 51.3 62.3 51.7 63 52.5C63.7 51.7 64.6 51.3 65.6 51.3C67.3 51.3 68.6 52.6 68.6 54.3C68.6 56.4 66.7 58.1 63.8 60.7L63 61.5Z"
-                        fill="white"
-                      />
-                    </svg>
-
-                    <div className="absolute inset-0 flex items-center justify-center opacity-40">
-                      <div className="h-20 w-32 rounded-full bg-indigo-100 blur-2xl"></div>
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <h3 className="mb-6 text-[18px] font-black tracking-tight text-[#171725]">
+                {/* Summary Card */}
+                <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                  <div className="border-b border-slate-200 p-5">
+                    <h3 className="text-base font-semibold tracking-tight text-slate-950">
                       Thông tin đặt khám
                     </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Kiểm tra lại thông tin trước khi xác nhận lịch hẹn.
+                    </p>
+                  </div>
 
-                    <div className="space-y-6">
+                  <div className="p-5">
+                    <div className="space-y-5">
                       {/* Pet detail */}
                       <div>
-                        <h4 className="mb-2 text-[11px] font-black tracking-widest text-[#7C6CF5] uppercase">
+                        <h4 className="mb-2 text-xs font-semibold text-slate-500">
                           Thú cưng
                         </h4>
                         {selectedPet ? (
-                          <div className="flex items-center gap-3.5 rounded-2xl border border-[#ECECF5] bg-white p-3 shadow-sm">
-                            <div className="size-11 shrink-0 overflow-hidden rounded-xl border border-[#ECECF5]">
+                          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+                            <div className="size-10 shrink-0 overflow-hidden rounded-md border border-slate-200">
                               <img
                                 src={getPetPhoto(selectedPet)}
                                 alt={selectedPet.name}
@@ -1257,16 +1208,16 @@ function BookVisitPage() {
                               />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[13.5px] font-extrabold text-[#171725]">
+                              <p className="truncate text-sm font-semibold text-slate-950">
                                 {selectedPet.name}
                               </p>
-                              <p className="mt-0.5 truncate text-[11.5px] font-semibold text-[#667085]">
+                              <p className="mt-0.5 truncate text-xs font-medium text-slate-500">
                                 {selectedPet.type ?? 'Khác'} • {getPetBreed(selectedPet)}
                               </p>
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-xl border border-dashed border-[#ECECF5] bg-[#FAFAFF] p-3 text-center text-xs font-bold text-[#667085]">
+                          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-xs font-medium text-slate-500">
                             Chưa chọn
                           </div>
                         )}
@@ -1274,12 +1225,12 @@ function BookVisitPage() {
 
                       {/* Vet detail */}
                       <div>
-                        <h4 className="mb-2 text-[11px] font-black tracking-widest text-[#7C6CF5] uppercase">
+                        <h4 className="mb-2 text-xs font-semibold text-slate-500">
                           Bác sĩ dự kiến
                         </h4>
                         {selectedVet ? (
-                          <div className="flex items-center gap-3.5 rounded-2xl border border-[#ECECF5] bg-white p-3 shadow-sm">
-                            <div className="size-11 shrink-0 overflow-hidden rounded-xl border border-[#ECECF5]">
+                          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3">
+                            <div className="size-10 shrink-0 overflow-hidden rounded-md border border-slate-200">
                               <img
                                 src={selectedVet.photoUrl}
                                 alt={selectedVet.name}
@@ -1287,15 +1238,15 @@ function BookVisitPage() {
                               />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[13.5px] font-extrabold text-[#171725]">
+                              <p className="truncate text-sm font-semibold text-slate-950">
                                 {selectedVet.name}
                               </p>
-                              <p className="mt-0.5 truncate text-[11.5px] font-semibold text-[#667085]">
+                              <p className="mt-0.5 truncate text-xs font-medium text-slate-500">
                                 {selectedVet.specialty}
                               </p>
                               <div className="mt-0.5 flex items-center gap-1">
                                 <Star className="size-3 fill-[#F59E0B] text-[#F59E0B]" />
-                                <span className="text-[11.5px] font-black text-[#171725]">
+                                <span className="text-xs font-semibold text-slate-700">
                                   {selectedVet.rating.toFixed(1)} ({selectedVet.reviews}{' '}
                                   đánh giá)
                                 </span>
@@ -1303,7 +1254,7 @@ function BookVisitPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-xl border border-dashed border-[#ECECF5] bg-[#FAFAFF] p-3 text-center text-xs font-bold text-[#667085]">
+                          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-xs font-medium text-slate-500">
                             Chưa chọn
                           </div>
                         )}
@@ -1311,19 +1262,19 @@ function BookVisitPage() {
 
                       {/* Time detail */}
                       <div>
-                        <h4 className="mb-2 text-[11px] font-black tracking-widest text-[#7C6CF5] uppercase">
+                        <h4 className="mb-2 text-xs font-semibold text-slate-500">
                           Thời gian dự kiến
                         </h4>
                         {values.scheduledAt ? (
-                          <div className="space-y-2 rounded-2xl border border-[#ECECF5] bg-white p-3.5 shadow-sm">
-                            <div className="flex items-center gap-2.5 text-[13px] font-bold text-[#171725]">
-                              <Calendar className="size-4.5 shrink-0 text-[#667085]" />
+                          <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                            <div className="flex items-center gap-2.5 text-sm font-medium text-slate-900">
+                              <Calendar className="size-4.5 shrink-0 text-slate-500" />
                               <span>
                                 {confirmFmt.format(new Date(values.scheduledAt))}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2.5 text-[13px] font-bold text-[#171725]">
-                              <Clock className="size-4.5 shrink-0 text-[#667085]" />
+                            <div className="flex items-center gap-2.5 text-sm font-medium text-slate-900">
+                              <Clock className="size-4.5 shrink-0 text-slate-500" />
                               <span>
                                 {new Date(values.scheduledAt).toLocaleTimeString(
                                   'vi-VN',
@@ -1333,39 +1284,39 @@ function BookVisitPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-xl border border-dashed border-[#ECECF5] bg-[#FAFAFF] p-3 text-center text-xs font-bold text-[#667085]">
+                          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-xs font-medium text-slate-500">
                             Chưa chọn
                           </div>
                         )}
                       </div>
 
-                      <div className="my-4 h-px w-full bg-[#ECECF5]" />
+                      <div className="my-4 h-px w-full bg-slate-200" />
 
                       {/* Branch detail */}
                       <div>
-                        <h4 className="mb-2 text-[11px] font-black tracking-widest text-[#7C6CF5] uppercase">
+                        <h4 className="mb-2 text-xs font-semibold text-slate-500">
                           Chi nhánh
                         </h4>
-                        <div className="space-y-2 rounded-2xl border border-[#ECECF5] bg-white p-3.5 shadow-sm">
-                          <div className="flex items-center gap-2.5 text-[13.5px] font-bold text-[#171725]">
-                            <MapPin className="size-4.5 shrink-0 text-[#667085]" />
+                        <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                          <div className="flex items-center gap-2.5 text-sm font-medium text-slate-900">
+                            <MapPin className="size-4.5 shrink-0 text-slate-500" />
                             <span>PetCare Clinic - Cầu Giấy</span>
                           </div>
-                          <div className="ml-7 text-[11.5px] font-bold text-[#667085]">
+                          <div className="ml-7 text-xs font-medium text-slate-500">
                             123 Trần Duy Hưng, Cầu Giấy, Hà Nội
                           </div>
                         </div>
                       </div>
 
                       {/* Price box with Dribbble-level typography */}
-                      <div className="mt-4 rounded-[20px] border border-[#7C6CF5]/10 bg-gradient-to-br from-[#7C6CF5]/5 to-[#A99CFF]/5 p-4.5 shadow-sm">
-                        <h4 className="mb-1.5 text-[11px] font-black tracking-widest text-[#667085] uppercase">
+                      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <h4 className="mb-1.5 text-xs font-semibold text-slate-500">
                           Phí khám dự kiến
                         </h4>
-                        <div className="text-3xl font-black tracking-tight text-[#7C6CF5]">
+                        <div className="text-2xl font-bold tracking-tight text-[#7C6CF5]">
                           150.000đ
                         </div>
-                        <div className="mt-2.5 flex items-center gap-1.5 text-[10.5px] font-black tracking-wider text-[#667085] uppercase">
+                        <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-slate-500">
                           <CheckCircle2 className="size-3.5 stroke-[2.5px] text-[#22C55E]" />{' '}
                           Đã bao gồm VAT
                         </div>
@@ -1374,43 +1325,43 @@ function BookVisitPage() {
                   </div>
                 </div>
 
-                {/* Core values list */}
-                <div className="space-y-1.5 rounded-[24px] border border-[#ECECF5] bg-white p-4 shadow-sm">
-                  <div className="flex items-center gap-3.5 rounded-xl bg-white p-3 transition-all hover:bg-[#FAFAFF]">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#7C6CF5]/10 text-[#7C6CF5]">
+                {/* Trust notes */}
+                <div className="space-y-1 rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm">
+                  <div className="flex items-center gap-3 rounded-md p-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
                       <ShieldCheck className="size-5 stroke-[2.5px]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-extrabold text-[#171725]">
+                      <p className="text-sm font-semibold text-slate-900">
                         Bác sĩ giàu kinh nghiệm
                       </p>
-                      <p className="mt-0.5 text-[11px] font-bold text-[#667085]">
+                      <p className="mt-0.5 text-xs font-medium text-slate-500">
                         Đội ngũ bác sĩ chuyên môn cao
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3.5 rounded-xl bg-white p-3 transition-all hover:bg-[#FAFAFF]">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#7C6CF5]/10 text-[#7C6CF5]">
+                  <div className="flex items-center gap-3 rounded-md p-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
                       <Activity className="size-5 stroke-[2.5px]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-extrabold text-[#171725]">
+                      <p className="text-sm font-semibold text-slate-900">
                         Trang thiết bị hiện đại
                       </p>
-                      <p className="mt-0.5 text-[11px] font-bold text-[#667085]">
+                      <p className="mt-0.5 text-xs font-medium text-slate-500">
                         Máy móc, thiết bị tiên tiến
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3.5 rounded-xl bg-white p-3 transition-all hover:bg-[#FAFAFF]">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#7C6CF5]/10 text-[#7C6CF5]">
-                      <Heart className="size-5 fill-[#7C6CF5] stroke-[2.5px]" />
+                  <div className="flex items-center gap-3 rounded-md p-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                      <Heart className="size-5 stroke-[2.5px]" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-extrabold text-[#171725]">
+                      <p className="text-sm font-semibold text-slate-900">
                         Dịch vụ tận tâm
                       </p>
-                      <p className="mt-0.5 text-[11px] font-bold text-[#667085]">
+                      <p className="mt-0.5 text-xs font-medium text-slate-500">
                         Chăm sóc thú cưng như người thân
                       </p>
                     </div>
