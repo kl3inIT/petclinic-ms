@@ -30,7 +30,12 @@ export const Route = createFileRoute('/customer')({
 });
 
 interface NavItem {
-  to: '/customer' | '/customer/book' | '/customer/visits' | '/customer/pets' | '/customer/profile';
+  to:
+    | '/customer'
+    | '/customer/book'
+    | '/customer/visits'
+    | '/customer/pets'
+    | '/customer/profile';
   label: string;
   icon: typeof Home;
   exact?: boolean;
@@ -57,7 +62,7 @@ function CustomerLayout() {
   });
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-white">
       <header className="sticky top-0 z-30 border-b bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-2">
@@ -121,7 +126,7 @@ function CustomerLayout() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-8">
+      <main className="mx-auto max-w-7xl px-6 py-8">
         <Outlet />
       </main>
     </div>
