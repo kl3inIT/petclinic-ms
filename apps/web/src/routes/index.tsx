@@ -90,11 +90,10 @@ function SiteHeader({ user, ctaHref }: HeaderProps) {
   const nav = [
     { label: 'Trang chủ', href: '#home' },
     { label: 'Dịch vụ', href: '#services' },
-    { label: 'Bác sĩ', href: '#team' },
     { label: 'Quy trình', href: '#process' },
+    { label: 'Bác sĩ', href: '#team' },
     { label: 'Bảng giá', href: '#pricing' },
     { label: 'Đánh giá', href: '#testimonials' },
-    { label: 'Liên hệ', href: '#contact' },
   ];
 
   return (
@@ -121,6 +120,12 @@ function SiteHeader({ user, ctaHref }: HeaderProps) {
               {item.label}
             </a>
           ))}
+          <Link
+            to="/store"
+            className="text-[15px] font-semibold text-slate-600 transition-colors hover:text-violet-600"
+          >
+            Cửa hàng
+          </Link>
         </nav>
 
         <div className="flex items-center gap-4">
@@ -577,6 +582,17 @@ function Services() {
               <div className="p-6">
                 <h3 className="mb-2 text-lg font-bold text-slate-900">{s.title}</h3>
                 <p className="text-sm leading-relaxed text-slate-600">{s.desc}</p>
+                {s.title === 'Pet Shop' ? (
+                  <Button
+                    asChild
+                    variant="link"
+                    className="mt-4 h-auto p-0 font-bold text-violet-600"
+                  >
+                    <Link to="/store">
+                      Vào cửa hàng <ChevronRight className="size-4" />
+                    </Link>
+                  </Button>
+                ) : null}
               </div>
             </motion.div>
           ))}
