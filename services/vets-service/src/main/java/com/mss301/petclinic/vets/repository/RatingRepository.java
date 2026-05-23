@@ -28,6 +28,9 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
     @Query("SELECT r.score, COUNT(r) FROM Rating r WHERE r.vetId = :vetId GROUP BY r.score")
     List<Object[]> findScoreDistributionByVetId(@Param("vetId") Long vetId);
 
+    @Query("SELECT r.vetId, AVG(r.score) FROM Rating r WHERE r.vetId IN :vetIds GROUP BY r.vetId")
+    List<Object[]> findAverageRatingByVetIds(@Param("vetIds") List<Long> vetIds);
+
     /**
      * Top-N vet theo average score (chỉ active vet, có ít nhất 1 rating).
      * Cross-entity aggregate qua JPQL — Rating không có @ManyToOne Vet, dùng JOIN explicit

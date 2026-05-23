@@ -1,6 +1,9 @@
 package com.mss301.petclinic.vets.service.impl;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -11,15 +14,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
+import com.mss301.petclinic.vets.config.StorageProperties;
 import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
 import com.mss301.petclinic.vets.dto.req.VetRequest;
 import com.mss301.petclinic.vets.dto.res.VetResponse;
 import com.mss301.petclinic.vets.exception.VetNotFoundException;
 import com.mss301.petclinic.vets.model.Specialty;
 import com.mss301.petclinic.vets.model.Vet;
+import com.mss301.petclinic.vets.model.VetPhoto;
+import com.mss301.petclinic.vets.repository.RatingRepository;
 import com.mss301.petclinic.vets.repository.SpecialtyRepository;
+import com.mss301.petclinic.vets.repository.VetPhotoRepository;
 import com.mss301.petclinic.vets.repository.VetRepository;
 import com.mss301.petclinic.vets.repository.VetSpecifications;
+import com.mss301.petclinic.vets.service.StorageService;
 import com.mss301.petclinic.vets.service.VetService;
 
 @Service
@@ -30,22 +38,60 @@ public class VetServiceImpl implements VetService {
 
     private final VetRepository vetRepository;
     private final SpecialtyRepository specialtyRepository;
+    private final RatingRepository ratingRepository;
+    private final VetPhotoRepository photoRepository;
+    private final StorageService storage;
+    private final StorageProperties props;
 
-    public VetServiceImpl(VetRepository vetRepository, SpecialtyRepository specialtyRepository) {
+    public VetServiceImpl(VetRepository vetRepository, SpecialtyRepository specialtyRepository, RatingRepository ratingRepository, VetPhotoRepository photoRepository, StorageService storage, StorageProperties props) {
         this.vetRepository = vetRepository;
         this.specialtyRepository = specialtyRepository;
+        this.ratingRepository = ratingRepository;
+        this.photoRepository = photoRepository;
+        this.storage = storage;
+        this.props = props;
     }
 
     @Override
     public Page<VetResponse> findAll(String lastName, Long specialtyId, Boolean active, Pageable pageable) {
-        return vetRepository.findAll(VetSpecifications.filter(lastName, specialtyId, active), pageable)
-                .map(VetResponse::from);
+        Page<Vet> page = vetRepository.findAll(VetSpecifications.filter(lastName, specialtyId, active), pageable);
+        if (page.isEmpty()) return page.map(v -> VetResponse.from(v, null, null));
+
+        List<Long> vetIds = page.getContent().stream().map(Vet::getId).toList();
+        Map<Long, Double> ratingsMap = new HashMap<>();
+        for (Object[] row : ratingRepository.findAverageRatingByVetIds(vetIds)) {
+            ratingsMap.put((Long) row[0], (Double) row[1]);
+        }
+
+        Map<Long, String> photoMap = new HashMap<>();
+        for (VetPhoto p : photoRepository.findAllById(vetIds)) {
+            try {
+                photoMap.put(p.getVetId(), storage.presignedGet(p.getObjectKey(), props.presignedTtl()).toString());
+            } catch (Exception e) { /* ignore */ }
+        }
+
+        return page.map(vet -> VetResponse.from(vet, photoMap.get(vet.getId()), ratingsMap.get(vet.getId())));
     }
 
     @Override
     public VetResponse findById(Long id) {
         return vetRepository.findById(id)
-                .map(VetResponse::from)
+                .map(vet -> {
+                    String photoUrl = photoRepository.findById(id)
+                            .map(p -> {
+                                try {
+                                    return storage.presignedGet(p.getObjectKey(), props.presignedTtl()).toString();
+                                } catch (Exception e) { return null; }
+                            })
+                            .orElse(null);
+                    Double avg = ratingRepository.findScoreDistributionByVetId(id)
+                                .stream()
+                                .mapToDouble(row -> ((Number) row[0]).doubleValue() * ((Number) row[1]).longValue())
+                                .sum();
+                    long count = ratingRepository.countByVetId(id);
+                    Double finalAvg = count > 0 ? avg / count : null;
+                    return VetResponse.from(vet, photoUrl, finalAvg);
+                })
                 .orElseThrow(() -> new VetNotFoundException(id.toString()));
     }
 
@@ -56,7 +102,7 @@ public class VetServiceImpl implements VetService {
         if (request.specialtyNames() != null && !request.specialtyNames().isEmpty()) {
             vet.setSpecialties(resolveSpecialties(request.specialtyNames()));
         }
-        return VetResponse.from(saveAndTranslateUniqueViolation(vet));
+        return VetResponse.from(saveAndTranslateUniqueViolation(vet), null, null);
     }
 
     @Override
@@ -109,7 +155,22 @@ public class VetServiceImpl implements VetService {
                     ? new HashSet<>()
                     : resolveSpecialties(request.specialtyNames()));
         }
-        return VetResponse.from(saveAndTranslateUniqueViolation(vet));
+
+        String photoUrl = photoRepository.findById(id)
+                .map(p -> {
+                    try {
+                        return storage.presignedGet(p.getObjectKey(), props.presignedTtl()).toString();
+                    } catch (Exception e) { return null; }
+                })
+                .orElse(null);
+        Double avg = ratingRepository.findScoreDistributionByVetId(id)
+                    .stream()
+                    .mapToDouble(row -> ((Number) row[0]).doubleValue() * ((Number) row[1]).longValue())
+                    .sum();
+        long count = ratingRepository.countByVetId(id);
+        Double finalAvg = count > 0 ? avg / count : null;
+
+        return VetResponse.from(saveAndTranslateUniqueViolation(vet), photoUrl, finalAvg);
     }
 
     @Override

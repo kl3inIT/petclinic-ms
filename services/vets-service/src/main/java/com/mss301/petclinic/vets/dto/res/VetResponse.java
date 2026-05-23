@@ -13,9 +13,11 @@ public record VetResponse(
         String phoneNumber,
         boolean active,
         String resume,
-        List<SpecialtyResponse> specialties
+        List<SpecialtyResponse> specialties,
+        String photoUrl,
+        Double averageRating
 ) {
-    public static VetResponse from(Vet vet) {
+    public static VetResponse from(Vet vet, String photoUrl, Double averageRating) {
         var specs = (vet.getSpecialties() == null ? Set.<com.mss301.petclinic.vets.model.Specialty>of() : vet.getSpecialties())
                 .stream()
                 .map(SpecialtyResponse::from)
@@ -29,7 +31,9 @@ public record VetResponse(
                 vet.getPhoneNumber(),
                 vet.isActive(),
                 vet.getResume(),
-                specs
+                specs,
+                photoUrl,
+                averageRating
         );
     }
 }
