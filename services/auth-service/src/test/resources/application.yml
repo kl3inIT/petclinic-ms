@@ -19,6 +19,15 @@ spring:
 
   liquibase:
     enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: auth
+    open-in-view: false
 
 petclinic:
   auth:
@@ -28,6 +37,26 @@ petclinic:
       audience: petclinic-test
     access-token-ttl: PT15M
     refresh-token-ttl: P7D
+  security:
+    endpoints:
+      public-endpoints:
+        - { method: POST, path: /api/v1/auth/register }
+        - { method: POST, path: /api/v1/auth/login }
+        - { method: POST, path: /api/v1/auth/refresh }
+        - { method: GET, path: /.well-known/jwks.json }
+      user-endpoints:
+        - { method: GET, path: /api/v1/auth/me }
+        - { method: POST, path: /api/v1/auth/logout }
+      admin-endpoints:
+        - { method: GET, path: /api/v1/admin/users/** }
+        - { method: GET, path: /api/v1/admin/audit/** }
+        - { method: PATCH, path: /api/v1/users/*/customer-link }
 
 # Disable event publishing trong test (auth emit user.registered event).
 petclinic.events.enabled: false
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
