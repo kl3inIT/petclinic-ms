@@ -59,8 +59,8 @@ function CustomerProfilePage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="grid gap-8 lg:grid-cols-[190px_1fr]">
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="grid items-start gap-8 lg:grid-cols-[190px_minmax(0,1fr)]">
         <ProfileSidebar />
 
         <div className="space-y-7">
@@ -74,8 +74,8 @@ function CustomerProfilePage() {
             <div className="mt-3 h-1 w-8 rounded-full bg-violet-600" />
           </section>
 
-          <section className="grid gap-5 xl:grid-cols-[1fr_400px]">
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+          <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
+            <div className="min-h-[504px] rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
               <SectionTitle icon={UserCircle2} title="Thông tin tài khoản" />
 
               <div className="mt-7 flex items-center gap-5">
@@ -144,7 +144,7 @@ function CustomerProfilePage() {
             </div>
 
             <div className="space-y-5">
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+              <div className="min-h-[336px] rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
                 <SectionTitle icon={KeyRound} title="Liên kết nhanh" />
                 <div className="mt-6 space-y-3">
                   <QuickLink
@@ -187,7 +187,7 @@ function CustomerProfilePage() {
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-700 shadow-[0_12px_35px_rgba(16,185,129,0.08)]">
+              <div className="flex min-h-[94px] items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-700 shadow-[0_12px_35px_rgba(16,185,129,0.08)]">
                 <div className="flex items-center gap-3">
                   <span className="flex size-9 items-center justify-center rounded-lg bg-white text-emerald-600">
                     <ShieldCheck className="size-5" />
@@ -207,7 +207,7 @@ function CustomerProfilePage() {
             </div>
           </section>
 
-          <section className="relative overflow-hidden rounded-2xl border border-violet-100 bg-violet-50 px-6 py-5 shadow-[0_18px_45px_rgba(124,58,237,0.08)]">
+          <section className="relative min-h-[112px] overflow-hidden rounded-2xl border border-violet-100 bg-violet-50 px-6 py-5 shadow-[0_18px_45px_rgba(124,58,237,0.08)]">
             <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-5">
                 <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm">
@@ -243,8 +243,8 @@ function CustomerProfilePage() {
 
 function ProfileSidebar() {
   return (
-    <aside className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-      <div className="relative mb-3 h-32 overflow-hidden rounded-xl bg-violet-500">
+    <aside className="self-start rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.06)] lg:sticky lg:top-24">
+      <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-xl bg-violet-500">
         <img
           src={petHero}
           alt=""
