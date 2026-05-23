@@ -59,182 +59,186 @@ function CustomerProfilePage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      <div className="grid items-start gap-8 lg:grid-cols-[190px_minmax(0,1fr)]">
-        <ProfileSidebar />
+    <div className="w-full overflow-x-auto pb-2">
+      <div className="mx-auto w-full max-w-6xl min-w-0 lg:w-[1070px] lg:max-w-none lg:min-w-[1070px]">
+        <div className="grid items-start gap-8 lg:grid-cols-[190px_minmax(0,1fr)]">
+          <ProfileSidebar />
 
-        <div className="space-y-7">
-          <section>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950">
-              Hồ sơ của tôi
-            </h1>
-            <p className="mt-2 text-sm font-medium text-slate-500">
-              Quản lý thông tin tài khoản, bảo mật và liên kết nhanh.
-            </p>
-            <div className="mt-3 h-1 w-8 rounded-full bg-violet-600" />
-          </section>
+          <div className="space-y-7">
+            <section>
+              <h1 className="text-3xl font-black tracking-tight text-slate-950">
+                Hồ sơ của tôi
+              </h1>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                Quản lý thông tin tài khoản, bảo mật và liên kết nhanh.
+              </p>
+              <div className="mt-3 h-1 w-8 rounded-full bg-violet-600" />
+            </section>
 
-          <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
-            <div className="min-h-[504px] rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-              <SectionTitle icon={UserCircle2} title="Thông tin tài khoản" />
+            <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-h-[504px] rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+                <SectionTitle icon={UserCircle2} title="Thông tin tài khoản" />
 
-              <div className="mt-7 flex items-center gap-5">
-                <div className="relative flex size-20 items-center justify-center rounded-full bg-violet-100 text-violet-600 ring-8 ring-violet-50">
-                  <UserCircle2 className="size-14" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-black text-slate-900">{username}</p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {(user?.roles?.length ? user.roles : ['USER']).map((role) => (
-                      <Badge
-                        key={role}
-                        variant="secondary"
-                        className="gap-1 rounded-md bg-violet-100 px-2 text-[10px] font-black text-violet-700"
-                      >
-                        <ShieldCheck className="size-3" />
-                        {role}
-                      </Badge>
-                    ))}
+                <div className="mt-7 flex items-center gap-5">
+                  <div className="relative flex size-20 items-center justify-center rounded-full bg-violet-100 text-violet-600 ring-8 ring-violet-50">
+                    <UserCircle2 className="size-14" />
                   </div>
-                </div>
-              </div>
-
-              <div className="mt-7 divide-y divide-slate-100 border-t border-slate-200">
-                <AccountRow
-                  icon={AtSign}
-                  label="Tên đăng nhập (Username)"
-                  value={username}
-                  action="Đổi"
-                />
-                <AccountRow icon={Mail} label="Email" value={username} action="Đổi" />
-                <AccountRow
-                  icon={Copy}
-                  label="Mã người dùng"
-                  value={userId}
-                  action="Sao chép"
-                  mono
-                  onAction={() => void navigator.clipboard?.writeText(String(userId))}
-                />
-                <AccountRow
-                  icon={CalendarCheck}
-                  label="Ngày tham gia"
-                  value="15/04/2024"
-                />
-              </div>
-
-              <div className="mt-5 flex items-center justify-between gap-4 overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-500">
-                    <Shield className="size-5" />
-                  </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-black text-orange-700">
-                      Giữ tài khoản của bạn luôn an toàn
+                    <p className="truncate text-lg font-black text-slate-900">
+                      {username}
                     </p>
-                    <p className="mt-1 text-xs leading-5 font-medium text-slate-600">
-                      Để bảo vệ tài khoản, vui lòng không chia sẻ email, mật khẩu hoặc mã
-                      xác thực với bất kỳ ai.
-                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {(user?.roles?.length ? user.roles : ['USER']).map((role) => (
+                        <Badge
+                          key={role}
+                          variant="secondary"
+                          className="gap-1 rounded-md bg-violet-100 px-2 text-[10px] font-black text-violet-700"
+                        >
+                          <ShieldCheck className="size-3" />
+                          {role}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-600 sm:flex">
-                  <LockKeyhole className="size-8" />
+
+                <div className="mt-7 divide-y divide-slate-100 border-t border-slate-200">
+                  <AccountRow
+                    icon={AtSign}
+                    label="Tên đăng nhập (Username)"
+                    value={username}
+                    action="Đổi"
+                  />
+                  <AccountRow icon={Mail} label="Email" value={username} action="Đổi" />
+                  <AccountRow
+                    icon={Copy}
+                    label="Mã người dùng"
+                    value={userId}
+                    action="Sao chép"
+                    mono
+                    onAction={() => void navigator.clipboard?.writeText(String(userId))}
+                  />
+                  <AccountRow
+                    icon={CalendarCheck}
+                    label="Ngày tham gia"
+                    value="15/04/2024"
+                  />
+                </div>
+
+                <div className="mt-5 flex items-center justify-between gap-4 overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-500">
+                      <Shield className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-orange-700">
+                        Giữ tài khoản của bạn luôn an toàn
+                      </p>
+                      <p className="mt-1 text-xs leading-5 font-medium text-slate-600">
+                        Để bảo vệ tài khoản, vui lòng không chia sẻ email, mật khẩu hoặc
+                        mã xác thực với bất kỳ ai.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-600 sm:flex">
+                    <LockKeyhole className="size-8" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-5">
-              <div className="min-h-[336px] rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-                <SectionTitle icon={KeyRound} title="Liên kết nhanh" />
-                <div className="mt-6 space-y-3">
-                  <QuickLink
-                    to="/customer/book"
-                    icon={CalendarCheck}
-                    title="Đặt lịch khám"
-                    description="Đặt lịch khám mới cho thú cưng"
-                  />
-                  <QuickLink
-                    to="/customer/visits"
-                    icon={CalendarCheck}
-                    title="Lịch sử khám"
-                    description="Xem lịch sử khám và kết quả"
-                  />
-                  <QuickLink
-                    to="/customer/pets"
-                    icon={PawPrint}
-                    title="Thú cưng của tôi"
-                    description="Quản lý thông tin thú cưng"
-                  />
-                </div>
+              <div className="space-y-5">
+                <div className="min-h-[336px] rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+                  <SectionTitle icon={KeyRound} title="Liên kết nhanh" />
+                  <div className="mt-6 space-y-3">
+                    <QuickLink
+                      to="/customer/book"
+                      icon={CalendarCheck}
+                      title="Đặt lịch khám"
+                      description="Đặt lịch khám mới cho thú cưng"
+                    />
+                    <QuickLink
+                      to="/customer/visits"
+                      icon={CalendarCheck}
+                      title="Lịch sử khám"
+                      description="Xem lịch sử khám và kết quả"
+                    />
+                    <QuickLink
+                      to="/customer/pets"
+                      icon={PawPrint}
+                      title="Thú cưng của tôi"
+                      description="Quản lý thông tin thú cưng"
+                    />
+                  </div>
 
-                <Button
-                  className="mt-5 h-14 w-full justify-between rounded-lg bg-rose-500 px-5 font-black shadow-lg shadow-rose-100 hover:bg-rose-600"
-                  disabled={logoutMutation.isPending}
-                  onClick={() => logoutMutation.mutate()}
-                >
-                  <span className="flex items-center gap-3">
-                    <LogOut className="size-5" />
-                    <span className="text-left">
-                      <span className="block text-sm">Đăng xuất</span>
-                      <span className="block text-xs font-medium text-white/80">
-                        {logoutMutation.isPending
-                          ? 'Đang thoát tài khoản'
-                          : 'Thoát khỏi tài khoản hiện tại'}
+                  <Button
+                    className="mt-5 h-14 w-full justify-between rounded-lg bg-rose-500 px-5 font-black shadow-lg shadow-rose-100 hover:bg-rose-600"
+                    disabled={logoutMutation.isPending}
+                    onClick={() => logoutMutation.mutate()}
+                  >
+                    <span className="flex items-center gap-3">
+                      <LogOut className="size-5" />
+                      <span className="text-left">
+                        <span className="block text-sm">Đăng xuất</span>
+                        <span className="block text-xs font-medium text-white/80">
+                          {logoutMutation.isPending
+                            ? 'Đang thoát tài khoản'
+                            : 'Thoát khỏi tài khoản hiện tại'}
+                        </span>
                       </span>
                     </span>
-                  </span>
-                  <ChevronRight className="size-5" />
-                </Button>
-              </div>
+                    <ChevronRight className="size-5" />
+                  </Button>
+                </div>
 
-              <div className="flex min-h-[94px] items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-700 shadow-[0_12px_35px_rgba(16,185,129,0.08)]">
-                <div className="flex items-center gap-3">
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-white text-emerald-600">
-                    <ShieldCheck className="size-5" />
-                  </span>
+                <div className="flex min-h-[94px] items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-700 shadow-[0_12px_35px_rgba(16,185,129,0.08)]">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-9 items-center justify-center rounded-lg bg-white text-emerald-600">
+                      <ShieldCheck className="size-5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-black">Tài khoản của bạn được bảo vệ</p>
+                      <p className="mt-1 text-xs font-medium text-slate-600">
+                        Lần đăng nhập cuối: 09:32 AM, 23/05/2026
+                      </p>
+                      <p className="text-xs font-medium text-slate-600">
+                        Thiết bị: Chrome trên Windows
+                      </p>
+                    </div>
+                  </div>
+                  <CheckCircle2 className="size-5 shrink-0" />
+                </div>
+              </div>
+            </section>
+
+            <section className="relative min-h-[112px] overflow-hidden rounded-2xl border border-violet-100 bg-violet-50 px-6 py-5 shadow-[0_18px_45px_rgba(124,58,237,0.08)]">
+              <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-5">
+                  <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm">
+                    <CalendarCheck className="size-8" />
+                  </div>
                   <div>
-                    <p className="text-sm font-black">Tài khoản của bạn được bảo vệ</p>
-                    <p className="mt-1 text-xs font-medium text-slate-600">
-                      Lần đăng nhập cuối: 09:32 AM, 23/05/2026
-                    </p>
-                    <p className="text-xs font-medium text-slate-600">
-                      Thiết bị: Chrome trên Windows
+                    <h2 className="text-xl font-black text-slate-950">
+                      Đặt lịch khám dễ dàng
+                    </h2>
+                    <p className="mt-2 max-w-md text-sm leading-6 font-medium text-slate-600">
+                      Chăm sóc sức khỏe thú cưng chưa bao giờ đơn giản đến thế!
                     </p>
                   </div>
                 </div>
-                <CheckCircle2 className="size-5 shrink-0" />
+                <Button
+                  asChild
+                  className="rounded-lg bg-violet-600 px-5 font-bold shadow-lg shadow-violet-200 hover:bg-violet-700"
+                >
+                  <Link to="/customer/book">Đặt lịch ngay</Link>
+                </Button>
               </div>
-            </div>
-          </section>
-
-          <section className="relative min-h-[112px] overflow-hidden rounded-2xl border border-violet-100 bg-violet-50 px-6 py-5 shadow-[0_18px_45px_rgba(124,58,237,0.08)]">
-            <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-5">
-                <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm">
-                  <CalendarCheck className="size-8" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-slate-950">
-                    Đặt lịch khám dễ dàng
-                  </h2>
-                  <p className="mt-2 max-w-md text-sm leading-6 font-medium text-slate-600">
-                    Chăm sóc sức khỏe thú cưng chưa bao giờ đơn giản đến thế!
-                  </p>
-                </div>
-              </div>
-              <Button
-                asChild
-                className="rounded-lg bg-violet-600 px-5 font-bold shadow-lg shadow-violet-200 hover:bg-violet-700"
-              >
-                <Link to="/customer/book">Đặt lịch ngay</Link>
-              </Button>
-            </div>
-            <img
-              src={petHero}
-              alt=""
-              className="pointer-events-none absolute right-14 bottom-0 hidden h-28 w-72 rounded-t-[36px] object-cover object-top opacity-90 mix-blend-multiply lg:block"
-            />
-          </section>
+              <img
+                src={petHero}
+                alt=""
+                className="pointer-events-none absolute right-14 bottom-0 hidden h-28 w-72 rounded-t-[36px] object-cover object-top opacity-90 mix-blend-multiply lg:block"
+              />
+            </section>
+          </div>
         </div>
       </div>
     </div>

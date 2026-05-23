@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Copy,
   Edit3,
   HeartPulse,
   ListFilter,
@@ -19,6 +20,8 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  SlidersHorizontal,
+  Trash2,
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
@@ -42,6 +45,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   useCancelVisit,
   useSearchVisits,
@@ -82,12 +101,22 @@ const doctorNames = [
 ];
 
 const specialties = ['Thú y tổng quát', 'Nội khoa', 'Da liễu', 'Tiêm phòng'];
+const PAGE_SIZE = 4;
+
+type MonthFilter = 'all' | 'current' | 'next' | 'past';
 
 function CustomerVisitsPage() {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<SearchVisitsStatus | typeof ALL>(ALL);
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [monthFilter, setMonthFilter] = useState<MonthFilter>('all');
+  const [doctorFilter, setDoctorFilter] = useState<string>(ALL);
+  const [feeFilter, setFeeFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [page, setPage] = useState(0);
+  const [detailTarget, setDetailTarget] = useState<VisitResponse | null>(null);
+  const [rescheduleTarget, setRescheduleTarget] = useState<VisitResponse | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<VisitResponse | null>(null);
 
   const params: SearchVisitsParams = {
@@ -116,9 +145,15 @@ function CustomerVisitsPage() {
   const visits = useMemo(() => listQuery.data?.content ?? [], [listQuery.data?.content]);
   const filteredVisits = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    if (!keyword) return visits;
+    return visits.filter((visit, index) => {
+      if (!matchesMonthFilter(visit, monthFilter)) return false;
+      if (doctorFilter !== ALL && doctorNames[index % doctorNames.length] !== doctorFilter) {
+        return false;
+      }
+      if (feeFilter === 'paid' && !hasVisitFee(visit)) return false;
+      if (feeFilter === 'unpaid' && hasVisitFee(visit)) return false;
+      if (!keyword) return true;
 
-    return visits.filter((visit) => {
       const text = [
         visit.reason,
         visit.diagnosis,
@@ -133,7 +168,18 @@ function CustomerVisitsPage() {
 
       return text.includes(keyword);
     });
-  }, [search, visits]);
+  }, [doctorFilter, feeFilter, monthFilter, search, visits]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [doctorFilter, feeFilter, monthFilter, search, sortOrder, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredVisits.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const visibleVisits = filteredVisits.slice(
+    currentPage * PAGE_SIZE,
+    currentPage * PAGE_SIZE + PAGE_SIZE,
+  );
 
   const counts = {
     scheduled: visits.filter((v) => v.status === VisitResponseStatus.SCHEDULED).length,
@@ -166,7 +212,17 @@ function CustomerVisitsPage() {
             <div className="min-w-0 space-y-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-bold text-slate-950">Charlie</h2>
-                <Edit3 className="size-4 text-primary" />
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-primary hover:bg-primary/10"
+                  title="Chỉnh sửa hồ sơ thú cưng"
+                >
+                  <Link to="/customer/pets">
+                    <Edit3 className="size-4" />
+                  </Link>
+                </Button>
               </div>
               <div className="flex flex-wrap gap-2">
                 <PetPill icon={PawPrint} label="Chó" />
@@ -187,6 +243,7 @@ function CustomerVisitsPage() {
           caption="Cuộc hẹn"
           action="Xem chi tiết"
           color="violet"
+          onClick={() => setStatusFilter(SearchVisitsStatus.SCHEDULED)}
         />
         <MetricCard
           icon={HeartPulse}
@@ -195,6 +252,7 @@ function CustomerVisitsPage() {
           caption="Lượt khám"
           action="Xem lịch sử"
           color="emerald"
+          onClick={() => setStatusFilter(SearchVisitsStatus.COMPLETED)}
         />
         <MetricCard
           icon={ShieldCheck}
@@ -203,6 +261,7 @@ function CustomerVisitsPage() {
           caption="Đang khám"
           action="Theo dõi"
           color="orange"
+          onClick={() => setStatusFilter(SearchVisitsStatus.IN_PROGRESS)}
         />
         <MetricCard
           icon={Bell}
@@ -211,6 +270,7 @@ function CustomerVisitsPage() {
           caption="Nhắc nhở"
           action="Xem chi tiết"
           color="rose"
+          onClick={() => setStatusFilter(SearchVisitsStatus.CANCELLED)}
         />
       </section>
 
@@ -245,12 +305,18 @@ function CustomerVisitsPage() {
               </SelectContent>
             </Select>
 
-            <Select value="month">
+            <Select
+              value={monthFilter}
+              onValueChange={(v) => setMonthFilter(v as MonthFilter)}
+            >
               <SelectTrigger className="h-10 w-[140px] border-slate-200 bg-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="month">Tháng này</SelectItem>
+                <SelectItem value="all">Tất cả tháng</SelectItem>
+                <SelectItem value="current">Tháng này</SelectItem>
+                <SelectItem value="next">Tháng tới</SelectItem>
+                <SelectItem value="past">Đã qua</SelectItem>
               </SelectContent>
             </Select>
 
@@ -264,7 +330,13 @@ function CustomerVisitsPage() {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" size="icon" className="border-slate-200">
+            <Button
+              variant="outline"
+              size="icon"
+              className="border-slate-200"
+              onClick={() => setAdvancedOpen(true)}
+              title="Lọc nâng cao"
+            >
               <ListFilter className="size-4" />
             </Button>
           </div>
@@ -278,11 +350,13 @@ function CustomerVisitsPage() {
           ) : filteredVisits.length === 0 ? (
             <EmptyState />
           ) : (
-            filteredVisits.map((visit, index) => (
+            visibleVisits.map((visit, index) => (
               <VisitRow
                 key={visit.id ?? index}
                 visit={visit}
-                index={index}
+                index={currentPage * PAGE_SIZE + index}
+                onDetail={() => setDetailTarget(visit)}
+                onReschedule={() => setRescheduleTarget(visit)}
                 onCancel={() => setCancelTarget(visit)}
               />
             ))
@@ -291,21 +365,75 @@ function CustomerVisitsPage() {
 
         {filteredVisits.length > 0 ? (
           <div className="flex items-center justify-center gap-3 border-t border-slate-100 py-3">
-            <Button variant="outline" size="icon-xs" className="border-slate-200 text-slate-400">
+            <Button
+              variant="outline"
+              size="icon-xs"
+              className="border-slate-200 text-slate-400"
+              disabled={currentPage === 0}
+              onClick={() => setPage((value) => Math.max(0, value - 1))}
+            >
               <ChevronLeft className="size-3" />
             </Button>
-            <span className="grid size-7 place-items-center rounded-md bg-primary text-xs font-bold text-white shadow-sm">
-              1
-            </span>
-            <span className="grid size-7 place-items-center rounded-md text-xs font-semibold text-slate-500">
-              2
-            </span>
-            <Button variant="outline" size="icon-xs" className="border-slate-200 text-slate-400">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setPage(i)}
+                className={cn(
+                  'grid size-7 place-items-center rounded-md text-xs font-bold',
+                  i === currentPage
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-slate-500 hover:bg-slate-100',
+                )}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <Button
+              variant="outline"
+              size="icon-xs"
+              className="border-slate-200 text-slate-400"
+              disabled={currentPage >= totalPages - 1}
+              onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}
+            >
               <ChevronRight className="size-3" />
             </Button>
           </div>
         ) : null}
       </section>
+
+      <VisitDetailDialog
+        visit={detailTarget}
+        onOpenChange={(open) => !open && setDetailTarget(null)}
+        onReschedule={(visit) => setRescheduleTarget(visit)}
+        onCancel={(visit) => setCancelTarget(visit)}
+      />
+
+      <RescheduleDialog
+        visit={rescheduleTarget}
+        onOpenChange={(open) => !open && setRescheduleTarget(null)}
+        onCancelOldVisit={(visit) => setCancelTarget(visit)}
+      />
+
+      <AdvancedFilterDialog
+        open={advancedOpen}
+        onOpenChange={setAdvancedOpen}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        monthFilter={monthFilter}
+        setMonthFilter={setMonthFilter}
+        doctorFilter={doctorFilter}
+        setDoctorFilter={setDoctorFilter}
+        feeFilter={feeFilter}
+        setFeeFilter={setFeeFilter}
+        onReset={() => {
+          setStatusFilter(ALL);
+          setMonthFilter('all');
+          setDoctorFilter(ALL);
+          setFeeFilter('all');
+          setSearch('');
+        }}
+      />
 
       <AlertDialog
         open={cancelTarget !== null}
@@ -346,6 +474,7 @@ function MetricCard({
   caption,
   action,
   color,
+  onClick,
 }: {
   icon: LucideIcon;
   label: string;
@@ -353,6 +482,7 @@ function MetricCard({
   caption: string;
   action: string;
   color: 'violet' | 'emerald' | 'orange' | 'rose';
+  onClick: () => void;
 }) {
   const styles = {
     violet: {
@@ -401,7 +531,11 @@ function MetricCard({
             {value}
           </div>
           <p className="mt-2 text-xs font-semibold text-slate-500">{caption}</p>
-          <button type="button" className={cn('mt-3 text-xs font-bold', styles.text)}>
+          <button
+            type="button"
+            onClick={onClick}
+            className={cn('mt-3 text-xs font-bold hover:underline', styles.text)}
+          >
             {action} <span aria-hidden="true">→</span>
           </button>
         </div>
@@ -413,10 +547,14 @@ function MetricCard({
 function VisitRow({
   visit,
   index,
+  onDetail,
+  onReschedule,
   onCancel,
 }: {
   visit: VisitResponse;
   index: number;
+  onDetail: () => void;
+  onReschedule: () => void;
   onCancel: () => void;
 }) {
   const date = visit.scheduledAt ? new Date(visit.scheduledAt) : null;
@@ -485,21 +623,369 @@ function VisitRow({
               variant="outline"
               size="sm"
               className="border-primary/40 px-4 text-xs font-bold text-primary hover:bg-primary/10"
+              onClick={onDetail}
             >
               Xem chi tiết
             </Button>
             {canCancel ? (
-              <Button size="sm" className="px-5 text-xs font-bold" onClick={onCancel}>
+              <Button size="sm" className="px-5 text-xs font-bold" onClick={onReschedule}>
                 Đổi lịch
               </Button>
             ) : null}
-            <Button variant="ghost" size="icon-sm" className="text-slate-500">
-              <MoreVertical className="size-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" className="text-slate-500">
+                  <MoreVertical className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={onDetail}>
+                  <CalendarCheck className="size-4" />
+                  Xem hồ sơ khám
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onReschedule} disabled={!canCancel}>
+                  <Calendar className="size-4" />
+                  Đổi lịch
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(`#${visit.id ?? ''}`);
+                    toast.success('Đã sao chép mã lịch');
+                  }}
+                >
+                  <Copy className="size-4" />
+                  Sao chép mã
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={onCancel}
+                  disabled={!canCancel}
+                >
+                  <Trash2 className="size-4" />
+                  Huỷ lịch
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function VisitDetailDialog({
+  visit,
+  onOpenChange,
+  onReschedule,
+  onCancel,
+}: {
+  visit: VisitResponse | null;
+  onOpenChange: (open: boolean) => void;
+  onReschedule: (visit: VisitResponse) => void;
+  onCancel: (visit: VisitResponse) => void;
+}) {
+  const date = visit?.scheduledAt ? new Date(visit.scheduledAt) : null;
+  const status = visit?.status ?? VisitResponseStatus.SCHEDULED;
+  const canCancel =
+    status === VisitResponseStatus.SCHEDULED ||
+    status === VisitResponseStatus.IN_PROGRESS;
+
+  return (
+    <Dialog open={visit !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl rounded-xl p-0">
+        <DialogHeader className="border-b border-slate-100 p-6">
+          <DialogTitle className="text-2xl font-extrabold text-slate-950">
+            Chi tiết lịch khám #{visit?.id}
+          </DialogTitle>
+          <DialogDescription>
+            Thông tin lịch hẹn, bác sĩ phụ trách và kết quả khám.
+          </DialogDescription>
+        </DialogHeader>
+
+        {visit ? (
+          <div className="space-y-5 p-6">
+            <div className="flex items-start justify-between gap-4 rounded-xl bg-violet-50 p-4">
+              <div className="flex items-center gap-3">
+                <div className="grid size-14 place-items-center rounded-full bg-white text-3xl shadow-sm">
+                  🐶
+                </div>
+                <div>
+                  <p className="text-lg font-extrabold text-slate-950">
+                    {titleForVisit(visit)}
+                  </p>
+                  <p className="text-sm font-semibold text-slate-500">
+                    Charlie • Pet #{visit.petId ?? '-'}
+                  </p>
+                </div>
+              </div>
+              <StatusPill status={status} />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <InfoTile icon={Calendar} label="Ngày khám" value={date ? fullDateFmt.format(date) : '-'} />
+              <InfoTile icon={Clock3} label="Giờ khám" value={timeRange(date)} />
+              <InfoTile icon={UserRound} label="Bác sĩ" value={`BS #${visit.vetId ?? '-'}`} />
+              <InfoTile icon={MapPin} label="Chi nhánh" value="PetCare Clinic - Cầu Giấy" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <ResultBlock label="Lý do khám" value={visit.reason || 'Chưa cập nhật'} />
+              <ResultBlock label="Chẩn đoán" value={visit.diagnosis || 'Chưa cập nhật'} />
+              <ResultBlock label="Điều trị" value={visit.treatment || 'Chưa cập nhật'} />
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Phí khám
+              </p>
+              <p className="mt-1 text-2xl font-extrabold text-primary">
+                {formatVisitFee(visit)}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        <DialogFooter className="border-t border-slate-100 p-6">
+          <DialogClose asChild>
+            <Button variant="outline">Đóng</Button>
+          </DialogClose>
+          {visit && canCancel ? (
+            <>
+              <Button variant="outline" onClick={() => onCancel(visit)}>
+                Huỷ lịch
+              </Button>
+              <Button onClick={() => onReschedule(visit)}>Đổi lịch</Button>
+            </>
+          ) : null}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RescheduleDialog({
+  visit,
+  onOpenChange,
+  onCancelOldVisit,
+}: {
+  visit: VisitResponse | null;
+  onOpenChange: (open: boolean) => void;
+  onCancelOldVisit: (visit: VisitResponse) => void;
+}) {
+  const date = visit?.scheduledAt ? new Date(visit.scheduledAt) : null;
+
+  return (
+    <Dialog open={visit !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-extrabold text-slate-950">
+            Đổi lịch khám
+          </DialogTitle>
+          <DialogDescription>
+            Hệ thống hiện hỗ trợ đặt lịch mới và huỷ lịch cũ để hoàn tất đổi lịch.
+          </DialogDescription>
+        </DialogHeader>
+
+        {visit ? (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Lịch hiện tại
+              </p>
+              <p className="mt-2 font-extrabold text-slate-950">
+                {titleForVisit(visit)}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                {date ? fullDateFmt.format(date) : '-'} • {timeRange(date)}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <InfoTile icon={Calendar} label="Bước 1" value="Đặt lịch mới ở form đặt lịch" />
+              <InfoTile icon={Trash2} label="Bước 2" value="Huỷ lịch cũ sau khi xác nhận" />
+            </div>
+          </div>
+        ) : null}
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Để sau</Button>
+          </DialogClose>
+          {visit ? (
+            <Button variant="outline" onClick={() => onCancelOldVisit(visit)}>
+              Huỷ lịch cũ
+            </Button>
+          ) : null}
+          <Button asChild>
+            <Link to="/customer/book">Đặt lịch mới</Link>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AdvancedFilterDialog({
+  open,
+  onOpenChange,
+  statusFilter,
+  setStatusFilter,
+  monthFilter,
+  setMonthFilter,
+  doctorFilter,
+  setDoctorFilter,
+  feeFilter,
+  setFeeFilter,
+  onReset,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  statusFilter: SearchVisitsStatus | typeof ALL;
+  setStatusFilter: (value: SearchVisitsStatus | typeof ALL) => void;
+  monthFilter: MonthFilter;
+  setMonthFilter: (value: MonthFilter) => void;
+  doctorFilter: string;
+  setDoctorFilter: (value: string) => void;
+  feeFilter: 'all' | 'paid' | 'unpaid';
+  setFeeFilter: (value: 'all' | 'paid' | 'unpaid') => void;
+  onReset: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-xl font-extrabold text-slate-950">
+            <SlidersHorizontal className="size-5 text-primary" />
+            Lọc nâng cao
+          </DialogTitle>
+          <DialogDescription>
+            Thu hẹp lịch khám theo trạng thái, thời gian, bác sĩ và thanh toán.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FilterField label="Trạng thái">
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as SearchVisitsStatus | typeof ALL)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Tất cả</SelectItem>
+                <SelectItem value={SearchVisitsStatus.SCHEDULED}>Sắp tới</SelectItem>
+                <SelectItem value={SearchVisitsStatus.IN_PROGRESS}>Đang khám</SelectItem>
+                <SelectItem value={SearchVisitsStatus.COMPLETED}>Đã hoàn thành</SelectItem>
+                <SelectItem value={SearchVisitsStatus.CANCELLED}>Đã huỷ</SelectItem>
+              </SelectContent>
+            </Select>
+          </FilterField>
+
+          <FilterField label="Thời gian">
+            <Select value={monthFilter} onValueChange={(v) => setMonthFilter(v as MonthFilter)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả tháng</SelectItem>
+                <SelectItem value="current">Tháng này</SelectItem>
+                <SelectItem value="next">Tháng tới</SelectItem>
+                <SelectItem value="past">Đã qua</SelectItem>
+              </SelectContent>
+            </Select>
+          </FilterField>
+
+          <FilterField label="Bác sĩ">
+            <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>Tất cả bác sĩ</SelectItem>
+                {doctorNames.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
+
+          <FilterField label="Thanh toán">
+            <Select
+              value={feeFilter}
+              onValueChange={(v) => setFeeFilter(v as 'all' | 'paid' | 'unpaid')}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="paid">Đã có phí khám</SelectItem>
+                <SelectItem value="unpaid">Chưa phát sinh phí</SelectItem>
+              </SelectContent>
+            </Select>
+          </FilterField>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onReset}>
+            Xoá bộ lọc
+          </Button>
+          <DialogClose asChild>
+            <Button>Áp dụng</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function InfoTile({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+        <Icon className="size-4 text-primary" />
+        {label}
+      </div>
+      <p className="mt-2 text-sm font-bold text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function ResultBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200 p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-2 min-h-12 text-sm font-semibold leading-6 text-slate-800">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function FilterField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="text-sm font-bold text-slate-700">{label}</span>
+      {children}
+    </label>
   );
 }
 
@@ -581,6 +1067,40 @@ function titleForVisit(visit: VisitResponse) {
   if (visit.status === VisitResponseStatus.CANCELLED) return 'Khám da liễu';
   if (visit.status === VisitResponseStatus.IN_PROGRESS) return 'Tái khám sau điều trị';
   return 'Khám tổng quát định kỳ';
+}
+
+function hasVisitFee(visit: VisitResponse) {
+  return typeof visit.fee === 'number' && Number.isFinite(visit.fee);
+}
+
+function formatVisitFee(visit: VisitResponse) {
+  if (!hasVisitFee(visit)) return 'Chưa phát sinh';
+
+  return visit.fee!.toLocaleString('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  });
+}
+
+function matchesMonthFilter(visit: VisitResponse, filter: MonthFilter) {
+  if (filter === 'all') return true;
+  if (!visit.scheduledAt) return false;
+
+  const date = new Date(visit.scheduledAt);
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  if (filter === 'current') {
+    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  }
+
+  if (filter === 'next') {
+    const next = new Date(currentYear, currentMonth + 1, 1);
+    return date.getMonth() === next.getMonth() && date.getFullYear() === next.getFullYear();
+  }
+
+  return date.getTime() < now.getTime();
 }
 
 function timelineDot(status: VisitResponseStatus) {
