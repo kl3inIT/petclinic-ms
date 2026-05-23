@@ -13,7 +13,7 @@ import com.mss301.petclinic.visits.model.VisitStatus;
 
 public interface VisitService {
 
-    VisitResponse book(BookVisitRequest request, UUID currentUserId);
+    VisitResponse book(BookVisitRequest request, UUID currentUserId, Long currentCustomerId);
 
     VisitResponse findById(Long id);
 

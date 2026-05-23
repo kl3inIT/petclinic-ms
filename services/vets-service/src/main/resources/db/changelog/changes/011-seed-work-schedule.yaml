@@ -1,0 +1,24 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 011-001-seed-default-work-schedule
+      author: mss301
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM vets.vet_work_schedule
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO vets.vet_work_schedule (vet_id, workday, work_hour)
+              SELECT v.id, d.workday, h.work_hour
+              FROM vets.vets v
+              CROSS JOIN (
+                VALUES ('MONDAY'), ('TUESDAY'), ('WEDNESDAY'), ('THURSDAY'), ('FRIDAY')
+              ) AS d(workday)
+              CROSS JOIN (
+                VALUES
+                  ('HOUR_8_9'), ('HOUR_9_10'), ('HOUR_10_11'), ('HOUR_11_12'),
+                  ('HOUR_13_14'), ('HOUR_14_15'), ('HOUR_15_16'), ('HOUR_16_17')
+              ) AS h(work_hour)

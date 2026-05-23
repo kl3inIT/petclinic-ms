@@ -100,11 +100,11 @@ function BookVisitPage() {
     !!values.scheduledAt &&
     new Date(values.scheduledAt).getTime() > Date.now();
 
-  // Min datetime-local: bây giờ + 1 giờ.
+  // Min datetime-local: làm tròn lên đầu giờ tiếp theo, tối thiểu sau 1 giờ.
   const minDateTime = useMemo(() => {
     const d = new Date(Date.now() + 60 * 60 * 1000);
-    d.setSeconds(0, 0);
-    // Trừ timezone offset để khớp datetime-local (local time, no zone).
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
     const tzOffsetMs = d.getTimezoneOffset() * 60 * 1000;
     return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 16);
   }, []);
@@ -258,6 +258,7 @@ function BookVisitPage() {
                         id={field.name}
                         type="datetime-local"
                         min={minDateTime}
+                        step={3600}
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}

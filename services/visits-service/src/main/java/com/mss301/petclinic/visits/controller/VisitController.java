@@ -59,7 +59,7 @@ public class VisitController {
     @Operation(summary = "Đặt visit cho pet với vet vào giờ xác định")
     public VisitResponse bookVisit(@Valid @RequestBody BookVisitRequest request,
                                     @AuthenticationPrincipal Jwt jwt) {
-        return service.book(request, currentUserId(jwt));
+        return service.book(request, currentUserId(jwt), currentCustomerId(jwt));
     }
 
     @GetMapping
@@ -108,6 +108,17 @@ public class VisitController {
 
     private static UUID currentUserId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
+    }
+
+    private static Long currentCustomerId(Jwt jwt) {
+        Object customerId = jwt.getClaim("customerId");
+        if (customerId instanceof Number number) {
+            return number.longValue();
+        }
+        if (customerId instanceof String value && !value.isBlank()) {
+            return Long.valueOf(value);
+        }
+        return null;
     }
 
     private static boolean isPrivileged(Jwt jwt) {
