@@ -18,17 +18,34 @@ spring:
       moderation: none
     mcp:
       server:
-        # STREAMABLE = stateless HTTP (modern, kế thừa SSE — recommended). Endpoint
-        # mặc định: /mcp (override qua streamable-http.mcp-endpoint).
-        protocol: STREAMABLE
+        # SEP-1442 (Spring IO 2026 keynote): "Make MCP Stateless (by default)".
+        # STATELESS protocol = Streamable HTTP không cần Mcp-Session-Id → mỗi request
+        # độc lập, load balancer rải random, KHÔNG cần sticky session. Scale ngang
+        # thoải mái không phải lo session affinity.
+        #
+        # Trade-off: KHÔNG dùng được sampling/elicitation từ server (cần persistent
+        # bi-directional connection). Petclinic chỉ expose tool/resource/prompt → OK.
+        protocol: STATELESS
         name: petclinic-mcp-server
-        version: 0.1.0
+        version: 0.2.0
         type: SYNC                # Sync mode — blocking + virtual threads stack toàn project
+        # Annotation scanner — auto-pickup @McpTool/@McpResource/@McpPrompt beans
+        # mà không cần khai báo ToolCallbackProvider thủ công (Phase 12a legacy).
+        annotation-scanner:
+          enabled: true
         instructions: |
-          Petclinic MCP server. Tools exposed:
-          - Customers domain (owners + pets): listOwners, getOwner, getPet
-          - Vets domain: listVets, getVet, findVetsBySpecialty
-          - Visits domain: searchVisits, getVisit (read-only — booking/cancel cần JWT, dời Phase 12b)
+          Petclinic MCP server (read-only). 3 component categories:
+          - TOOLS (model-controlled): listOwners, getOwner, getPet, listVets, getVet,
+            findVetsBySpecialty, searchVisits, getVisit
+          - RESOURCES (application-controlled): pet-care FAQ, vet specialty catalog
+          - PROMPTS (user-controlled): visit-summary template, owner-contact template
+
+# MCP-specific properties
+petclinic:
+  mcp:
+    # URI public của MCP server — dùng trong /.well-known/oauth-protected-resource metadata.
+    # Override env override khi prod public hostname khác.
+    resource-uri: ${MCP_RESOURCE_URI:http://localhost:8187/mcp}
 
 management:
   endpoints:

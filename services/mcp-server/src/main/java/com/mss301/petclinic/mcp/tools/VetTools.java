@@ -4,8 +4,8 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.ai.mcp.annotation.McpTool;
+import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
 import com.mss301.petclinic.mcp.client.VetsClient;
@@ -23,14 +23,14 @@ public class VetTools {
         this.vetsClient = vetsClient;
     }
 
-    @Tool(description = """
+    @McpTool(description = """
             List all veterinarians with their specialties. Use when the user asks
             'what vets are available?' or wants to browse the team.
             """)
     public PageResult<VetSummary> listVets(
-            @ToolParam(description = "Page number, 0-based. Default 0.", required = false)
+            @McpToolParam(description = "Page number, 0-based. Default 0.", required = false)
             Integer page,
-            @ToolParam(description = "Page size. Default 20, max 50.", required = false)
+            @McpToolParam(description = "Page size. Default 20, max 50.", required = false)
             Integer size
     ) {
         int pageNum = page == null ? 0 : page;
@@ -39,24 +39,24 @@ public class VetTools {
         return vetsClient.listVets(pageNum, pageSize);
     }
 
-    @Tool(description = """
+    @McpTool(description = """
             Get full details of a specific veterinarian by ID, including specialties.
             """)
     public VetSummary getVet(
-            @ToolParam(description = "The numeric vet ID.")
+            @McpToolParam(description = "The numeric vet ID.")
             Long vetId
     ) {
         log.info("Tool getVet(vetId={})", vetId);
         return vetsClient.getVet(vetId);
     }
 
-    @Tool(description = """
+    @McpTool(description = """
             Find vets that have a given specialty (case-insensitive partial match).
             Example specialties: 'radiology', 'surgery', 'dentistry'. Returns full
             list (not paginated) — specialty pool is small.
             """)
     public List<VetSummary> findVetsBySpecialty(
-            @ToolParam(description = "Specialty keyword, e.g. 'surgery'.")
+            @McpToolParam(description = "Specialty keyword, e.g. 'surgery'.")
             String specialty
     ) {
         log.info("Tool findVetsBySpecialty(specialty={})", specialty);

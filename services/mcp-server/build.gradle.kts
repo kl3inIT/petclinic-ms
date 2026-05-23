@@ -25,6 +25,10 @@ dependencies {
     // common-clients ship @LoadBalanced RestClient.Builder + JwtForwardInterceptor → reuse.
     implementation(project(":shared:common-clients"))
     implementation(project(":shared:common-web"))
+    // MCP spec 2025-11-25: MCP server = OAuth 2.1 Resource Server. JWT bearer + JWKS từ
+    // auth-service. common-security cung cấp JwtDecoder + JwtAuthenticationConverter.
+    // McpServer-specific SecurityFilterChain override default chain ở common-security.
+    implementation(project(":shared:common-security"))
 
     // Tracing — span của tool call sẽ link với gateway → visits → customers traces.
     implementation(libs.micrometer.tracing.bridge.otel)

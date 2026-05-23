@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>petclinic-ms — MCP Server (Spring IO 2026 best practices)</title>
+<style>
+  :root {
+    --bg: #0f172a; --bg-card: #1e293b; --bg-code: #0b1220;
+    --fg: #e2e8f0; --fg-dim: #94a3b8;
+    --accent: #38bdf8; --accent-2: #a78bfa; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --border: #334155;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.6; }
+  body { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 2.4em; margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 48px; }
+  h3 { color: var(--accent-2); margin-top: 28px; }
+  h4 { color: var(--fg-dim); margin-top: 20px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85em; }
+  .lede { color: var(--fg-dim); font-size: 1.1em; margin: 0 0 32px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; }
+  .card.ok { border-left: 4px solid var(--ok); }
+  .card.warn { border-left: 4px solid var(--warn); }
+  .card.accent { border-left: 4px solid var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--bg-code); color: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.88em; }
+  pre { background: var(--bg-code); padding: 16px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); font-size: 0.85em; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: #e2e8f0; }
+  .file-label { display: inline-block; background: var(--accent); color: var(--bg); padding: 2px 10px; border-radius: 4px 4px 0 0; font-size: 0.75em; font-weight: 700; font-family: ui-monospace, monospace; margin-bottom: -1px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.92em; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--accent); font-weight: 600; }
+  td code { font-size: 0.85em; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 700;
+    background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .badge.warn { background: rgba(251,191,36,0.15); color: var(--warn); border-color: var(--warn); }
+  .badge.bad { background: rgba(248,113,113,0.15); color: var(--bad); border-color: var(--bad); }
+  .badge.na { background: rgba(148,163,184,0.15); color: var(--fg-dim); border-color: var(--fg-dim); }
+  .tldr { background: rgba(56,189,248,0.08); border: 1px solid var(--accent); border-radius: 6px; padding: 16px; margin: 16px 0; }
+  .tldr::before { content: "TL;DR"; display: block; color: var(--accent); font-weight: 700; font-size: 0.85em; letter-spacing: 1px; margin-bottom: 6px; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .toc { background: var(--bg-card); padding: 16px 20px 16px 40px; border-radius: 6px; }
+  .toc h3 { margin-top: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 0.78em; font-weight: 700; color: white; }
+  .pill.tool { background: #7c2d12; }
+  .pill.resource { background: #1e40af; }
+  .pill.prompt { background: #166534; }
+</style>
+</head>
+<body>
+
+<h1>petclinic-ms — MCP Server</h1>
+<p class="lede">Implementation aligned with Spring IO 2026 keynote: "Beyond local tools — Deep dive into MCP with Spring AI" (Maximilian Schellhorn & James Ward, AWS). OAuth 2.1 Resource Server + Stateless mode + 3 component categories.</p>
+
+<div class="toc">
+  <h3>Mục lục</h3>
+  <ol>
+    <li><a href="#overview">Overview + 3 MCP component categories</a></li>
+    <li><a href="#transport">Transport — Streamable HTTP + Stateless mode (SEP-1442)</a></li>
+    <li><a href="#auth">Authorization (spec 2025-11-25)</a></li>
+    <li><a href="#tools">Tools (model-controlled)</a></li>
+    <li><a href="#resources">Resources (application-controlled)</a></li>
+    <li><a href="#prompts">Prompts (user-controlled)</a></li>
+    <li><a href="#matrix">Best practice scorecard</a></li>
+    <li><a href="#client-flow">Client flow</a></li>
+    <li><a href="#references">References</a></li>
+  </ol>
+</div>
+
+<div class="tldr">
+  petclinic-ms <code>mcp-server</code> expose <b>8 Tools</b> (Customers/Vets/Visits domain), <b>2 Resources</b> (FAQ + Specialty catalog), <b>2 Prompts</b> (visit-summary + owner-contact-script) qua Spring AI 2.0.0-M6 + STATELESS Streamable HTTP transport. OAuth 2.1 Resource Server (JWT JWKS từ auth-service) + <code>/.well-known/oauth-protected-resource</code> metadata per RFC 9728. Annotation-driven: <code>@McpTool</code> / <code>@McpResource</code> / <code>@McpPrompt</code> auto-scan, không cần ToolCallbackProvider thủ công.
+</div>
+
+<h2 id="overview">1. Overview + 3 MCP component categories</h2>
+
+<div class="card accent">
+  <p>Theo slide MSS301 + Spring IO 2026 keynote slide #5, MCP server expose 3 component categories khác nhau về <b>controller</b>:</p>
+</div>
+
+<table>
+  <thead><tr><th>Category</th><th>Controlled by</th><th>Purpose</th><th>Petclinic example</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="pill tool">Tool</span></td>
+      <td>Model</td>
+      <td>LLM tự quyết khi gọi để thực thi action</td>
+      <td><code>searchVisits()</code>, <code>listOwners()</code>, ...</td>
+    </tr>
+    <tr>
+      <td><span class="pill resource">Resource</span></td>
+      <td>Application</td>
+      <td>Inject context data vào session</td>
+      <td>Pet care FAQ markdown, Specialty catalog</td>
+    </tr>
+    <tr>
+      <td><span class="pill prompt">Prompt</span></td>
+      <td>User</td>
+      <td>Pre-baked templates user pick từ menu</td>
+      <td>Visit summary, Owner contact script</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="transport">2. Transport — Streamable HTTP + Stateless mode</h2>
+
+<h3>2.1. Transport options (slide #8-9)</h3>
+<table>
+  <thead><tr><th>Transport</th><th>Use case</th><th>Petclinic?</th></tr></thead>
+  <tbody>
+    <tr><td><code>STDIO</code></td><td>Local MCP server (Claude Desktop spawn process)</td><td>❌ Microservices, container không stdio</td></tr>
+    <tr><td><code>STREAMABLE</code></td><td>Remote HTTP, optional SSE upgrade qua <code>Mcp-Session-Id</code></td><td>⚠️ Có state → cần sticky session</td></tr>
+    <tr><td><code>STATELESS</code> <span class="badge">PICK</span></td><td>Stateless HTTP, mỗi request độc lập</td><td>✅ Load balance trivial</td></tr>
+  </tbody>
+</table>
+
+<h3>2.2. SEP-1442 — "Make MCP Stateless (by default)"</h3>
+<div class="card ok">
+  <p>Slide #14-17 nhấn mạnh proposal <b>SEP-1442</b>: future direction là MCP stateless mặc định. petclinic-ms adopt từ đầu:</p>
+</div>
+
+<div class="file-label">config-repo/mcp-server.yml</div>
+<pre><code>spring:
+  ai:
+    mcp:
+      server:
+        protocol: STATELESS              # ← SEP-1442 alignment
+        name: petclinic-mcp-server
+        version: 0.2.0
+        type: SYNC                        # Java 25 virtual threads
+        annotation-scanner:
+          enabled: true                   # Auto-pickup @McpTool/@McpResource/@McpPrompt
+</code></pre>
+
+<table>
+  <thead><tr><th>Trade-off STATELESS</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>✅ Load balancer trivial</td><td>Không cần sticky session, request rải random</td></tr>
+    <tr><td>✅ Scale ngang vô tư</td><td>Mỗi instance độc lập, no shared state</td></tr>
+    <tr><td>⚠️ KHÔNG sampling/elicitation từ server</td><td>Cần bi-directional persistent connection. Petclinic chỉ expose tools/resources/prompts → OK</td></tr>
+  </tbody>
+</table>
+
+<h2 id="auth">3. Authorization — MCP spec 2025-11-25 (slide #11-12)</h2>
+
+<div class="card accent">
+  <p>Spring IO 2026 keynote dành 2 trang nguyên cho phần này. Spec mới (2025-11-25) định nghĩa MCP server = <b>OAuth 2.1 Resource Server</b>.</p>
+</div>
+
+<h3>3.1. Flow</h3>
+<table>
+  <tbody>
+    <tr><td>1. Client gọi <code>/mcp</code> không token</td><td>MCP server trả <code>401 Unauthorized</code> + header <code>WWW-Authenticate: Bearer ...</code></td></tr>
+    <tr><td>2. Client fetch <code>/.well-known/oauth-protected-resource</code></td><td>MCP server trả metadata: authorization_servers, scopes, bearer_methods</td></tr>
+    <tr><td>3. Client redirect user → authorization server OAuth flow</td><td>(petclinic: auth-service JWT issue)</td></tr>
+    <tr><td>4. Client lấy access token</td><td>Bearer JWT signed bằng RSA, JWKS publish ở auth-service</td></tr>
+    <tr><td>5. Client gọi <code>/mcp</code> với <code>Authorization: Bearer &lt;jwt&gt;</code></td><td>MCP server verify qua JwtDecoder (JWKS) → OK / 401</td></tr>
+  </tbody>
+</table>
+
+<h3>3.2. Implementation</h3>
+<div class="file-label">mcp-server/.../config/McpSecurityConfig.java</div>
+<pre><code>@Bean
+public SecurityFilterChain mcpSecurityFilterChain(HttpSecurity http, JwtAuthenticationConverter conv) throws Exception {
+    http
+        .csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/.well-known/**", "/actuator/health/**", ...).permitAll()
+            .requestMatchers("/mcp/**").authenticated()
+            .anyRequest().authenticated())
+        .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(conv)));
+    return http.build();
+}
+</code></pre>
+
+<div class="file-label">mcp-server/.../config/WellKnownController.java</div>
+<pre><code>@GetMapping("/.well-known/oauth-protected-resource")  // RFC 9728
+Map&lt;String, Object&gt; protectedResourceMetadata() {
+    return Map.of(
+        "resource", "http://localhost:8187/mcp",
+        "authorization_servers", List.of("petclinic-ms"),   // issuer claim
+        "bearer_methods_supported", List.of("header"),
+        "scopes_supported", List.of("openid", "profile"),
+        "resource_documentation", "...");
+}
+</code></pre>
+
+<div class="card warn">
+  <p><b>Lý do KHÔNG dùng <code>spring-ai-community/mcp-security</code> library:</b> Version 0.1.11 advertise "Spring AI 2.0.x branch" nhưng chưa verify với 2.0.0-M6 milestone hiện tại (churn risk). Manual config = 0 dep mới, full control, pattern consistent với 4 service khác đã dùng <code>common-security</code>.</p>
+</div>
+
+<h2 id="tools">4. Tools — model-controlled <span class="pill tool">8 tools</span></h2>
+
+<div class="card accent">
+  <p>LLM tự quyết khi nào gọi tool dựa trên <code>description</code>. Quality của description ảnh hưởng trực tiếp accuracy chọn tool (slide #20: tool filtering + curation).</p>
+</div>
+
+<table>
+  <thead><tr><th>Tool</th><th>Domain</th><th>Description focus</th></tr></thead>
+  <tbody>
+    <tr><td><code>listOwners</code></td><td>Customers</td><td>Tìm owner theo last name, paginated</td></tr>
+    <tr><td><code>getOwner</code></td><td>Customers</td><td>Detail owner + pets</td></tr>
+    <tr><td><code>getPet</code></td><td>Customers</td><td>Detail pet + ownerId</td></tr>
+    <tr><td><code>listVets</code></td><td>Vets</td><td>Catalog vet + specialties</td></tr>
+    <tr><td><code>getVet</code></td><td>Vets</td><td>Detail vet</td></tr>
+    <tr><td><code>findVetsBySpecialty</code></td><td>Vets</td><td>Match vet theo chuyên môn</td></tr>
+    <tr><td><code>searchVisits</code></td><td>Visits</td><td>Filter visit theo pet/vet/status</td></tr>
+    <tr><td><code>getVisit</code></td><td>Visits</td><td>Detail visit + diagnosis/treatment</td></tr>
+  </tbody>
+</table>
+
+<div class="file-label">Example — VisitTools.java</div>
+<pre><code>@McpTool(description = """
+        Search visits with optional filters: pet ID, vet ID, status. Use when the user
+        asks 'show me visits for pet X' or 'what visits has Dr. Y scheduled'.
+        Status values: SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED.
+        """)
+public PageResult&lt;VisitSummary&gt; searchVisits(
+        @McpToolParam(description = "Filter by pet ID. Null = any pet.", required = false) Long petId,
+        @McpToolParam(description = "Filter by vet ID. Null = any vet.", required = false) Long vetId,
+        @McpToolParam(description = "Filter by status: SCHEDULED|IN_PROGRESS|COMPLETED|CANCELLED.", required = false) String status,
+        @McpToolParam(description = "Page number, 0-based. Default 0.", required = false) Integer page,
+        @McpToolParam(description = "Page size. Default 20, max 50.", required = false) Integer size
+) { ... }
+</code></pre>
+
+<h2 id="resources">5. Resources — application-controlled <span class="pill resource">2 resources</span></h2>
+
+<table>
+  <thead><tr><th>URI</th><th>Mime</th><th>Source</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>petclinic://faq/pet-care</code></td>
+      <td>text/markdown</td>
+      <td>Static file <code>mcp-data/pet-care-faq.md</code> (112 lines: symptoms, vaccines, emergency, nutrition)</td>
+    </tr>
+    <tr>
+      <td><code>petclinic://catalog/specialties</code></td>
+      <td>text/markdown</td>
+      <td>Dynamic — extracted live từ vets-service catalog</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="file-label">PetclinicResources.java</div>
+<pre><code>@McpResource(
+    uri = "petclinic://faq/pet-care",
+    name = "pet-care-faq",
+    title = "Pet Care FAQ",
+    description = "Comprehensive pet care knowledge base...",
+    mimeType = "text/markdown")
+public String petCareFaq() {
+    return petCareFaqFile.getContentAsString(StandardCharsets.UTF_8);
+}
+</code></pre>
+
+<div class="card ok">
+  <p>Custom URI scheme <code>petclinic://</code> phân biệt với HTTP. MCP client UI (Claude Desktop) hiển thị URI để user chọn resource muốn include vào context window.</p>
+</div>
+
+<h2 id="prompts">6. Prompts — user-controlled <span class="pill prompt">2 prompts</span></h2>
+
+<table>
+  <thead><tr><th>Prompt</th><th>Args</th><th>Output</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>visit-summary</code></td>
+      <td>petName, diagnosis, treatment, followUpDays</td>
+      <td>Email summary tiếng Việt cho owner sau khi vet xong visit</td>
+    </tr>
+    <tr>
+      <td><code>owner-contact-script</code></td>
+      <td>ownerName, petName, reason</td>
+      <td>Script staff gọi điện owner (reminder/follow-up/billing/other)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="file-label">PetclinicPrompts.java</div>
+<pre><code>@McpPrompt(
+    name = "visit-summary",
+    title = "Visit Summary for Owner",
+    description = "Generate a friendly, plain-language visit summary email...")
+public String visitSummary(
+        @McpArg(name = "petName", description = "Name of the pet", required = true) String petName,
+        @McpArg(name = "diagnosis", description = "Clinical diagnosis", required = true) String diagnosis,
+        @McpArg(name = "treatment", description = "Treatment given", required = true) String treatment,
+        @McpArg(name = "followUpDays", description = "Suggested follow-up days") String followUpDays
+) {
+    return String.format(""" ... """, ...);
+}
+</code></pre>
+
+<h2 id="matrix">7. Best practice scorecard — Spring IO 2026</h2>
+
+<table>
+  <thead><tr><th>Best practice (slide)</th><th>petclinic-ms</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr><td>Streamable HTTP transport (#8)</td><td><span class="badge">✓ STATELESS</span></td><td>Stateless variant, SEP-1442 alignment</td></tr>
+    <tr><td>JSON-RPC over HTTP</td><td><span class="badge">✓</span></td><td>Tự động qua spring-ai-starter</td></tr>
+    <tr><td>Tools (model-controlled)</td><td><span class="badge">✓ 8 tools</span></td><td>@McpTool + @McpToolParam</td></tr>
+    <tr><td>Resources (application-controlled)</td><td><span class="badge">✓ 2 resources</span></td><td>@McpResource — Phase 16 added</td></tr>
+    <tr><td>Prompts (user-controlled)</td><td><span class="badge">✓ 2 prompts</span></td><td>@McpPrompt — Phase 16 added</td></tr>
+    <tr><td>OAuth 2.1 Resource Server (#11)</td><td><span class="badge">✓</span></td><td>JWT JWKS validation + WWW-Authenticate (Spring Security auto)</td></tr>
+    <tr><td>/.well-known/oauth-protected-resource (#11)</td><td><span class="badge">✓ RFC 9728</span></td><td>Manual controller, không cần thư viện ngoài</td></tr>
+    <tr><td>Stateless mode (SEP-1442, #16-17)</td><td><span class="badge">✓</span></td><td>protocol=STATELESS, không sticky session</td></tr>
+    <tr><td>Tool descriptions quality</td><td><span class="badge">✓</span></td><td>Multiline text-block với usage examples + value ranges</td></tr>
+    <tr><td>Structured output (#22)</td><td><span class="badge">✓</span></td><td>Records: PageResult, OwnerSummary, VetSummary, ...</td></tr>
+    <tr><td>Observability (tracing)</td><td><span class="badge">✓</span></td><td>OpenTelemetry → Zipkin span tool calls</td></tr>
+    <tr><td>Tool filtering / MCP Gateway (#20)</td><td><span class="badge na">N/A</span></td><td>Chỉ 8 tools, chưa cần gateway aggregation</td></tr>
+    <tr><td>Progressive disclosure (#21)</td><td><span class="badge na">N/A</span></td><td>Spring AI 2.0-M6 chưa có chuẩn cho dynamic load/unload</td></tr>
+    <tr><td>Code mode (#22)</td><td><span class="badge na">N/A</span></td><td>Client-side pattern (genai-service), không phải server</td></tr>
+    <tr><td>Sampling / Elicitation</td><td><span class="badge na">N/A</span></td><td>STATELESS không support — trade-off đã chấp nhận</td></tr>
+    <tr><td>Dynamic Client Registration (DCR)</td><td><span class="badge warn">○</span></td><td>auth-service hiện không expose DCR endpoint. Static client OK cho lab</td></tr>
+    <tr><td>MCP client JWT forwarding (Option C)</td><td><span class="badge">✓</span></td><td>McpSyncHttpClientRequestCustomizer + lazy init — genai-service forward user JWT xuống mcp-server</td></tr>
+  </tbody>
+</table>
+
+<h2 id="client-flow">8. Client flow — how to consume</h2>
+
+<h3>Internal: genai-service (Option C — JWT forwarding)</h3>
+
+<p>Genai-service forward JWT của user đang chat xuống mcp-server qua
+<code>McpSyncHttpClientRequestCustomizer</code> (Spring AI 2.0-M6 ship sẵn).</p>
+
+<div class="file-label">genai-service/.../config/McpClientAuthConfig.java</div>
+<pre><code>static {
+    // Boot 4 + Reactor 3.5+ — bridge Reactor Context ↔ ThreadLocal cho SecurityContext.
+    Hooks.enableAutomaticContextPropagation();
+}
+
+@Bean
+McpSyncHttpClientRequestCustomizer mcpJwtForwarder() {
+    return (builder, method, endpoint, body, context) -> {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof JwtAuthenticationToken jwt && jwt.isAuthenticated()) {
+            builder.header("Authorization", "Bearer " + jwt.getToken().getTokenValue());
+        }
+    };
+}
+</code></pre>
+
+<div class="file-label">config-repo/genai-service.yml</div>
+<pre><code>spring:
+  ai:
+    mcp:
+      client:
+        type: SYNC
+        request-timeout: 30s
+        initialized: false              # ← lazy init, defer tới khi có user JWT
+        toolcallback:
+          enabled: true
+        streamable-http:
+          connections:
+            petclinic-mcp:
+              url: http://mcp-server:8187
+</code></pre>
+
+<div class="card warn">
+  <h4>Tại sao <code>initialized: false</code>?</h4>
+  <p>Spring AI MCP client mặc định khởi tạo lúc boot — tools/list discovery xảy ra ngay.
+  Nhưng lúc boot KHÔNG có user JWT → request 401. Set <code>false</code> → defer init
+  đến lần đầu user chat → SecurityContext có JWT → customizer forward đúng → mcp-server
+  validate OK → tool catalog load.</p>
+</div>
+
+<h3>External: Claude Desktop / Cursor / mcp-inspector</h3>
+<pre><code>{
+  "mcpServers": {
+    "petclinic": {
+      "url": "http://localhost:8187/mcp",
+      "auth": {
+        "type": "bearer",
+        "token": "&lt;JWT từ POST /api/v1/auth/login&gt;"
+      }
+    }
+  }
+}
+</code></pre>
+
+<h2 id="references">9. References</h2>
+<ul>
+  <li><a href="https://2026.springio.net/slides/beyond-local-tools-deep-dive-into-mcp-with-spring-ai-springio26.pdf" target="_blank">Spring IO 2026 — Beyond local tools: Deep dive into MCP with Spring AI</a> (Maximilian Schellhorn + James Ward)</li>
+  <li><a href="https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization" target="_blank">MCP Authorization Spec 2025-11-25</a></li>
+  <li><a href="https://datatracker.ietf.org/doc/html/rfc9728" target="_blank">RFC 9728 — OAuth Protected Resource Metadata</a></li>
+  <li><a href="https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html" target="_blank">Spring AI MCP Server Boot Starter Reference</a></li>
+  <li><a href="https://docs.spring.io/spring-ai/reference/api/mcp/mcp-security.html" target="_blank">Spring AI MCP Security</a></li>
+  <li><a href="https://github.com/spring-ai-community/mcp-security" target="_blank">spring-ai-community/mcp-security (alternative library)</a></li>
+  <li><a href="saga.html">saga.html</a> — Saga choreography pattern</li>
+  <li><a href="security-rbac.html">security-rbac.html</a> — Least Privilege RBAC</li>
+</ul>
+
+</body>
+</html>

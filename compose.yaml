@@ -139,7 +139,7 @@ services:
   # Metrics scrape backend — Prometheus pull /actuator/prometheus mỗi 15s.
   # UI: http://localhost:9090  | Targets: /targets  | Graph: /graph
   prometheus:
-    image: prom/prometheus:v2.55.1
+    image: prom/prometheus:v3.11.3
     container_name: petclinic-prometheus
     profiles: ["obs", "all"]
     ports:
@@ -163,7 +163,7 @@ services:
   # Metrics visualization. Provision datasource Prometheus + 1 default dashboard tự load.
   # UI: http://localhost:3000  (admin/admin — đổi pwd lần đầu trừ khi env override)
   grafana:
-    image: grafana/grafana:11.3.0
+    image: grafana/grafana:13.0.1
     container_name: petclinic-grafana
     profiles: ["obs", "all"]
     depends_on:
