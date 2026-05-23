@@ -66,88 +66,91 @@ function CustomerProfilePage() {
 
           <div className="space-y-7">
             <section>
-              <h1 className="text-3xl font-black tracking-tight text-slate-950">
+              <h1 className="text-[30px] leading-tight font-black tracking-tight text-slate-950">
                 Hồ sơ của tôi
               </h1>
               <p className="mt-2 text-sm font-medium text-slate-500">
                 Quản lý thông tin tài khoản, bảo mật và liên kết nhanh.
               </p>
-              <div className="mt-3 h-1 w-8 rounded-full bg-violet-600" />
+              <div className="mt-3 h-1 w-9 rounded-full bg-[#7C6CF5] shadow-[0_6px_14px_rgba(124,108,245,0.35)]" />
             </section>
 
             <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="min-h-[504px] rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
-                <SectionTitle icon={UserCircle2} title="Thông tin tài khoản" />
+              <div className="relative min-h-[504px] overflow-hidden rounded-[22px] border border-[#ECECF5] bg-white/95 p-5 shadow-[0_22px_60px_rgba(30,30,70,0.08)] backdrop-blur">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#F6F3FF] to-transparent" />
+                <div className="relative">
+                  <SectionTitle icon={UserCircle2} title="Thông tin tài khoản" />
 
-                <div className="mt-7 flex items-center gap-5">
-                  <div className="relative flex size-20 items-center justify-center rounded-full bg-violet-100 text-violet-600 ring-8 ring-violet-50">
-                    <UserCircle2 className="size-14" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-lg font-black text-slate-900">
-                      {username}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {(user?.roles?.length ? user.roles : ['USER']).map((role) => (
-                        <Badge
-                          key={role}
-                          variant="secondary"
-                          className="gap-1 rounded-md bg-violet-100 px-2 text-[10px] font-black text-violet-700"
-                        >
-                          <ShieldCheck className="size-3" />
-                          {role}
-                        </Badge>
-                      ))}
+                  <div className="mt-7 flex items-center gap-5">
+                    <div className="relative flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-white via-[#F2EFFF] to-[#DDD7FF] text-[#7C6CF5] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_34px_rgba(124,108,245,0.18)] ring-8 ring-[#F5F2FF]">
+                      <UserCircle2 className="size-14" />
                     </div>
-                  </div>
-                </div>
-
-                <div className="mt-7 divide-y divide-slate-100 border-t border-slate-200">
-                  <AccountRow
-                    icon={AtSign}
-                    label="Tên đăng nhập (Username)"
-                    value={username}
-                    action="Đổi"
-                  />
-                  <AccountRow icon={Mail} label="Email" value={username} action="Đổi" />
-                  <AccountRow
-                    icon={Copy}
-                    label="Mã người dùng"
-                    value={userId}
-                    action="Sao chép"
-                    mono
-                    onAction={() => void navigator.clipboard?.writeText(String(userId))}
-                  />
-                  <AccountRow
-                    icon={CalendarCheck}
-                    label="Ngày tham gia"
-                    value="15/04/2024"
-                  />
-                </div>
-
-                <div className="mt-5 flex items-center justify-between gap-4 overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-500">
-                      <Shield className="size-5" />
-                    </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-black text-orange-700">
-                        Giữ tài khoản của bạn luôn an toàn
+                      <p className="truncate text-[17px] font-black text-slate-950">
+                        {username}
                       </p>
-                      <p className="mt-1 text-xs leading-5 font-medium text-slate-600">
-                        Để bảo vệ tài khoản, vui lòng không chia sẻ email, mật khẩu hoặc
-                        mã xác thực với bất kỳ ai.
-                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {(user?.roles?.length ? user.roles : ['USER']).map((role) => (
+                          <Badge
+                            key={role}
+                            variant="secondary"
+                            className="gap-1 rounded-md border border-[#E7E1FF] bg-[#F4F1FF] px-2 text-[10px] font-black text-[#6C5CEB] shadow-sm"
+                          >
+                            <ShieldCheck className="size-3" />
+                            {role}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-600 sm:flex">
-                    <LockKeyhole className="size-8" />
+
+                  <div className="mt-7 divide-y divide-[#F0F0F7] border-t border-[#ECECF5]">
+                    <AccountRow
+                      icon={AtSign}
+                      label="Tên đăng nhập (Username)"
+                      value={username}
+                      action="Đổi"
+                    />
+                    <AccountRow icon={Mail} label="Email" value={username} action="Đổi" />
+                    <AccountRow
+                      icon={Copy}
+                      label="Mã người dùng"
+                      value={userId}
+                      action="Sao chép"
+                      mono
+                      onAction={() => void navigator.clipboard?.writeText(String(userId))}
+                    />
+                    <AccountRow
+                      icon={CalendarCheck}
+                      label="Ngày tham gia"
+                      value="15/04/2024"
+                    />
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-between gap-4 overflow-hidden rounded-xl border border-[#FFE5B7] bg-gradient-to-r from-[#FFF8EA] via-[#FFF6E8] to-[#FFF0DB] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#F59E0B] shadow-sm ring-1 ring-orange-100">
+                        <Shield className="size-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-[#B76B09]">
+                          Giữ tài khoản của bạn luôn an toàn
+                        </p>
+                        <p className="mt-1 text-xs leading-5 font-medium text-slate-600">
+                          Để bảo vệ tài khoản, vui lòng không chia sẻ email, mật khẩu hoặc
+                          mã xác thực với bất kỳ ai.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#EEE9FF] to-white text-[#7C6CF5] shadow-sm ring-1 ring-[#E8E2FF] sm:flex">
+                      <LockKeyhole className="size-8" />
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-5">
-                <div className="min-h-[336px] rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+                <div className="min-h-[336px] rounded-[22px] border border-[#ECECF5] bg-white/95 p-5 shadow-[0_22px_60px_rgba(30,30,70,0.08)] backdrop-blur">
                   <SectionTitle icon={KeyRound} title="Liên kết nhanh" />
                   <div className="mt-6 space-y-3">
                     <QuickLink
@@ -171,7 +174,7 @@ function CustomerProfilePage() {
                   </div>
 
                   <Button
-                    className="mt-5 h-14 w-full justify-between rounded-lg bg-rose-500 px-5 font-black shadow-lg shadow-rose-100 hover:bg-rose-600"
+                    className="mt-5 h-14 w-full justify-between rounded-xl bg-gradient-to-r from-[#F94F6D] to-[#F43F5E] px-5 font-black shadow-[0_16px_32px_rgba(244,63,94,0.22)] hover:from-[#EF4564] hover:to-[#E93656]"
                     disabled={logoutMutation.isPending}
                     onClick={() => logoutMutation.mutate()}
                   >
@@ -190,9 +193,9 @@ function CustomerProfilePage() {
                   </Button>
                 </div>
 
-                <div className="flex min-h-[94px] items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-4 text-emerald-700 shadow-[0_12px_35px_rgba(16,185,129,0.08)]">
+                <div className="flex min-h-[94px] items-center justify-between gap-4 rounded-xl border border-[#C8F4E0] bg-gradient-to-r from-[#F0FFF8] to-[#ECFBF6] px-5 py-4 text-emerald-700 shadow-[0_16px_40px_rgba(16,185,129,0.09)]">
                   <div className="flex items-center gap-3">
-                    <span className="flex size-9 items-center justify-center rounded-lg bg-white text-emerald-600">
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm ring-1 ring-emerald-100">
                       <ShieldCheck className="size-5" />
                     </span>
                     <div>
@@ -210,10 +213,11 @@ function CustomerProfilePage() {
               </div>
             </section>
 
-            <section className="relative min-h-[112px] overflow-hidden rounded-2xl border border-violet-100 bg-violet-50 px-6 py-5 shadow-[0_18px_45px_rgba(124,58,237,0.08)]">
+            <section className="relative min-h-[112px] overflow-hidden rounded-[22px] border border-[#E8E2FF] bg-gradient-to-r from-[#F6F2FF] via-[#F7F4FF] to-[#EEE9FF] px-6 py-5 shadow-[0_22px_55px_rgba(124,108,245,0.12)]">
+              <div className="pointer-events-none absolute inset-0 bg-white/20" />
               <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-5">
-                  <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white text-violet-600 shadow-sm">
+                  <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-white/90 text-[#7C6CF5] shadow-[0_14px_30px_rgba(124,108,245,0.15)] ring-1 ring-white">
                     <CalendarCheck className="size-8" />
                   </div>
                   <div>
@@ -227,7 +231,7 @@ function CustomerProfilePage() {
                 </div>
                 <Button
                   asChild
-                  className="rounded-lg bg-violet-600 px-5 font-bold shadow-lg shadow-violet-200 hover:bg-violet-700"
+                  className="rounded-xl bg-[#7C6CF5] px-5 font-bold shadow-[0_16px_34px_rgba(124,108,245,0.28)] hover:bg-[#6D5CE8]"
                 >
                   <Link to="/customer/book">Đặt lịch ngay</Link>
                 </Button>
@@ -247,14 +251,14 @@ function CustomerProfilePage() {
 
 function ProfileSidebar() {
   return (
-    <aside className="self-start rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.06)] lg:sticky lg:top-24">
-      <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-xl bg-violet-500">
+    <aside className="self-start rounded-[22px] border border-[#ECECF5] bg-white/95 p-3 shadow-[0_22px_60px_rgba(30,30,70,0.08)] backdrop-blur lg:sticky lg:top-24">
+      <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-[18px] bg-[#7C6CF5] shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
         <img
           src={petHero}
           alt=""
-          className="size-full object-cover object-center opacity-95 mix-blend-screen"
+          className="size-full object-cover object-center opacity-90 mix-blend-screen"
         />
-        <div className="absolute inset-0 bg-violet-500/25" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#7C6CF5]/35 via-transparent to-[#A997FF]/45" />
       </div>
 
       <nav className="space-y-1">
@@ -263,8 +267,9 @@ function ProfileSidebar() {
             key={item.label}
             type="button"
             className={cn(
-              'flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-xs font-bold text-slate-600 transition hover:bg-violet-50 hover:text-violet-700',
-              item.active && 'bg-violet-50 text-violet-700',
+              'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-bold text-slate-600 transition-all duration-200 hover:bg-[#F5F2FF] hover:text-[#6D5CE8]',
+              item.active &&
+                'bg-[#F4F1FF] text-[#6D5CE8] shadow-[inset_0_0_0_1px_rgba(124,108,245,0.08)]',
             )}
           >
             <item.icon className="size-4" />
@@ -273,18 +278,18 @@ function ProfileSidebar() {
         ))}
       </nav>
 
-      <div className="mt-5 rounded-lg bg-slate-50 p-4">
-        <span className="flex size-9 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+      <div className="mt-5 rounded-[18px] border border-[#ECECF5] bg-gradient-to-br from-[#F8F7FC] to-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+        <span className="flex size-9 items-center justify-center rounded-full bg-[#F1EEFF] text-[#7C6CF5] shadow-sm">
           <Headphones className="size-5" />
         </span>
-        <p className="mt-3 text-sm font-black text-slate-800">Cần hỗ trợ?</p>
+        <p className="mt-3 text-sm font-black text-slate-900">Cần hỗ trợ?</p>
         <p className="mt-2 text-xs leading-5 font-medium text-slate-500">
           Đội ngũ của chúng tôi luôn sẵn sàng giúp bạn.
         </p>
         <Button
           variant="outline"
           size="sm"
-          className="mt-3 rounded-lg border-violet-200 bg-white text-xs font-bold text-violet-700 hover:bg-violet-50"
+          className="mt-3 rounded-xl border-[#E4DEFF] bg-white text-xs font-bold text-[#6D5CE8] shadow-sm hover:bg-[#F7F4FF]"
         >
           Liên hệ ngay
         </Button>
@@ -296,10 +301,10 @@ function ProfileSidebar() {
 function SectionTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex size-10 items-center justify-center rounded-full bg-violet-50 text-violet-600">
+      <span className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-[#F7F4FF] to-white text-[#7C6CF5] shadow-sm ring-1 ring-[#ECE7FF]">
         <Icon className="size-5" />
       </span>
-      <h2 className="font-black text-slate-900">{title}</h2>
+      <h2 className="text-[15px] font-black text-slate-950">{title}</h2>
     </div>
   );
 }
@@ -320,13 +325,13 @@ function AccountRow({
   onAction?: () => void;
 }) {
   return (
-    <div className="grid gap-3 py-4 sm:grid-cols-[24px_1fr_auto] sm:items-center">
+    <div className="grid gap-3 rounded-xl py-4 transition-colors hover:bg-[#FBFAFF] sm:grid-cols-[24px_1fr_auto] sm:items-center sm:px-2">
       <Icon className="hidden size-4 text-slate-500 sm:block" />
       <div className="min-w-0">
-        <p className="text-xs font-medium text-slate-500">{label}</p>
+        <p className="text-[11px] font-semibold text-slate-500">{label}</p>
         <p
           className={cn(
-            'mt-1 text-sm font-semibold break-words text-slate-800',
+            'mt-1 text-sm font-semibold break-words text-slate-900',
             mono && 'font-mono text-xs',
           )}
         >
@@ -337,7 +342,7 @@ function AccountRow({
         <Button
           variant="outline"
           size="xs"
-          className="w-fit rounded-lg border-violet-200 text-xs font-black text-violet-700 hover:bg-violet-50"
+          className="w-fit rounded-lg border-[#E1DAFF] bg-white text-xs font-black text-[#6D5CE8] shadow-sm hover:bg-[#F6F3FF]"
           onClick={onAction}
         >
           {action === 'Sao chép' ? <Copy className="size-3" /> : null}
@@ -362,10 +367,10 @@ function QuickLink({
   return (
     <Link
       to={to}
-      className="flex min-h-16 items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 transition hover:border-violet-200 hover:bg-violet-50"
+      className="group flex min-h-16 items-center justify-between gap-4 rounded-xl border border-[#ECECF5] bg-white/90 px-4 py-3 shadow-[0_8px_22px_rgba(30,30,70,0.04)] transition-all duration-200 hover:border-[#DED6FF] hover:bg-[#FBFAFF] hover:shadow-[0_14px_30px_rgba(124,108,245,0.1)]"
     >
       <span className="flex min-w-0 items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#F4F1FF] text-[#7C6CF5] shadow-sm ring-1 ring-[#ECE7FF] transition group-hover:bg-[#7C6CF5] group-hover:text-white">
           <Icon className="size-5" />
         </span>
         <span className="min-w-0">
@@ -377,7 +382,7 @@ function QuickLink({
           </span>
         </span>
       </span>
-      <ChevronRight className="size-5 shrink-0 text-slate-400" />
+      <ChevronRight className="size-5 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-[#7C6CF5]" />
     </Link>
   );
 }
