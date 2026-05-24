@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import {
   CalendarCheck,
@@ -6,14 +6,32 @@ import {
   PawPrint,
   Search,
   ArrowLeft,
-  HelpCircle,
   ShieldCheck,
+  Plus,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useListPets } from '@/lib/api/generated/pets/pets';
+import {
+  type PetPayload,
+  useAddMyPet,
+  useMyOwnerProfile,
+  useRemoveMyPet,
+  useUpdateMyPet,
+} from '@/features/customers/api';
+import type { PetDto } from '@/lib/api/generated/model';
 
 export const Route = createFileRoute('/customer/pets')({
   component: CustomerPetsPage,
@@ -78,11 +96,18 @@ function getPetBreed(pet: { name?: string; type?: string }) {
 
 function CustomerPetsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const petsQuery = useListPets({
-    pageable: { page: 0, size: 200, sort: ['name,asc'] },
-  });
+  const [editingPet, setEditingPet] = useState<PetDto | null>(null);
+  const [petDialogOpen, setPetDialogOpen] = useState(false);
+  const ownerQuery = useMyOwnerProfile();
+  const removePet = useRemoveMyPet();
 
-  const pets = useMemo(() => petsQuery.data?.content ?? [], [petsQuery.data]);
+  const pets = useMemo(
+    () =>
+      [...(ownerQuery.data?.pets ?? [])].sort((a, b) =>
+        (a.name ?? '').localeCompare(b.name ?? ''),
+      ),
+    [ownerQuery.data],
+  );
 
   const filteredPets = useMemo(() => {
     if (!searchTerm) return pets;
@@ -124,10 +149,13 @@ function CustomerPetsPage() {
           </div>
 
           <Button
-            variant="outline"
-            className="gap-1.5 rounded-full border-indigo-100 font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-50"
+            className="gap-1.5 rounded-full bg-indigo-600 font-bold text-white shadow-sm transition-all hover:bg-indigo-700"
+            onClick={() => {
+              setEditingPet(null);
+              setPetDialogOpen(true);
+            }}
           >
-            <HelpCircle className="size-4 text-indigo-500" /> Hướng dẫn
+            <Plus className="size-4" /> Thêm thú cưng
           </Button>
         </div>
 
@@ -161,14 +189,12 @@ function CustomerPetsPage() {
             </div>
             <p className="text-sm font-bold tracking-wide text-slate-500 uppercase">
               Tổng cộng:{' '}
-              <span className="font-extrabold text-indigo-600">
-                {petsQuery.data?.totalElements ?? pets.length}
-              </span>{' '}
-              bé thú cưng
+              <span className="font-extrabold text-indigo-600">{pets.length}</span> bé thú
+              cưng
             </p>
           </div>
 
-          {petsQuery.isLoading ? (
+          {ownerQuery.isLoading ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-[180px] w-full rounded-2xl" />
@@ -236,16 +262,47 @@ function CustomerPetsPage() {
                       </div>
 
                       {/* Booking Action button */}
-                      <div className="mt-4 border-t border-dashed border-slate-100 pt-4">
+                      <div className="mt-4 grid grid-cols-[1fr_auto_auto] gap-2 border-t border-dashed border-slate-100 pt-4">
                         <Button
                           asChild
                           variant="ghost"
                           size="sm"
-                          className="h-9.5 w-full gap-1.5 rounded-xl bg-indigo-50/50 font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-600 hover:text-white"
+                          className="h-9.5 gap-1.5 rounded-xl bg-indigo-50/50 font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-600 hover:text-white"
                         >
                           <Link to="/customer/book" search={{ petId: p.id }}>
                             <CalendarCheck className="size-4" /> Đặt lịch khám
                           </Link>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="size-9.5 rounded-xl border-slate-200 text-slate-600"
+                          onClick={() => {
+                            setEditingPet(p);
+                            setPetDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="size-9.5 rounded-xl border-rose-100 text-rose-600 hover:bg-rose-50"
+                          disabled={removePet.isPending}
+                          onClick={() => {
+                            if (!p.id) return;
+                            if (!window.confirm(`Xóa hồ sơ ${p.name ?? `#${p.id}`}?`))
+                              return;
+                            removePet.mutate(p.id, {
+                              onSuccess: () => toast.success('Đã xóa hồ sơ thú cưng'),
+                              onError: (err: Error) =>
+                                toast.error(err.message || 'Xóa thú cưng thất bại'),
+                            });
+                          }}
+                        >
+                          <Trash2 className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -256,6 +313,129 @@ function CustomerPetsPage() {
           )}
         </div>
       </div>
+      <PetEditorDialog
+        open={petDialogOpen}
+        pet={editingPet}
+        onOpenChange={setPetDialogOpen}
+      />
     </div>
+  );
+}
+
+function PetEditorDialog({
+  open,
+  pet,
+  onOpenChange,
+}: {
+  open: boolean;
+  pet: PetDto | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const addPet = useAddMyPet();
+  const updatePet = useUpdateMyPet();
+  const [form, setForm] = useState<PetPayload>({
+    name: '',
+    birthDate: '',
+    type: '',
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    setForm({
+      name: pet?.name ?? '',
+      birthDate: pet?.birthDate ?? '',
+      type: pet?.type ?? '',
+    });
+  }, [open, pet]);
+
+  const pending = addPet.isPending || updatePet.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{pet ? 'Sửa hồ sơ thú cưng' : 'Thêm thú cưng'}</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const payload = {
+              name: form.name.trim(),
+              birthDate: form.birthDate || undefined,
+              type: form.type.trim(),
+            };
+            if (!payload.name || !payload.type) {
+              toast.error('Vui lòng nhập tên và loại thú cưng');
+              return;
+            }
+            if (pet?.id) {
+              updatePet.mutate(
+                { petId: pet.id, payload },
+                {
+                  onSuccess: () => {
+                    toast.success('Đã cập nhật hồ sơ thú cưng');
+                    onOpenChange(false);
+                  },
+                  onError: (err: Error) =>
+                    toast.error(err.message || 'Cập nhật thú cưng thất bại'),
+                },
+              );
+            } else {
+              addPet.mutate(payload, {
+                onSuccess: () => {
+                  toast.success('Đã thêm thú cưng');
+                  onOpenChange(false);
+                },
+                onError: (err: Error) =>
+                  toast.error(err.message || 'Thêm thú cưng thất bại'),
+              });
+            }
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="pet-name">Tên</Label>
+            <Input
+              id="pet-name"
+              value={form.name}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
+              placeholder="Milu"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pet-type">Loại</Label>
+            <Input
+              id="pet-type"
+              value={form.type}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, type: event.target.value }))
+              }
+              placeholder="dog, cat, rabbit..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pet-birth-date">Ngày sinh</Label>
+            <Input
+              id="pet-birth-date"
+              type="date"
+              value={form.birthDate ?? ''}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, birthDate: event.target.value }))
+              }
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Hủy
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Đang lưu...' : 'Lưu'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -15,9 +15,9 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/features/auth/store';
+import { useMyOwnerProfile } from '@/features/customers/api';
 import type { VisitResponse } from '@/lib/api/generated/model';
 import { SearchVisitsStatus } from '@/lib/api/generated/model';
-import { useListPets } from '@/lib/api/generated/pets/pets';
 import { useSearchVisits } from '@/lib/api/generated/visits/visits';
 import { cn } from '@/lib/utils';
 
@@ -58,13 +58,11 @@ function CustomerDashboard() {
   const recentQuery = useSearchVisits({
     pageable: { page: 0, size: 5, sort: ['scheduledAt,desc'] },
   });
-  const petsQuery = useListPets({
-    pageable: { page: 0, size: 100, sort: ['name,asc'] },
-  });
+  const ownerQuery = useMyOwnerProfile();
 
   const upcoming = upcomingQuery.data?.content ?? [];
   const recent = recentQuery.data?.content ?? [];
-  const pets = petsQuery.data?.content ?? [];
+  const pets = ownerQuery.data?.pets ?? [];
 
   const petNameById = new Map(pets.map((pet) => [pet.id, pet.name ?? `Pet #${pet.id}`]));
   const firstUpcoming = upcoming[0];
@@ -123,7 +121,7 @@ function CustomerDashboard() {
           subLabel="Bé cưng"
           action="Quản lý thú cưng"
           to="/customer/pets"
-          loading={petsQuery.isLoading}
+          loading={ownerQuery.isLoading}
           className="from-violet-500 to-fuchsia-500"
         />
       </section>

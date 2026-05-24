@@ -25,6 +25,11 @@ petclinic:
       # Authenticated USER xem được catalog pet (cho dropdown FE)
       user:
         - { method: GET, path: /api/v1/pets/** }
+        - { method: GET, path: /api/v1/owners/me }
+        - { method: PATCH, path: /api/v1/owners/me }
+        - { method: POST, path: /api/v1/owners/me/pets }
+        - { method: PUT, path: /api/v1/owners/me/pets/** }
+        - { method: DELETE, path: /api/v1/owners/me/pets/** }
         - { method: GET, path: /api/v1/owners/* }     # detail OK — leak ownerId là acceptable
       # Staff vận hành owner records — tạo, list, xem detail
       staff:

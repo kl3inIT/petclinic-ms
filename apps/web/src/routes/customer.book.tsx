@@ -34,9 +34,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { FieldError } from '@/lib/form/FieldError';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/client';
+import { useMyOwnerProfile } from '@/features/customers/api';
 
 import { useBookVisit } from '@/lib/api/generated/visits/visits';
-import { useListPets } from '@/lib/api/generated/pets/pets';
 import { useListVets } from '@/lib/api/generated/vets/vets';
 import type { WorkScheduleSlotResponse } from '@/lib/api/generated/model';
 import { bookVisitSchema } from '@/features/visits/schemas';
@@ -226,9 +226,7 @@ function BookVisitPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
 
   const [petPage, setPetPage] = useState(0);
-  const petsQuery = useListPets({
-    pageable: { page: petPage, size: 8, sort: ['name,asc'] },
-  });
+  const ownerQuery = useMyOwnerProfile();
 
   const [vetPage, setVetPage] = useState(0);
   const vetsQuery = useListVets({
@@ -265,7 +263,13 @@ function BookVisitPage() {
       }),
   });
 
-  const pets = useMemo(() => petsQuery.data?.content ?? [], [petsQuery.data]);
+  const pets = useMemo(
+    () =>
+      [...(ownerQuery.data?.pets ?? [])].sort((a, b) =>
+        (a.name ?? '').localeCompare(b.name ?? ''),
+      ),
+    [ownerQuery.data],
+  );
   const vets = useMemo(() => vetsQuery.data?.content ?? [], [vetsQuery.data]);
 
   const values = useStore(form.store, (state) => state.values);
@@ -340,6 +344,11 @@ function BookVisitPage() {
         (p.type ?? '').toLowerCase().includes(term),
     );
   }, [pets, searchTerm]);
+  const totalPetPages = Math.max(1, Math.ceil(filteredPets.length / 8));
+  const pagedPets = useMemo(
+    () => filteredPets.slice(petPage * 8, petPage * 8 + 8),
+    [filteredPets, petPage],
+  );
 
   const handlePrevMonth = () => {
     const d = new Date(selectedDate);
@@ -571,7 +580,10 @@ function BookVisitPage() {
                       placeholder="Tìm kiếm thú cưng..."
                       className="h-12 rounded-xl border-[#ECECF5] bg-[#FAFAFF] pl-11 text-[14.5px] font-semibold shadow-sm transition-all focus-visible:bg-white focus-visible:ring-[#7C6CF5]"
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setPetPage(0);
+                      }}
                     />
                   </div>
                   <Button
@@ -591,7 +603,7 @@ function BookVisitPage() {
                   name="petId"
                   children={(field) => (
                     <div className="space-y-8">
-                      {petsQuery.isLoading ? (
+                      {ownerQuery.isLoading ? (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                           {Array.from({ length: 4 }).map((_, i) => (
                             <Skeleton
@@ -609,7 +621,7 @@ function BookVisitPage() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                          {filteredPets.map((p, idx) => {
+                          {pagedPets.map((p, idx) => {
                             const isSelected = field.state.value === p.id;
                             const displayBreed = getPetBreed(p);
                             const displayPhoto = getPetPhoto(p);
@@ -679,7 +691,7 @@ function BookVisitPage() {
                       )}
 
                       {/* Stepper Pagination Control */}
-                      {(petsQuery.data?.totalPages ?? 0) > 1 && (
+                      {totalPetPages > 1 && (
                         <div className="mt-8 flex items-center justify-center gap-4 border-t border-[#ECECF5] pt-5">
                           <Button
                             variant="outline"
@@ -691,14 +703,14 @@ function BookVisitPage() {
                             <ChevronLeft className="size-5.5 stroke-[2.5px]" />
                           </Button>
                           <span className="text-[13.5px] font-bold text-[#667085]">
-                            Hiển thị {filteredPets.length} /{' '}
-                            {petsQuery.data?.totalElements} thú cưng
+                            Hiển thị {filteredPets.length} / {filteredPets.length} thú
+                            cưng
                           </span>
                           <Button
                             variant="outline"
                             size="icon"
                             className="size-10 rounded-full border-[#ECECF5] text-[#171725] shadow-sm transition-all hover:border-[#7C6CF5]/30"
-                            disabled={petPage >= (petsQuery.data?.totalPages ?? 1) - 1}
+                            disabled={petPage >= totalPetPages - 1}
                             onClick={() => setPetPage((p) => p + 1)}
                           >
                             <ChevronRight className="size-5.5 stroke-[2.5px]" />

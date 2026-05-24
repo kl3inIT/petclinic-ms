@@ -6,8 +6,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.petclinic.customers.dto.req.OwnerRequest;
+import com.mss301.petclinic.customers.dto.req.PetRequest;
+import com.mss301.petclinic.customers.dto.req.UpdateOwnerRequest;
 import com.mss301.petclinic.customers.dto.res.OwnerResponse;
 import com.mss301.petclinic.customers.exception.OwnerNotFoundException;
+import com.mss301.petclinic.customers.exception.PetNotFoundException;
 import com.mss301.petclinic.customers.repository.OwnerRepository;
 import com.mss301.petclinic.customers.service.OwnerService;
 
@@ -44,10 +47,75 @@ public class OwnerServiceImpl implements OwnerService {
 
     @Override
     @Transactional
+    public OwnerResponse update(Long id, UpdateOwnerRequest request) {
+        var owner = repository.findById(id)
+                .orElseThrow(() -> new OwnerNotFoundException(id.toString()));
+
+        if (request.firstName() != null && !request.firstName().isBlank()) {
+            owner.setFirstName(request.firstName());
+        }
+        if (request.lastName() != null && !request.lastName().isBlank()) {
+            owner.setLastName(request.lastName());
+        }
+        if (request.address() != null) {
+            owner.setAddress(blankToNull(request.address()));
+        }
+        if (request.city() != null) {
+            owner.setCity(blankToNull(request.city()));
+        }
+        if (request.telephone() != null) {
+            owner.setTelephone(blankToNull(request.telephone()));
+        }
+        return OwnerResponse.from(owner);
+    }
+
+    @Override
+    @Transactional
+    public OwnerResponse addPet(Long ownerId, PetRequest request) {
+        var owner = repository.findById(ownerId)
+                .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
+        owner.addPet(request.toEntity());
+        return OwnerResponse.from(repository.saveAndFlush(owner));
+    }
+
+    @Override
+    @Transactional
+    public OwnerResponse updatePet(Long ownerId, Long petId, PetRequest request) {
+        var owner = repository.findById(ownerId)
+                .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
+        var pet = owner.getPets().stream()
+                .filter(candidate -> petId.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(() -> new PetNotFoundException(petId.toString()));
+
+        pet.setName(request.name());
+        pet.setBirthDate(request.birthDate());
+        pet.setType(request.type());
+        return OwnerResponse.from(owner);
+    }
+
+    @Override
+    @Transactional
+    public void removePet(Long ownerId, Long petId) {
+        var owner = repository.findById(ownerId)
+                .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
+        var pet = owner.getPets().stream()
+                .filter(candidate -> petId.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(() -> new PetNotFoundException(petId.toString()));
+        owner.removePet(pet);
+    }
+
+    @Override
+    @Transactional
     public void deleteById(Long id) {
         if (!repository.existsById(id)) {
             throw new OwnerNotFoundException(id.toString());
         }
         repository.deleteById(id);
+    }
+
+    private static String blankToNull(String value) {
+        return value.isBlank() ? null : value;
     }
 }

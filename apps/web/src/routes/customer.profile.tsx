@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
+import { toast } from 'sonner';
 import {
   AtSign,
   Bell,
@@ -23,7 +25,10 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/features/auth/store';
+import { useMyOwnerProfile, useUpdateMyOwnerProfile } from '@/features/customers/api';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
@@ -48,6 +53,27 @@ function CustomerProfilePage() {
   const clear = useAuthStore((s) => s.clear);
   const username = user?.username ?? 'customer@petclinic.local';
   const userId = user?.id ?? '10000000-0000-0000-0000-000000000001';
+  const ownerQuery = useMyOwnerProfile();
+  const updateOwner = useUpdateMyOwnerProfile();
+  const [ownerForm, setOwnerForm] = useState({
+    firstName: '',
+    lastName: '',
+    address: '',
+    city: '',
+    telephone: '',
+  });
+
+  useEffect(() => {
+    const owner = ownerQuery.data;
+    if (!owner) return;
+    setOwnerForm({
+      firstName: owner.firstName ?? '',
+      lastName: owner.lastName ?? '',
+      address: owner.address ?? '',
+      city: owner.city ?? '',
+      telephone: owner.telephone ?? '',
+    });
+  }, [ownerQuery.data]);
 
   const logoutMutation = useLogout({
     mutation: {
@@ -126,6 +152,68 @@ function CustomerProfilePage() {
                       value="15/04/2024"
                     />
                   </div>
+
+                  <form
+                    className="mt-5 rounded-xl border border-[#ECECF5] bg-white/80 p-4 shadow-sm"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      updateOwner.mutate(ownerForm, {
+                        onSuccess: () => toast.success('Da cap nhat ho so khach hang'),
+                        onError: (err: Error) =>
+                          toast.error(err.message || 'Cap nhat ho so that bai'),
+                      });
+                    }}
+                  >
+                    <div className="grid grid-cols-2 gap-3">
+                      <OwnerField
+                        id="owner-first-name"
+                        label="First name"
+                        value={ownerForm.firstName}
+                        onChange={(firstName) =>
+                          setOwnerForm((prev) => ({ ...prev, firstName }))
+                        }
+                      />
+                      <OwnerField
+                        id="owner-last-name"
+                        label="Last name"
+                        value={ownerForm.lastName}
+                        onChange={(lastName) =>
+                          setOwnerForm((prev) => ({ ...prev, lastName }))
+                        }
+                      />
+                      <OwnerField
+                        id="owner-phone"
+                        label="Telephone"
+                        value={ownerForm.telephone}
+                        onChange={(telephone) =>
+                          setOwnerForm((prev) => ({ ...prev, telephone }))
+                        }
+                      />
+                      <OwnerField
+                        id="owner-city"
+                        label="City"
+                        value={ownerForm.city}
+                        onChange={(city) => setOwnerForm((prev) => ({ ...prev, city }))}
+                      />
+                      <div className="col-span-2">
+                        <OwnerField
+                          id="owner-address"
+                          label="Address"
+                          value={ownerForm.address}
+                          onChange={(address) =>
+                            setOwnerForm((prev) => ({ ...prev, address }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="submit"
+                      className="mt-4 h-10 w-full rounded-xl bg-[#7C6CF5] font-black hover:bg-[#6D5CE8]"
+                      disabled={ownerQuery.isLoading || updateOwner.isPending}
+                    >
+                      {updateOwner.isPending ? 'Dang luu...' : 'Luu ho so khach hang'}
+                    </Button>
+                  </form>
 
                   <div className="mt-5 flex items-center justify-between gap-4 overflow-hidden rounded-xl border border-[#FFE5B7] bg-gradient-to-r from-[#FFF8EA] via-[#FFF6E8] to-[#FFF0DB] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                     <div className="flex min-w-0 items-center gap-3">
@@ -349,6 +437,32 @@ function AccountRow({
           {action}
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+function OwnerField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-[11px] font-black text-slate-500">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-9 rounded-lg border-[#ECECF5] bg-white text-xs font-semibold"
+      />
     </div>
   );
 }
