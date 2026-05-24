@@ -7,3 +7,5 @@ databaseChangeLog:
       file: db/changelog/changes/003-add-pet-owner-id-mirror.yaml
   - include:
       file: db/changelog/changes/004-seed-dev-data.yaml
+  - include:
+      file: db/changelog/changes/005-extend-pet-profile.yaml

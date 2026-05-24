@@ -91,6 +91,10 @@ public class OwnerServiceImpl implements OwnerService {
         pet.setName(request.name());
         pet.setBirthDate(request.birthDate());
         pet.setType(request.type());
+        pet.setPetTypeId(request.petTypeId());
+        pet.setIsActive(request.isActive() == null ? true : request.isActive());
+        pet.setWeight(request.weight());
+        pet.setPhotoId(request.photoId());
         return OwnerResponse.from(owner);
     }
 

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiClient } from '@/lib/api/client';
-import type { OwnerResponse } from '@/lib/api/generated/model';
+import type { OwnerResponse, PetDto } from '@/lib/api/generated/model';
 
 export interface UpdateOwnerPayload {
   firstName?: string;
@@ -15,12 +15,27 @@ export interface PetPayload {
   name: string;
   birthDate?: string;
   type: string;
+  petTypeId?: string;
+  isActive?: boolean;
+  weight?: number;
+  photoId?: string;
 }
+
+export interface CustomerPet extends PetDto {
+  petTypeId?: string;
+  isActive?: boolean;
+  weight?: number;
+  photoId?: string;
+}
+
+export type MyOwnerResponse = Omit<OwnerResponse, 'pets'> & {
+  pets?: CustomerPet[];
+};
 
 export const myOwnerQueryKey = ['/api/v1/owners/me'] as const;
 
 export async function getMyOwnerProfile() {
-  const { data } = await apiClient.get<OwnerResponse>('/api/v1/owners/me');
+  const { data } = await apiClient.get<MyOwnerResponse>('/api/v1/owners/me');
   return data;
 }
 
@@ -36,7 +51,10 @@ export function useUpdateMyOwnerProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: UpdateOwnerPayload) => {
-      const { data } = await apiClient.patch<OwnerResponse>('/api/v1/owners/me', payload);
+      const { data } = await apiClient.patch<MyOwnerResponse>(
+        '/api/v1/owners/me',
+        payload,
+      );
       return data;
     },
     onSuccess: (owner) => {
@@ -49,7 +67,7 @@ export function useAddMyPet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: PetPayload) => {
-      const { data } = await apiClient.post<OwnerResponse>(
+      const { data } = await apiClient.post<MyOwnerResponse>(
         '/api/v1/owners/me/pets',
         payload,
       );
@@ -65,7 +83,7 @@ export function useUpdateMyPet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ petId, payload }: { petId: number; payload: PetPayload }) => {
-      const { data } = await apiClient.put<OwnerResponse>(
+      const { data } = await apiClient.put<MyOwnerResponse>(
         `/api/v1/owners/me/pets/${petId}`,
         payload,
       );

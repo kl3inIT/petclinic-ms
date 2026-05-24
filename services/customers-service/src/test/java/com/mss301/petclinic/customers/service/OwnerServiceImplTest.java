@@ -114,10 +114,11 @@ class OwnerServiceImplTest {
         given(repository.findById(1L)).willReturn(Optional.of(owner));
         given(repository.saveAndFlush(any(Owner.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        var result = service.addPet(1L, new PetRequest("Milu", null, "dog"));
+        var result = service.addPet(1L, new PetRequest("Milu", null, "dog", "dog", true, null, null));
 
         assertThat(result.pets()).hasSize(1);
         assertThat(result.pets().getFirst().name()).isEqualTo("Milu");
+        assertThat(result.pets().getFirst().petTypeId()).isEqualTo("dog");
     }
 
     @Test
@@ -129,7 +130,8 @@ class OwnerServiceImplTest {
         owner.addPet(pet);
         given(repository.findById(1L)).willReturn(Optional.of(owner));
 
-        assertThatThrownBy(() -> service.updatePet(1L, 99L, new PetRequest("Tom", null, "cat")))
+        assertThatThrownBy(() -> service.updatePet(1L, 99L,
+                new PetRequest("Tom", null, "cat", "cat", true, null, null)))
                 .isInstanceOf(PetNotFoundException.class);
     }
 

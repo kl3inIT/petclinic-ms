@@ -25,13 +25,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  type CustomerPet,
   type PetPayload,
   useAddMyPet,
   useMyOwnerProfile,
   useRemoveMyPet,
   useUpdateMyPet,
 } from '@/features/customers/api';
-import type { PetDto } from '@/lib/api/generated/model';
 
 export const Route = createFileRoute('/customer/pets')({
   component: CustomerPetsPage,
@@ -96,7 +96,7 @@ function getPetBreed(pet: { name?: string; type?: string }) {
 
 function CustomerPetsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingPet, setEditingPet] = useState<PetDto | null>(null);
+  const [editingPet, setEditingPet] = useState<CustomerPet | null>(null);
   const [petDialogOpen, setPetDialogOpen] = useState(false);
   const ownerQuery = useMyOwnerProfile();
   const removePet = useRemoveMyPet();
@@ -255,6 +255,15 @@ function CustomerPetsPage() {
                           {age} • {gender}
                         </p>
 
+                        <p className="mt-1 text-[12px] font-bold text-slate-500">
+                          Pet type ID: {p.petTypeId || 'N/A'} â€¢ Weight:{' '}
+                          {p.weight != null ? `${p.weight} kg` : 'N/A'}
+                        </p>
+                        <p className="mt-1 text-[12px] font-bold text-slate-500">
+                          Photo ID: {p.photoId || 'N/A'} â€¢ Status:{' '}
+                          {p.isActive === false ? 'Inactive' : 'Active'}
+                        </p>
+
                         <div className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-100/30 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black text-emerald-600">
                           <ShieldCheck className="size-3.5 fill-emerald-100 text-emerald-600" />{' '}
                           Đã tiêm vaccine
@@ -328,7 +337,7 @@ function PetEditorDialog({
   onOpenChange,
 }: {
   open: boolean;
-  pet: PetDto | null;
+  pet: CustomerPet | null;
   onOpenChange: (open: boolean) => void;
 }) {
   const addPet = useAddMyPet();
@@ -337,6 +346,10 @@ function PetEditorDialog({
     name: '',
     birthDate: '',
     type: '',
+    petTypeId: '',
+    isActive: true,
+    weight: undefined,
+    photoId: '',
   });
 
   useEffect(() => {
@@ -345,6 +358,10 @@ function PetEditorDialog({
       name: pet?.name ?? '',
       birthDate: pet?.birthDate ?? '',
       type: pet?.type ?? '',
+      petTypeId: pet?.petTypeId ?? '',
+      isActive: pet?.isActive ?? true,
+      weight: pet?.weight,
+      photoId: pet?.photoId ?? '',
     });
   }, [open, pet]);
 
@@ -364,6 +381,10 @@ function PetEditorDialog({
               name: form.name.trim(),
               birthDate: form.birthDate || undefined,
               type: form.type.trim(),
+              petTypeId: form.petTypeId?.trim() || undefined,
+              isActive: form.isActive ?? true,
+              weight: form.weight,
+              photoId: form.photoId?.trim() || undefined,
             };
             if (!payload.name || !payload.type) {
               toast.error('Vui lòng nhập tên và loại thú cưng');
@@ -416,6 +437,17 @@ function PetEditorDialog({
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="pet-type-id">Pet type ID</Label>
+            <Input
+              id="pet-type-id"
+              value={form.petTypeId ?? ''}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, petTypeId: event.target.value }))
+              }
+              placeholder="dog, cat, rabbit..."
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="pet-birth-date">Ngày sinh</Label>
             <Input
               id="pet-birth-date"
@@ -424,6 +456,53 @@ function PetEditorDialog({
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, birthDate: event.target.value }))
               }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="pet-weight">Weight (kg)</Label>
+              <Input
+                id="pet-weight"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.weight ?? ''}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    weight:
+                      event.target.value === '' ? undefined : Number(event.target.value),
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pet-active">Active</Label>
+              <select
+                id="pet-active"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.isActive === false ? 'false' : 'true'}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    isActive: event.target.value === 'true',
+                  }))
+                }
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pet-photo-id">Photo ID</Label>
+            <Input
+              id="pet-photo-id"
+              value={form.photoId ?? ''}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, photoId: event.target.value }))
+              }
+              placeholder="file/photo id"
             />
           </div>
           <DialogFooter>
