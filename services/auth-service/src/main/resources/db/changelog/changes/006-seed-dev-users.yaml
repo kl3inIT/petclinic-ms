@@ -16,15 +16,14 @@ databaseChangeLog:
   # chính mình" qua /me/work-schedule.
 
   - changeSet:
-      id: 006-001-seed-dev-users
+      id: 006-002-seed-dev-users-upsert
       author: mss301
       context: dev
-      preConditions:
-        - onFail: MARK_RAN
-        - sqlCheck:
-            expectedResult: 0
-            sql: SELECT COUNT(*) FROM auth.users WHERE username IN ('vet1', 'vet2', 'admin1', 'staff1')
       changes:
+        # ON CONFLICT DO NOTHING — idempotent. Trước đây dùng preCondition
+        # `SELECT COUNT = 0` thì bị skip toàn bộ nếu môi trường đã có 1 trong
+        # 4 username (vd admin1 tạo tay). Bỏ preCondition + dùng ON CONFLICT
+        # ở từng row → user còn thiếu vẫn được seed, user đã có thì pass.
         - sql:
             sql: >-
               INSERT INTO auth.users (id, username, email, password, roles_csv, enabled, vet_id, customer_id) VALUES
@@ -32,3 +31,4 @@ databaseChangeLog:
                 ('11111111-1111-1111-1111-000000000002', 'vet2',    'vet2@petclinic.local',    '$2a$12$Tz9t/NL738HopUQUWG/RFeZzhuK574jdm5/rUAS09SgLCggoITT/u', 'VET',   TRUE, 2, NULL),
                 ('11111111-1111-1111-1111-000000000003', 'admin1',  'admin1@petclinic.local',  '$2a$12$Tz9t/NL738HopUQUWG/RFeZzhuK574jdm5/rUAS09SgLCggoITT/u', 'ADMIN', TRUE, NULL, NULL),
                 ('11111111-1111-1111-1111-000000000004', 'staff1',  'staff1@petclinic.local',  '$2a$12$Tz9t/NL738HopUQUWG/RFeZzhuK574jdm5/rUAS09SgLCggoITT/u', 'STAFF', TRUE, NULL, NULL)
+              ON CONFLICT (username) DO NOTHING
