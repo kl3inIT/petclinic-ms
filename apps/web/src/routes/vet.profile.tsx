@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { toast } from 'sonner';
@@ -39,10 +39,18 @@ import { VetPageHeader } from '@/features/vet-me/components/VetPageHeader';
 import { FieldError } from '@/lib/form/FieldError';
 import { cn } from '@/lib/utils';
 
+// PATCH semantics: validation chỉ check format/length. User không cần đụng field
+// nào nếu không muốn đổi — onSubmit sẽ diff vs original và chỉ gửi field thay đổi
+// (BE: null = không đổi, "" = clear cho phone/resume).
 const profileFormSchema = z.object({
-  firstName: z.string().min(1, 'Bắt buộc').max(255, 'Tối đa 255 ký tự'),
-  lastName: z.string().min(1, 'Bắt buộc').max(255, 'Tối đa 255 ký tự'),
-  email: z.string().min(1, 'Bắt buộc').email('Email không hợp lệ').max(255),
+  firstName: z.string().max(255, 'Tối đa 255 ký tự'),
+  lastName: z.string().max(255, 'Tối đa 255 ký tự'),
+  email: z
+    .string()
+    .max(255)
+    .refine((v) => v === '' || z.string().email().safeParse(v).success, {
+      message: 'Email không hợp lệ',
+    }),
   phoneNumber: z.string().max(30, 'Tối đa 30 ký tự'),
   resume: z.string().max(10_000, 'Tối đa 10000 ký tự'),
 });
@@ -67,29 +75,54 @@ function VetProfilePage() {
       resume: '',
     },
     validators: { onChange: profileFormSchema },
-    onSubmit: ({ value }) =>
+    onSubmit: ({ value }) => {
+      // Diff vs original — chỉ gửi field user thực sự đổi. BE PATCH:
+      //   null = giữ nguyên
+      //   "" cho phone/resume = clear
+      //   firstName/lastName/email "" = 400 (BE service throw blank)
+      const orig = {
+        firstName: profile?.firstName ?? '',
+        lastName: profile?.lastName ?? '',
+        email: profile?.email ?? '',
+        phoneNumber: profile?.phoneNumber ?? '',
+        resume: profile?.resume ?? '',
+      };
+      const v = {
+        firstName: value.firstName.trim(),
+        lastName: value.lastName.trim(),
+        email: value.email.trim(),
+        phoneNumber: value.phoneNumber.trim(),
+        resume: value.resume.trim(),
+      };
+
+      const data: Record<string, string | undefined> = {};
+      if (v.firstName !== orig.firstName) data.firstName = v.firstName;
+      if (v.lastName !== orig.lastName) data.lastName = v.lastName;
+      if (v.email !== orig.email) data.email = v.email;
+      if (v.phoneNumber !== orig.phoneNumber) data.phoneNumber = v.phoneNumber;
+      if (v.resume !== orig.resume) data.resume = v.resume;
+
+      if (Object.keys(data).length === 0) {
+        toast.info('Không có thay đổi nào để lưu');
+        return;
+      }
+
       updateMutation.mutate(
-        {
-          data: {
-            firstName: value.firstName.trim(),
-            lastName: value.lastName.trim(),
-            email: value.email.trim(),
-            phoneNumber: value.phoneNumber.trim(),
-            resume: value.resume.trim(),
-          },
-        },
+        { data },
         {
           onSuccess: () => toast.success('Đã cập nhật hồ sơ'),
           onError: (err) =>
             toast.error(err instanceof Error ? err.message : 'Cập nhật thất bại'),
         },
-      ),
+      );
+    },
   });
 
-  // hydrate-once qua ref guard — tránh form reset overwrite user typing.
-  const hydratedRef = useRef(false);
+  // hydrate-once: state để conditional render đợi profile load xong rồi mới mount
+  // form (tránh user thấy field rỗng giữa lúc query đang fetch).
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    if (profileQuery.data && !hydratedRef.current) {
+    if (profileQuery.data && !hydrated) {
       form.reset({
         firstName: profileQuery.data.firstName ?? '',
         lastName: profileQuery.data.lastName ?? '',
@@ -97,9 +130,9 @@ function VetProfilePage() {
         phoneNumber: profileQuery.data.phoneNumber ?? '',
         resume: profileQuery.data.resume ?? '',
       });
-      hydratedRef.current = true;
+      setHydrated(true);
     }
-  }, [profileQuery.data, form]);
+  }, [profileQuery.data, hydrated, form]);
 
   const profile = profileQuery.data;
   const initials = getInitials(profile?.firstName, profile?.lastName);
@@ -293,173 +326,194 @@ function VetProfilePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-5">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void form.handleSubmit();
-              }}
-              className="space-y-6"
-            >
-              <SectionTitle icon={User}>Thông tin cá nhân</SectionTitle>
+            {!hydrated ? (
+              <FormSkeleton />
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void form.handleSubmit();
+                }}
+                className="space-y-6"
+              >
+                <SectionTitle icon={User}>Thông tin cá nhân</SectionTitle>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <form.Field
+                    name="firstName"
+                    children={(field) => (
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor={field.name}
+                          className="text-sm font-medium text-slate-700"
+                        >
+                          Tên
+                        </Label>
+                        <Input
+                          id={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="Thanh"
+                          className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
+                        />
+                        <FieldError field={field} />
+                      </div>
+                    )}
+                  />
+                  <form.Field
+                    name="lastName"
+                    children={(field) => (
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor={field.name}
+                          className="text-sm font-medium text-slate-700"
+                        >
+                          Họ
+                        </Label>
+                        <Input
+                          id={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="Nguyễn"
+                          className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
+                        />
+                        <FieldError field={field} />
+                      </div>
+                    )}
+                  />
+                </div>
+
                 <form.Field
-                  name="firstName"
+                  name="email"
                   children={(field) => (
                     <div className="space-y-2">
                       <Label
                         htmlFor={field.name}
-                        className="text-sm font-medium text-slate-700"
+                        className="flex items-center gap-2 text-sm font-medium text-slate-700"
                       >
-                        Tên *
+                        <Mail className="size-4 text-violet-600" />
+                        Email
                       </Label>
                       <Input
                         id={field.name}
+                        type="email"
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="Thanh"
+                        placeholder="ten.vet@petclinic.local"
                         className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
-                      />
-                      <FieldError field={field} />
-                    </div>
-                  )}
-                />
-                <form.Field
-                  name="lastName"
-                  children={(field) => (
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor={field.name}
-                        className="text-sm font-medium text-slate-700"
-                      >
-                        Họ *
-                      </Label>
-                      <Input
-                        id={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="Nguyễn"
-                        className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
-                      />
-                      <FieldError field={field} />
-                    </div>
-                  )}
-                />
-              </div>
-
-              <form.Field
-                name="email"
-                children={(field) => (
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor={field.name}
-                      className="flex items-center gap-2 text-sm font-medium text-slate-700"
-                    >
-                      <Mail className="size-4 text-violet-600" />
-                      Email *
-                    </Label>
-                    <Input
-                      id={field.name}
-                      type="email"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="ten.vet@petclinic.local"
-                      className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
-                    />
-                    <FieldError field={field} />
-                    <p className="text-xs text-slate-500">
-                      Email phải duy nhất trong hệ thống. Email trùng → 400.
-                    </p>
-                  </div>
-                )}
-              />
-
-              <form.Field
-                name="phoneNumber"
-                children={(field) => (
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor={field.name}
-                      className="flex items-center gap-2 text-sm font-medium text-slate-700"
-                    >
-                      <Phone className="size-4 text-violet-600" />
-                      Số điện thoại
-                    </Label>
-                    <Input
-                      id={field.name}
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="0901000001"
-                      className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
-                    />
-                    <FieldError field={field} />
-                    <p className="text-xs text-slate-500">
-                      Để trống để xoá số điện thoại đang lưu. Khách hàng có thể thấy số
-                      này khi đặt lịch.
-                    </p>
-                  </div>
-                )}
-              />
-
-              <div className="space-y-2 border-t border-slate-100 pt-5">
-                <SectionTitle icon={MessageSquareQuote}>Tiểu sử nghề nghiệp</SectionTitle>
-                <form.Field
-                  name="resume"
-                  children={(field) => (
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor={field.name}
-                        className="text-sm font-medium text-slate-700"
-                      >
-                        Mô tả ngắn về bạn
-                      </Label>
-                      <Textarea
-                        id={field.name}
-                        rows={7}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="Mô tả kinh nghiệm, chứng chỉ, lĩnh vực chuyên sâu, năm tốt nghiệp..."
-                        className="min-h-40 rounded-md border-slate-200 bg-white text-sm shadow-sm focus-visible:ring-violet-300"
                       />
                       <FieldError field={field} />
                       <p className="text-xs text-slate-500">
-                        {field.state.value.length}/10000 ký tự. Hiển thị ở trang chi tiết
-                        bác sĩ cho khách hàng. Để trống = xoá tiểu sử.
+                        Email phải duy nhất trong hệ thống. Không đổi thì giữ nguyên.
                       </p>
                     </div>
                   )}
                 />
-              </div>
 
-              <div className="flex flex-col-reverse items-stretch justify-end gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={updateMutation.isPending || profileQuery.isLoading}
-                  className="text-slate-500 hover:text-slate-800"
-                  onClick={resetForm}
-                >
-                  <RotateCcw className="size-4" />
-                  Khôi phục
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateMutation.isPending || profileQuery.isLoading}
-                  className="bg-violet-600 text-white shadow-sm hover:bg-violet-700"
-                >
-                  <Save className="size-4" />
-                  {updateMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </Button>
-              </div>
-            </form>
+                <form.Field
+                  name="phoneNumber"
+                  children={(field) => (
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor={field.name}
+                        className="flex items-center gap-2 text-sm font-medium text-slate-700"
+                      >
+                        <Phone className="size-4 text-violet-600" />
+                        Số điện thoại
+                      </Label>
+                      <Input
+                        id={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="0901000001"
+                        className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
+                      />
+                      <FieldError field={field} />
+                      <p className="text-xs text-slate-500">
+                        Để trống để xoá số điện thoại đang lưu. Khách hàng có thể thấy số
+                        này khi đặt lịch.
+                      </p>
+                    </div>
+                  )}
+                />
+
+                <div className="space-y-2 border-t border-slate-100 pt-5">
+                  <SectionTitle icon={MessageSquareQuote}>
+                    Tiểu sử nghề nghiệp
+                  </SectionTitle>
+                  <form.Field
+                    name="resume"
+                    children={(field) => (
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor={field.name}
+                          className="text-sm font-medium text-slate-700"
+                        >
+                          Mô tả ngắn về bạn
+                        </Label>
+                        <Textarea
+                          id={field.name}
+                          rows={7}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="Mô tả kinh nghiệm, chứng chỉ, lĩnh vực chuyên sâu, năm tốt nghiệp..."
+                          className="min-h-40 rounded-md border-slate-200 bg-white text-sm shadow-sm focus-visible:ring-violet-300"
+                        />
+                        <FieldError field={field} />
+                        <p className="text-xs text-slate-500">
+                          {field.state.value.length}/10000 ký tự. Hiển thị ở trang chi
+                          tiết bác sĩ cho khách hàng. Để trống = xoá tiểu sử.
+                        </p>
+                      </div>
+                    )}
+                  />
+                </div>
+
+                <div className="flex flex-col-reverse items-stretch justify-end gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={updateMutation.isPending || profileQuery.isLoading}
+                    className="text-slate-500 hover:text-slate-800"
+                    onClick={resetForm}
+                  >
+                    <RotateCcw className="size-4" />
+                    Khôi phục
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updateMutation.isPending || profileQuery.isLoading}
+                    className="bg-violet-600 text-white shadow-sm hover:bg-violet-700"
+                  >
+                    <Save className="size-4" />
+                    {updateMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </Button>
+                </div>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function FormSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-4 w-32" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-40 w-full" />
     </div>
   );
 }
