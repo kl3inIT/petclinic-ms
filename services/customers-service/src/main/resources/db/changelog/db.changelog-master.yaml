@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/changes/005-extend-pet-profile.yaml
   - include:
       file: db/changelog/changes/006-create-pet-types.yaml
+  - include:
+      file: db/changelog/changes/007-add-version-columns.yaml
