@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/lib/form/FieldError';
 import { PetTypeSelect } from '@/features/pet-types/PetTypeSelect';
+import { usePetTypes } from '@/features/pet-types/api';
 
 import { useAddPet, useUpdatePet } from '@/lib/api/generated/owners/owners';
 import type { PetDto } from '@/lib/api/generated/model/petDto';
@@ -33,6 +34,7 @@ interface Props {
 export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
   const qc = useQueryClient();
   const isEdit = !!pet?.id;
+  const petTypesQuery = usePetTypes();
 
   const invalidate = () =>
     qc.invalidateQueries({
@@ -168,7 +170,22 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
                 <PetTypeSelect
                   id={field.name}
                   value={field.state.value ?? undefined}
-                  onChange={(v) => field.handleChange(v ?? null)}
+                  onChange={(v) => {
+                    field.handleChange(v ?? null);
+                    // Auto-fill `type` free-text từ catalog code khi user chọn —
+                    // chỉ ghi đè khi field "type" đang trống hoặc khớp code cũ
+                    // (để tránh đè user input đã sửa thủ công).
+                    const code = petTypesQuery.data?.find((pt) => pt.id === v)?.code;
+                    if (code) {
+                      const currentType = form.getFieldValue('type');
+                      const prevCode = petTypesQuery.data?.find(
+                        (pt) => pt.id === field.state.value,
+                      )?.code;
+                      if (!currentType || currentType === prevCode) {
+                        form.setFieldValue('type', code);
+                      }
+                    }
+                  }}
                 />
                 <FieldError field={field} />
               </div>

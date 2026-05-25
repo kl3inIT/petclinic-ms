@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
@@ -19,6 +20,9 @@ public class Pet extends AbstractAuditingEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Version
+    private Long version;
 
     private String name;
     private LocalDate birthDate;
@@ -59,6 +63,7 @@ public class Pet extends AbstractAuditingEntity {
     }
 
     public Long getId() { return id; }
+    public Long getVersion() { return version; }
     public String getName() { return name; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getType() { return type; }

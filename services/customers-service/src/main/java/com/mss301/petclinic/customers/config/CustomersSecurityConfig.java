@@ -2,6 +2,7 @@ package com.mss301.petclinic.customers.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -17,11 +18,12 @@ import com.mss301.petclinic.common.security.endpoints.SecurityEndpointsPropertie
  * <p>Customers chứa PII (full name, email, address, phone) → role gating chặt hơn vets:
  * USER chỉ GET pet, STAFF list/create owner, ADMIN delete + manage pet catalog.
  *
- * <p>Per-instance ownership (vd "USER chỉ xem owner record của mình") chưa enforce
- * tại tầng này — cần {@code @PreAuthorize("@ownerSecurity.isOwner(#id, authentication)")}
- * ở controller. Hiện tại UI chỉ admin/staff dùng → coarse role-based đủ.
+ * <p>Per-instance ownership đã enforce qua {@code @PreAuthorize} ở
+ * {@code OwnerController.getOwner(id)} dùng helper {@code @ownerSecurity.isOwner}.
+ * {@code @EnableMethodSecurity} bật annotation-based authorization.
  */
 @Configuration
+@EnableMethodSecurity
 public class CustomersSecurityConfig {
 
     @Bean

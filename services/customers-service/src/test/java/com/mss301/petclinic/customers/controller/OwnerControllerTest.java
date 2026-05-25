@@ -115,4 +115,8 @@ class OwnerControllerTest {
                         .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isNotFound());
     }
+
+    // /me endpoints test ở OwnerIntegrationTest (full Spring context cần thiết cho
+    // AuthenticationPrincipalArgumentResolver — @WebMvcTest slice không auto-wire
+    // security arg resolver → Jwt args bị DataBinder rỗng).
 }

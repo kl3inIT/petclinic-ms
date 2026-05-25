@@ -1,4 +1,4 @@
-import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
 import {
   Bell,
   CalendarCheck,
@@ -13,19 +13,15 @@ import {
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/features/auth/store';
+import { requireAnyRole } from '@/features/auth/guards';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/customer')({
   beforeLoad: ({ location }) => {
-    const { accessToken } = useAuthStore.getState();
-    if (!accessToken) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw redirect({
-        to: '/login',
-        search: { redirect: location.href },
-      });
-    }
+    // /customer/** chỉ cho USER role (+ ADMIN bypass theo convention).
+    // VET role không vào được — sẽ redirect /forbidden.
+    requireAnyRole({ redirectFrom: location.href, allowedRoles: ['USER'] });
   },
   component: CustomerLayout,
 });
@@ -109,6 +105,18 @@ function CustomerLayout() {
               <Bell className="size-5" />
               <span className="absolute top-1 right-1 size-2 rounded-full bg-red-500 ring-2 ring-white" />
             </Button>
+
+            <Link
+              to="/customer/profile"
+              title="Hồ sơ của tôi"
+              className="hidden size-10 shrink-0 overflow-hidden rounded-full border border-slate-100 bg-white shadow-sm transition hover:border-violet-100 hover:ring-2 hover:ring-violet-100 md:inline-flex"
+            >
+              <img
+                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&q=80&auto=format&fit=crop"
+                alt="Avatar"
+                className="size-full object-cover"
+              />
+            </Link>
 
             <Button
               variant="ghost"
