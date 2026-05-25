@@ -2,7 +2,6 @@ import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import {
   Bell,
   CalendarCheck,
-  ChevronDown,
   Home,
   LogOut,
   PawPrint,
@@ -52,7 +51,6 @@ const navItems: NavItem[] = [
 ];
 
 function CustomerLayout() {
-  const user = useAuthStore((s) => s.user);
   const clear = useAuthStore((s) => s.clear);
   const logoutMutation = useLogout({
     mutation: {
@@ -111,24 +109,6 @@ function CustomerLayout() {
               <Bell className="size-5" />
               <span className="absolute top-1 right-1 size-2 rounded-full bg-red-500 ring-2 ring-white" />
             </Button>
-
-            <Link
-              to="/customer/profile"
-              className="hidden items-center gap-3 rounded-full border border-slate-100 bg-white py-1 pr-3 pl-1 shadow-sm transition hover:border-violet-100 hover:bg-violet-50/50 md:flex"
-            >
-              <img
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&q=80&auto=format&fit=crop"
-                alt=""
-                className="size-10 rounded-full object-cover"
-              />
-              <div className="hidden max-w-48 flex-col text-right xl:flex">
-                <span className="truncate text-sm font-bold text-slate-800">
-                  {user?.username ?? 'customer@petclinic.local'}
-                </span>
-                <span className="text-xs font-medium text-slate-500">Khách hàng</span>
-              </div>
-              <ChevronDown className="size-4 text-slate-500" />
-            </Link>
 
             <Button
               variant="ghost"

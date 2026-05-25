@@ -23,7 +23,10 @@ public class Pet extends AbstractAuditingEntity {
     private String name;
     private LocalDate birthDate;
     private String type;
-    private String petTypeId;
+
+    @Column(name = "pet_type_id")
+    private Long petTypeId;
+
     private Boolean isActive = true;
     private BigDecimal weight;
     private String photoId;
@@ -44,7 +47,7 @@ public class Pet extends AbstractAuditingEntity {
         this(name, birthDate, type, null, true, null, null);
     }
 
-    public Pet(String name, LocalDate birthDate, String type, String petTypeId,
+    public Pet(String name, LocalDate birthDate, String type, Long petTypeId,
                Boolean isActive, BigDecimal weight, String photoId) {
         this.name = name;
         this.birthDate = birthDate;
@@ -59,7 +62,7 @@ public class Pet extends AbstractAuditingEntity {
     public String getName() { return name; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getType() { return type; }
-    public String getPetTypeId() { return petTypeId; }
+    public Long getPetTypeId() { return petTypeId; }
     public Boolean getIsActive() { return isActive; }
     public BigDecimal getWeight() { return weight; }
     public String getPhotoId() { return photoId; }
@@ -68,7 +71,7 @@ public class Pet extends AbstractAuditingEntity {
     public void setName(String name) { this.name = name; }
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
     public void setType(String type) { this.type = type; }
-    public void setPetTypeId(String petTypeId) { this.petTypeId = petTypeId; }
+    public void setPetTypeId(Long petTypeId) { this.petTypeId = petTypeId; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
     public void setWeight(BigDecimal weight) { this.weight = weight; }
     public void setPhotoId(String photoId) { this.photoId = photoId; }

@@ -41,6 +41,7 @@ import com.mss301.petclinic.customers.service.impl.OwnerServiceImpl;
 class OwnerServiceImplTest {
 
     @Mock OwnerRepository repository;
+    @Mock PetTypeService petTypeService;
     @InjectMocks OwnerServiceImpl service;
 
     @Test
@@ -114,11 +115,11 @@ class OwnerServiceImplTest {
         given(repository.findById(1L)).willReturn(Optional.of(owner));
         given(repository.saveAndFlush(any(Owner.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        var result = service.addPet(1L, new PetRequest("Milu", null, "dog", "dog", true, null, null));
+        var result = service.addPet(1L, new PetRequest("Milu", null, "dog", 1L, true, null, null));
 
         assertThat(result.pets()).hasSize(1);
         assertThat(result.pets().getFirst().name()).isEqualTo("Milu");
-        assertThat(result.pets().getFirst().petTypeId()).isEqualTo("dog");
+        assertThat(result.pets().getFirst().petTypeId()).isEqualTo(1L);
     }
 
     @Test
@@ -131,7 +132,7 @@ class OwnerServiceImplTest {
         given(repository.findById(1L)).willReturn(Optional.of(owner));
 
         assertThatThrownBy(() -> service.updatePet(1L, 99L,
-                new PetRequest("Tom", null, "cat", "cat", true, null, null)))
+                new PetRequest("Tom", null, "cat", 2L, true, null, null)))
                 .isInstanceOf(PetNotFoundException.class);
     }
 

@@ -13,15 +13,18 @@ import com.mss301.petclinic.customers.exception.OwnerNotFoundException;
 import com.mss301.petclinic.customers.exception.PetNotFoundException;
 import com.mss301.petclinic.customers.repository.OwnerRepository;
 import com.mss301.petclinic.customers.service.OwnerService;
+import com.mss301.petclinic.customers.service.PetTypeService;
 
 @Service
 @Transactional(readOnly = true)
 public class OwnerServiceImpl implements OwnerService {
 
     private final OwnerRepository repository;
+    private final PetTypeService petTypeService;
 
-    public OwnerServiceImpl(OwnerRepository repository) {
+    public OwnerServiceImpl(OwnerRepository repository, PetTypeService petTypeService) {
         this.repository = repository;
+        this.petTypeService = petTypeService;
     }
 
     @Override
@@ -74,6 +77,7 @@ public class OwnerServiceImpl implements OwnerService {
     public OwnerResponse addPet(Long ownerId, PetRequest request) {
         var owner = repository.findById(ownerId)
                 .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
+        petTypeService.resolve(request.petTypeId());  // validate trước khi save
         owner.addPet(request.toEntity());
         return OwnerResponse.from(repository.saveAndFlush(owner));
     }
@@ -87,6 +91,7 @@ public class OwnerServiceImpl implements OwnerService {
                 .filter(candidate -> petId.equals(candidate.getId()))
                 .findFirst()
                 .orElseThrow(() -> new PetNotFoundException(petId.toString()));
+        petTypeService.resolve(request.petTypeId());  // validate
 
         pet.setName(request.name());
         pet.setBirthDate(request.birthDate());

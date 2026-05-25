@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -36,6 +36,8 @@ import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/client';
 import { useMyOwnerProfile } from '@/features/customers/api';
 
+import { z } from 'zod';
+
 import { useBookVisit } from '@/lib/api/generated/visits/visits';
 import { useListVets } from '@/lib/api/generated/vets/vets';
 import type { WorkScheduleSlotResponse } from '@/lib/api/generated/model';
@@ -46,7 +48,12 @@ import {
   WORKHOUR_ORDER,
 } from '@/features/vets/labels';
 
+const searchSchema = z.object({
+  petId: z.coerce.number().int().positive().optional().catch(undefined),
+});
+
 export const Route = createFileRoute('/customer/book')({
+  validateSearch: searchSchema,
   component: BookVisitPage,
 });
 
@@ -214,9 +221,11 @@ async function listVetWorkSchedule(vetId: number) {
 
 function BookVisitPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: '/customer/book' });
   const qc = useQueryClient();
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const appliedPetIdRef = useRef<number | undefined>(undefined);
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const d = new Date();
@@ -288,6 +297,19 @@ function BookVisitPage() {
     const originalIndex = vets.findIndex((v) => v.id === selectedVetRaw.id);
     return getVetDisplayData(selectedVetRaw, originalIndex >= 0 ? originalIndex : 0);
   }, [selectedVetRaw, vets]);
+
+  useEffect(() => {
+    const requestedPetId = search.petId;
+    if (!requestedPetId || appliedPetIdRef.current === requestedPetId) return;
+
+    const petIndex = pets.findIndex((pet) => pet.id === requestedPetId);
+    if (petIndex < 0) return;
+
+    appliedPetIdRef.current = requestedPetId;
+    form.setFieldValue('petId', requestedPetId);
+    setPetPage(Math.floor(petIndex / 8));
+    setStep(2);
+  }, [form, pets, search.petId]);
 
   const vetScheduleQuery = useQuery({
     queryKey: ['vet-work-schedule', values.vetId],

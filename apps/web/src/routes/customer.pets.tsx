@@ -32,6 +32,8 @@ import {
   useRemoveMyPet,
   useUpdateMyPet,
 } from '@/features/customers/api';
+import { PetTypeSelect } from '@/features/pet-types/PetTypeSelect';
+import { usePetTypes } from '@/features/pet-types/api';
 
 export const Route = createFileRoute('/customer/pets')({
   component: CustomerPetsPage,
@@ -100,6 +102,12 @@ function CustomerPetsPage() {
   const [petDialogOpen, setPetDialogOpen] = useState(false);
   const ownerQuery = useMyOwnerProfile();
   const removePet = useRemoveMyPet();
+  const petTypesQuery = usePetTypes();
+  const petTypeLabel = useMemo(() => {
+    const byId = new Map((petTypesQuery.data ?? []).map((pt) => [pt.id, pt.name]));
+    return (id?: number | null) =>
+      id != null ? (byId.get(id) ?? `#${id}`) : 'Chưa phân loại';
+  }, [petTypesQuery.data]);
 
   const pets = useMemo(
     () =>
@@ -256,7 +264,7 @@ function CustomerPetsPage() {
                         </p>
 
                         <p className="mt-1 text-[12px] font-bold text-slate-500">
-                          Pet type ID: {p.petTypeId || 'N/A'} â€¢ Weight:{' '}
+                          {petTypeLabel(p.petTypeId)} • Cân nặng:{' '}
                           {p.weight != null ? `${p.weight} kg` : 'N/A'}
                         </p>
                         <p className="mt-1 text-[12px] font-bold text-slate-500">
@@ -346,7 +354,7 @@ function PetEditorDialog({
     name: '',
     birthDate: '',
     type: '',
-    petTypeId: '',
+    petTypeId: undefined,
     isActive: true,
     weight: undefined,
     photoId: '',
@@ -358,7 +366,7 @@ function PetEditorDialog({
       name: pet?.name ?? '',
       birthDate: pet?.birthDate ?? '',
       type: pet?.type ?? '',
-      petTypeId: pet?.petTypeId ?? '',
+      petTypeId: pet?.petTypeId ?? undefined,
       isActive: pet?.isActive ?? true,
       weight: pet?.weight,
       photoId: pet?.photoId ?? '',
@@ -381,7 +389,7 @@ function PetEditorDialog({
               name: form.name.trim(),
               birthDate: form.birthDate || undefined,
               type: form.type.trim(),
-              petTypeId: form.petTypeId?.trim() || undefined,
+              petTypeId: form.petTypeId ?? undefined,
               isActive: form.isActive ?? true,
               weight: form.weight,
               photoId: form.photoId?.trim() || undefined,
@@ -437,14 +445,11 @@ function PetEditorDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pet-type-id">Pet type ID</Label>
-            <Input
+            <Label htmlFor="pet-type-id">Loại pet (catalog)</Label>
+            <PetTypeSelect
               id="pet-type-id"
-              value={form.petTypeId ?? ''}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, petTypeId: event.target.value }))
-              }
-              placeholder="dog, cat, rabbit..."
+              value={form.petTypeId}
+              onChange={(v) => setForm((prev) => ({ ...prev, petTypeId: v }))}
             />
           </div>
           <div className="space-y-2">

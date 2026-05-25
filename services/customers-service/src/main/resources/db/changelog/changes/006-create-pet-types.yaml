@@ -1,0 +1,107 @@
+databaseChangeLog:
+
+  # Pet type catalog — chuyển pet_type_id từ VARCHAR free-text sang FK BIGINT
+  # tới bảng catalog. Cho phép admin quản lý loại pet + FE dropdown chuẩn.
+  # `code` là business key bất biến (tham chiếu cross-service), `name` là label
+  # hiển thị Vietnamese, `display_order` cho UI sort.
+
+  - changeSet:
+      id: 006-001-create-pet-types
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: customers
+            tableName: pet_types
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_order
+                  type: INT
+                  constraints:
+                    nullable: false
+                  defaultValueNumeric: 100
+              - column: { name: created_by,         type: VARCHAR(50) }
+              - column: { name: created_date,       type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: last_modified_by,   type: VARCHAR(50) }
+              - column: { name: last_modified_date, type: TIMESTAMP WITH TIME ZONE }
+
+  - changeSet:
+      id: 006-002-seed-pet-types
+      author: mss301
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM customers.pet_types
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO customers.pet_types (code, name, display_order) VALUES
+                ('dog',     'Chó',           10),
+                ('cat',     'Mèo',           20),
+                ('rabbit',  'Thỏ',           30),
+                ('bird',    'Chim',          40),
+                ('hamster', 'Chuột Hamster', 50),
+                ('fish',    'Cá',            60),
+                ('reptile', 'Bò sát',        70),
+                ('other',   'Khác',          99)
+
+  # Migrate cột pet_type_id từ VARCHAR(100) sang BIGINT FK.
+  # Bước 1: rename cũ thành legacy (giữ tạm để có chuyển dữ liệu nếu có data),
+  # bước 2: tạo cột mới, bước 3: populate từ pets.type, bước 4: drop legacy.
+  - changeSet:
+      id: 006-003-migrate-pet-type-id-to-fk
+      author: mss301
+      changes:
+        - renameColumn:
+            schemaName: customers
+            tableName: pets
+            oldColumnName: pet_type_id
+            newColumnName: pet_type_id_legacy
+            columnDataType: VARCHAR(100)
+        - addColumn:
+            schemaName: customers
+            tableName: pets
+            columns:
+              - column:
+                  name: pet_type_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_pets_pet_type
+                    references: customers.pet_types(id)
+                    deleteCascade: false
+        - createIndex:
+            schemaName: customers
+            tableName: pets
+            indexName: idx_pets_pet_type_id
+            columns:
+              - column:
+                  name: pet_type_id
+        # Populate pet_type_id từ pets.type (string seed cũ: dog, cat, rabbit, bird, hamster)
+        - sql:
+            dbms: postgresql
+            sql: >-
+              UPDATE customers.pets p
+              SET pet_type_id = pt.id
+              FROM customers.pet_types pt
+              WHERE p.type IS NOT NULL AND lower(p.type) = pt.code
+        - dropColumn:
+            schemaName: customers
+            tableName: pets
+            columnName: pet_type_id_legacy
