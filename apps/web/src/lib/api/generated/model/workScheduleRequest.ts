@@ -5,9 +5,8 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
+import type { WorkScheduleSlotResponse } from './workScheduleSlotResponse';
 
-export interface SortObject {
-  unsorted?: boolean;
-  sorted?: boolean;
-  empty?: boolean;
+export interface WorkScheduleRequest {
+  slots: WorkScheduleSlotResponse[];
 }

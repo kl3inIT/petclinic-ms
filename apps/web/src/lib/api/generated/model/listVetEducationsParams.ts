@@ -5,9 +5,8 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
+import type { Pageable } from './pageable';
 
-export interface SortObject {
-  unsorted?: boolean;
-  sorted?: boolean;
-  empty?: boolean;
-}
+export type ListVetEducationsParams = {
+  pageable: Pageable;
+};

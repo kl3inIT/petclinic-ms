@@ -6,8 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface SortObject {
-  unsorted?: boolean;
-  sorted?: boolean;
-  empty?: boolean;
+export interface EducationResponse {
+  id?: number;
+  vetId?: number;
+  schoolName?: string;
+  degree?: string;
+  fieldOfStudy?: string;
+  startDate?: string;
+  endDate?: string;
 }

@@ -5,20 +5,20 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
-import type { OwnerResponse } from './ownerResponse';
-import type { SortObject } from './sortObject';
 import type { PageableObject } from './pageableObject';
+import type { SortObject } from './sortObject';
+import type { OwnerResponse } from './ownerResponse';
 
 export interface PageOwnerResponse {
   totalElements?: number;
   totalPages?: number;
-  size?: number;
-  content?: OwnerResponse[];
-  number?: number;
+  pageable?: PageableObject;
+  sort?: SortObject;
+  numberOfElements?: number;
   first?: boolean;
   last?: boolean;
-  numberOfElements?: number;
-  sort?: SortObject;
-  pageable?: PageableObject;
+  number?: number;
+  size?: number;
+  content?: OwnerResponse[];
   empty?: boolean;
 }

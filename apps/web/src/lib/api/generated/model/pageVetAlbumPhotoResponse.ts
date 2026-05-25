@@ -7,9 +7,9 @@
  */
 import type { PageableObject } from './pageableObject';
 import type { SortObject } from './sortObject';
-import type { BadgeResponse } from './badgeResponse';
+import type { VetAlbumPhotoResponse } from './vetAlbumPhotoResponse';
 
-export interface PageBadgeResponse {
+export interface PageVetAlbumPhotoResponse {
   totalPages?: number;
   totalElements?: number;
   pageable?: PageableObject;
@@ -19,6 +19,6 @@ export interface PageBadgeResponse {
   numberOfElements?: number;
   number?: number;
   size?: number;
-  content?: BadgeResponse[];
+  content?: VetAlbumPhotoResponse[];
   empty?: boolean;
 }

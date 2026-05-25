@@ -6,8 +6,15 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface SortObject {
-  unsorted?: boolean;
-  sorted?: boolean;
-  empty?: boolean;
+export interface RatingRequest {
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  score: number;
+  /**
+   * @minLength 0
+   * @maxLength 2000
+   */
+  description?: string;
 }

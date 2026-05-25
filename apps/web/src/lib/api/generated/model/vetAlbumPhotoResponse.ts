@@ -6,8 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface SortObject {
-  unsorted?: boolean;
-  sorted?: boolean;
-  empty?: boolean;
+export interface VetAlbumPhotoResponse {
+  id?: number;
+  vetId?: number;
+  caption?: string;
+  contentType?: string;
+  sizeBytes?: number;
+  uploadedAt?: string;
+  presignedUrl?: string;
 }

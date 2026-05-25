@@ -6,21 +6,22 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface VetRequest {
-  /** @minLength 1 */
-  firstName: string;
-  /** @minLength 1 */
-  lastName: string;
+export interface EducationRequest {
   /**
    * @minLength 0
-   * @maxLength 255
+   * @maxLength 200
    */
-  email: string;
+  schoolName: string;
   /**
    * @minLength 0
-   * @maxLength 30
+   * @maxLength 100
    */
-  phoneNumber?: string;
-  resume?: string;
-  specialtyNames?: string[];
+  degree: string;
+  /**
+   * @minLength 0
+   * @maxLength 150
+   */
+  fieldOfStudy?: string;
+  startDate: string;
+  endDate?: string;
 }

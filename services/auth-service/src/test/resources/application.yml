@@ -20,6 +20,9 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    # Loại trừ context "dev" → seed users (changeset 006) skip trong test.
+    # IT tự register user nếu cần, KHÔNG dùng seed data.
+    contexts: test
 
   jpa:
     hibernate:

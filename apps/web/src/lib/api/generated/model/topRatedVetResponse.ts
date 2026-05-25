@@ -6,8 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface SortObject {
-  unsorted?: boolean;
-  sorted?: boolean;
-  empty?: boolean;
+export interface TopRatedVetResponse {
+  vetId?: number;
+  firstName?: string;
+  lastName?: string;
+  ratingCount?: number;
+  averageScore?: number;
 }
