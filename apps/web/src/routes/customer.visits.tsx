@@ -64,8 +64,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 import { useCancelVisit, useSearchVisits } from '@/lib/api/generated/visits/visits';
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
+import type { PetDto } from '@/lib/api/generated/model/petDto';
 import { SearchVisitsStatus, type SearchVisitsParams } from '@/lib/api/generated/model';
 import { VisitResponseStatus } from '@/lib/api/generated/model/visitResponseStatus';
 import { cn } from '@/lib/utils';
@@ -100,6 +102,48 @@ const doctorNames = [
 const specialties = ['Thú y tổng quát', 'Nội khoa', 'Da liễu', 'Tiêm phòng'];
 const PAGE_SIZE = 4;
 
+/** Map loại pet (text từ Pet.type) → emoji hiển thị. Fallback dấu chân chung. */
+function petEmoji(type?: string): string {
+  const t = (type ?? '').toLowerCase();
+  if (t.includes('dog') || t.includes('chó')) return '🐶';
+  if (t.includes('cat') || t.includes('mèo')) return '🐱';
+  if (t.includes('rabbit') || t.includes('thỏ')) return '🐰';
+  if (t.includes('bird') || t.includes('chim')) return '🐦';
+  if (t.includes('parrot') || t.includes('vẹt')) return '🦜';
+  if (t.includes('hamster') || t.includes('guinea') || t.includes('chuột lang'))
+    return '🐹';
+  if (t.includes('fish') || t.includes('cá')) return '🐠';
+  if (
+    t.includes('reptile') ||
+    t.includes('bò sát') ||
+    t.includes('snake') ||
+    t.includes('rắn')
+  )
+    return '🐍';
+  if (t.includes('turtle') || t.includes('rùa')) return '🐢';
+  if (t.includes('ferret') || t.includes('chồn')) return '🦨';
+  if (t.includes('squirrel') || t.includes('sóc')) return '🐿️';
+  return '🐾';
+}
+
+function petTypeLabel(type?: string): string {
+  const t = (type ?? '').toLowerCase();
+  if (t.includes('dog') || t.includes('chó')) return 'Chó';
+  if (t.includes('cat') || t.includes('mèo')) return 'Mèo';
+  if (t.includes('rabbit') || t.includes('thỏ')) return 'Thỏ';
+  if (t.includes('bird') || t.includes('chim')) return 'Chim';
+  if (t.includes('parrot') || t.includes('vẹt')) return 'Vẹt';
+  if (t.includes('hamster')) return 'Hamster';
+  if (t.includes('guinea') || t.includes('chuột lang')) return 'Chuột lang';
+  if (t.includes('fish') || t.includes('cá')) return 'Cá';
+  if (t.includes('reptile') || t.includes('bò sát')) return 'Bò sát';
+  if (t.includes('turtle') || t.includes('rùa')) return 'Rùa';
+  if (t.includes('snake') || t.includes('rắn')) return 'Rắn';
+  if (t.includes('ferret') || t.includes('chồn')) return 'Chồn';
+  if (t.includes('squirrel') || t.includes('sóc')) return 'Sóc';
+  return type || 'Thú cưng';
+}
+
 type MonthFilter = 'all' | 'current' | 'next' | 'past';
 
 function CustomerVisitsPage() {
@@ -123,6 +167,19 @@ function CustomerVisitsPage() {
   };
 
   const listQuery = useSearchVisits(params);
+  const ownerQuery = useGetMyOwnerProfile();
+  const ownerPets = useMemo(() => ownerQuery.data?.pets ?? [], [ownerQuery.data]);
+  // Hero hiển thị thú cưng "trọng tâm" — ưu tiên pet có lịch SCHEDULED gần nhất,
+  // không có thì lấy pet đầu tiên trong hồ sơ.
+  const focusPet = useMemo(() => {
+    const visits = listQuery.data?.content ?? [];
+    const nextScheduled = visits.find((v) => v.status === 'SCHEDULED');
+    const focusId = nextScheduled?.petId ?? ownerPets[0]?.id;
+    return ownerPets.find((p) => p.id === focusId) ?? ownerPets[0];
+  }, [listQuery.data, ownerPets]);
+  const focusPetName = focusPet?.name ?? 'thú cưng';
+  const focusPetEmoji = petEmoji(focusPet?.type);
+  const focusPetTypeLabel = petTypeLabel(focusPet?.type);
 
   const cancelMutation = useCancelVisit({
     mutation: {
@@ -195,7 +252,7 @@ function CustomerVisitsPage() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-950">
-              Lịch khám của bé <span className="text-primary">Charlie</span>
+              Lịch khám của bé <span className="text-primary">{focusPetName}</span>
             </h1>
             <PawPrint className="size-5 text-primary/60" />
           </div>
@@ -208,11 +265,11 @@ function CustomerVisitsPage() {
           <PawPrint className="absolute -top-4 -right-4 size-24 text-primary/5" />
           <div className="relative flex items-center gap-4">
             <div className="grid size-20 shrink-0 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-amber-100 to-orange-200 text-4xl shadow-md">
-              🐶
+              {focusPetEmoji}
             </div>
             <div className="min-w-0 space-y-2">
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-slate-950">Charlie</h2>
+                <h2 className="text-xl font-bold text-slate-950">{focusPetName}</h2>
                 <Button
                   asChild
                   variant="ghost"
@@ -226,7 +283,7 @@ function CustomerVisitsPage() {
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
-                <PetPill icon={PawPrint} label="Chó" />
+                <PetPill icon={PawPrint} label={focusPetTypeLabel} />
                 <PetPill icon={UserRound} label="Đực" />
                 <PetPill label="5 tuổi" />
                 <PetPill icon={CheckCircle2} label="Đã tiêm vaccine" tone="green" />
@@ -354,17 +411,22 @@ function CustomerVisitsPage() {
           ) : filteredVisits.length === 0 ? (
             <EmptyState />
           ) : (
-            visibleVisits.map((visit, index) => (
-              <VisitRow
-                key={visit.id ?? index}
-                visit={visit}
-                index={currentPage * PAGE_SIZE + index}
-                onDetail={() => setDetailTarget(visit)}
-                onReschedule={() => setRescheduleTarget(visit)}
-                onCancel={() => setCancelTarget(visit)}
-                onRate={() => setRateTarget(visit)}
-              />
-            ))
+            visibleVisits.map((visit, index) => {
+              const pet = ownerPets.find((p) => p.id === visit.petId);
+              return (
+                <VisitRow
+                  key={visit.id ?? index}
+                  visit={visit}
+                  index={currentPage * PAGE_SIZE + index}
+                  petName={pet?.name}
+                  petType={pet?.type}
+                  onDetail={() => setDetailTarget(visit)}
+                  onReschedule={() => setRescheduleTarget(visit)}
+                  onCancel={() => setCancelTarget(visit)}
+                  onRate={() => setRateTarget(visit)}
+                />
+              );
+            })
           )}
         </div>
 
@@ -409,6 +471,7 @@ function CustomerVisitsPage() {
 
       <VisitDetailDialog
         visit={detailTarget}
+        pets={ownerPets}
         onOpenChange={(open) => !open && setDetailTarget(null)}
         onReschedule={(visit) => setRescheduleTarget(visit)}
         onCancel={(visit) => setCancelTarget(visit)}
@@ -561,6 +624,8 @@ function MetricCard({
 function VisitRow({
   visit,
   index,
+  petName,
+  petType,
   onDetail,
   onReschedule,
   onCancel,
@@ -568,6 +633,8 @@ function VisitRow({
 }: {
   visit: VisitResponse;
   index: number;
+  petName?: string;
+  petType?: string;
   onDetail: () => void;
   onReschedule: () => void;
   onCancel: () => void;
@@ -603,10 +670,12 @@ function VisitRow({
       <div className="grid gap-4 rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)] transition hover:border-primary/40 hover:shadow-[0_14px_34px_rgba(104,93,199,0.10)] md:grid-cols-[1fr_auto] md:items-center">
         <div className="flex min-w-0 items-center gap-4">
           <div className="grid size-14 shrink-0 place-items-center rounded-full border-2 border-white bg-gradient-to-br from-amber-100 to-orange-200 text-3xl shadow-sm">
-            🐶
+            {petEmoji(petType)}
           </div>
           <div className="min-w-0">
-            <h3 className="truncate text-base font-extrabold text-slate-950">{title}</h3>
+            <h3 className="truncate text-base font-extrabold text-slate-950">
+              {petName ? `${petName} — ${title}` : title}
+            </h3>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-500">
               <span className="inline-flex items-center gap-1">
                 <UserRound className="size-3.5" />
@@ -708,17 +777,20 @@ function VisitRow({
 
 function VisitDetailDialog({
   visit,
+  pets,
   onOpenChange,
   onReschedule,
   onCancel,
   onRate,
 }: {
   visit: VisitResponse | null;
+  pets: PetDto[];
   onOpenChange: (open: boolean) => void;
   onReschedule: (visit: VisitResponse) => void;
   onCancel: (visit: VisitResponse) => void;
   onRate: (visit: VisitResponse) => void;
 }) {
+  const pet = visit ? pets.find((p) => p.id === visit.petId) : undefined;
   const date = visit?.scheduledAt ? new Date(visit.scheduledAt) : null;
   const status = visit?.status ?? VisitResponseStatus.SCHEDULED;
   const canCancel =
@@ -743,14 +815,14 @@ function VisitDetailDialog({
             <div className="flex items-start justify-between gap-4 rounded-xl bg-violet-50 p-4">
               <div className="flex items-center gap-3">
                 <div className="grid size-14 place-items-center rounded-full bg-white text-3xl shadow-sm">
-                  🐶
+                  {petEmoji(pet?.type)}
                 </div>
                 <div>
                   <p className="text-lg font-extrabold text-slate-950">
                     {titleForVisit(visit)}
                   </p>
                   <p className="text-sm font-semibold text-slate-500">
-                    Charlie • Pet #{visit.petId ?? '-'}
+                    {pet?.name ?? `Thú cưng`} • Pet #{visit.petId ?? '-'}
                   </p>
                 </div>
               </div>
