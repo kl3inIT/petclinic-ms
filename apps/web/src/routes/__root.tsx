@@ -1,5 +1,4 @@
 import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import type { QueryClient } from '@tanstack/react-query';
 
 interface RouterContext {
@@ -12,14 +11,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootLayout() {
-  return (
-    <>
-      <Outlet />
-      {import.meta.env.DEV ? (
-        <TanStackRouterDevtools position="bottom-right" />
-      ) : null}
-    </>
-  );
+  // TanStackRouterDevtools đã bỏ — badge "TanStack Router" floating bottom-right
+  // làm bẩn UI screenshot. Nếu cần debug route, thêm lại tạm thời rồi xóa.
+  return <Outlet />;
 }
 
 function NotFound() {
