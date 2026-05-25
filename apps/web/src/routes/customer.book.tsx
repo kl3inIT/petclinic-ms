@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import {
@@ -33,12 +33,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FieldError } from '@/lib/form/FieldError';
 import { cn } from '@/lib/utils';
-import { apiClient } from '@/lib/api/client';
 import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
+import { useListVetWorkSchedule } from '@/lib/api/generated/vet-work-schedule/vet-work-schedule';
 
 import { useBookVisit } from '@/lib/api/generated/visits/visits';
 import { useListVets } from '@/lib/api/generated/vets/vets';
-import type { WorkScheduleSlotResponse } from '@/lib/api/generated/model';
 import { bookVisitSchema } from '@/features/visits/schemas';
 import {
   JS_DAY_TO_WORKDAY,
@@ -210,13 +209,6 @@ function getSlotStatus(slot: string) {
   }
 }
 
-async function listVetWorkSchedule(vetId: number) {
-  const { data } = await apiClient.get<WorkScheduleSlotResponse[]>(
-    `/api/v1/vets/${vetId}/work-schedule`,
-  );
-  return data;
-}
-
 function BookVisitPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: '/customer/book' });
@@ -309,10 +301,8 @@ function BookVisitPage() {
     setStep(2);
   }, [form, pets, search.petId]);
 
-  const vetScheduleQuery = useQuery({
-    queryKey: ['vet-work-schedule', values.vetId],
-    queryFn: () => listVetWorkSchedule(values.vetId),
-    enabled: values.vetId > 0,
+  const vetScheduleQuery = useListVetWorkSchedule(values.vetId, {
+    query: { enabled: values.vetId > 0 },
   });
 
   const selectedWorkday = useMemo(() => {
