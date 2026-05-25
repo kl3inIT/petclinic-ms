@@ -6,13 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface PetDto {
+export interface PetTypeResponse {
   id?: number;
+  code?: string;
   name?: string;
-  birthDate?: string;
-  type?: string;
-  petTypeId?: number;
-  isActive?: boolean;
-  weight?: number;
-  photoId?: string;
+  displayOrder?: number;
 }

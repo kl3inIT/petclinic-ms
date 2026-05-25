@@ -6,13 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface PetDto {
-  id?: number;
-  name?: string;
-  birthDate?: string;
-  type?: string;
-  petTypeId?: number;
-  isActive?: boolean;
-  weight?: number;
-  photoId?: string;
+export interface UpdateOwnerRequest {
+  firstName?: string;
+  lastName?: string;
+  address?: string;
+  city?: string;
+  telephone?: string;
 }

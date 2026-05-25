@@ -15,14 +15,14 @@ export interface PetPayload {
   name: string;
   birthDate?: string;
   type: string;
-  petTypeId?: string;
+  petTypeId?: number;
   isActive?: boolean;
   weight?: number;
   photoId?: string;
 }
 
 export interface CustomerPet extends PetDto {
-  petTypeId?: string;
+  petTypeId?: number;
   isActive?: boolean;
   weight?: number;
   photoId?: string;
