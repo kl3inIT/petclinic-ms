@@ -372,13 +372,13 @@ function VetProfilePage() {
                             readOnly
                             tabIndex={-1}
                             placeholder="ten.vet@petclinic.local"
-                            className="h-11 cursor-not-allowed bg-slate-50 pr-32 text-slate-600"
+                            className="h-11 cursor-not-allowed bg-slate-50 pr-10 text-slate-600"
                           />
                           <span
                             title="Đổi email sẽ phát hành sau"
-                            className="pointer-events-none absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50/70 px-2 py-1 text-xs font-bold text-amber-700"
+                            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400"
                           >
-                            <LockKeyhole className="size-3.5" /> Sẽ có sau
+                            <LockKeyhole className="size-4" />
                           </span>
                         </div>
                       </Field>
