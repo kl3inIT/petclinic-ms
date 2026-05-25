@@ -55,7 +55,9 @@ public class GatewayRoutesConfig {
     @Bean
     public RouterFunction<ServerResponse> customersServiceRoute() {
         return route("customers-service")
-                .route(path("/api/v1/owners/**").or(path("/api/v1/pets/**")), http())
+                .route(path("/api/v1/owners/**")
+                        .or(path("/api/v1/pets/**"))
+                        .or(path("/api/v1/pet-types/**")), http())
                 .filter(lb("customers-service"))
                 .filter(bulkhead(bulkheadRegistry, "customersBulkhead"))
                 .filter(circuitBreaker(c -> c.setId("customersCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
