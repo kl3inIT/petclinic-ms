@@ -16,10 +16,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.customers.dto.req.OwnerRequest;
 import com.mss301.petclinic.customers.dto.req.PetRequest;
 import com.mss301.petclinic.customers.dto.req.UpdateOwnerRequest;
@@ -42,6 +44,8 @@ class OwnerServiceImplTest {
 
     @Mock OwnerRepository repository;
     @Mock PetTypeService petTypeService;
+    /** Trả null → publishAfterCommit short-circuit, không cần verify event. */
+    @Mock ObjectProvider<EventPublisher> eventPublisherProvider;
     @InjectMocks OwnerServiceImpl service;
 
     @Test
@@ -139,11 +143,11 @@ class OwnerServiceImplTest {
     @Test
     @DisplayName("deleteById missing → OwnerNotFoundException (no delete called)")
     void deleteById_missing_throws() {
-        given(repository.existsById(999L)).willReturn(false);
+        given(repository.findById(999L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.deleteById(999L))
                 .isInstanceOf(OwnerNotFoundException.class);
 
-        then(repository).should(never()).deleteById(any());
+        then(repository).should(never()).delete(any());
     }
 }
