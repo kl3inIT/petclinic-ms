@@ -16,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PetResponse } from '@/lib/api/generated/model/petResponse';
+import { usePetTypes } from '@/features/pet-types/api';
 
 interface Props {
   data: PetResponse[];
@@ -29,6 +30,12 @@ function fmtDate(iso?: string): string {
 }
 
 export function PetsDataTable({ data, isLoading }: Props) {
+  const petTypesQuery = usePetTypes();
+  const petTypeLabel = useMemo(() => {
+    const byId = new Map((petTypesQuery.data ?? []).map((pt) => [pt.id, pt.name]));
+    return (id?: number | null) => (id != null ? (byId.get(id) ?? `#${id}`) : '—');
+  }, [petTypesQuery.data]);
+
   const columns = useMemo<ColumnDef<PetResponse>[]>(
     () => [
       {
@@ -41,12 +48,21 @@ export function PetsDataTable({ data, isLoading }: Props) {
       {
         accessorKey: 'name',
         header: 'Tên',
-        cell: ({ row }) => <span className="font-medium">{row.original.name ?? '—'}</span>,
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.name ?? '—'}</span>
+        ),
       },
       {
         accessorKey: 'type',
-        header: 'Loài',
+        header: 'Loài (free-text)',
         cell: ({ row }) => <Badge variant="outline">{row.original.type ?? '—'}</Badge>,
+      },
+      {
+        accessorKey: 'petTypeId',
+        header: 'Loại (catalog)',
+        cell: ({ row }) => (
+          <Badge variant="secondary">{petTypeLabel(row.original.petTypeId)}</Badge>
+        ),
       },
       {
         accessorKey: 'birthDate',
@@ -64,7 +80,7 @@ export function PetsDataTable({ data, isLoading }: Props) {
           ),
       },
     ],
-    [],
+    [petTypeLabel],
   );
 
   const table = useReactTable({
@@ -81,7 +97,9 @@ export function PetsDataTable({ data, isLoading }: Props) {
             <TableRow key={hg.id}>
               {hg.headers.map((h) => (
                 <TableHead key={h.id}>
-                  {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                  {h.isPlaceholder
+                    ? null
+                    : flexRender(h.column.columnDef.header, h.getContext())}
                 </TableHead>
               ))}
             </TableRow>
