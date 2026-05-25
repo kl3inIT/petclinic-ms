@@ -36,7 +36,7 @@ import { PetTypeSelect } from '@/features/pet-types/PetTypeSelect';
 import { usePetTypes } from '@/features/pet-types/api';
 
 export const Route = createFileRoute('/customer/pets')({
-  component: PetDtosPage,
+  component: CustomerPetsPage,
 });
 
 // Helper to get high-quality pet photos for maximum aesthetic impact
@@ -96,7 +96,7 @@ function getPetBreed(pet: { name?: string; type?: string }) {
   return 'Khác';
 }
 
-function PetDtosPage() {
+function CustomerPetsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingPet, setEditingPet] = useState<PetDto | null>(null);
   const [petDialogOpen, setPetDialogOpen] = useState(false);
