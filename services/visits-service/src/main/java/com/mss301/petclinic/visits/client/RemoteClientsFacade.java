@@ -53,6 +53,11 @@ public class RemoteClientsFacade {
         return vetsClient.getVet(vetId);
     }
 
+    @CircuitBreaker(name = "vets-service", fallbackMethod = "checkVetAvailabilityFallback")
+    public VetAvailabilityResponse checkVetAvailability(Long vetId, String workday, String workHour) {
+        return vetsClient.checkAvailability(vetId, workday, workHour);
+    }
+
     @CircuitBreaker(name = "auth-service", fallbackMethod = "fetchUserFallback")
     public UserSummary fetchUser(UUID userId) {
         return usersClient.getUser(userId);
@@ -67,6 +72,14 @@ public class RemoteClientsFacade {
     @SuppressWarnings("unused")
     private VetSummary fetchVetFallback(Long vetId, Throwable t) {
         log.warn("vets-service circuit OPEN/down (vetId={}): {}", vetId, t.toString());
+        throw new ExternalServiceUnavailableException("vets-service", t);
+    }
+
+    @SuppressWarnings("unused")
+    private VetAvailabilityResponse checkVetAvailabilityFallback(Long vetId, String workday, String workHour,
+                                                                 Throwable t) {
+        log.warn("vets-service circuit OPEN/down (vetId={}, workday={}, workHour={}): {}",
+                vetId, workday, workHour, t.toString());
         throw new ExternalServiceUnavailableException("vets-service", t);
     }
 

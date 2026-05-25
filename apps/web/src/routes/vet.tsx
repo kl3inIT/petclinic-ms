@@ -9,22 +9,13 @@ import {
   UserCircle,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
+import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/features/auth/store';
 import { DemoBanner } from '@/features/vet-me/components/DemoBanner';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
-/**
- * Phase K3 — layout cho role VET. Guard: yêu cầu accessToken + role VET (hoặc
- * STAFF/ADMIN dùng /me cho debug). User không có claim {@code vetId} → service
- * /me sẽ trả 400 missing-vet-id → page hiển thị error state.
- */
-// Role gate: VET là role mặc định. ADMIN/STAFF cho debug (admin link sang vet entity).
-// CUSTOMER không có quyền vào portal — redirect về /customer.
-// CodeRabbit review (PR #11, 2026-05-20) flag việc cho mọi user login vào portal
-// gây nhầm UX. Demo mode tách riêng: bật qua URL ?demo=1 trên /login hoặc /.
 const VET_PORTAL_ROLES = ['VET', 'ADMIN', 'STAFF'] as const;
 
 export const Route = createFileRoute('/vet')({
@@ -72,9 +63,8 @@ function VetLayout() {
   });
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted/10 md:flex-row">
-      {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-card px-4 md:hidden">
+    <div className="flex min-h-screen flex-col bg-[#fbfaff] md:h-screen md:flex-row md:overflow-hidden">
+      <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b bg-white px-4 md:hidden">
         <Link to="/vet" className="flex items-center gap-2">
           <Logo size="sm" />
           <span className="text-xs font-semibold text-primary">Vet portal</span>
@@ -89,8 +79,7 @@ function VetLayout() {
         </Button>
       </header>
 
-      {/* Mobile horizontal nav */}
-      <nav className="flex overflow-x-auto border-b bg-card px-2 md:hidden">
+      <nav className="flex shrink-0 overflow-x-auto border-b bg-white px-2 md:hidden">
         {navItems.map((item) => (
           <Link
             key={item.to}
@@ -98,8 +87,7 @@ function VetLayout() {
             activeOptions={{ exact: item.exact ?? false }}
             className="shrink-0 px-3 py-3 text-xs text-muted-foreground"
             activeProps={{
-              className:
-                'border-b-2 border-primary text-primary font-medium',
+              className: 'border-b-2 border-primary text-primary font-medium',
             }}
           >
             <div className="flex items-center gap-1.5">
@@ -110,13 +98,12 @@ function VetLayout() {
         ))}
       </nav>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r bg-card md:flex">
-        <div className="flex h-16 items-center gap-2 border-b px-5">
-          <Link to="/vet" className="flex items-center gap-2">
+      <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
+        <div className="flex h-16 items-center border-b px-4">
+          <Link to="/vet" className="flex min-w-0 flex-1 items-center gap-2">
             <Logo size="sm" />
           </Link>
-          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+          <span className="ml-2 shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] leading-none font-semibold tracking-wide text-primary uppercase">
             Vet portal
           </span>
         </div>
@@ -148,7 +135,7 @@ function VetLayout() {
               <div className="truncate text-sm font-medium">
                 {user?.username ?? 'Anonymous'}
               </div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <div className="text-[10px] tracking-wider text-muted-foreground uppercase">
                 Bác sĩ thú y
               </div>
             </div>
@@ -161,13 +148,13 @@ function VetLayout() {
             onClick={() => logoutMutation.mutate()}
           >
             <LogOut className="size-4" />
-            {logoutMutation.isPending ? 'Đang đăng xuất…' : 'Đăng xuất'}
+            {logoutMutation.isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
           </Button>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-6xl">
+      <main className="min-w-0 flex-1 overflow-auto bg-[#fbfaff] p-4 sm:p-6 lg:p-8">
+        <div className="min-h-full w-full">
           <DemoBanner />
           <Outlet />
         </div>

@@ -65,6 +65,10 @@ class WorkScheduleControllerIT {
     @Test
     void listVetWorkSchedule_emptyInitially_returnsEmptyArray() throws Exception {
         Long vetId = firstVetId();
+        // Clear schedule to ensure we test the empty state reliably,
+        // avoiding flaky behavior depending on which vet is returned first by DB.
+        mvc.perform(delete("/api/v1/vets/{vetId}/work-schedule", vetId).with(staff()));
+
         mvc.perform(get("/api/v1/vets/{vetId}/work-schedule", vetId).with(staff()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())

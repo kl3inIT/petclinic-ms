@@ -3,23 +3,31 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { Mail, Phone, Save, Stethoscope, UserCircle } from 'lucide-react';
+import {
+  Info,
+  LockKeyhole,
+  Mail,
+  Pencil,
+  Phone,
+  RotateCcw,
+  Save,
+  Stethoscope,
+  UserCircle,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FieldError } from '@/lib/form/FieldError';
+import { Textarea } from '@/components/ui/textarea';
 import { useMyProfile, useUpdateMyProfile } from '@/features/vet-me/api';
 import { VetPageHeader } from '@/features/vet-me/components/VetPageHeader';
+import { FieldError } from '@/lib/form/FieldError';
+import { cn } from '@/lib/utils';
 
-/**
- * Vet sửa thông tin cá nhân (resume + phone). KHÔNG cho sửa email/firstName/lastName/
- * active — đây là identity, admin sửa qua /api/v1/vets/{id}.
- */
 const profileFormSchema = z.object({
   phoneNumber: z.string().max(30, 'Tối đa 30 ký tự'),
   resume: z.string().max(10_000, 'Tối đa 10000 ký tự'),
@@ -62,91 +70,137 @@ function VetProfilePage() {
   }, [profileQuery.data, form]);
 
   const profile = profileQuery.data;
+  const initials = getInitials(profile?.firstName, profile?.lastName);
+  const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
+
+  if (profileQuery.isError) {
+    return (
+      <Card className="border-destructive/30 bg-white shadow-sm">
+        <CardContent className="flex items-start gap-3 p-6 text-sm text-destructive">
+          <Info className="mt-0.5 size-5 shrink-0" />
+          <div>
+            <p className="font-semibold">Không tải được hồ sơ bác sĩ.</p>
+            <p className="mt-1 text-destructive/80">
+              {profileQuery.error instanceof Error
+                ? profileQuery.error.message
+                : 'Vui lòng thử lại sau.'}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-5 overflow-hidden rounded-xl bg-[#fbfaff] p-3 sm:p-5 lg:p-6">
       <VetPageHeader
         icon={UserCircle}
         title="Hồ sơ cá nhân"
         subtitle="Thông tin định danh do quản trị viên duy trì. Bạn có thể sửa số điện thoại và tiểu sử."
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Identity card — read-only */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-base">Thông tin định danh</CardTitle>
+      <div className="flex items-center gap-3 rounded-lg border border-violet-100 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm">
+        <Info className="size-4 shrink-0 text-violet-600" />
+        <span>
+          Một số thông tin chỉ có thể được chỉnh sửa bởi quản trị viên PetClinic để đảm
+          bảo tính bảo mật và chính xác.
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[0.9fr_1.65fr]">
+        <Card className="border-slate-200/80 bg-white/90 shadow-sm">
+          <CardHeader className="border-b border-slate-100 px-5 py-4">
+            <CardTitle className="text-base font-bold text-slate-950">
+              Thông tin định danh
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm">
+          <CardContent className="p-5">
             {profileQuery.isLoading ? (
-              <>
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-4 w-1/2" />
-              </>
+              <IdentitySkeleton />
             ) : (
-              <>
-                {/* Avatar placeholder — Phase E2 có endpoint photo, regen orval sẽ thay */}
-                <div className="flex items-center gap-3">
-                  <div className="flex size-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-semibold text-primary">
-                    {(profile?.firstName ?? '?').charAt(0)}
-                    {(profile?.lastName ?? '?').charAt(0)}
+              <div className="space-y-5">
+                <div className="flex items-center gap-5">
+                  <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-violet-100 text-3xl font-bold text-violet-600">
+                    {initials}
                   </div>
-                  <div>
-                    <div className="font-medium">
-                      BS. {profile?.firstName} {profile?.lastName}
+                  <div className="min-w-0">
+                    <div className="truncate text-base font-bold text-slate-950">
+                      BS. {fullName || 'Chưa có tên'}
                     </div>
-                    <Badge
-                      variant={profile?.active ? 'default' : 'secondary'}
-                      className="mt-1"
-                    >
-                      {profile?.active ? 'Đang hoạt động' : 'Tạm nghỉ'}
-                    </Badge>
+                    <StatusBadge active={profile?.active} />
                   </div>
                 </div>
 
-                <ReadField icon={Mail} label="Email" value={profile?.email} />
+                <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+                  <ReadField icon={Mail} label="Email" value={profile?.email} />
+                  <ReadField
+                    icon={Phone}
+                    label="Số điện thoại"
+                    value={profile?.phoneNumber}
+                    action={
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-8 rounded-md bg-violet-50 text-violet-600 hover:bg-violet-100 hover:text-violet-700"
+                        onClick={() => {
+                          const input = document.getElementById('phoneNumber');
+                          input?.focus();
+                        }}
+                        aria-label="Chỉnh sửa số điện thoại"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    }
+                  />
+                </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-                    <Stethoscope className="size-3.5" />
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
+                    <Stethoscope className="size-4" />
                     Chuyên môn
                   </div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {(profile?.specialties ?? []).length === 0 ? (
-                      <span className="text-xs italic text-muted-foreground">
-                        Chưa có
-                      </span>
+                      <span className="text-sm text-slate-500 italic">Chưa có</span>
                     ) : (
-                      profile?.specialties?.map((s) => (
-                        <Badge key={s.id ?? s.name} variant="secondary">
-                          {s.name}
+                      profile?.specialties?.map((specialty) => (
+                        <Badge
+                          key={specialty.id ?? specialty.name}
+                          variant="secondary"
+                          className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700"
+                        >
+                          {specialty.name}
                         </Badge>
                       ))
                     )}
                   </div>
                 </div>
 
-                <p className="border-t pt-3 text-xs text-muted-foreground">
-                  Cần đổi tên hoặc email? Liên hệ admin.
-                </p>
-              </>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <LockKeyhole className="size-3.5 shrink-0" />
+                  <span>
+                    Cần đổi tên hoặc email? Liên hệ quản trị viên để được hỗ trợ.
+                  </span>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Editable form */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Cập nhật thông tin</CardTitle>
+        <Card className="border-slate-200/80 bg-white/90 shadow-sm">
+          <CardHeader className="border-b border-slate-100 px-5 py-4">
+            <CardTitle className="text-base font-bold text-slate-950">
+              Cập nhật thông tin
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-5">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 void form.handleSubmit();
               }}
-              className="space-y-5"
+              className="space-y-6"
             >
               <form.Field
                 name="phoneNumber"
@@ -154,9 +208,9 @@ function VetProfilePage() {
                   <div className="space-y-2">
                     <Label
                       htmlFor={field.name}
-                      className="flex items-center gap-1.5"
+                      className="flex items-center gap-2 text-sm font-medium text-slate-700"
                     >
-                      <Phone className="size-3.5" />
+                      <Phone className="size-4 text-violet-600" />
                       Số điện thoại
                     </Label>
                     <Input
@@ -164,10 +218,11 @@ function VetProfilePage() {
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="0901 234 567"
+                      placeholder="0901000001"
+                      className="h-11 rounded-md border-slate-200 bg-white text-base shadow-sm focus-visible:ring-violet-300"
                     />
                     <FieldError field={field} />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-slate-500">
                       Khách hàng có thể thấy số này khi đặt lịch khám.
                     </p>
                   </div>
@@ -178,28 +233,35 @@ function VetProfilePage() {
                 name="resume"
                 children={(field) => (
                   <div className="space-y-2">
-                    <Label htmlFor={field.name}>Tiểu sử / Kinh nghiệm</Label>
+                    <Label
+                      htmlFor={field.name}
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      Tiểu sử / Kinh nghiệm
+                    </Label>
                     <Textarea
                       id={field.name}
-                      rows={8}
+                      rows={7}
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Mô tả kinh nghiệm, chứng chỉ, lĩnh vực chuyên sâu, năm tốt nghiệp…"
+                      placeholder="Mô tả kinh nghiệm, chứng chỉ, lĩnh vực chuyên sâu, năm tốt nghiệp..."
+                      className="min-h-40 rounded-md border-slate-200 bg-white text-sm shadow-sm focus-visible:ring-violet-300"
                     />
                     <FieldError field={field} />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-slate-500">
                       {field.state.value.length}/10000 ký tự
                     </p>
                   </div>
                 )}
               />
 
-              <div className="flex items-center justify-end gap-2 border-t pt-4">
+              <div className="flex flex-col-reverse items-stretch justify-end gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center">
                 <Button
                   type="button"
                   variant="ghost"
-                  disabled={updateMutation.isPending || !form.state.isDirty}
+                  disabled={updateMutation.isPending || profileQuery.isLoading}
+                  className="text-slate-500 hover:text-slate-800"
                   onClick={() => {
                     if (profile) {
                       form.reset({
@@ -209,14 +271,16 @@ function VetProfilePage() {
                     }
                   }}
                 >
+                  <RotateCcw className="size-4" />
                   Khôi phục
                 </Button>
                 <Button
                   type="submit"
-                  disabled={updateMutation.isPending || !form.state.isDirty}
+                  disabled={updateMutation.isPending || profileQuery.isLoading}
+                  className="bg-violet-600 text-white shadow-sm hover:bg-violet-700"
                 >
                   <Save className="size-4" />
-                  {updateMutation.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+                  {updateMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </Button>
               </div>
             </form>
@@ -227,22 +291,68 @@ function VetProfilePage() {
   );
 }
 
+function IdentitySkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-5">
+        <Skeleton className="size-20 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-6 w-28 rounded-full" />
+        </div>
+      </div>
+      <Skeleton className="h-28 w-full" />
+      <Skeleton className="h-24 w-full" />
+    </div>
+  );
+}
+
+function StatusBadge({ active }: { active?: boolean }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'mt-2 rounded-full px-3 py-1 text-xs font-semibold',
+        active
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          : 'border-slate-200 bg-slate-50 text-slate-600',
+      )}
+    >
+      <span
+        className={cn(
+          'mr-1.5 size-2 rounded-full',
+          active ? 'bg-emerald-500' : 'bg-slate-400',
+        )}
+      />
+      {active ? 'Đang hoạt động' : 'Tạm nghỉ'}
+    </Badge>
+  );
+}
+
 function ReadField({
   icon: Icon,
   label,
   value,
+  action,
 }: {
-  icon: typeof Mail;
+  icon: LucideIcon;
   label: string;
   value?: string | null;
+  action?: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
-        <Icon className="size-3.5" />
-        {label}
-      </div>
-      <div className="text-sm">{value || '—'}</div>
+    <div className="grid grid-cols-[1rem_6rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-4 text-sm">
+      <Icon className="size-4 text-slate-500" />
+      <span className="text-xs font-semibold text-slate-500 uppercase">{label}</span>
+      <span className="min-w-0 truncate font-medium text-slate-900">{value || '-'}</span>
+      {action}
     </div>
   );
+}
+
+function getInitials(firstName?: string, lastName?: string): string {
+  const first = firstName?.trim().charAt(0) ?? '';
+  const last = lastName?.trim().charAt(0) ?? '';
+  const initials = `${first}${last}`.toUpperCase();
+  return initials || 'BS';
 }

@@ -1,6 +1,8 @@
 package com.mss301.petclinic.visits.service.impl;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -40,6 +42,7 @@ import com.mss301.petclinic.visits.service.VisitService;
 public class VisitServiceImpl implements VisitService {
 
     private static final Logger log = LoggerFactory.getLogger(VisitServiceImpl.class);
+    private static final ZoneId CLINIC_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final VisitRepository repository;
     /** Cross-service calls qua bean tách riêng — bean boundary cần thiết để Spring AOP
@@ -63,7 +66,12 @@ public class VisitServiceImpl implements VisitService {
 
     @Override
     @Transactional
-    public VisitResponse book(BookVisitRequest req, UUID currentUserId) {
+    public VisitResponse book(BookVisitRequest req, UUID currentUserId, Long currentCustomerId) {
+        if (currentCustomerId == null) {
+            throw new BadRequestAlertException(
+                    "Tài khoản chưa được link với hồ sơ khách hàng", "Visit", "customer-link-required");
+        }
+
         // Cross-service validation — reuse response cho event enrichment
         VetSummary vet;
         try {
@@ -83,6 +91,18 @@ public class VisitServiceImpl implements VisitService {
         if (pet.ownerId() == null) {
             throw new BadRequestAlertException(
                     "Pet không có owner hợp lệ", "Visit", "pet-no-owner");
+        }
+        if (!pet.ownerId().equals(currentCustomerId)) {
+            throw new BadRequestAlertException(
+                    "Bạn chỉ có thể đặt lịch cho thú cưng của mình", "Visit", "pet-owner-mismatch");
+        }
+
+        Slot slot = toBookableSlot(req.scheduledAt());
+        if (!remoteClients.checkVetAvailability(req.vetId(), slot.workday(), slot.workHour()).available()) {
+            throw new BadRequestAlertException(
+                    "Bác sĩ không có lịch làm việc vào khung giờ đã chọn",
+                    "Visit",
+                    "vet-unavailable");
         }
 
         Visit visit = Visit.book(req.petId(), req.vetId(), currentUserId,
@@ -146,6 +166,35 @@ public class VisitServiceImpl implements VisitService {
     private Visit loadOrThrow(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new VisitNotFoundException(id.toString()));
+    }
+
+    private static Slot toBookableSlot(Instant scheduledAt) {
+        ZonedDateTime local = scheduledAt.atZone(CLINIC_ZONE);
+        if (local.getMinute() != 0 || local.getSecond() != 0 || local.getNano() != 0) {
+            throw new BadRequestAlertException(
+                    "Thời gian khám phải bắt đầu đúng đầu giờ", "Visit", "invalid-slot-start");
+        }
+        int hour = local.getHour();
+        if (hour < 8 || hour > 19) {
+            throw new BadRequestAlertException(
+                    "Thời gian khám phải nằm trong khung 08:00-20:00", "Visit", "invalid-work-hour");
+        }
+        return new Slot(toWorkday(local), "HOUR_" + hour + "_" + (hour + 1));
+    }
+
+    private static String toWorkday(ZonedDateTime local) {
+        return switch (local.getDayOfWeek()) {
+            case MONDAY -> "MONDAY";
+            case TUESDAY -> "TUESDAY";
+            case WEDNESDAY -> "WEDNESDAY";
+            case THURSDAY -> "THURSDAY";
+            case FRIDAY -> "FRIDAY";
+            case SATURDAY -> "SATURDAY";
+            case SUNDAY -> "SUNDAY";
+        };
+    }
+
+    private record Slot(String workday, String workHour) {
     }
 
     /**

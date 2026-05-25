@@ -67,6 +67,13 @@ public class JwtTokenProvider {
         if (user.getVetId() != null) {
             claimsBuilder.claim("vetId", user.getVetId());
         }
+        // Phase L — claim customerId cho USER role link sang owner entity (customers-service).
+        // Visits-service / customers-service đọc claim này cho per-instance authorization
+        // (vd "USER chỉ book pet của mình" qua check pet.ownerId == jwt.customerId).
+        // Vet/admin/staff không có claim (customerId NULL).
+        if (user.getCustomerId() != null) {
+            claimsBuilder.claim("customerId", user.getCustomerId());
+        }
 
         JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256)
                 .keyId(rsaJwk.getKeyID())

@@ -1,0 +1,37 @@
+databaseChangeLog:
+
+  # Phase L — Link user account ↔ customer (owner) entity (1-1, optional).
+  # customer_id NULL = user thường (vet/admin/staff). Non-null = customer owns pets.
+  # Pattern y hệt Phase K vet_id — mirror column ở 2 schema (auth.users.customer_id
+  # ↔ customers.owners.user_id) sync qua event-driven flow (user.registered → owner.created).
+  #
+  # KHÔNG FK constraint sang customers schema vì cross-schema FK Postgres support kém +
+  # customers-service có thể chạy độc lập (microservice boundary). Integrity check ở app layer.
+  #
+  # JwtTokenProvider sẽ thêm claim `customerId` nếu non-null → visits-service / customers-service
+  # dùng claim này để enforce per-instance authorization (vd "USER chỉ book cho pet của mình"
+  # qua check pet.ownerId == jwt.customerId — KHÔNG cần extra DB round-trip).
+
+  - changeSet:
+      id: 005-001-add-users-customer-id
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: auth
+            tableName: users
+            columns:
+              - column:
+                  name: customer_id
+                  type: BIGINT
+                  constraints:
+                    nullable: true
+
+  - changeSet:
+      id: 005-002-add-users-customer-id-unique
+      author: mss301
+      changes:
+        - addUniqueConstraint:
+            schemaName: auth
+            tableName: users
+            columnNames: customer_id
+            constraintName: uk_users_customer_id

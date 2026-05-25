@@ -6,6 +6,7 @@ build/
 .kotlin
 
 ### IntelliJ IDEA ###
+.idea/
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml
@@ -62,6 +63,7 @@ dist/
 
 ### TanStack Router auto-gen ###
 **/src/routeTree.gen.ts
+**/.tanstack/
 
 ### Test outputs ###
 coverage/

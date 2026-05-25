@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 @plugin 'tailwindcss-animate';
@@ -114,11 +115,31 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
+    font-family:
+      'Plus Jakarta Sans',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 }
 
 /* Login background — Jmix petclinic style */
+.landing-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.landing-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 .auth-bg {
   background-image: url('/brand/login-background.svg');
   background-size: cover;

@@ -7,3 +7,5 @@ databaseChangeLog:
       file: db/changelog/changes/003-refresh-tokens.yaml
   - include:
       file: db/changelog/changes/004-add-vet-link.yaml
+  - include:
+      file: db/changelog/changes/005-add-customer-link.yaml

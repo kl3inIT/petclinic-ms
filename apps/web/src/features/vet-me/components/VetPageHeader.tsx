@@ -1,18 +1,13 @@
+import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
-/**
- * Page header dùng chung cho mọi trang trong /vet/*. Giữ visual hierarchy nhất quán.
- *
- * Cấu trúc: icon (size lg, tinted bg) + title (h1) + subtitle (muted). Action slot
- * bên phải cho button "Edit", "Refresh", v.v.
- */
 interface VetPageHeaderProps {
   icon: LucideIcon;
   title: string;
   subtitle?: string;
-  /** Slot bên phải header — vd nút "Cập nhật" / "Xuất CSV". */
-  action?: React.ReactNode;
+  action?: ReactNode;
   className?: string;
 }
 
@@ -24,24 +19,28 @@ export function VetPageHeader({
   className,
 }: VetPageHeaderProps) {
   return (
-    <div
+    <section
       className={cn(
-        'flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between',
+        'rounded-xl border border-violet-100 bg-white/80 px-4 py-5 shadow-sm sm:px-6',
         className,
       )}
     >
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
-          <Icon className="size-6" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600 shadow-sm">
+            <Icon className="size-7" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl leading-tight font-bold text-slate-950">{title}</h1>
+            {subtitle && (
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold leading-tight">{title}</h1>
-          {subtitle && (
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-          )}
-        </div>
+        {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
       </div>
-      {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
-    </div>
+    </section>
   );
 }
