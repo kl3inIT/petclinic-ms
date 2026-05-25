@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
 import { toast } from 'sonner';
@@ -6,6 +6,7 @@ import { z } from 'zod';
 import {
   Award,
   CalendarClock,
+  CreditCard,
   Eye,
   FileText,
   IdCard,
@@ -14,8 +15,10 @@ import {
   Mail,
   MessageSquareQuote,
   Phone,
+  QrCode,
   RotateCcw,
   Save,
+  ShieldCheck,
   Sparkles,
   Star,
   Stethoscope,
@@ -26,6 +29,13 @@ import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,6 +78,7 @@ function VetProfilePage() {
   const ratingsSummaryQuery = useMyRatingsSummary();
   const badgesQuery = useMyBadges(0, 1);
   const scheduleQuery = useMySchedule();
+  const [idCardOpen, setIdCardOpen] = useState(false);
 
   const formDefaults = useMemo(
     () => ({
@@ -187,6 +198,19 @@ function VetProfilePage() {
             icon={IdCard}
             title="Thẻ bác sĩ"
             subtitle="Thông tin định danh nội bộ"
+            action={
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5 rounded-lg border-violet-200 bg-white text-violet-700 hover:bg-violet-50"
+                onClick={() => setIdCardOpen(true)}
+                disabled={profileQuery.isLoading || !profile}
+              >
+                <CreditCard className="size-3.5" />
+                Xem thẻ
+              </Button>
+            }
           >
             {profileQuery.isLoading ? (
               <IdSkeleton />
@@ -444,6 +468,14 @@ function VetProfilePage() {
           onSave={() => void form.handleSubmit()}
         />
       )}
+
+      <VetIdCardDialog
+        open={idCardOpen}
+        onOpenChange={setIdCardOpen}
+        profile={profile}
+        username={username}
+        fullName={fullName}
+      />
     </div>
   );
 }
@@ -900,5 +932,172 @@ function IdSkeleton() {
         <Skeleton key={i} className="h-10 w-full" />
       ))}
     </div>
+  );
+}
+
+interface VetIdCardDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  profile: ReturnType<typeof useMyProfile>['data'];
+  username: string;
+  fullName: string;
+}
+
+function VetIdCardDialog({
+  open,
+  onOpenChange,
+  profile,
+  username,
+  fullName,
+}: VetIdCardDialogProps) {
+  const issuedYear = new Date().getFullYear();
+  const idPadded = profile?.id != null ? String(profile.id).padStart(4, '0') : '----';
+  const cardCode = `PC-VET-${idPadded}`;
+  const specialtyNames = (profile?.specialties ?? [])
+    .map((s) => s.name)
+    .filter(Boolean) as string[];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[420px] overflow-hidden border-none bg-transparent p-0 shadow-none [&>button]:top-4 [&>button]:right-4 [&>button]:z-30 [&>button]:rounded-full [&>button]:bg-white/90 [&>button]:p-1 [&>button]:text-slate-700 [&>button]:hover:bg-white">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Thẻ bác sĩ</DialogTitle>
+          <DialogDescription>
+            Thẻ ra vào nội bộ Petclinic — chỉ dùng trong khuôn viên phòng khám.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col items-center">
+          {/* Lanyard ribbon */}
+          <div className="flex h-12 w-24 items-end justify-center">
+            <div className="h-full w-3 rounded-t bg-gradient-to-b from-violet-700 to-violet-500 shadow-inner" />
+            <div className="h-full w-3 rounded-t bg-gradient-to-b from-violet-500 to-violet-700 shadow-inner" />
+          </div>
+
+          {/* Clip */}
+          <div className="-mt-1 flex items-center justify-center">
+            <div className="h-3 w-16 rounded-t-md bg-slate-800" />
+          </div>
+
+          {/* Card body */}
+          <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_25px_60px_-15px_rgba(124,108,245,0.45)]">
+            {/* Hole punch */}
+            <div className="absolute top-3 left-1/2 z-10 size-4 -translate-x-1/2 rounded-full border border-slate-300 bg-slate-100 shadow-inner" />
+
+            {/* Header band */}
+            <div className="relative bg-gradient-to-br from-violet-700 via-violet-600 to-indigo-600 px-5 pt-9 pb-4 text-white">
+              <div className="pointer-events-none absolute -top-10 -right-10 size-32 rounded-full bg-white/10 blur-2xl" />
+              <div className="pointer-events-none absolute -bottom-12 -left-12 size-32 rounded-full bg-white/10 blur-2xl" />
+              <div className="relative flex items-center gap-2">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur">
+                  <Stethoscope className="size-5" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-bold tracking-[0.2em] text-violet-100 uppercase">
+                    Petclinic
+                  </p>
+                  <p className="text-sm font-extrabold tracking-wide">MEDICAL STAFF</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Diagonal stripe */}
+            <div className="h-2 bg-[repeating-linear-gradient(135deg,_#7c3aed_0_10px,_#a855f7_10px_20px)]" />
+
+            {/* Body */}
+            <div className="space-y-4 px-5 py-5">
+              <div className="flex items-center gap-4">
+                <div className="rounded-xl bg-gradient-to-br from-violet-50 to-indigo-50 p-1 ring-2 ring-violet-200">
+                  <VetAvatar
+                    firstName={profile?.firstName}
+                    lastName={profile?.lastName}
+                    photoUrl={profile?.photoUrl ?? null}
+                    size="lg"
+                    className="rounded-lg"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
+                    Bác sĩ thú y
+                  </p>
+                  <p className="truncate text-lg leading-tight font-extrabold text-slate-950">
+                    {fullName || 'Chưa có tên'}
+                  </p>
+                  <p className="mt-0.5 truncate font-mono text-[11px] text-slate-500">
+                    {username}
+                  </p>
+                </div>
+              </div>
+
+              {specialtyNames.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {specialtyNames.slice(0, 4).map((name) => (
+                    <span
+                      key={name}
+                      className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[11px] font-bold text-violet-700"
+                    >
+                      <Sparkles className="size-2.5" />
+                      {name}
+                    </span>
+                  ))}
+                  {specialtyNames.length > 4 && (
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600">
+                      +{specialtyNames.length - 4}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-[1fr_auto] items-end gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3">
+                <div className="space-y-1.5 text-left">
+                  <div>
+                    <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">
+                      Mã thẻ
+                    </p>
+                    <p className="font-mono text-sm font-extrabold text-slate-950">
+                      {cardCode}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">
+                      Tình trạng
+                    </p>
+                    <p className="flex items-center gap-1 text-[11px] font-bold text-slate-700">
+                      <ShieldCheck
+                        className={cn(
+                          'size-3',
+                          profile?.active ? 'text-emerald-600' : 'text-slate-400',
+                        )}
+                      />
+                      {profile?.active ? 'Đang hoạt động' : 'Tạm ngưng'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex size-16 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm">
+                  <QrCode className="size-12" />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-dashed border-slate-200 pt-3 text-[10px] font-semibold text-slate-500">
+                <span>Cấp năm {issuedYear}</span>
+                <span>Giá trị đến {issuedYear + 2}</span>
+              </div>
+            </div>
+
+            {/* Footer band */}
+            <div className="bg-slate-950 px-5 py-2.5 text-center">
+              <p className="text-[9px] font-bold tracking-[0.25em] text-slate-300 uppercase">
+                Petclinic Internal · Authorized Personnel Only
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-4 max-w-[320px] text-center text-[11px] font-medium text-slate-500">
+            Thẻ định danh nội bộ — vui lòng mang theo khi vào khu vực điều trị. Mất thẻ
+            báo lễ tân để cấp lại.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
