@@ -4,9 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,5 +94,67 @@ class OwnerIntegrationTest extends AbstractPostgresIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(org.hamcrest.Matchers.greaterThanOrEqualTo(10)))
                 .andExpect(jsonPath("$.content[?(@.lastName == 'Nguyễn')]").exists());
+    }
+
+    // ===== /me self-service — JWT customerId claim →
+    // controller resolveCustomerId() → service.findById/update =====
+
+    /** Tạo JWT bộ phận có claim customerId — controller dùng để resolve owner record. */
+    private static Jwt userJwtWithCustomerId(long customerId) {
+        Instant now = Instant.now();
+        return Jwt.withTokenValue("test-token")
+                .header("alg", "RS256")
+                .header("typ", "JWT")
+                .subject("00000000-0000-0000-0000-000000000001")
+                .claim("preferred_username", "testuser")
+                .claim("roles", List.of("USER"))
+                .claim("customerId", customerId)
+                .issuer("petclinic-ms-test")
+                .audience(List.of("petclinic-ms"))
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(3600))
+                .build();
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/owners/me — JWT customerId=1 → trả về owner seed #1")
+    void getMyOwnerProfile_resolvesByClaim() throws Exception {
+        // Seed Liquibase 004: owner id=1 = "Anh Nguyễn"
+        mockMvc.perform(get("/api/v1/owners/me")
+                        .with(jwt().jwt(userJwtWithCustomerId(1L))
+                                .authorities(JwtTestSupport.userAuthorities())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.firstName").value("Anh"))
+                .andExpect(jsonPath("$.lastName").value("Nguyễn"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/owners/me — JWT thiếu customerId claim → 400 BadRequestAlert")
+    void getMyOwnerProfile_missingClaim_returns400() throws Exception {
+        mockMvc.perform(get("/api/v1/owners/me")
+                        .with(jwt().jwt(JwtTestSupport.userJwt())
+                                .authorities(JwtTestSupport.userAuthorities())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.entityName").value("owner-me"))
+                .andExpect(jsonPath("$.errorKey").value("missing-customer-id"));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/owners/me — update partial qua customerId claim")
+    void updateMyOwnerProfile_updates() throws Exception {
+        String body = """
+                {"city":"Cần Thơ"}
+                """;
+
+        mockMvc.perform(patch("/api/v1/owners/me")
+                        .with(jwt().jwt(userJwtWithCustomerId(1L))
+                                .authorities(JwtTestSupport.userAuthorities()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.city").value("Cần Thơ"));
     }
 }
