@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,7 +22,6 @@ import {
   HelpCircle,
   RefreshCcw,
   Search,
-  Plus,
   Edit2,
   Calendar,
 } from 'lucide-react';
@@ -33,12 +33,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FieldError } from '@/lib/form/FieldError';
 import { cn } from '@/lib/utils';
-import { apiClient } from '@/lib/api/client';
+import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
+import { useListVetWorkSchedule } from '@/lib/api/generated/vet-work-schedule/vet-work-schedule';
 
 import { useBookVisit } from '@/lib/api/generated/visits/visits';
-import { useListPets } from '@/lib/api/generated/pets/pets';
 import { useListVets } from '@/lib/api/generated/vets/vets';
-import type { WorkScheduleSlotResponse } from '@/lib/api/generated/model';
 import { bookVisitSchema } from '@/features/visits/schemas';
 import {
   JS_DAY_TO_WORKDAY,
@@ -46,7 +45,12 @@ import {
   WORKHOUR_ORDER,
 } from '@/features/vets/labels';
 
+const searchSchema = z.object({
+  petId: z.coerce.number().int().positive().optional().catch(undefined),
+});
+
 export const Route = createFileRoute('/customer/book')({
+  validateSearch: searchSchema,
   component: BookVisitPage,
 });
 
@@ -205,18 +209,13 @@ function getSlotStatus(slot: string) {
   }
 }
 
-async function listVetWorkSchedule(vetId: number) {
-  const { data } = await apiClient.get<WorkScheduleSlotResponse[]>(
-    `/api/v1/vets/${vetId}/work-schedule`,
-  );
-  return data;
-}
-
 function BookVisitPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: '/customer/book' });
   const qc = useQueryClient();
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const appliedPetIdRef = useRef<number | undefined>(undefined);
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const d = new Date();
@@ -226,9 +225,7 @@ function BookVisitPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
 
   const [petPage, setPetPage] = useState(0);
-  const petsQuery = useListPets({
-    pageable: { page: petPage, size: 8, sort: ['name,asc'] },
-  });
+  const ownerQuery = useGetMyOwnerProfile();
 
   const [vetPage, setVetPage] = useState(0);
   const vetsQuery = useListVets({
@@ -265,7 +262,13 @@ function BookVisitPage() {
       }),
   });
 
-  const pets = useMemo(() => petsQuery.data?.content ?? [], [petsQuery.data]);
+  const pets = useMemo(
+    () =>
+      [...(ownerQuery.data?.pets ?? [])].sort((a, b) =>
+        (a.name ?? '').localeCompare(b.name ?? ''),
+      ),
+    [ownerQuery.data],
+  );
   const vets = useMemo(() => vetsQuery.data?.content ?? [], [vetsQuery.data]);
 
   const values = useStore(form.store, (state) => state.values);
@@ -285,10 +288,21 @@ function BookVisitPage() {
     return getVetDisplayData(selectedVetRaw, originalIndex >= 0 ? originalIndex : 0);
   }, [selectedVetRaw, vets]);
 
-  const vetScheduleQuery = useQuery({
-    queryKey: ['vet-work-schedule', values.vetId],
-    queryFn: () => listVetWorkSchedule(values.vetId),
-    enabled: values.vetId > 0,
+  useEffect(() => {
+    const requestedPetId = search.petId;
+    if (!requestedPetId || appliedPetIdRef.current === requestedPetId) return;
+
+    const petIndex = pets.findIndex((pet) => pet.id === requestedPetId);
+    if (petIndex < 0) return;
+
+    appliedPetIdRef.current = requestedPetId;
+    form.setFieldValue('petId', requestedPetId);
+    setPetPage(Math.floor(petIndex / 8));
+    setStep(2);
+  }, [form, pets, search.petId]);
+
+  const vetScheduleQuery = useListVetWorkSchedule(values.vetId, {
+    query: { enabled: values.vetId > 0 },
   });
 
   const selectedWorkday = useMemo(() => {
@@ -340,6 +354,11 @@ function BookVisitPage() {
         (p.type ?? '').toLowerCase().includes(term),
     );
   }, [pets, searchTerm]);
+  const totalPetPages = Math.max(1, Math.ceil(filteredPets.length / 8));
+  const pagedPets = useMemo(
+    () => filteredPets.slice(petPage * 8, petPage * 8 + 8),
+    [filteredPets, petPage],
+  );
 
   const handlePrevMonth = () => {
     const d = new Date(selectedDate);
@@ -563,27 +582,18 @@ function BookVisitPage() {
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[#7C6CF5]/10 to-transparent"></div>
                 </div>
 
-                {/* Filter and Add Block with premium input styling */}
-                <div className="flex flex-col items-center justify-between gap-5 sm:flex-row">
-                  <div className="relative w-full sm:max-w-md">
-                    <Search className="absolute top-1/2 left-4 size-4.5 -translate-y-1/2 text-[#667085]" />
-                    <Input
-                      placeholder="Tìm kiếm thú cưng..."
-                      className="h-12 rounded-xl border-[#ECECF5] bg-[#FAFAFF] pl-11 text-[14.5px] font-semibold shadow-sm transition-all focus-visible:bg-white focus-visible:ring-[#7C6CF5]"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="h-12 w-full rounded-xl border-[#7C6CF5]/30 px-6 font-bold text-[#7C6CF5] transition-all hover:bg-[#7C6CF5]/5 sm:w-auto"
-                  >
-                    <Link to="/customer/pets">
-                      <Plus className="mr-1.5 size-4.5 stroke-[2.5px]" /> Thêm thú cưng
-                      mới
-                    </Link>
-                  </Button>
+                {/* Filter — booking flow chỉ chọn pet đã có. Quản lý pet ở /customer/pets. */}
+                <div className="relative w-full">
+                  <Search className="absolute top-1/2 left-4 size-4.5 -translate-y-1/2 text-[#667085]" />
+                  <Input
+                    placeholder="Tìm kiếm thú cưng..."
+                    className="h-12 rounded-xl border-[#ECECF5] bg-[#FAFAFF] pl-11 text-[14.5px] font-semibold shadow-sm transition-all focus-visible:bg-white focus-visible:ring-[#7C6CF5]"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPetPage(0);
+                    }}
+                  />
                 </div>
 
                 {/* Pet Selection Grid - STRICTLY 2 cards per row, LARGE cards */}
@@ -591,7 +601,7 @@ function BookVisitPage() {
                   name="petId"
                   children={(field) => (
                     <div className="space-y-8">
-                      {petsQuery.isLoading ? (
+                      {ownerQuery.isLoading ? (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                           {Array.from({ length: 4 }).map((_, i) => (
                             <Skeleton
@@ -609,7 +619,7 @@ function BookVisitPage() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                          {filteredPets.map((p, idx) => {
+                          {pagedPets.map((p, idx) => {
                             const isSelected = field.state.value === p.id;
                             const displayBreed = getPetBreed(p);
                             const displayPhoto = getPetPhoto(p);
@@ -679,7 +689,7 @@ function BookVisitPage() {
                       )}
 
                       {/* Stepper Pagination Control */}
-                      {(petsQuery.data?.totalPages ?? 0) > 1 && (
+                      {totalPetPages > 1 && (
                         <div className="mt-8 flex items-center justify-center gap-4 border-t border-[#ECECF5] pt-5">
                           <Button
                             variant="outline"
@@ -691,14 +701,14 @@ function BookVisitPage() {
                             <ChevronLeft className="size-5.5 stroke-[2.5px]" />
                           </Button>
                           <span className="text-[13.5px] font-bold text-[#667085]">
-                            Hiển thị {filteredPets.length} /{' '}
-                            {petsQuery.data?.totalElements} thú cưng
+                            Hiển thị {filteredPets.length} / {filteredPets.length} thú
+                            cưng
                           </span>
                           <Button
                             variant="outline"
                             size="icon"
                             className="size-10 rounded-full border-[#ECECF5] text-[#171725] shadow-sm transition-all hover:border-[#7C6CF5]/30"
-                            disabled={petPage >= (petsQuery.data?.totalPages ?? 1) - 1}
+                            disabled={petPage >= totalPetPages - 1}
                             onClick={() => setPetPage((p) => p + 1)}
                           >
                             <ChevronRight className="size-5.5 stroke-[2.5px]" />

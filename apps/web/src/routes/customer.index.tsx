@@ -15,9 +15,9 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/features/auth/store';
+import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 import type { VisitResponse } from '@/lib/api/generated/model';
 import { SearchVisitsStatus } from '@/lib/api/generated/model';
-import { useListPets } from '@/lib/api/generated/pets/pets';
 import { useSearchVisits } from '@/lib/api/generated/visits/visits';
 import { cn } from '@/lib/utils';
 
@@ -58,13 +58,11 @@ function CustomerDashboard() {
   const recentQuery = useSearchVisits({
     pageable: { page: 0, size: 5, sort: ['scheduledAt,desc'] },
   });
-  const petsQuery = useListPets({
-    pageable: { page: 0, size: 100, sort: ['name,asc'] },
-  });
+  const ownerQuery = useGetMyOwnerProfile();
 
   const upcoming = upcomingQuery.data?.content ?? [];
   const recent = recentQuery.data?.content ?? [];
-  const pets = petsQuery.data?.content ?? [];
+  const pets = ownerQuery.data?.pets ?? [];
 
   const petNameById = new Map(pets.map((pet) => [pet.id, pet.name ?? `Pet #${pet.id}`]));
   const firstUpcoming = upcoming[0];
@@ -123,7 +121,7 @@ function CustomerDashboard() {
           subLabel="Bé cưng"
           action="Quản lý thú cưng"
           to="/customer/pets"
-          loading={petsQuery.isLoading}
+          loading={ownerQuery.isLoading}
           className="from-violet-500 to-fuchsia-500"
         />
       </section>
@@ -197,11 +195,11 @@ function CustomerDashboard() {
       </section>
 
       <section className="relative overflow-hidden rounded-[28px] border border-violet-100 bg-gradient-to-r from-violet-100 via-violet-50 to-indigo-50 px-6 py-7 shadow-[0_16px_50px_rgba(124,108,245,0.12)]">
-        <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-5">
-            <div className="flex size-16 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-300">
-              <CalendarCheck className="size-8" />
-            </div>
+        <div className="relative z-10 flex items-start gap-5 lg:pr-80">
+          <div className="flex size-16 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-300">
+            <CalendarCheck className="size-8" />
+          </div>
+          <div className="flex flex-col gap-4">
             <div>
               <h2 className="text-xl font-black text-slate-950">Đặt lịch khám dễ dàng</h2>
               <p className="mt-1 max-w-md text-sm leading-6 font-medium text-slate-600">
@@ -209,15 +207,15 @@ function CustomerDashboard() {
                 đơn giản.
               </p>
             </div>
+            <Button
+              asChild
+              className="w-fit rounded-xl bg-violet-600 px-5 shadow-lg shadow-violet-300 hover:bg-violet-700"
+            >
+              <Link to="/customer/book">
+                <Plus className="size-4" /> Đặt lịch khám mới
+              </Link>
+            </Button>
           </div>
-          <Button
-            asChild
-            className="rounded-xl bg-violet-600 px-5 shadow-lg shadow-violet-300 hover:bg-violet-700"
-          >
-            <Link to="/customer/book">
-              <Plus className="size-4" /> Đặt lịch khám mới
-            </Link>
-          </Button>
         </div>
         <img
           src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=520&q=80&auto=format&fit=crop"

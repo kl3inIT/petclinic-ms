@@ -1,0 +1,50 @@
+databaseChangeLog:
+
+  # Optimistic lock — @Version cho Owner/Pet/PetType.
+  # `ddl-auto: validate` yêu cầu cột tồn tại với type khớp entity (Long → BIGINT).
+  # DEFAULT 0 để row hiện có không NULL khi Hibernate load lần đầu.
+
+  - changeSet:
+      id: 007-001-add-version-owners
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: customers
+            tableName: owners
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 007-002-add-version-pets
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: customers
+            tableName: pets
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 007-003-add-version-pet-types
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: customers
+            tableName: pet_types
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

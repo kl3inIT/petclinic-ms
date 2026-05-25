@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/changes/004-add-vet-link.yaml
   - include:
       file: db/changelog/changes/005-add-customer-link.yaml
+  - include:
+      file: db/changelog/changes/006-seed-dev-users.yaml

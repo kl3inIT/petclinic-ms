@@ -5,11 +5,7 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
-import {
-  useMutation,
-  useQuery,
-  useSuspenseQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -24,7 +20,7 @@ import type {
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
-  UseSuspenseQueryResult
+  UseSuspenseQueryResult,
 } from '@tanstack/react-query';
 
 import type {
@@ -35,812 +31,1186 @@ import type {
   RatingSummaryResponse,
   UpdateVetRequest,
   VetResponse,
-  WorkScheduleSlotResponse
+  WorkScheduleSlotResponse,
 } from '.././model';
 
 import { apiMutator } from '../../mutator';
-import type { ErrorType , BodyType } from '../../mutator';
-
-
-
+import type { ErrorType, BodyType } from '../../mutator';
 
 /**
- * @summary Profile cua vet dang login
+ * @summary Profile của vet đang login
  */
-export const getMyVetProfile = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return apiMutator<VetResponse>(
-      {url: `/api/v1/vets/me`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
+export const getMyVetProfile = (signal?: AbortSignal) => {
+  return apiMutator<VetResponse>({ url: `/api/v1/vets/me`, method: 'GET', signal });
+};
 
 export const getGetMyVetProfileQueryKey = () => {
-    return [
-    `/api/v1/vets/me`
-    ] as const;
-    }
+  return [`/api/v1/vets/me`] as const;
+};
 
-    
-export const getGetMyVetProfileQueryOptions = <TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>>, }
-) => {
+export const getGetMyVetProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetMyVetProfileQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMyVetProfileQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyVetProfile>>> = ({
+    signal,
+  }) => getMyVetProfile(signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyVetProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyVetProfile>>> = ({ signal }) => getMyVetProfile(signal);
+export type GetMyVetProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyVetProfile>>
+>;
+export type GetMyVetProfileQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetMyVetProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getMyVetProfile>>>
-export type GetMyVetProfileQueryError = ErrorType<unknown>
-
-
-export function useGetMyVetProfile<TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>> & Pick<
+export function useGetMyVetProfile<
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMyVetProfile>>,
           TError,
           Awaited<ReturnType<typeof getMyVetProfile>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyVetProfile<TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyVetProfile<
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMyVetProfile>>,
           TError,
           Awaited<ReturnType<typeof getMyVetProfile>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyVetProfile<TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyVetProfile<
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Profile cua vet dang login
+ * @summary Profile của vet đang login
  */
 
-export function useGetMyVetProfile<TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetMyVetProfile<
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetMyVetProfileQueryOptions(options);
 
-  const queryOptions = getGetMyVetProfileQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
+export const getGetMyVetProfileSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getGetMyVetProfileQueryKey();
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyVetProfile>>> = ({
+    signal,
+  }) => getMyVetProfile(signal);
 
-export const getGetMyVetProfileSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>>, }
-) => {
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getMyVetProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-const {query: queryOptions} = options ?? {};
+export type GetMyVetProfileSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyVetProfile>>
+>;
+export type GetMyVetProfileSuspenseQueryError = ErrorType<unknown>;
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMyVetProfileQueryKey();
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyVetProfile>>> = ({ signal }) => getMyVetProfile(signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetMyVetProfileSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getMyVetProfile>>>
-export type GetMyVetProfileSuspenseQueryError = ErrorType<unknown>
-
-
-export function useGetMyVetProfileSuspense<TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyVetProfileSuspense<TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyVetProfileSuspense<TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyVetProfileSuspense<
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyVetProfileSuspense<
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyVetProfileSuspense<
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Profile cua vet dang login
+ * @summary Profile của vet đang login
  */
 
-export function useGetMyVetProfileSuspense<TData = Awaited<ReturnType<typeof getMyVetProfile>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetMyVetProfileSuspense<
+  TData = Awaited<ReturnType<typeof getMyVetProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyVetProfile>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetMyVetProfileSuspenseQueryOptions(options);
 
-  const queryOptions = getGetMyVetProfileSuspenseQueryOptions(options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
+/**
+ * @summary Sửa profile của vet đang login (PATCH partial)
+ */
+export const updateMyVetProfile = (updateVetRequest: BodyType<UpdateVetRequest>) => {
+  return apiMutator<VetResponse>({
+    url: `/api/v1/vets/me`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateVetRequest,
+  });
+};
 
+export const getUpdateMyVetProfileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyVetProfile>>,
+    TError,
+    { data: BodyType<UpdateVetRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyVetProfile>>,
+  TError,
+  { data: BodyType<UpdateVetRequest> },
+  TContext
+> => {
+  const mutationKey = ['updateMyVetProfile'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyVetProfile>>,
+    { data: BodyType<UpdateVetRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMyVetProfile(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyVetProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyVetProfile>>
+>;
+export type UpdateMyVetProfileMutationBody = BodyType<UpdateVetRequest>;
+export type UpdateMyVetProfileMutationError = ErrorType<unknown>;
 
 /**
- * @summary Sua profile cua vet dang login (PATCH partial)
+ * @summary Sửa profile của vet đang login (PATCH partial)
  */
-export const updateMyVetProfile = (
-    updateVetRequest: BodyType<UpdateVetRequest>,
- ) => {
-      
-      
-      return apiMutator<VetResponse>(
-      {url: `/api/v1/vets/me`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: updateVetRequest
-    },
-      );
-    }
-  
+export const useUpdateMyVetProfile = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateMyVetProfile>>,
+      TError,
+      { data: BodyType<UpdateVetRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyVetProfile>>,
+  TError,
+  { data: BodyType<UpdateVetRequest> },
+  TContext
+> => {
+  const mutationOptions = getUpdateMyVetProfileMutationOptions(options);
 
-
-export const getUpdateMyVetProfileMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyVetProfile>>, TError,{data: BodyType<UpdateVetRequest>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof updateMyVetProfile>>, TError,{data: BodyType<UpdateVetRequest>}, TContext> => {
-
-const mutationKey = ['updateMyVetProfile'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMyVetProfile>>, {data: BodyType<UpdateVetRequest>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  updateMyVetProfile(data,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateMyVetProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateMyVetProfile>>>
-    export type UpdateMyVetProfileMutationBody = BodyType<UpdateVetRequest>
-    export type UpdateMyVetProfileMutationError = ErrorType<unknown>
-
-    /**
- * @summary Sua profile cua vet dang login (PATCH partial)
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Lịch trực của vet đang login
  */
-export const useUpdateMyVetProfile = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyVetProfile>>, TError,{data: BodyType<UpdateVetRequest>}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof updateMyVetProfile>>,
-        TError,
-        {data: BodyType<UpdateVetRequest>},
-        TContext
-      > => {
-
-      const mutationOptions = getUpdateMyVetProfileMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
- * @summary Lich truc cua vet dang login
- */
-export const listMyWorkSchedule = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return apiMutator<WorkScheduleSlotResponse[]>(
-      {url: `/api/v1/vets/me/work-schedule`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
+export const listMyWorkSchedule = (signal?: AbortSignal) => {
+  return apiMutator<WorkScheduleSlotResponse[]>({
+    url: `/api/v1/vets/me/work-schedule`,
+    method: 'GET',
+    signal,
+  });
+};
 
 export const getListMyWorkScheduleQueryKey = () => {
-    return [
-    `/api/v1/vets/me/work-schedule`
-    ] as const;
-    }
+  return [`/api/v1/vets/me/work-schedule`] as const;
+};
 
-    
-export const getListMyWorkScheduleQueryOptions = <TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>>, }
-) => {
+export const getListMyWorkScheduleQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListMyWorkScheduleQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getListMyWorkScheduleQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyWorkSchedule>>> = ({
+    signal,
+  }) => listMyWorkSchedule(signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyWorkSchedule>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyWorkSchedule>>> = ({ signal }) => listMyWorkSchedule(signal);
+export type ListMyWorkScheduleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyWorkSchedule>>
+>;
+export type ListMyWorkScheduleQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMyWorkScheduleQueryResult = NonNullable<Awaited<ReturnType<typeof listMyWorkSchedule>>>
-export type ListMyWorkScheduleQueryError = ErrorType<unknown>
-
-
-export function useListMyWorkSchedule<TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>> & Pick<
+export function useListMyWorkSchedule<
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMyWorkSchedule>>,
           TError,
           Awaited<ReturnType<typeof listMyWorkSchedule>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyWorkSchedule<TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyWorkSchedule<
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMyWorkSchedule>>,
           TError,
           Awaited<ReturnType<typeof listMyWorkSchedule>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyWorkSchedule<TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyWorkSchedule<
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Lich truc cua vet dang login
+ * @summary Lịch trực của vet đang login
  */
 
-export function useListMyWorkSchedule<TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListMyWorkSchedule<
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMyWorkScheduleQueryOptions(options);
 
-  const queryOptions = getListMyWorkScheduleQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
+export const getListMyWorkScheduleSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getListMyWorkScheduleQueryKey();
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyWorkSchedule>>> = ({
+    signal,
+  }) => listMyWorkSchedule(signal);
 
-export const getListMyWorkScheduleSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>>, }
-) => {
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof listMyWorkSchedule>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-const {query: queryOptions} = options ?? {};
+export type ListMyWorkScheduleSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyWorkSchedule>>
+>;
+export type ListMyWorkScheduleSuspenseQueryError = ErrorType<unknown>;
 
-  const queryKey =  queryOptions?.queryKey ?? getListMyWorkScheduleQueryKey();
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyWorkSchedule>>> = ({ signal }) => listMyWorkSchedule(signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMyWorkScheduleSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof listMyWorkSchedule>>>
-export type ListMyWorkScheduleSuspenseQueryError = ErrorType<unknown>
-
-
-export function useListMyWorkScheduleSuspense<TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyWorkScheduleSuspense<TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyWorkScheduleSuspense<TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyWorkScheduleSuspense<
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listMyWorkSchedule>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyWorkScheduleSuspense<
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listMyWorkSchedule>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyWorkScheduleSuspense<
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listMyWorkSchedule>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Lich truc cua vet dang login
+ * @summary Lịch trực của vet đang login
  */
 
-export function useListMyWorkScheduleSuspense<TData = Awaited<ReturnType<typeof listMyWorkSchedule>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyWorkSchedule>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListMyWorkScheduleSuspense<
+  TData = Awaited<ReturnType<typeof listMyWorkSchedule>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof listMyWorkSchedule>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListMyWorkScheduleSuspenseQueryOptions(options);
 
-  const queryOptions = getListMyWorkScheduleSuspenseQueryOptions(options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
 /**
- * @summary Ratings customer cham cho vet dang login (paginated)
+ * @summary Ratings customer chấm cho vet đang login (paginated)
  */
-export const listMyRatings = (
-    params: ListMyRatingsParams,
- signal?: AbortSignal
+export const listMyRatings = (params: ListMyRatingsParams, signal?: AbortSignal) => {
+  return apiMutator<PageRatingResponse>({
+    url: `/api/v1/vets/me/ratings`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getListMyRatingsQueryKey = (params?: ListMyRatingsParams) => {
+  return [`/api/v1/vets/me/ratings`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMyRatingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    >;
+  },
 ) => {
-      
-      
-      return apiMutator<PageRatingResponse>(
-      {url: `/api/v1/vets/me/ratings`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getListMyRatingsQueryKey(params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyRatings>>> = ({
+    signal,
+  }) => listMyRatings(params, signal);
 
-export const getListMyRatingsQueryKey = (params?: ListMyRatingsParams,) => {
-    return [
-    `/api/v1/vets/me/ratings`, ...(params ? [params]: [])
-    ] as const;
-    }
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyRatings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getListMyRatingsQueryOptions = <TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(params: ListMyRatingsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>>, }
-) => {
+export type ListMyRatingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyRatings>>
+>;
+export type ListMyRatingsQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListMyRatingsQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyRatings>>> = ({ signal }) => listMyRatings(params, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMyRatingsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyRatings>>>
-export type ListMyRatingsQueryError = ErrorType<unknown>
-
-
-export function useListMyRatings<TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(
- params: ListMyRatingsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>> & Pick<
+export function useListMyRatings<
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMyRatings>>,
           TError,
           Awaited<ReturnType<typeof listMyRatings>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyRatings<TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(
- params: ListMyRatingsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyRatings<
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMyRatings>>,
           TError,
           Awaited<ReturnType<typeof listMyRatings>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyRatings<TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(
- params: ListMyRatingsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyRatings<
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Ratings customer cham cho vet dang login (paginated)
+ * @summary Ratings customer chấm cho vet đang login (paginated)
  */
 
-export function useListMyRatings<TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(
- params: ListMyRatingsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListMyRatings<
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMyRatingsQueryOptions(params, options);
 
-  const queryOptions = getListMyRatingsQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getListMyRatingsSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(params: ListMyRatingsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>>, }
+export const getListMyRatingsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListMyRatingsQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getListMyRatingsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyRatings>>> = ({
+    signal,
+  }) => listMyRatings(params, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof listMyRatings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyRatings>>> = ({ signal }) => listMyRatings(params, signal);
+export type ListMyRatingsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyRatings>>
+>;
+export type ListMyRatingsSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMyRatingsSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof listMyRatings>>>
-export type ListMyRatingsSuspenseQueryError = ErrorType<unknown>
-
-
-export function useListMyRatingsSuspense<TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(
- params: ListMyRatingsParams, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyRatingsSuspense<TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(
- params: ListMyRatingsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyRatingsSuspense<TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(
- params: ListMyRatingsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyRatingsSuspense<
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyRatingsSuspense<
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyRatingsSuspense<
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Ratings customer cham cho vet dang login (paginated)
+ * @summary Ratings customer chấm cho vet đang login (paginated)
  */
 
-export function useListMyRatingsSuspense<TData = Awaited<ReturnType<typeof listMyRatings>>, TError = ErrorType<unknown>>(
- params: ListMyRatingsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListMyRatingsSuspense<
+  TData = Awaited<ReturnType<typeof listMyRatings>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyRatingsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyRatings>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListMyRatingsSuspenseQueryOptions(params, options);
 
-  const queryOptions = getListMyRatingsSuspenseQueryOptions(params,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
 /**
- * @summary Summary ratings cua vet dang login (count, average, distribution)
+ * @summary Summary ratings của vet đang login (count, average, distribution)
  */
-export const getMyRatingsSummary = (
-    
- signal?: AbortSignal
-) => {
-      
-      
-      return apiMutator<RatingSummaryResponse>(
-      {url: `/api/v1/vets/me/ratings/summary`, method: 'GET', signal
-    },
-      );
-    }
-  
-
-
+export const getMyRatingsSummary = (signal?: AbortSignal) => {
+  return apiMutator<RatingSummaryResponse>({
+    url: `/api/v1/vets/me/ratings/summary`,
+    method: 'GET',
+    signal,
+  });
+};
 
 export const getGetMyRatingsSummaryQueryKey = () => {
-    return [
-    `/api/v1/vets/me/ratings/summary`
-    ] as const;
-    }
+  return [`/api/v1/vets/me/ratings/summary`] as const;
+};
 
-    
-export const getGetMyRatingsSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>>, }
-) => {
+export const getGetMyRatingsSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetMyRatingsSummaryQueryKey();
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMyRatingsSummaryQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyRatingsSummary>>> = ({
+    signal,
+  }) => getMyRatingsSummary(signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyRatingsSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyRatingsSummary>>> = ({ signal }) => getMyRatingsSummary(signal);
+export type GetMyRatingsSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyRatingsSummary>>
+>;
+export type GetMyRatingsSummaryQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetMyRatingsSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getMyRatingsSummary>>>
-export type GetMyRatingsSummaryQueryError = ErrorType<unknown>
-
-
-export function useGetMyRatingsSummary<TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>> & Pick<
+export function useGetMyRatingsSummary<
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMyRatingsSummary>>,
           TError,
           Awaited<ReturnType<typeof getMyRatingsSummary>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyRatingsSummary<TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyRatingsSummary<
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMyRatingsSummary>>,
           TError,
           Awaited<ReturnType<typeof getMyRatingsSummary>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyRatingsSummary<TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyRatingsSummary<
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Summary ratings cua vet dang login (count, average, distribution)
+ * @summary Summary ratings của vet đang login (count, average, distribution)
  */
 
-export function useGetMyRatingsSummary<TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetMyRatingsSummary<
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetMyRatingsSummaryQueryOptions(options);
 
-  const queryOptions = getGetMyRatingsSummaryQueryOptions(options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
+export const getGetMyRatingsSummarySuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseSuspenseQueryOptions<
+      Awaited<ReturnType<typeof getMyRatingsSummary>>,
+      TError,
+      TData
+    >
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getGetMyRatingsSummaryQueryKey();
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyRatingsSummary>>> = ({
+    signal,
+  }) => getMyRatingsSummary(signal);
 
-export const getGetMyRatingsSummarySuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>>, }
-) => {
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getMyRatingsSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-const {query: queryOptions} = options ?? {};
+export type GetMyRatingsSummarySuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyRatingsSummary>>
+>;
+export type GetMyRatingsSummarySuspenseQueryError = ErrorType<unknown>;
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMyRatingsSummaryQueryKey();
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyRatingsSummary>>> = ({ signal }) => getMyRatingsSummary(signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetMyRatingsSummarySuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getMyRatingsSummary>>>
-export type GetMyRatingsSummarySuspenseQueryError = ErrorType<unknown>
-
-
-export function useGetMyRatingsSummarySuspense<TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyRatingsSummarySuspense<TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMyRatingsSummarySuspense<TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyRatingsSummarySuspense<
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getMyRatingsSummary>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyRatingsSummarySuspense<
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getMyRatingsSummary>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyRatingsSummarySuspense<
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getMyRatingsSummary>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Summary ratings cua vet dang login (count, average, distribution)
+ * @summary Summary ratings của vet đang login (count, average, distribution)
  */
 
-export function useGetMyRatingsSummarySuspense<TData = Awaited<ReturnType<typeof getMyRatingsSummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyRatingsSummary>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetMyRatingsSummarySuspense<
+  TData = Awaited<ReturnType<typeof getMyRatingsSummary>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getMyRatingsSummary>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetMyRatingsSummarySuspenseQueryOptions(options);
 
-  const queryOptions = getGetMyRatingsSummarySuspenseQueryOptions(options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
 /**
- * @summary Badges cua vet dang login (paginated)
+ * @summary Badges của vet đang login (paginated)
  */
-export const listMyBadges = (
-    params: ListMyBadgesParams,
- signal?: AbortSignal
+export const listMyBadges = (params: ListMyBadgesParams, signal?: AbortSignal) => {
+  return apiMutator<PageBadgeResponse>({
+    url: `/api/v1/vets/me/badges`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getListMyBadgesQueryKey = (params?: ListMyBadgesParams) => {
+  return [`/api/v1/vets/me/badges`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMyBadgesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    >;
+  },
 ) => {
-      
-      
-      return apiMutator<PageBadgeResponse>(
-      {url: `/api/v1/vets/me/badges`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getListMyBadgesQueryKey(params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyBadges>>> = ({ signal }) =>
+    listMyBadges(params, signal);
 
-export const getListMyBadgesQueryKey = (params?: ListMyBadgesParams,) => {
-    return [
-    `/api/v1/vets/me/badges`, ...(params ? [params]: [])
-    ] as const;
-    }
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyBadges>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getListMyBadgesQueryOptions = <TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(params: ListMyBadgesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>>, }
-) => {
+export type ListMyBadgesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyBadges>>
+>;
+export type ListMyBadgesQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListMyBadgesQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyBadges>>> = ({ signal }) => listMyBadges(params, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMyBadgesQueryResult = NonNullable<Awaited<ReturnType<typeof listMyBadges>>>
-export type ListMyBadgesQueryError = ErrorType<unknown>
-
-
-export function useListMyBadges<TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(
- params: ListMyBadgesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>> & Pick<
+export function useListMyBadges<
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMyBadges>>,
           TError,
           Awaited<ReturnType<typeof listMyBadges>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyBadges<TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(
- params: ListMyBadgesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyBadges<
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMyBadges>>,
           TError,
           Awaited<ReturnType<typeof listMyBadges>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyBadges<TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(
- params: ListMyBadgesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyBadges<
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Badges cua vet dang login (paginated)
+ * @summary Badges của vet đang login (paginated)
  */
 
-export function useListMyBadges<TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(
- params: ListMyBadgesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListMyBadges<
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMyBadgesQueryOptions(params, options);
 
-  const queryOptions = getListMyBadgesQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getListMyBadgesSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(params: ListMyBadgesParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>>, }
+export const getListMyBadgesSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListMyBadgesQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getListMyBadgesQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyBadges>>> = ({ signal }) =>
+    listMyBadges(params, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof listMyBadges>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyBadges>>> = ({ signal }) => listMyBadges(params, signal);
+export type ListMyBadgesSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyBadges>>
+>;
+export type ListMyBadgesSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMyBadgesSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof listMyBadges>>>
-export type ListMyBadgesSuspenseQueryError = ErrorType<unknown>
-
-
-export function useListMyBadgesSuspense<TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(
- params: ListMyBadgesParams, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyBadgesSuspense<TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(
- params: ListMyBadgesParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMyBadgesSuspense<TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(
- params: ListMyBadgesParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyBadgesSuspense<
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyBadgesSuspense<
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyBadgesSuspense<
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Badges cua vet dang login (paginated)
+ * @summary Badges của vet đang login (paginated)
  */
 
-export function useListMyBadgesSuspense<TData = Awaited<ReturnType<typeof listMyBadges>>, TError = ErrorType<unknown>>(
- params: ListMyBadgesParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListMyBadgesSuspense<
+  TData = Awaited<ReturnType<typeof listMyBadges>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListMyBadgesParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listMyBadges>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListMyBadgesSuspenseQueryOptions(params, options);
 
-  const queryOptions = getListMyBadgesSuspenseQueryOptions(params,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-

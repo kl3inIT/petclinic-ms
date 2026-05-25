@@ -1,8 +1,7 @@
-import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
 import {
   Bell,
   CalendarCheck,
-  ChevronDown,
   Home,
   LogOut,
   PawPrint,
@@ -14,19 +13,15 @@ import {
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/features/auth/store';
+import { requireAnyRole } from '@/features/auth/guards';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/customer')({
   beforeLoad: ({ location }) => {
-    const { accessToken } = useAuthStore.getState();
-    if (!accessToken) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw redirect({
-        to: '/login',
-        search: { redirect: location.href },
-      });
-    }
+    // /customer/** chỉ cho USER role (+ ADMIN bypass theo convention).
+    // VET role không vào được — sẽ redirect /forbidden.
+    requireAnyRole({ redirectFrom: location.href, allowedRoles: ['USER'] });
   },
   component: CustomerLayout,
 });
@@ -52,7 +47,6 @@ const navItems: NavItem[] = [
 ];
 
 function CustomerLayout() {
-  const user = useAuthStore((s) => s.user);
   const clear = useAuthStore((s) => s.clear);
   const logoutMutation = useLogout({
     mutation: {
@@ -64,7 +58,7 @@ function CustomerLayout() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8F8FF]">
+    <div className="customer-layout-hide-scrollbar min-h-screen bg-[#F8F8FF]">
       <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/95 shadow-sm shadow-slate-200/40 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5">
           <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2">
@@ -114,20 +108,14 @@ function CustomerLayout() {
 
             <Link
               to="/customer/profile"
-              className="hidden items-center gap-3 rounded-full border border-slate-100 bg-white py-1 pr-3 pl-1 shadow-sm transition hover:border-violet-100 hover:bg-violet-50/50 md:flex"
+              title="Hồ sơ của tôi"
+              className="hidden size-10 shrink-0 overflow-hidden rounded-full border border-slate-100 bg-white shadow-sm transition hover:border-violet-100 hover:ring-2 hover:ring-violet-100 md:inline-flex"
             >
               <img
                 src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&q=80&auto=format&fit=crop"
-                alt=""
-                className="size-10 rounded-full object-cover"
+                alt="Avatar"
+                className="size-full object-cover"
               />
-              <div className="hidden max-w-48 flex-col text-right xl:flex">
-                <span className="truncate text-sm font-bold text-slate-800">
-                  {user?.username ?? 'customer@petclinic.local'}
-                </span>
-                <span className="text-xs font-medium text-slate-500">Khách hàng</span>
-              </div>
-              <ChevronDown className="size-4 text-slate-500" />
             </Link>
 
             <Button

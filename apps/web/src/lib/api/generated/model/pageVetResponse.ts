@@ -5,20 +5,20 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
-import type { VetResponse } from './vetResponse';
-import type { SortObject } from './sortObject';
 import type { PageableObject } from './pageableObject';
+import type { SortObject } from './sortObject';
+import type { VetResponse } from './vetResponse';
 
 export interface PageVetResponse {
-  totalElements?: number;
   totalPages?: number;
-  size?: number;
-  content?: VetResponse[];
-  number?: number;
+  totalElements?: number;
+  pageable?: PageableObject;
+  sort?: SortObject;
   first?: boolean;
   last?: boolean;
   numberOfElements?: number;
-  sort?: SortObject;
-  pageable?: PageableObject;
+  number?: number;
+  size?: number;
+  content?: VetResponse[];
   empty?: boolean;
 }

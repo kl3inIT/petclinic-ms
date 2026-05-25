@@ -1,0 +1,20 @@
+databaseChangeLog:
+  # Capacity rule đổi từ 1 → 2 ca/khung/vet (xem project_slot_capacity_rule.md).
+  # DB UNIQUE không thể express "max 2 rows per group" — đẩy check xuống app level
+  # ở VisitServiceImpl.book(). Giữ index để query count vẫn nhanh.
+  - changeSet:
+      id: 006-drop-uk-visits-vet-slot
+      author: mss301
+      changes:
+        - dropUniqueConstraint:
+            schemaName: visits
+            tableName: visits
+            constraintName: uk_visits_vet_slot
+
+        # Re-create non-unique composite index (uk drop có thể drop index theo).
+        # Đảm bảo countActiveByVetIdAndScheduledAt vẫn fast với equality on (vet_id, scheduled_at).
+        - sql:
+            sql: >-
+              CREATE INDEX IF NOT EXISTS idx_visits_vet_scheduled
+              ON visits.visits (vet_id, scheduled_at)
+            dbms: postgresql

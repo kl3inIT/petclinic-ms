@@ -76,7 +76,7 @@ public class VetController {
                           "active = false để soft-deactivate. " +
                           "specialtyNames null=giữ nguyên, []=clear, [...]=REPLACE."
     )
-    public VetResponse updateVet(@PathVariable Long id, @RequestBody UpdateVetRequest request) {
+    public VetResponse updateVet(@PathVariable Long id, @RequestBody @Valid UpdateVetRequest request) {
         return service.update(id, request);
     }
 

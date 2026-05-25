@@ -5,11 +5,7 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
-import {
-  useMutation,
-  useQuery,
-  useSuspenseQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -24,7 +20,7 @@ import type {
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
-  UseSuspenseQueryResult
+  UseSuspenseQueryResult,
 } from '@tanstack/react-query';
 
 import type {
@@ -32,557 +28,752 @@ import type {
   CompleteVisitRequest,
   PageVisitResponse,
   SearchVisitsParams,
-  VisitResponse
+  VisitResponse,
 } from '.././model';
 
 import { apiMutator } from '../../mutator';
-import type { ErrorType , BodyType } from '../../mutator';
-
-
-
+import type { ErrorType, BodyType } from '../../mutator';
 
 /**
  * @summary List visits — USER thấy của mình, STAFF/ADMIN/VET thấy theo filter
  */
-export const searchVisits = (
-    params: SearchVisitsParams,
- signal?: AbortSignal
+export const searchVisits = (params: SearchVisitsParams, signal?: AbortSignal) => {
+  return apiMutator<PageVisitResponse>({
+    url: `/api/v1/visits`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getSearchVisitsQueryKey = (params?: SearchVisitsParams) => {
+  return [`/api/v1/visits`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchVisitsQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    >;
+  },
 ) => {
-      
-      
-      return apiMutator<PageVisitResponse>(
-      {url: `/api/v1/visits`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getSearchVisitsQueryKey(params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchVisits>>> = ({ signal }) =>
+    searchVisits(params, signal);
 
-export const getSearchVisitsQueryKey = (params?: SearchVisitsParams,) => {
-    return [
-    `/api/v1/visits`, ...(params ? [params]: [])
-    ] as const;
-    }
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchVisits>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getSearchVisitsQueryOptions = <TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(params: SearchVisitsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>>, }
-) => {
+export type SearchVisitsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchVisits>>
+>;
+export type SearchVisitsQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getSearchVisitsQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchVisits>>> = ({ signal }) => searchVisits(params, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SearchVisitsQueryResult = NonNullable<Awaited<ReturnType<typeof searchVisits>>>
-export type SearchVisitsQueryError = ErrorType<unknown>
-
-
-export function useSearchVisits<TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(
- params: SearchVisitsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>> & Pick<
+export function useSearchVisits<
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof searchVisits>>,
           TError,
           Awaited<ReturnType<typeof searchVisits>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSearchVisits<TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(
- params: SearchVisitsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchVisits<
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof searchVisits>>,
           TError,
           Awaited<ReturnType<typeof searchVisits>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSearchVisits<TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(
- params: SearchVisitsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchVisits<
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary List visits — USER thấy của mình, STAFF/ADMIN/VET thấy theo filter
  */
 
-export function useSearchVisits<TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(
- params: SearchVisitsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useSearchVisits<
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchVisitsQueryOptions(params, options);
 
-  const queryOptions = getSearchVisitsQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getSearchVisitsSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(params: SearchVisitsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>>, }
+export const getSearchVisitsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getSearchVisitsQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getSearchVisitsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchVisits>>> = ({ signal }) =>
+    searchVisits(params, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof searchVisits>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchVisits>>> = ({ signal }) => searchVisits(params, signal);
+export type SearchVisitsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchVisits>>
+>;
+export type SearchVisitsSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type SearchVisitsSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof searchVisits>>>
-export type SearchVisitsSuspenseQueryError = ErrorType<unknown>
-
-
-export function useSearchVisitsSuspense<TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(
- params: SearchVisitsParams, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSearchVisitsSuspense<TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(
- params: SearchVisitsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSearchVisitsSuspense<TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(
- params: SearchVisitsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSearchVisitsSuspense<
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchVisitsSuspense<
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchVisitsSuspense<
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary List visits — USER thấy của mình, STAFF/ADMIN/VET thấy theo filter
  */
 
-export function useSearchVisitsSuspense<TData = Awaited<ReturnType<typeof searchVisits>>, TError = ErrorType<unknown>>(
- params: SearchVisitsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useSearchVisitsSuspense<
+  TData = Awaited<ReturnType<typeof searchVisits>>,
+  TError = ErrorType<unknown>,
+>(
+  params: SearchVisitsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof searchVisits>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getSearchVisitsSuspenseQueryOptions(params, options);
 
-  const queryOptions = getSearchVisitsSuspenseQueryOptions(params,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * @summary Đặt visit cho pet với vet vào giờ xác định
  */
 export const bookVisit = (
-    bookVisitRequest: BodyType<BookVisitRequest>,
- signal?: AbortSignal
+  bookVisitRequest: BodyType<BookVisitRequest>,
+  signal?: AbortSignal,
 ) => {
-      
-      
-      return apiMutator<VisitResponse>(
-      {url: `/api/v1/visits`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: bookVisitRequest, signal
-    },
-      );
-    }
-  
+  return apiMutator<VisitResponse>({
+    url: `/api/v1/visits`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: bookVisitRequest,
+    signal,
+  });
+};
 
+export const getBookVisitMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bookVisit>>,
+    TError,
+    { data: BodyType<BookVisitRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bookVisit>>,
+  TError,
+  { data: BodyType<BookVisitRequest> },
+  TContext
+> => {
+  const mutationKey = ['bookVisit'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-export const getBookVisitMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bookVisit>>, TError,{data: BodyType<BookVisitRequest>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof bookVisit>>, TError,{data: BodyType<BookVisitRequest>}, TContext> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bookVisit>>,
+    { data: BodyType<BookVisitRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
 
-const mutationKey = ['bookVisit'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+    return bookVisit(data);
+  };
 
-      
+  return { mutationFn, ...mutationOptions };
+};
 
+export type BookVisitMutationResult = NonNullable<Awaited<ReturnType<typeof bookVisit>>>;
+export type BookVisitMutationBody = BodyType<BookVisitRequest>;
+export type BookVisitMutationError = ErrorType<unknown>;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bookVisit>>, {data: BodyType<BookVisitRequest>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  bookVisit(data,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type BookVisitMutationResult = NonNullable<Awaited<ReturnType<typeof bookVisit>>>
-    export type BookVisitMutationBody = BodyType<BookVisitRequest>
-    export type BookVisitMutationError = ErrorType<unknown>
-
-    /**
+/**
  * @summary Đặt visit cho pet với vet vào giờ xác định
  */
-export const useBookVisit = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bookVisit>>, TError,{data: BodyType<BookVisitRequest>}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof bookVisit>>,
-        TError,
-        {data: BodyType<BookVisitRequest>},
-        TContext
-      > => {
+export const useBookVisit = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof bookVisit>>,
+      TError,
+      { data: BodyType<BookVisitRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bookVisit>>,
+  TError,
+  { data: BodyType<BookVisitRequest> },
+  TContext
+> => {
+  const mutationOptions = getBookVisitMutationOptions(options);
 
-      const mutationOptions = getBookVisitMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary Mark visit IN_PROGRESS (vet/staff)
  */
-export const startVisit = (
-    id: number,
- ) => {
-      
-      
-      return apiMutator<VisitResponse>(
-      {url: `/api/v1/visits/${id}/start`, method: 'PATCH'
-    },
-      );
-    }
-  
+export const startVisit = (id: number) => {
+  return apiMutator<VisitResponse>({
+    url: `/api/v1/visits/${id}/start`,
+    method: 'PATCH',
+  });
+};
 
+export const getStartVisitMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startVisit>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startVisit>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ['startVisit'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-export const getStartVisitMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startVisit>>, TError,{id: number}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof startVisit>>, TError,{id: number}, TContext> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startVisit>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
 
-const mutationKey = ['startVisit'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+    return startVisit(id);
+  };
 
-      
+  return { mutationFn, ...mutationOptions };
+};
 
+export type StartVisitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startVisit>>
+>;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startVisit>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
+export type StartVisitMutationError = ErrorType<unknown>;
 
-          return  startVisit(id,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type StartVisitMutationResult = NonNullable<Awaited<ReturnType<typeof startVisit>>>
-    
-    export type StartVisitMutationError = ErrorType<unknown>
-
-    /**
+/**
  * @summary Mark visit IN_PROGRESS (vet/staff)
  */
-export const useStartVisit = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startVisit>>, TError,{id: number}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof startVisit>>,
-        TError,
-        {id: number},
-        TContext
-      > => {
+export const useStartVisit = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startVisit>>,
+      TError,
+      { id: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startVisit>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationOptions = getStartVisitMutationOptions(options);
 
-      const mutationOptions = getStartVisitMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary Vet đóng visit + ghi diagnosis/treatment/fee
  */
 export const completeVisit = (
-    id: number,
-    completeVisitRequest: BodyType<CompleteVisitRequest>,
- ) => {
-      
-      
-      return apiMutator<VisitResponse>(
-      {url: `/api/v1/visits/${id}/complete`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: completeVisitRequest
-    },
-      );
-    }
-  
+  id: number,
+  completeVisitRequest: BodyType<CompleteVisitRequest>,
+) => {
+  return apiMutator<VisitResponse>({
+    url: `/api/v1/visits/${id}/complete`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: completeVisitRequest,
+  });
+};
 
+export const getCompleteVisitMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeVisit>>,
+    TError,
+    { id: number; data: BodyType<CompleteVisitRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeVisit>>,
+  TError,
+  { id: number; data: BodyType<CompleteVisitRequest> },
+  TContext
+> => {
+  const mutationKey = ['completeVisit'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-export const getCompleteVisitMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeVisit>>, TError,{id: number;data: BodyType<CompleteVisitRequest>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof completeVisit>>, TError,{id: number;data: BodyType<CompleteVisitRequest>}, TContext> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeVisit>>,
+    { id: number; data: BodyType<CompleteVisitRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
 
-const mutationKey = ['completeVisit'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+    return completeVisit(id, data);
+  };
 
-      
+  return { mutationFn, ...mutationOptions };
+};
 
+export type CompleteVisitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeVisit>>
+>;
+export type CompleteVisitMutationBody = BodyType<CompleteVisitRequest>;
+export type CompleteVisitMutationError = ErrorType<unknown>;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeVisit>>, {id: number;data: BodyType<CompleteVisitRequest>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  completeVisit(id,data,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CompleteVisitMutationResult = NonNullable<Awaited<ReturnType<typeof completeVisit>>>
-    export type CompleteVisitMutationBody = BodyType<CompleteVisitRequest>
-    export type CompleteVisitMutationError = ErrorType<unknown>
-
-    /**
+/**
  * @summary Vet đóng visit + ghi diagnosis/treatment/fee
  */
-export const useCompleteVisit = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeVisit>>, TError,{id: number;data: BodyType<CompleteVisitRequest>}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof completeVisit>>,
-        TError,
-        {id: number;data: BodyType<CompleteVisitRequest>},
-        TContext
-      > => {
+export const useCompleteVisit = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof completeVisit>>,
+      TError,
+      { id: number; data: BodyType<CompleteVisitRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof completeVisit>>,
+  TError,
+  { id: number; data: BodyType<CompleteVisitRequest> },
+  TContext
+> => {
+  const mutationOptions = getCompleteVisitMutationOptions(options);
 
-      const mutationOptions = getCompleteVisitMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
- * @summary Cancel visit — USER chỉ hủy của mình; STAFF/ADMIN hủy được hết
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Cancel visit — owner hoặc STAFF/ADMIN/VET
  */
-export const cancelVisit = (
-    id: number,
- ) => {
-      
-      
-      return apiMutator<VisitResponse>(
-      {url: `/api/v1/visits/${id}/cancel`, method: 'PATCH'
-    },
-      );
-    }
-  
+export const cancelVisit = (id: number) => {
+  return apiMutator<VisitResponse>({
+    url: `/api/v1/visits/${id}/cancel`,
+    method: 'PATCH',
+  });
+};
 
+export const getCancelVisitMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelVisit>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelVisit>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ['cancelVisit'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-export const getCancelVisitMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelVisit>>, TError,{id: number}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof cancelVisit>>, TError,{id: number}, TContext> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelVisit>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
 
-const mutationKey = ['cancelVisit'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+    return cancelVisit(id);
+  };
 
-      
+  return { mutationFn, ...mutationOptions };
+};
 
+export type CancelVisitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelVisit>>
+>;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelVisit>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
+export type CancelVisitMutationError = ErrorType<unknown>;
 
-          return  cancelVisit(id,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CancelVisitMutationResult = NonNullable<Awaited<ReturnType<typeof cancelVisit>>>
-    
-    export type CancelVisitMutationError = ErrorType<unknown>
-
-    /**
- * @summary Cancel visit — USER chỉ hủy của mình; STAFF/ADMIN hủy được hết
+/**
+ * @summary Cancel visit — owner hoặc STAFF/ADMIN/VET
  */
-export const useCancelVisit = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelVisit>>, TError,{id: number}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof cancelVisit>>,
-        TError,
-        {id: number},
-        TContext
-      > => {
+export const useCancelVisit = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof cancelVisit>>,
+      TError,
+      { id: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof cancelVisit>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationOptions = getCancelVisitMutationOptions(options);
 
-      const mutationOptions = getCancelVisitMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
- * @summary Get visit detail
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Get visit detail — owner hoặc STAFF/ADMIN/VET
  */
-export const getVisit = (
-    id: number,
- signal?: AbortSignal
+export const getVisit = (id: number, signal?: AbortSignal) => {
+  return apiMutator<VisitResponse>({
+    url: `/api/v1/visits/${id}`,
+    method: 'GET',
+    signal,
+  });
+};
+
+export const getGetVisitQueryKey = (id?: number) => {
+  return [`/api/v1/visits/${id}`] as const;
+};
+
+export const getGetVisitQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>;
+  },
 ) => {
-      
-      
-      return apiMutator<VisitResponse>(
-      {url: `/api/v1/visits/${id}`, method: 'GET', signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getGetVisitQueryKey(id);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVisit>>> = ({ signal }) =>
+    getVisit(id, signal);
 
-export const getGetVisitQueryKey = (id?: number,) => {
-    return [
-    `/api/v1/visits/${id}`
-    ] as const;
-    }
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVisit>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getGetVisitQueryOptions = <TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>, }
-) => {
+export type GetVisitQueryResult = NonNullable<Awaited<ReturnType<typeof getVisit>>>;
+export type GetVisitQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetVisitQueryKey(id);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVisit>>> = ({ signal }) => getVisit(id, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetVisitQueryResult = NonNullable<Awaited<ReturnType<typeof getVisit>>>
-export type GetVisitQueryError = ErrorType<unknown>
-
-
-export function useGetVisit<TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>> & Pick<
+export function useGetVisit<
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getVisit>>,
           TError,
           Awaited<ReturnType<typeof getVisit>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetVisit<TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetVisit<
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getVisit>>,
           TError,
           Awaited<ReturnType<typeof getVisit>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetVisit<TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetVisit<
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Get visit detail
+ * @summary Get visit detail — owner hoặc STAFF/ADMIN/VET
  */
 
-export function useGetVisit<TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetVisit<
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetVisitQueryOptions(id, options);
 
-  const queryOptions = getGetVisitQueryOptions(id,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getGetVisitSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>, }
+export const getGetVisitSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetVisitQueryKey(id);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetVisitQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVisit>>> = ({ signal }) =>
+    getVisit(id, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getVisit>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVisit>>> = ({ signal }) => getVisit(id, signal);
+export type GetVisitSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVisit>>
+>;
+export type GetVisitSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetVisitSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getVisit>>>
-export type GetVisitSuspenseQueryError = ErrorType<unknown>
-
-
-export function useGetVisitSuspense<TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(
- id: number, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetVisitSuspense<TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetVisitSuspense<TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetVisitSuspense<
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetVisitSuspense<
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetVisitSuspense<
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Get visit detail
+ * @summary Get visit detail — owner hoặc STAFF/ADMIN/VET
  */
 
-export function useGetVisitSuspense<TData = Awaited<ReturnType<typeof getVisit>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetVisitSuspense<
+  TData = Awaited<ReturnType<typeof getVisit>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVisit>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetVisitSuspenseQueryOptions(id, options);
 
-  const queryOptions = getGetVisitSuspenseQueryOptions(id,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-

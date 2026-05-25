@@ -22,20 +22,30 @@ spring:
 petclinic:
   security:
     endpoints:
-      # Authenticated USER xem được catalog pet (cho dropdown FE)
+      # Authenticated USER xem được catalog pet + pet types (cho dropdown FE)
       user:
         - { method: GET, path: /api/v1/pets/** }
-        - { method: GET, path: /api/v1/owners/* }     # detail OK — leak ownerId là acceptable
+        - { method: GET, path: /api/v1/pet-types/** }
+        - { method: GET, path: /api/v1/owners/me }
+        - { method: PATCH, path: /api/v1/owners/me }
+        - { method: POST, path: /api/v1/owners/me/pets }
+        - { method: PUT, path: /api/v1/owners/me/pets/** }
+        - { method: DELETE, path: /api/v1/owners/me/pets/** }
+        - { method: GET, path: /api/v1/owners/* }     # USER pass filter chain; @PreAuthorize trên controller siết per-instance ownership (chỉ xem record của mình)
       # Staff vận hành owner records — tạo, list, xem detail
       staff:
         - { method: GET,  path: /api/v1/owners }
+        - { method: GET,  path: /api/v1/owners/** }   # detail + sub-resources cho STAFF
         - { method: POST, path: /api/v1/owners }
         - { method: PUT,  path: /api/v1/owners/** }
         - { method: PATCH, path: /api/v1/owners/** }
-      # Admin only — hard delete + pet management (write)
+      # Admin only — hard delete + pet management (write) + pet-type catalog write
       admin:
         - { method: DELETE, path: /api/v1/owners/** }
         - { method: POST,   path: /api/v1/pets }
         - { method: PUT,    path: /api/v1/pets/** }
         - { method: PATCH,  path: /api/v1/pets/** }
         - { method: DELETE, path: /api/v1/pets/** }
+        - { method: POST,   path: /api/v1/pet-types }
+        - { method: PUT,    path: /api/v1/pet-types/** }
+        - { method: DELETE, path: /api/v1/pet-types/** }

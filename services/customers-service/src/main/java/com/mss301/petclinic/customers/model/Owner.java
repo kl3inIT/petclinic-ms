@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
@@ -23,6 +24,14 @@ public class Owner extends AbstractAuditingEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /**
+     * Optimistic lock counter — Hibernate tự increment khi update; nếu DB row
+     * version khác với entity version → throw {@link org.springframework.orm.ObjectOptimisticLockingFailureException}
+     * → {@code shared/common-jpa/DataExceptionTranslator} map sang HTTP 409.
+     */
+    @Version
+    private Long version;
 
     @Column(nullable = false)
     private String firstName;
@@ -52,6 +61,7 @@ public class Owner extends AbstractAuditingEntity {
     }
 
     public Long getId() { return id; }
+    public Long getVersion() { return version; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }
     public String getAddress() { return address; }

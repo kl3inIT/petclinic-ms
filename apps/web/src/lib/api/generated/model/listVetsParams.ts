@@ -8,6 +8,8 @@
 import type { Pageable } from './pageable';
 
 export type ListVetsParams = {
-lastName?: string;
-pageable: Pageable;
+  lastName?: string;
+  specialtyId?: number;
+  active?: boolean;
+  pageable: Pageable;
 };

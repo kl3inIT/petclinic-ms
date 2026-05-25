@@ -11,7 +11,9 @@ export const Route = createFileRoute('/admin/pets')({
 });
 
 function PetsPage() {
-  // Read-only ở MVP — Pet write nằm trong Owner aggregate, chưa có endpoint /owners/{id}/pets.
+  // Read-only ở admin.pets — Pet write thực hiện qua trang Owners
+  // (mỗi Pet thuộc 1 Owner aggregate, không tạo Pet "không chủ").
+  // Endpoint write: POST/PUT/DELETE /api/v1/owners/{id}/pets[/{petId}].
   const listQuery = useListPets({ pageable: { page: 0, size: 50, sort: ['name,asc'] } });
 
   return (
@@ -21,7 +23,8 @@ function PetsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Pets</h1>
           <p className="text-sm text-muted-foreground">
-            Danh sách thú cưng (read-only). Quản lý write qua trang Owners.
+            Danh sách thú cưng (read-only). Thêm / sửa / xóa thú cưng tại trang
+            <span className="font-medium"> Owners → Xem chi tiết</span>.
           </p>
         </div>
       </div>

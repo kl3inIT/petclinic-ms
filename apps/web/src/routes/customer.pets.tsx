@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import {
   CalendarCheck,
@@ -6,21 +6,57 @@ import {
   PawPrint,
   Search,
   ArrowLeft,
-  HelpCircle,
   ShieldCheck,
+  Plus,
+  Pencil,
+  Trash2,
+  ImagePlus,
+  X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useListPets } from '@/lib/api/generated/pets/pets';
+import {
+  useAddMyPet,
+  useGetMyOwnerProfile,
+  useRemoveMyPet,
+  useUpdateMyPet,
+} from '@/lib/api/generated/owners/owners';
+import type { PetDto } from '@/lib/api/generated/model/petDto';
+import type { PetRequest } from '@/lib/api/generated/model/petRequest';
+import { PetTypeSelect } from '@/features/pet-types/PetTypeSelect';
+import { usePetTypes } from '@/features/pet-types/api';
 
 export const Route = createFileRoute('/customer/pets')({
   component: CustomerPetsPage,
 });
 
+function getPreviewablePhotoUrl(photoId?: string | null) {
+  const value = photoId?.trim();
+  if (!value) return null;
+  return /^(https?:|blob:|data:image\/)/i.test(value) ? value : null;
+}
+
 // Helper to get high-quality pet photos for maximum aesthetic impact
-function getPetPhoto(pet: { name?: string; type?: string; id?: number }) {
+function getPetPhoto(pet: {
+  name?: string;
+  type?: string;
+  id?: number;
+  photoId?: string | null;
+}) {
+  const previewablePhoto = getPreviewablePhotoUrl(pet.photoId);
+  if (previewablePhoto) return previewablePhoto;
+
   const name = (pet.name ?? '').toLowerCase();
   const type = (pet.type ?? '').toLowerCase();
 
@@ -78,11 +114,24 @@ function getPetBreed(pet: { name?: string; type?: string }) {
 
 function CustomerPetsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const petsQuery = useListPets({
-    pageable: { page: 0, size: 200, sort: ['name,asc'] },
-  });
+  const [editingPet, setEditingPet] = useState<PetDto | null>(null);
+  const [petDialogOpen, setPetDialogOpen] = useState(false);
+  const ownerQuery = useGetMyOwnerProfile();
+  const removePet = useRemoveMyPet();
+  const petTypesQuery = usePetTypes();
+  const petTypeLabel = useMemo(() => {
+    const byId = new Map((petTypesQuery.data ?? []).map((pt) => [pt.id, pt.name]));
+    return (id?: number | null) =>
+      id != null ? (byId.get(id) ?? `#${id}`) : 'Chưa phân loại';
+  }, [petTypesQuery.data]);
 
-  const pets = useMemo(() => petsQuery.data?.content ?? [], [petsQuery.data]);
+  const pets = useMemo(
+    () =>
+      [...(ownerQuery.data?.pets ?? [])].sort((a, b) =>
+        (a.name ?? '').localeCompare(b.name ?? ''),
+      ),
+    [ownerQuery.data],
+  );
 
   const filteredPets = useMemo(() => {
     if (!searchTerm) return pets;
@@ -90,9 +139,10 @@ function CustomerPetsPage() {
     return pets.filter(
       (p) =>
         (p.name ?? '').toLowerCase().includes(term) ||
-        (p.type ?? '').toLowerCase().includes(term),
+        (p.type ?? '').toLowerCase().includes(term) ||
+        petTypeLabel(p.petTypeId).toLowerCase().includes(term),
     );
-  }, [pets, searchTerm]);
+  }, [petTypeLabel, pets, searchTerm]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-8 font-sans text-slate-800 antialiased">
@@ -124,10 +174,13 @@ function CustomerPetsPage() {
           </div>
 
           <Button
-            variant="outline"
-            className="gap-1.5 rounded-full border-indigo-100 font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-50"
+            className="gap-1.5 rounded-full bg-indigo-600 font-bold text-white shadow-sm transition-all hover:bg-indigo-700"
+            onClick={() => {
+              setEditingPet(null);
+              setPetDialogOpen(true);
+            }}
           >
-            <HelpCircle className="size-4 text-indigo-500" /> Hướng dẫn
+            <Plus className="size-4" /> Thêm thú cưng
           </Button>
         </div>
 
@@ -161,14 +214,12 @@ function CustomerPetsPage() {
             </div>
             <p className="text-sm font-bold tracking-wide text-slate-500 uppercase">
               Tổng cộng:{' '}
-              <span className="font-extrabold text-indigo-600">
-                {petsQuery.data?.totalElements ?? pets.length}
-              </span>{' '}
-              bé thú cưng
+              <span className="font-extrabold text-indigo-600">{pets.length}</span> bé thú
+              cưng
             </p>
           </div>
 
-          {petsQuery.isLoading ? (
+          {ownerQuery.isLoading ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-[180px] w-full rounded-2xl" />
@@ -187,7 +238,7 @@ function CustomerPetsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {filteredPets.map((p, idx) => {
-                const displayBreed = getPetBreed(p);
+                const displayBreed = p.type?.trim() || getPetBreed(p);
                 const displayPhoto = getPetPhoto(p);
                 const age = p.birthDate
                   ? `${new Date().getFullYear() - parseInt(p.birthDate.substring(0, 4))} tuổi`
@@ -222,11 +273,16 @@ function CustomerPetsPage() {
 
                         <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-bold text-slate-500">
                           <PawPrint className="size-3.5 text-slate-400" />
-                          {p.type ?? 'Khác'} • {displayBreed}
+                          {petTypeLabel(p.petTypeId)} • {displayBreed}
                         </p>
 
                         <p className="mt-1 text-[12px] font-bold text-slate-500">
                           {age} • {gender}
+                        </p>
+
+                        <p className="mt-1 text-[12px] font-bold text-slate-500">
+                          Giống: {displayBreed} • Cân nặng:{' '}
+                          {p.weight != null ? `${p.weight} kg` : 'N/A'}
                         </p>
 
                         <div className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-100/30 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black text-emerald-600">
@@ -236,16 +292,52 @@ function CustomerPetsPage() {
                       </div>
 
                       {/* Booking Action button */}
-                      <div className="mt-4 border-t border-dashed border-slate-100 pt-4">
+                      <div className="mt-4 grid grid-cols-[1fr_auto_auto] gap-2 border-t border-dashed border-slate-100 pt-4">
                         <Button
                           asChild
                           variant="ghost"
                           size="sm"
-                          className="h-9.5 w-full gap-1.5 rounded-xl bg-indigo-50/50 font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-600 hover:text-white"
+                          className="h-9.5 gap-1.5 rounded-xl bg-indigo-50/50 font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-600 hover:text-white"
                         >
                           <Link to="/customer/book" search={{ petId: p.id }}>
                             <CalendarCheck className="size-4" /> Đặt lịch khám
                           </Link>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="size-9.5 rounded-xl border-slate-200 text-slate-600"
+                          onClick={() => {
+                            setEditingPet(p);
+                            setPetDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="size-9.5 rounded-xl border-rose-100 text-rose-600 hover:bg-rose-50"
+                          disabled={removePet.isPending}
+                          onClick={() => {
+                            if (!p.id) return;
+                            if (!window.confirm(`Xóa hồ sơ ${p.name ?? `#${p.id}`}?`))
+                              return;
+                            removePet.mutate(
+                              { petId: p.id },
+                              {
+                                onSuccess: () => toast.success('Đã xóa hồ sơ thú cưng'),
+                                onError: (err) =>
+                                  toast.error(
+                                    (err as Error).message || 'Xóa thú cưng thất bại',
+                                  ),
+                              },
+                            );
+                          }}
+                        >
+                          <Trash2 className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -256,6 +348,262 @@ function CustomerPetsPage() {
           )}
         </div>
       </div>
+      <PetEditorDialog
+        open={petDialogOpen}
+        pet={editingPet}
+        onOpenChange={setPetDialogOpen}
+      />
     </div>
+  );
+}
+
+function PetEditorDialog({
+  open,
+  pet,
+  onOpenChange,
+}: {
+  open: boolean;
+  pet: PetDto | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const addPet = useAddMyPet();
+  const updatePet = useUpdateMyPet();
+  const [form, setForm] = useState<PetRequest>({
+    name: '',
+    birthDate: '',
+    type: '',
+    petTypeId: undefined,
+    isActive: true,
+    weight: undefined,
+    photoId: '',
+  });
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [selectedPhotoName, setSelectedPhotoName] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setForm({
+      name: pet?.name ?? '',
+      birthDate: pet?.birthDate ?? '',
+      type: pet?.type ?? '',
+      petTypeId: pet?.petTypeId ?? undefined,
+      isActive: pet?.isActive ?? true,
+      weight: pet?.weight,
+      photoId: pet?.photoId ?? '',
+    });
+    setPhotoPreviewUrl(getPreviewablePhotoUrl(pet?.photoId));
+    setSelectedPhotoName(pet?.photoId ?? '');
+  }, [open, pet]);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(photoPreviewUrl);
+    };
+  }, [photoPreviewUrl]);
+
+  const handlePhotoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn file ảnh');
+      event.target.value = '';
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(file);
+    setPhotoPreviewUrl(nextPreviewUrl);
+    setSelectedPhotoName(file.name);
+    setForm((prev) => ({ ...prev, photoId: file.name }));
+  };
+
+  const pending = addPet.isPending || updatePet.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{pet ? 'Sửa hồ sơ thú cưng' : 'Thêm thú cưng'}</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const payload = {
+              name: form.name.trim(),
+              birthDate: form.birthDate || undefined,
+              type: form.type.trim(),
+              petTypeId: form.petTypeId ?? undefined,
+              isActive: form.isActive ?? true,
+              weight: form.weight,
+              photoId: form.photoId?.trim() || undefined,
+            };
+            if (!payload.name || !payload.petTypeId || !payload.type) {
+              toast.error('Vui lòng nhập tên, loài pet và giống');
+              return;
+            }
+            if (pet?.id) {
+              updatePet.mutate(
+                { petId: pet.id, data: payload },
+                {
+                  onSuccess: () => {
+                    toast.success('Đã cập nhật hồ sơ thú cưng');
+                    onOpenChange(false);
+                  },
+                  onError: (err) =>
+                    toast.error((err as Error).message || 'Cập nhật thú cưng thất bại'),
+                },
+              );
+            } else {
+              addPet.mutate(
+                { data: payload },
+                {
+                  onSuccess: () => {
+                    toast.success('Đã thêm thú cưng');
+                    onOpenChange(false);
+                  },
+                  onError: (err) =>
+                    toast.error((err as Error).message || 'Thêm thú cưng thất bại'),
+                },
+              );
+            }
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="pet-name">Tên</Label>
+            <Input
+              id="pet-name"
+              value={form.name}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, name: event.target.value }))
+              }
+              placeholder="Milu"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pet-type-id">Loài pet</Label>
+            <PetTypeSelect
+              id="pet-type-id"
+              value={form.petTypeId}
+              onChange={(v) => setForm((prev) => ({ ...prev, petTypeId: v }))}
+              placeholder="Chọn chó, mèo, thỏ..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pet-type">Giống</Label>
+            <Input
+              id="pet-type"
+              value={form.type}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, type: event.target.value }))
+              }
+              placeholder="Golden Retriever, Mèo Anh lông ngắn..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pet-birth-date">Ngày sinh</Label>
+            <Input
+              id="pet-birth-date"
+              type="date"
+              value={form.birthDate ?? ''}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, birthDate: event.target.value }))
+              }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="pet-weight">Weight (kg)</Label>
+              <Input
+                id="pet-weight"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.weight ?? ''}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    weight:
+                      event.target.value === '' ? undefined : Number(event.target.value),
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pet-active">Active</Label>
+              <select
+                id="pet-active"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.isActive === false ? 'false' : 'true'}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    isActive: event.target.value === 'true',
+                  }))
+                }
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pet-photo">Ảnh thú cưng</Label>
+            <div className="grid gap-3 sm:grid-cols-[132px_1fr]">
+              <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-200 bg-slate-50">
+                {photoPreviewUrl ? (
+                  <img
+                    src={photoPreviewUrl}
+                    alt={form.name || 'Ảnh thú cưng'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <ImagePlus className="size-8" />
+                    <span className="text-xs font-semibold">Chưa có ảnh</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col justify-center gap-3">
+                <Input
+                  id="pet-photo"
+                  type="file"
+                  accept="image/*"
+                  className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-indigo-700"
+                  onChange={handlePhotoFileChange}
+                />
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+                  <span className="truncate">
+                    {selectedPhotoName || 'Chọn ảnh để xem preview trước khi lưu'}
+                  </span>
+                  {(photoPreviewUrl || selectedPhotoName) && (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-md p-1 text-slate-500 hover:bg-white hover:text-rose-600"
+                      onClick={() => {
+                        setPhotoPreviewUrl(null);
+                        setSelectedPhotoName('');
+                        setForm((prev) => ({ ...prev, photoId: '' }));
+                      }}
+                      aria-label="Xóa ảnh đã chọn"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Hủy
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Đang lưu...' : 'Lưu'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

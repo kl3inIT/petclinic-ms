@@ -42,6 +42,9 @@ public class AuthAuditLogger {
     private static final String ACTION_LOGOUT_SUCCESS   = "authentication.logout.success";
     private static final String ACTION_EVENT_PUBLISH_FAILURE = "event.publish.failure";
     private static final String ACTION_CUSTOMER_LINKED  = "authorization.customer.linked";
+    private static final String ACTION_VET_LINKED       = "authorization.vet.linked";
+    private static final String ACTION_PASSWORD_CHANGE_SUCCESS = "authentication.password.change.success";
+    private static final String ACTION_PASSWORD_CHANGE_FAILURE = "authentication.password.change.failure";
 
     public void loginSuccess(UUID userId, String username) {
         try {
@@ -136,6 +139,46 @@ public class AuthAuditLogger {
         } finally {
             MDC.remove("actor.user.id");
             MDC.remove("customer.id");
+            clearAll();
+        }
+    }
+
+    /**
+     * Phase K — admin link user ↔ vet. Audit trail bắt buộc vì privilege escalation
+     * (user gain ROLE_VET capabilities qua claim vetId). MDC mirror customerLinked.
+     */
+    public void vetLinked(UUID adminId, UUID targetUserId, Long vetId) {
+        try {
+            putBase(ACTION_VET_LINKED, OUTCOME_SUCCESS);
+            if (adminId != null) MDC.put("actor.user.id", adminId.toString());
+            MDC.put(K_USER_ID, targetUserId.toString());
+            MDC.put("vet.id", vetId.toString());
+            log.info("Vet linked to user");
+        } finally {
+            MDC.remove("actor.user.id");
+            MDC.remove("vet.id");
+            clearAll();
+        }
+    }
+
+    /** User tự đổi mật khẩu thành công — refresh tokens revoke trên các device khác. */
+    public void passwordChangeSuccess(UUID userId) {
+        try {
+            putBase(ACTION_PASSWORD_CHANGE_SUCCESS, OUTCOME_SUCCESS);
+            MDC.put(K_USER_ID, userId.toString());
+            log.info("Password changed");
+        } finally {
+            clearAll();
+        }
+    }
+
+    /** Currentpassword sai — brute-force signal khi cùng userId nhiều lần / phút. */
+    public void passwordChangeFailure(UUID userId) {
+        try {
+            putBase(ACTION_PASSWORD_CHANGE_FAILURE, OUTCOME_FAILURE);
+            MDC.put(K_USER_ID, userId.toString());
+            log.warn("Password change failed: invalid current password");
+        } finally {
             clearAll();
         }
     }

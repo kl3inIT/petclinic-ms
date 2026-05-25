@@ -20,6 +20,9 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    # Loại trừ context "dev" → seed users (changeset 006) skip trong test.
+    # IT tự register user nếu cần, KHÔNG dùng seed data.
+    contexts: test
 
   jpa:
     hibernate:
@@ -51,6 +54,7 @@ petclinic:
         - { method: GET, path: /api/v1/admin/users/** }
         - { method: GET, path: /api/v1/admin/audit/** }
         - { method: PATCH, path: /api/v1/users/*/customer-link }
+        - { method: PATCH, path: /api/v1/users/*/vet-link }
 
 # Disable event publishing trong test (auth emit user.registered event).
 petclinic.events.enabled: false

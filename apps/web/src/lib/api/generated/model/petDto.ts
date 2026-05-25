@@ -11,4 +11,8 @@ export interface PetDto {
   name?: string;
   birthDate?: string;
   type?: string;
+  petTypeId?: number;
+  isActive?: boolean;
+  weight?: number;
+  photoId?: string;
 }

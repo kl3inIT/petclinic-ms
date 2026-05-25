@@ -5,10 +5,7 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
-import {
-  useQuery,
-  useSuspenseQuery
-} from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -20,313 +17,424 @@ import type {
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
-  UseSuspenseQueryResult
+  UseSuspenseQueryResult,
 } from '@tanstack/react-query';
 
-import type {
-  ListPetsParams,
-  PagePetResponse,
-  PetResponse
-} from '.././model';
+import type { ListPetsParams, PagePetResponse, PetResponse } from '.././model';
 
 import { apiMutator } from '../../mutator';
 import type { ErrorType } from '../../mutator';
 
-
-
-
 /**
- * @summary List pets (paginated) — dùng cho FE dropdown, OpenAPI client
+ * Filter optional: ownerId, petTypeId, isActive. Pageable nhận page/size/sort theo convention orval.
+ * @summary List pets (paginated, optional filters)
  */
-export const listPets = (
-    params: ListPetsParams,
- signal?: AbortSignal
+export const listPets = (params: ListPetsParams, signal?: AbortSignal) => {
+  return apiMutator<PagePetResponse>({
+    url: `/api/v1/pets`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getListPetsQueryKey = (params?: ListPetsParams) => {
+  return [`/api/v1/pets`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>;
+  },
 ) => {
-      
-      
-      return apiMutator<PagePetResponse>(
-      {url: `/api/v1/pets`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getListPetsQueryKey(params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPets>>> = ({ signal }) =>
+    listPets(params, signal);
 
-export const getListPetsQueryKey = (params?: ListPetsParams,) => {
-    return [
-    `/api/v1/pets`, ...(params ? [params]: [])
-    ] as const;
-    }
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getListPetsQueryOptions = <TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(params: ListPetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>, }
-) => {
+export type ListPetsQueryResult = NonNullable<Awaited<ReturnType<typeof listPets>>>;
+export type ListPetsQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListPetsQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPets>>> = ({ signal }) => listPets(params, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListPetsQueryResult = NonNullable<Awaited<ReturnType<typeof listPets>>>
-export type ListPetsQueryError = ErrorType<unknown>
-
-
-export function useListPets<TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(
- params: ListPetsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>> & Pick<
+export function useListPets<
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPets>>,
           TError,
           Awaited<ReturnType<typeof listPets>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPets<TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(
- params: ListPetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPets<
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listPets>>,
           TError,
           Awaited<ReturnType<typeof listPets>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPets<TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(
- params: ListPetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPets<
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary List pets (paginated) — dùng cho FE dropdown, OpenAPI client
+ * @summary List pets (paginated, optional filters)
  */
 
-export function useListPets<TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(
- params: ListPetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListPets<
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPetsQueryOptions(params, options);
 
-  const queryOptions = getListPetsQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getListPetsSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(params: ListPetsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>, }
+export const getListPetsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListPetsQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getListPetsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPets>>> = ({ signal }) =>
+    listPets(params, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof listPets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPets>>> = ({ signal }) => listPets(params, signal);
+export type ListPetsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPets>>
+>;
+export type ListPetsSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListPetsSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof listPets>>>
-export type ListPetsSuspenseQueryError = ErrorType<unknown>
-
-
-export function useListPetsSuspense<TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(
- params: ListPetsParams, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPetsSuspense<TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(
- params: ListPetsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListPetsSuspense<TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(
- params: ListPetsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPetsSuspense<
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPetsSuspense<
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPetsSuspense<
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary List pets (paginated) — dùng cho FE dropdown, OpenAPI client
+ * @summary List pets (paginated, optional filters)
  */
 
-export function useListPetsSuspense<TData = Awaited<ReturnType<typeof listPets>>, TError = ErrorType<unknown>>(
- params: ListPetsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListPetsSuspense<
+  TData = Awaited<ReturnType<typeof listPets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPetsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listPets>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListPetsSuspenseQueryOptions(params, options);
 
-  const queryOptions = getListPetsSuspenseQueryOptions(params,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * @summary Get pet by id (returns ownerId for cross-service validation)
  */
-export const getPet = (
-    id: number,
- signal?: AbortSignal
+export const getPet = (id: number, signal?: AbortSignal) => {
+  return apiMutator<PetResponse>({ url: `/api/v1/pets/${id}`, method: 'GET', signal });
+};
+
+export const getGetPetQueryKey = (id?: number) => {
+  return [`/api/v1/pets/${id}`] as const;
+};
+
+export const getGetPetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>;
+  },
 ) => {
-      
-      
-      return apiMutator<PetResponse>(
-      {url: `/api/v1/pets/${id}`, method: 'GET', signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getGetPetQueryKey(id);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPet>>> = ({ signal }) =>
+    getPet(id, signal);
 
-export const getGetPetQueryKey = (id?: number,) => {
-    return [
-    `/api/v1/pets/${id}`
-    ] as const;
-    }
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getGetPetQueryOptions = <TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>, }
-) => {
+export type GetPetQueryResult = NonNullable<Awaited<ReturnType<typeof getPet>>>;
+export type GetPetQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetPetQueryKey(id);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPet>>> = ({ signal }) => getPet(id, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetPetQueryResult = NonNullable<Awaited<ReturnType<typeof getPet>>>
-export type GetPetQueryError = ErrorType<unknown>
-
-
-export function useGetPet<TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>> & Pick<
+export function useGetPet<
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPet>>,
           TError,
           Awaited<ReturnType<typeof getPet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPet<TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPet<
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getPet>>,
           TError,
           Awaited<ReturnType<typeof getPet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPet<TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPet<
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary Get pet by id (returns ownerId for cross-service validation)
  */
 
-export function useGetPet<TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetPet<
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPetQueryOptions(id, options);
 
-  const queryOptions = getGetPetQueryOptions(id,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getGetPetSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>, }
+export const getGetPetSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetPetQueryKey(id);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetPetQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPet>>> = ({ signal }) =>
+    getPet(id, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getPet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPet>>> = ({ signal }) => getPet(id, signal);
+export type GetPetSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getPet>>>;
+export type GetPetSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetPetSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getPet>>>
-export type GetPetSuspenseQueryError = ErrorType<unknown>
-
-
-export function useGetPetSuspense<TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(
- id: number, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPetSuspense<TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPetSuspense<TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPetSuspense<
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPetSuspense<
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPetSuspense<
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary Get pet by id (returns ownerId for cross-service validation)
  */
 
-export function useGetPetSuspense<TData = Awaited<ReturnType<typeof getPet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetPetSuspense<
+  TData = Awaited<ReturnType<typeof getPet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetPetSuspenseQueryOptions(id, options);
 
-  const queryOptions = getGetPetSuspenseQueryOptions(id,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
-

@@ -1,4 +1,4 @@
-import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
 import {
   Award,
   CalendarDays,
@@ -12,24 +12,18 @@ import {
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/features/auth/store';
+import { requireAnyRole } from '@/features/auth/guards';
 import { DemoBanner } from '@/features/vet-me/components/DemoBanner';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
-const VET_PORTAL_ROLES = ['VET', 'ADMIN', 'STAFF'] as const;
+const VET_PORTAL_ROLES = ['VET', 'STAFF'] as const;
 
 export const Route = createFileRoute('/vet')({
   beforeLoad: ({ location }) => {
-    const { accessToken, user } = useAuthStore.getState();
-    if (!accessToken) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw redirect({ to: '/login', search: { redirect: location.href } });
-    }
-    const hasAccess = user?.roles?.some((r) => VET_PORTAL_ROLES.includes(r as never));
-    if (!hasAccess) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw redirect({ to: '/' });
-    }
+    // /vet/** chỉ cho VET + STAFF (+ ADMIN bypass). USER role không vào được —
+    // sẽ redirect /forbidden với explain context.
+    requireAnyRole({ redirectFrom: location.href, allowedRoles: VET_PORTAL_ROLES });
   },
   component: VetLayout,
 });
