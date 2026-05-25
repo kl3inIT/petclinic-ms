@@ -182,17 +182,22 @@ public class VetServiceImpl implements VetService {
         vetRepository.deleteById(id);
     }
 
+    private static final String UK_VETS_EMAIL = "uk_vets_email";
+
     /**
      * Save và dịch DB unique violation (email trùng) thành 400 BadRequestAlertException
-     * thay vì để 500 leak constraint name ra client. Postgres unique constraint name = uk_vets_email
-     * (changeset 003-003) → check message contains.
+     * thay vì để 500 leak constraint name ra client.
+     *
+     * <p>M4 fix: ưu tiên typed API ({@code PSQLException.getSQLState() == "23505"} +
+     * {@code getServerErrorMessage().getConstraint()}) thay vì string match. String
+     * match fragile — nếu rename constraint trong Liquibase, silent bypass → 500 leak.
+     * Fallback string-contains chỉ chạy khi cause KHÔNG phải PSQLException (H2/MySQL).
      */
     private Vet saveAndTranslateUniqueViolation(Vet vet) {
         try {
             return vetRepository.saveAndFlush(vet);
         } catch (DataIntegrityViolationException ex) {
-            String msg = ex.getMostSpecificCause().getMessage();
-            if (msg != null && msg.contains("uk_vets_email")) {
+            if (isEmailUniqueViolation(ex)) {
                 throw new BadRequestAlertException(
                         "Email already in use: " + vet.getEmail(),
                         ENTITY_NAME,
@@ -201,6 +206,31 @@ public class VetServiceImpl implements VetService {
             }
             throw ex;
         }
+    }
+
+    private static boolean isEmailUniqueViolation(DataIntegrityViolationException ex) {
+        Throwable cause = ex.getMostSpecificCause();
+        // Tier 1 (preferred): Hibernate's ConstraintViolationException carry constraint
+        // name typed-API thay vì parse message text. Available với Hibernate 6+ và
+        // KHÔNG kéo Postgres-specific class vào compile classpath (postgresql JDBC
+        // là `runtimeOnly` dep — chỉ ở classpath khi container chạy).
+        if (cause instanceof org.hibernate.exception.ConstraintViolationException cve
+                && UK_VETS_EMAIL.equals(cve.getConstraintName())) {
+            return true;
+        }
+        // Tier 2: SQLState check — 23505 = unique_violation theo SQL standard.
+        // Áp dụng được cho mọi JDBC driver (Postgres/H2/MySQL), KHÔNG cần typed
+        // driver class. Nếu unique violation NHƯNG constraint khác → fall through
+        // sang Tier 3 string match.
+        if (cause instanceof java.sql.SQLException sqlEx
+                && "23505".equals(sqlEx.getSQLState())) {
+            String msg = cause.getMessage();
+            return msg != null && msg.contains(UK_VETS_EMAIL);
+        }
+        // Tier 3 (fallback): pure string match cho non-SQLException (vd lỗi từ
+        // Hibernate StaleStateException). Best-effort.
+        String msg = cause.getMessage();
+        return msg != null && msg.contains(UK_VETS_EMAIL);
     }
 
     /**

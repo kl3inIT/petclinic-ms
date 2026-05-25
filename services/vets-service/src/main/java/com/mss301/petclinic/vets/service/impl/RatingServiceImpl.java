@@ -85,24 +85,43 @@ public class RatingServiceImpl implements RatingService {
         if (publisher == null) {
             return; // common-events tắt (test profile) → skip
         }
+
+        // M3 fix: guard isSynchronizationActive(). Trước đây gọi registerSynchronization
+        // trực tiếp → IllegalStateException khi caller không trong @Transactional context
+        // (vd refactor xoá @Transactional ở create, hoặc gọi từ async task). Fallback
+        // publish ngay trong trường hợp đó — chấp nhận risk orphan event (rollback sau khi
+        // publish) đổi lấy KHÔNG bị NPE runtime.
+        VetRatingAddedEvent event = VetRatingAddedEvent.of(
+                saved.getId(),
+                saved.getVetId(),
+                saved.getScore(),
+                saved.getDescription(),
+                saved.getCustomerName(),
+                saved.getRateDate(),
+                isUpdate);
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            log.warn("Publish vet.rating.added OUTSIDE transaction (rating={}). "
+                    + "Risk orphan event if caller rolls back. Check @Transactional on caller.",
+                    saved.getId());
+            tryPublish(publisher, event, saved.getId());
+            return;
+        }
+
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                try {
-                    publisher.publish(VetRatingAddedEvent.of(
-                            saved.getId(),
-                            saved.getVetId(),
-                            saved.getScore(),
-                            saved.getDescription(),
-                            saved.getCustomerName(),
-                            saved.getRateDate(),
-                            isUpdate));
-                } catch (RuntimeException ex) {
-                    log.warn("Publish vet.rating.added failed (rating={}): {}",
-                            saved.getId(), ex.getMessage());
-                }
+                tryPublish(publisher, event, saved.getId());
             }
         });
+    }
+
+    private static void tryPublish(EventPublisher publisher, VetRatingAddedEvent event, Long ratingId) {
+        try {
+            publisher.publish(event);
+        } catch (RuntimeException ex) {
+            log.warn("Publish vet.rating.added failed (rating={}): {}", ratingId, ex.getMessage());
+        }
     }
 
     @Override

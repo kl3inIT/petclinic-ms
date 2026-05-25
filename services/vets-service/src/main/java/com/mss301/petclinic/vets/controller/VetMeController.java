@@ -4,6 +4,8 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -44,6 +46,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Vet Me (self-service)", description = "Bác sĩ thú y tự xem/sửa data của chính mình. vetId từ JWT claim.")
 public class VetMeController {
 
+    private static final Logger log = LoggerFactory.getLogger(VetMeController.class);
+
     private final VetService vetService;
     private final WorkScheduleService workScheduleService;
     private final RatingService ratingService;
@@ -67,12 +71,16 @@ public class VetMeController {
             // Generic message — không expose DB schema (auth.users + vet_id cột) cho client.
             // CodeRabbit review (PR #11, 2026-05-20): error message KHÔNG được leak internal
             // structure. Detail dành cho admin (xem log server-side).
+            // L7 fix: log sub claim để admin grep user nào hit endpoint mà chưa link.
+            log.warn("JWT missing 'vetId' claim — sub={}", jwt.getSubject());
             throw new BadRequestAlertException(
                     "Tài khoản chưa được liên kết với hồ sơ bác sĩ. " +
                     "Vui lòng liên hệ quản trị viên.",
                     "vet-me", "missing-vet-id");
         }
         if (!(raw instanceof Number n)) {
+            log.warn("JWT 'vetId' claim is non-numeric — sub={}, claimType={}",
+                    jwt.getSubject(), raw.getClass().getSimpleName());
             throw new BadRequestAlertException(
                     "Claim 'vetId' phải là số.",
                     "vet-me", "invalid-vet-id-type");

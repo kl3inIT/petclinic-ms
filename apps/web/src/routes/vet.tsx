@@ -25,7 +25,11 @@ export const Route = createFileRoute('/vet')({
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: '/login', search: { redirect: location.href } });
     }
-    const hasAccess = user?.roles?.some((r) => VET_PORTAL_ROLES.includes(r as never));
+    // L1 fix: `r as never` là tricky type assertion. Cast `VET_PORTAL_ROLES`
+    // sang `readonly string[]` chuẩn hơn (string.includes nhận string).
+    const hasAccess = user?.roles?.some((r) =>
+      (VET_PORTAL_ROLES as readonly string[]).includes(r),
+    );
     if (!hasAccess) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: '/' });

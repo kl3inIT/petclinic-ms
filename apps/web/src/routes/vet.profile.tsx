@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { toast } from 'sonner';
@@ -60,12 +60,17 @@ function VetProfilePage() {
       ),
   });
 
+  // M5 fix: form.reset() chỉ chạy 1 lần khi profile data về lần đầu. Trước đây
+  // deps là [profileQuery.data, form] — `form` reference có thể unstable sau mỗi
+  // render → reset overwrites user input đang gõ. Dùng ref guard để hydrate-once.
+  const hydratedRef = useRef(false);
   useEffect(() => {
-    if (profileQuery.data) {
+    if (profileQuery.data && !hydratedRef.current) {
       form.reset({
         phoneNumber: profileQuery.data.phoneNumber ?? '',
         resume: profileQuery.data.resume ?? '',
       });
+      hydratedRef.current = true;
     }
   }, [profileQuery.data, form]);
 

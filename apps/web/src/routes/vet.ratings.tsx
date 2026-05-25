@@ -19,13 +19,16 @@ function VetRatingsPage() {
   const summaryQuery = useMyRatingsSummary();
   const listQuery = useMyRatings(page);
 
+  // L5 fix: wrap `dist[star.toString()]` qua helper — đỡ phải lặp lại 2 lần
+  // mỗi star + tránh nguy cơ typo (vd quên `.toString()` → undefined silent).
   const distribution = useMemo(() => {
     const dist = summaryQuery.data?.distribution ?? {};
     const total = summaryQuery.data?.count ?? 0;
+    const get = (star: number) => dist[star.toString()] ?? 0;
     return [5, 4, 3, 2, 1].map((star) => ({
       star,
-      count: dist[star.toString()] ?? 0,
-      percent: total === 0 ? 0 : ((dist[star.toString()] ?? 0) / total) * 100,
+      count: get(star),
+      percent: total === 0 ? 0 : (get(star) / total) * 100,
     }));
   }, [summaryQuery.data]);
 

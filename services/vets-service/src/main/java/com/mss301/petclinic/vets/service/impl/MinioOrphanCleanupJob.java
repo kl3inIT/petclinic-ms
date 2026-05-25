@@ -1,15 +1,14 @@
 package com.mss301.petclinic.vets.service.impl;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.mss301.petclinic.vets.config.StorageCleanupProperties;
 import com.mss301.petclinic.vets.repository.VetAlbumPhotoRepository;
@@ -62,22 +61,28 @@ public class MinioOrphanCleanupJob {
     }
 
     /**
-     * Package-private để IT gọi trực tiếp thay vì đợi cron. Wrap trong @Transactional(readOnly)
-     * để Hibernate session đảm bảo findAll consistent snapshot.
+     * Package-private để IT gọi trực tiếp thay vì đợi cron.
+     *
+     * <p>M1+M2 fix: NO {@code @Transactional} ở method-level — Spring Data repo
+     * method tự mở/đóng tx riêng cho mỗi {@code findAllObjectKeys()} call (default
+     * REQUIRED). Trước đây {@code @Transactional(readOnly=true)} wrap cả method
+     * → DB connection giữ trong suốt network I/O với MinIO (có thể vài phút khi
+     * bucket lớn) → connection pool starvation risk.
+     *
+     * <p>Projection query (M1): trả {@code List<String>} thay vì hydrate entity vào
+     * persistence context — scale 10K vet vẫn nhẹ.
      */
-    @Transactional(readOnly = true)
     public CleanupReport runCleanup() {
         Instant cutoff = Instant.now().minus(cleanupProps.minAge());
 
-        // Đọc DB TRƯỚC khi list S3 → nếu có upload xen vào lúc list S3, key mới sẽ
-        // CHƯA xuất hiện trong dbKeys nhưng cutoff sẽ bảo vệ (object mới chưa quá tuổi).
-        Set<String> validPhotoKeys = photoRepository.findAll().stream()
-                .map(p -> p.getObjectKey())
-                .collect(Collectors.toSet());
-        Set<String> validAlbumKeys = albumRepository.findAll().stream()
-                .map(p -> p.getObjectKey())
-                .collect(Collectors.toSet());
+        // Snapshot key set qua projection — mỗi call tự tx, connection trả pool ngay.
+        // Race: upload xen vào sau snapshot, key mới CHƯA có trong validKeys nhưng
+        // cutoff bảo vệ (object mới chưa quá tuổi nên sweep bỏ qua).
+        Set<String> validPhotoKeys = new HashSet<>(photoRepository.findAllObjectKeys());
+        Set<String> validAlbumKeys = new HashSet<>(albumRepository.findAllObjectKeys());
 
+        // S3 sweep ngoài tx — list + delete S3 chạy với network latency tự do,
+        // KHÔNG khoá DB connection.
         int photoOrphans = sweep(PHOTO_PREFIX, validPhotoKeys, cutoff);
         int albumOrphans = sweep(ALBUM_PREFIX, validAlbumKeys, cutoff);
 
