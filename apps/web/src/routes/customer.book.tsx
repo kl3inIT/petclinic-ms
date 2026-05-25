@@ -36,8 +36,6 @@ import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/client';
 import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 
-import { z } from 'zod';
-
 import { useBookVisit } from '@/lib/api/generated/visits/visits';
 import { useListVets } from '@/lib/api/generated/vets/vets';
 import type { WorkScheduleSlotResponse } from '@/lib/api/generated/model';
