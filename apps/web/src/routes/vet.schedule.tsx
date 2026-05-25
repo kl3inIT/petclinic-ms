@@ -21,6 +21,7 @@ import {
   Sunrise,
   Sunset,
   User as UserIcon,
+  Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -59,6 +60,10 @@ import { cn } from '@/lib/utils';
 
 type ViewMode = 'week' | 'today' | 'summary';
 
+/** Tối đa SLOT_CAPACITY ca khám active per khung giờ — đồng bộ với BE
+ * VisitServiceImpl.SLOT_CAPACITY (visits-service). FE chỉ render. */
+const SLOT_CAPACITY = 2;
+
 export const Route = createFileRoute('/vet/schedule')({
   component: VetSchedulePage,
 });
@@ -84,6 +89,33 @@ function VetSchedulePage() {
     () => new Set(slots.map((s) => `${s.workday}|${s.workHour}`)),
     [slots],
   );
+
+  // Tải visits cả tuần đang xem để tô màu slot đầy/đang nhận.
+  const weekFromIso = useMemo(() => weekStart.toISOString(), [weekStart]);
+  const weekToIso = useMemo(() => {
+    const end = new Date(weekStart);
+    end.setDate(end.getDate() + 7);
+    return end.toISOString();
+  }, [weekStart]);
+  const weekVisitsQuery = useSearchVisits(
+    {
+      vetId,
+      from: weekFromIso,
+      to: weekToIso,
+      pageable: { page: 0, size: 200, sort: ['scheduledAt,asc'] },
+    },
+    { query: { enabled: vetId != null } },
+  );
+  const slotLoad = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const v of weekVisitsQuery.data?.content ?? []) {
+      if (!v.scheduledAt || v.status === 'CANCELLED') continue;
+      const d = new Date(v.scheduledAt);
+      const key = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}|${d.getHours()}`;
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return map;
+  }, [weekVisitsQuery.data]);
   const totalSlots = slots.length;
   const totalHours = totalSlots;
   const totalCapacity = WORKDAY_ORDER.length * WORKHOUR_ORDER.length;
@@ -129,6 +161,7 @@ function VetSchedulePage() {
           todayWorkday={todayWorkday}
           today={today}
           occupied={occupied}
+          slotLoad={slotLoad}
           onSlotClick={(date, workHour) => setSelectedSlot({ date, workHour })}
         />
       ) : mode === 'today' ? (
@@ -136,6 +169,7 @@ function VetSchedulePage() {
           slots={slots}
           todayWorkday={todayWorkday}
           today={today}
+          slotLoad={slotLoad}
           onSlotClick={(date, workHour) => setSelectedSlot({ date, workHour })}
         />
       ) : (
@@ -300,6 +334,7 @@ function WeekHeatmap({
   todayWorkday,
   today,
   occupied,
+  slotLoad,
   onSlotClick,
 }: {
   weekStart: Date;
@@ -309,6 +344,7 @@ function WeekHeatmap({
   todayWorkday?: WorkScheduleSlotResponseWorkday;
   today: Date;
   occupied: Set<string>;
+  slotLoad: Map<string, number>;
   onSlotClick: (date: Date, workHour: WorkScheduleSlotResponseWorkHour) => void;
 }) {
   return (
@@ -354,11 +390,13 @@ function WeekHeatmap({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
-            <LegendDot className="bg-emerald-500" label="Đang trực" />
-            <LegendDot className="bg-violet-100 ring-1 ring-violet-200" label="Trống" />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500">
+            <LegendDot className="bg-violet-500" label="Trống" />
+            <LegendDot className="bg-amber-500" label="Đang nhận ca" />
+            <LegendDot className="bg-rose-500" label="Đã đầy" />
+            <LegendDot className="bg-slate-200" label="Không trực" />
             <LegendDot
-              className="bg-emerald-200 ring-1 ring-emerald-300"
+              className="bg-emerald-500 ring-1 ring-emerald-300"
               label="Hôm nay"
             />
           </div>
@@ -409,6 +447,7 @@ function WeekHeatmap({
                   group={group}
                   weekDays={weekDays}
                   occupied={occupied}
+                  slotLoad={slotLoad}
                   todayWorkday={todayWorkday}
                   today={today}
                   onSlotClick={onSlotClick}
@@ -460,6 +499,7 @@ function ShiftGroupRows({
   group,
   weekDays,
   occupied,
+  slotLoad,
   todayWorkday,
   today,
   onSlotClick,
@@ -467,6 +507,7 @@ function ShiftGroupRows({
   group: ShiftGroup;
   weekDays: { workday: WorkScheduleSlotResponseWorkday; date: Date }[];
   occupied: Set<string>;
+  slotLoad: Map<string, number>;
   todayWorkday?: WorkScheduleSlotResponseWorkday;
   today: Date;
   onSlotClick: (date: Date, workHour: WorkScheduleSlotResponseWorkHour) => void;
@@ -497,6 +538,7 @@ function ShiftGroupRows({
           {weekDays.map(({ workday, date }) => {
             const isOn = occupied.has(`${workday}|${hour}`);
             const isToday = workday === todayWorkday && isSameDay(date, today);
+            const load = slotLoad.get(slotLoadKey(date, hour)) ?? 0;
             return (
               <td
                 key={`${workday}-${hour}`}
@@ -505,6 +547,7 @@ function ShiftGroupRows({
                 <HeatCell
                   on={isOn}
                   today={isToday}
+                  load={load}
                   onClick={isOn ? () => onSlotClick(date, hour) : undefined}
                 />
               </td>
@@ -519,26 +562,53 @@ function ShiftGroupRows({
 function HeatCell({
   on,
   today,
+  load,
   onClick,
 }: {
   on: boolean;
   today: boolean;
+  load: number;
   onClick?: () => void;
 }) {
   if (on) {
+    const full = load >= SLOT_CAPACITY;
+    const busy = !full && load > 0;
+    const tone = full
+      ? 'bg-gradient-to-br from-rose-500 to-rose-600'
+      : busy
+        ? 'bg-gradient-to-br from-amber-500 to-amber-600'
+        : 'bg-gradient-to-br from-violet-500 to-violet-600';
     return (
       <button
         type="button"
         onClick={onClick}
-        title="Xem chi tiết ca trực"
+        title={
+          full
+            ? `Đã đầy ca trực (${load}/${SLOT_CAPACITY}) — click để xem chi tiết`
+            : busy
+              ? `Đang nhận ca (${load}/${SLOT_CAPACITY}) — click để xem chi tiết`
+              : 'Trống — click để xem chi tiết'
+        }
         className={cn(
-          'flex h-9 w-full items-center justify-center rounded-md text-xs font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-1',
-          today
-            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 ring-2 ring-emerald-300'
-            : 'bg-gradient-to-br from-violet-500 to-violet-600',
+          'flex h-9 w-full items-center justify-center gap-1 rounded-md text-xs font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-1',
+          tone,
+          today && 'ring-2 ring-emerald-300',
         )}
       >
-        <CheckCircle2 className="size-4" />
+        {full ? (
+          <>
+            <Users className="size-3.5" />
+            <span className="text-[10px] font-bold tracking-wider text-white/90 tabular-nums">
+              {load}/{SLOT_CAPACITY}
+            </span>
+          </>
+        ) : busy ? (
+          <span className="text-[10px] font-bold tabular-nums">
+            {load}/{SLOT_CAPACITY}
+          </span>
+        ) : (
+          <CheckCircle2 className="size-4" />
+        )}
       </button>
     );
   }
@@ -558,11 +628,13 @@ function TodayView({
   slots,
   todayWorkday,
   today,
+  slotLoad,
   onSlotClick,
 }: {
   slots: WorkScheduleSlotResponse[];
   todayWorkday?: WorkScheduleSlotResponseWorkday;
   today: Date;
+  slotLoad: Map<string, number>;
   onSlotClick: (date: Date, workHour: WorkScheduleSlotResponseWorkHour) => void;
 }) {
   if (!todayWorkday) return null;
@@ -599,35 +671,54 @@ function TodayView({
               const isOn = occupied.has(hour);
               if (!isOn) return null;
               const status = slotStatus(hour, currentHour);
+              const load = slotLoad.get(slotLoadKey(today, hour)) ?? 0;
+              const full = load >= SLOT_CAPACITY;
+              const busy = !full && load > 0;
               return (
                 <li key={hour} className="relative pl-5">
                   <span
                     className={cn(
                       'absolute top-1/2 left-0 size-3 -translate-y-1/2 rounded-full ring-4 ring-white',
-                      status === 'live' && 'bg-emerald-500',
-                      status === 'upcoming' && 'bg-violet-400',
-                      status === 'done' && 'bg-slate-300',
+                      full
+                        ? 'bg-rose-500'
+                        : busy
+                          ? 'bg-amber-500'
+                          : status === 'live'
+                            ? 'bg-emerald-500'
+                            : status === 'upcoming'
+                              ? 'bg-violet-400'
+                              : 'bg-slate-300',
                     )}
                   />
                   <button
                     type="button"
                     onClick={() => onSlotClick(today, hour)}
                     className={cn(
-                      'flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-colors hover:bg-violet-50/60 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400',
-                      status === 'live' && 'border-emerald-200 bg-emerald-50/60',
-                      status === 'upcoming' && 'border-violet-100 bg-white',
-                      status === 'done' && 'border-slate-100 bg-slate-50/60',
+                      'flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-colors hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400',
+                      full
+                        ? 'border-rose-200 bg-rose-50/60 hover:bg-rose-50'
+                        : busy
+                          ? 'border-amber-200 bg-amber-50/60 hover:bg-amber-50'
+                          : status === 'live'
+                            ? 'border-emerald-200 bg-emerald-50/60 hover:bg-violet-50/60'
+                            : status === 'upcoming'
+                              ? 'border-violet-100 bg-white hover:bg-violet-50/60'
+                              : 'border-slate-100 bg-slate-50/60',
                     )}
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <Clock3
                         className={cn(
                           'size-4 shrink-0',
-                          status === 'live'
-                            ? 'text-emerald-600'
-                            : status === 'done'
-                              ? 'text-slate-400'
-                              : 'text-violet-500',
+                          full
+                            ? 'text-rose-600'
+                            : busy
+                              ? 'text-amber-600'
+                              : status === 'live'
+                                ? 'text-emerald-600'
+                                : status === 'done'
+                                  ? 'text-slate-400'
+                                  : 'text-violet-500',
                         )}
                       />
                       <span
@@ -639,6 +730,19 @@ function TodayView({
                         )}
                       >
                         {formatHour(hour)}
+                      </span>
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tabular-nums',
+                          full
+                            ? 'border-rose-200 bg-rose-100 text-rose-700'
+                            : busy
+                              ? 'border-amber-200 bg-amber-100 text-amber-700'
+                              : 'border-violet-200 bg-violet-50 text-violet-700',
+                        )}
+                      >
+                        <Users className="size-2.5" />
+                        {load}/{SLOT_CAPACITY}
                       </span>
                     </div>
                     <StatusBadge status={status} />
@@ -870,6 +974,13 @@ function isSameDay(a: Date, b: Date): boolean {
 
 function pad2(value: number): string {
   return value.toString().padStart(2, '0');
+}
+
+/** Key cho slotLoad map: "YYYY-MM-DD|<startHour>" (local time của browser). */
+function slotLoadKey(date: Date, hour: WorkScheduleSlotResponseWorkHour): string {
+  const m = /^HOUR_(\d+)_/.exec(hour);
+  const startHour = m ? Number(m[1]) : 0;
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}|${startHour}`;
 }
 
 function parseWorkHourRange(hour: WorkScheduleSlotResponseWorkHour): {
