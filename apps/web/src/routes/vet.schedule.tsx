@@ -417,7 +417,7 @@ function WeekHeatmap({
                       className={cn(
                         'min-w-28 px-2 py-2 text-center align-bottom',
                         isToday &&
-                          'border-x-2 border-emerald-400 bg-gradient-to-b from-emerald-100 to-emerald-50/60 shadow-[0_2px_0_0_rgb(52,211,153)]',
+                          'border-x-2 border-t-2 border-emerald-400 bg-emerald-100/40',
                       )}
                     >
                       <div className="flex flex-col items-center gap-1">
@@ -529,10 +529,7 @@ function ShiftGroupRows({
   return (
     <>
       <tr>
-        <td
-          colSpan={weekDays.length + 1}
-          className="border-t border-slate-100 px-4 pt-4 pb-1"
-        >
+        <td className="border-t border-slate-100 px-4 pt-4 pb-1">
           <div className="inline-flex items-center gap-2 text-[11px] font-bold tracking-wider text-slate-500 uppercase">
             <span className={cn('rounded-md p-1', group.tone)}>
               <group.icon className="size-3" />
@@ -540,6 +537,18 @@ function ShiftGroupRows({
             {group.label}
           </div>
         </td>
+        {weekDays.map(({ workday, date }) => {
+          const isToday = workday === todayWorkday && isSameDay(date, today);
+          return (
+            <td
+              key={`hdr-${workday}`}
+              className={cn(
+                'border-t border-slate-100 pt-4 pb-1',
+                isToday && 'border-x-2 border-emerald-400 bg-emerald-100/40',
+              )}
+            />
+          );
+        })}
       </tr>
       {group.hours.map((hour) => (
         <tr key={hour} className="group">
@@ -556,7 +565,10 @@ function ShiftGroupRows({
             return (
               <td
                 key={`${workday}-${hour}`}
-                className={cn('p-1.5 align-middle', isToday && 'bg-emerald-50/40')}
+                className={cn(
+                  'p-1.5 align-middle',
+                  isToday && 'border-x-2 border-emerald-400 bg-emerald-100/40',
+                )}
               >
                 <HeatCell
                   on={isOn}
