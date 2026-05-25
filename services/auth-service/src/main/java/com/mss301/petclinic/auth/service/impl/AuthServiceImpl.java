@@ -158,6 +158,17 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    @Override
+    @Transactional
+    public UserResponse linkVet(UUID userId, Long vetId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId.toString()));
+        user.setVetId(vetId);
+        User saved = userRepository.saveAndFlush(user);
+        audit.vetLinked(currentAdminId(), saved.getId(), vetId);
+        return UserResponse.from(saved);
+    }
+
     /** Lấy UUID của admin đang login từ SecurityContext. Null nếu không có (test/internal). */
     private static UUID currentAdminId() {
         var auth = org.springframework.security.core.context.SecurityContextHolder

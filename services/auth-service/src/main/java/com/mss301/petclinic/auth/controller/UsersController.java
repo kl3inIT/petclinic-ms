@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.mss301.petclinic.auth.dto.req.LinkCustomerRequest;
+import com.mss301.petclinic.auth.dto.req.LinkVetRequest;
 import com.mss301.petclinic.auth.dto.res.UserResponse;
 import com.mss301.petclinic.auth.service.AuthService;
 
@@ -58,5 +59,19 @@ public class UsersController {
             @RequestBody @Valid LinkCustomerRequest request
     ) {
         return authService.linkCustomer(id, request.customerId());
+    }
+
+    @PatchMapping("/{id}/vet-link")
+    @Operation(
+            summary = "Phase K — admin link user account ↔ vet entity",
+            description = "ADMIN only. Sau khi link, user cần logout/login để token mới carry " +
+                          "claim vetId. vets-service /me/* dùng claim này để resolve. KHÔNG " +
+                          "verify vetId tồn tại cross-schema — vets-service trả 404 nếu sai."
+    )
+    public UserResponse linkVet(
+            @PathVariable UUID id,
+            @RequestBody @Valid LinkVetRequest request
+    ) {
+        return authService.linkVet(id, request.vetId());
     }
 }
