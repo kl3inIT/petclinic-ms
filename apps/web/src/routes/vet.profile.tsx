@@ -203,12 +203,17 @@ function VetProfilePage() {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="gap-1.5 rounded-lg border-violet-200 bg-white text-violet-700 hover:bg-violet-50"
-                onClick={() => setIdCardOpen(true)}
+                className={cn(
+                  'gap-1.5 rounded-lg border-violet-200 transition-colors',
+                  idCardOpen
+                    ? 'bg-violet-600 text-white hover:bg-violet-700'
+                    : 'bg-white text-violet-700 hover:bg-violet-50',
+                )}
+                onClick={() => setIdCardOpen((v) => !v)}
                 disabled={profileQuery.isLoading || !profile}
               >
                 <CreditCard className="size-3.5" />
-                Xem thẻ
+                {idCardOpen ? 'Ẩn thẻ' : 'Xem thẻ'}
               </Button>
             }
           >
@@ -959,7 +964,7 @@ function VetIdCardDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] overflow-hidden border-none bg-transparent p-0 shadow-none [&>button]:top-4 [&>button]:right-4 [&>button]:z-30 [&>button]:rounded-full [&>button]:bg-white/90 [&>button]:p-1 [&>button]:text-slate-700 [&>button]:hover:bg-white">
+      <DialogContent className="max-w-[420px] overflow-hidden border-none bg-transparent p-0 shadow-none [&>button]:hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Thẻ bác sĩ</DialogTitle>
           <DialogDescription>

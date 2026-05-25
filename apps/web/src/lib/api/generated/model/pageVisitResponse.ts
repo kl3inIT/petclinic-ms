@@ -10,8 +10,8 @@ import type { SortObject } from './sortObject';
 import type { VisitResponse } from './visitResponse';
 
 export interface PageVisitResponse {
-  totalPages?: number;
   totalElements?: number;
+  totalPages?: number;
   pageable?: PageableObject;
   sort?: SortObject;
   numberOfElements?: number;

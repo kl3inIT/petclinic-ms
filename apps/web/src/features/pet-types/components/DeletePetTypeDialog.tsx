@@ -44,7 +44,7 @@ export function DeletePetTypeDialog({ petType, onOpenChange }: Props) {
                     toast.success('Đã xóa loại pet');
                     onOpenChange(false);
                   },
-                  onError: (err) => toast.error(err.message || 'Xóa thất bại'),
+                  onError: (err) => toast.error((err as Error).message || 'Xóa thất bại'),
                 });
               }
             }}

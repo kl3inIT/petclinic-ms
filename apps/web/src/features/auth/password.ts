@@ -1,18 +1,16 @@
-import { useMutation } from '@tanstack/react-query';
-
-import { apiClient } from '@/lib/api/client';
+import { useChangeMyPassword as useChangeMyPasswordGenerated } from '@/lib/api/generated/authentication/authentication';
 
 export interface ChangePasswordPayload {
   currentPassword: string;
   newPassword: string;
 }
 
-// TODO: thay manual axios bằng orval-generated useChangeMyPassword sau khi
-// rebuild auth-service docker + regen openapi.
 export function useChangeMyPassword() {
-  return useMutation({
-    mutationFn: async (payload: ChangePasswordPayload) => {
-      await apiClient.post('/api/v1/auth/me/password', payload);
-    },
-  });
+  const m = useChangeMyPasswordGenerated();
+  return {
+    ...m,
+    mutate: (payload: ChangePasswordPayload, options?: Parameters<typeof m.mutate>[1]) =>
+      m.mutate({ data: payload }, options),
+    mutateAsync: (payload: ChangePasswordPayload) => m.mutateAsync({ data: payload }),
+  };
 }

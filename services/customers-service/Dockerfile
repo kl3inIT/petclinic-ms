@@ -31,6 +31,7 @@ RUN --mount=type=cache,id=gradle-cache,target=/cache/.gradle,sharing=locked     
 COPY shared/common-web/src shared/common-web/src
 COPY shared/common-jpa/src shared/common-jpa/src
 COPY shared/common-security/src shared/common-security/src
+COPY shared/common-events/src shared/common-events/src
 # Service src
 COPY services/customers-service/src services/customers-service/src
 

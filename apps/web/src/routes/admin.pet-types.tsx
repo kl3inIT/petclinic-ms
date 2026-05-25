@@ -81,7 +81,7 @@ function PetTypesAdminPage() {
           return (
             <DropdownMenu
               open={isOpen}
-              onOpenChange={(o) => setActionRowId(o ? pt.id : null)}
+              onOpenChange={(o) => setActionRowId(o ? (pt.id ?? null) : null)}
             >
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="size-8">

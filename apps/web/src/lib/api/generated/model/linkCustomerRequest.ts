@@ -6,12 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface UserResponse {
-  id?: string;
-  username?: string;
-  email?: string;
-  roles?: string[];
-  enabled?: boolean;
-  vetId?: number;
-  customerId?: number;
+export interface LinkCustomerRequest {
+  customerId: number;
 }

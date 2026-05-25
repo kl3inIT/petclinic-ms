@@ -8,5 +8,8 @@
 import type { Pageable } from './pageable';
 
 export type ListPetsParams = {
-pageable: Pageable;
+  ownerId?: number;
+  petTypeId?: number;
+  isActive?: boolean;
+  pageable: Pageable;
 };

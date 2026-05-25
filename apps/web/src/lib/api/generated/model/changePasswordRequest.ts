@@ -6,12 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface UserResponse {
-  id?: string;
-  username?: string;
-  email?: string;
-  roles?: string[];
-  enabled?: boolean;
-  vetId?: number;
-  customerId?: number;
+export interface ChangePasswordRequest {
+  /** @minLength 1 */
+  currentPassword: string;
+  /**
+   * @minLength 8
+   * @maxLength 72
+   */
+  newPassword: string;
 }

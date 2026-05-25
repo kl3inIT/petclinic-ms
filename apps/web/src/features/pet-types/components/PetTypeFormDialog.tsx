@@ -55,7 +55,7 @@ export function PetTypeFormDialog({ open, onOpenChange, petType }: Props) {
               form.reset();
               onOpenChange(false);
             },
-            onError: (err) => toast.error(err.message || 'Cập nhật thất bại'),
+            onError: (err) => toast.error((err as Error).message || 'Cập nhật thất bại'),
           },
         );
       } else {
@@ -65,7 +65,8 @@ export function PetTypeFormDialog({ open, onOpenChange, petType }: Props) {
             form.reset();
             onOpenChange(false);
           },
-          onError: (err) => toast.error(err.message || 'Tạo loại pet thất bại'),
+          onError: (err) =>
+            toast.error((err as Error).message || 'Tạo loại pet thất bại'),
         });
       }
     },

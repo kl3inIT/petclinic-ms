@@ -61,8 +61,7 @@ function SecurityPage() {
             }, 1500);
           },
           onError: (err) => {
-            const msg = err.message;
-            toast.error(msg || 'Đổi mật khẩu thất bại');
+            toast.error((err as Error).message || 'Đổi mật khẩu thất bại');
           },
         },
       );
