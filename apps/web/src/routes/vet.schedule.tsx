@@ -403,7 +403,13 @@ function WeekHeatmap({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-[920px] border-collapse text-sm">
+          <table className="w-full min-w-[920px] table-fixed border-collapse text-sm">
+            <colgroup>
+              <col className="w-32" />
+              {weekDays.map(({ workday }) => (
+                <col key={workday} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 <th className="w-32 px-4 py-2 text-left text-[10px] font-bold tracking-wider text-slate-500 uppercase">
@@ -415,7 +421,7 @@ function WeekHeatmap({
                     <th
                       key={workday}
                       className={cn(
-                        'min-w-28 px-2 py-2 text-center align-bottom',
+                        'px-2 py-2 text-center align-bottom',
                         isToday &&
                           'border-x-2 border-t-2 border-emerald-400 bg-emerald-100/40',
                       )}
@@ -551,8 +557,8 @@ function ShiftGroupRows({
         })}
       </tr>
       {group.hours.map((hour) => (
-        <tr key={hour} className="group">
-          <td className="px-4 py-1.5 text-xs font-semibold text-slate-700">
+        <tr key={hour} className="group h-12">
+          <td className="px-4 text-xs font-semibold text-slate-700">
             <span className="inline-flex items-center gap-2">
               <Clock3 className="size-3 text-slate-400" />
               {formatHour(hour)}
@@ -566,7 +572,7 @@ function ShiftGroupRows({
               <td
                 key={`${workday}-${hour}`}
                 className={cn(
-                  'p-1.5 align-middle',
+                  'p-1 align-middle',
                   isToday && 'border-x-2 border-emerald-400 bg-emerald-100/40',
                 )}
               >
@@ -616,7 +622,7 @@ function HeatCell({
               : 'Trống — click để xem chi tiết'
         }
         className={cn(
-          'flex h-9 w-full items-center justify-center gap-1 rounded-md text-xs font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-1',
+          'flex h-full min-h-10 w-full items-center justify-center gap-1 rounded-md text-xs font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-1',
           tone,
           today && 'ring-2 ring-emerald-300',
         )}
@@ -641,7 +647,7 @@ function HeatCell({
   return (
     <div
       className={cn(
-        'flex h-9 items-center justify-center rounded-md',
+        'flex h-full min-h-10 w-full items-center justify-center rounded-md',
         today ? 'bg-emerald-100/40' : 'bg-slate-50',
       )}
     >
