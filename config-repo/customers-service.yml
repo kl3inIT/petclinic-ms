@@ -39,10 +39,13 @@ petclinic:
         - { method: POST, path: /api/v1/owners }
         - { method: PUT,  path: /api/v1/owners/** }
         - { method: PATCH, path: /api/v1/owners/** }
-      # Admin only — hard delete + pet management (write)
+      # Admin only — hard delete + pet management (write) + pet-type catalog write
       admin:
         - { method: DELETE, path: /api/v1/owners/** }
         - { method: POST,   path: /api/v1/pets }
         - { method: PUT,    path: /api/v1/pets/** }
         - { method: PATCH,  path: /api/v1/pets/** }
         - { method: DELETE, path: /api/v1/pets/** }
+        - { method: POST,   path: /api/v1/pet-types }
+        - { method: PUT,    path: /api/v1/pet-types/** }
+        - { method: DELETE, path: /api/v1/pet-types/** }
