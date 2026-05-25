@@ -34,7 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { FieldError } from '@/lib/form/FieldError';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/client';
-import { useMyOwnerProfile } from '@/features/customers/api';
+import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 
 import { useBookVisit } from '@/lib/api/generated/visits/visits';
 import { useListVets } from '@/lib/api/generated/vets/vets';
@@ -226,7 +226,7 @@ function BookVisitPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
 
   const [petPage, setPetPage] = useState(0);
-  const ownerQuery = useMyOwnerProfile();
+  const ownerQuery = useGetMyOwnerProfile();
 
   const [vetPage, setVetPage] = useState(0);
   const vetsQuery = useListVets({

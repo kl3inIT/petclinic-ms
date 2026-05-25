@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/features/auth/store';
-import { useMyOwnerProfile } from '@/features/customers/api';
+import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 import type { VisitResponse } from '@/lib/api/generated/model';
 import { SearchVisitsStatus } from '@/lib/api/generated/model';
 import { useSearchVisits } from '@/lib/api/generated/visits/visits';
@@ -58,7 +58,7 @@ function CustomerDashboard() {
   const recentQuery = useSearchVisits({
     pageable: { page: 0, size: 5, sort: ['scheduledAt,desc'] },
   });
-  const ownerQuery = useMyOwnerProfile();
+  const ownerQuery = useGetMyOwnerProfile();
 
   const upcoming = upcomingQuery.data?.content ?? [];
   const recent = recentQuery.data?.content ?? [];

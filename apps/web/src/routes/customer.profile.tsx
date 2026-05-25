@@ -28,7 +28,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/features/auth/store';
-import { useMyOwnerProfile, useUpdateMyOwnerProfile } from '@/features/customers/api';
+import {
+  useGetMyOwnerProfile,
+  useUpdateMyOwnerProfile,
+} from '@/lib/api/generated/owners/owners';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
@@ -53,7 +56,7 @@ function CustomerProfilePage() {
   const clear = useAuthStore((s) => s.clear);
   const username = user?.username ?? 'customer@petclinic.local';
   const userId = user?.id ?? '10000000-0000-0000-0000-000000000001';
-  const ownerQuery = useMyOwnerProfile();
+  const ownerQuery = useGetMyOwnerProfile();
   const updateOwner = useUpdateMyOwnerProfile();
   const [ownerForm, setOwnerForm] = useState({
     firstName: '',
@@ -157,11 +160,16 @@ function CustomerProfilePage() {
                     className="mt-5 rounded-xl border border-[#ECECF5] bg-white/80 p-4 shadow-sm"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      updateOwner.mutate(ownerForm, {
-                        onSuccess: () => toast.success('Da cap nhat ho so khach hang'),
-                        onError: (err: Error) =>
-                          toast.error(err.message || 'Cap nhat ho so that bai'),
-                      });
+                      updateOwner.mutate(
+                        { data: ownerForm },
+                        {
+                          onSuccess: () => toast.success('Đã cập nhật hồ sơ khách hàng'),
+                          onError: (err) =>
+                            toast.error(
+                              (err as Error).message || 'Cập nhật hồ sơ thất bại',
+                            ),
+                        },
+                      );
                     }}
                   >
                     <div className="grid grid-cols-2 gap-3">
@@ -211,7 +219,7 @@ function CustomerProfilePage() {
                       className="mt-4 h-10 w-full rounded-xl bg-[#7C6CF5] font-black hover:bg-[#6D5CE8]"
                       disabled={ownerQuery.isLoading || updateOwner.isPending}
                     >
-                      {updateOwner.isPending ? 'Dang luu...' : 'Luu ho so khach hang'}
+                      {updateOwner.isPending ? 'Đang lưu…' : 'Lưu hồ sơ khách hàng'}
                     </Button>
                   </form>
 

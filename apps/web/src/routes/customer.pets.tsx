@@ -25,16 +25,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  type CustomerPet,
-  type PetPayload,
   useAddMyPet,
-  useMyOwnerProfile,
+  useGetMyOwnerProfile,
   useRemoveMyPet,
   useUpdateMyPet,
-} from '@/features/customers/api';
+} from '@/lib/api/generated/owners/owners';
+import type { PetDto } from '@/lib/api/generated/model/petDto';
+import type { PetRequest } from '@/lib/api/generated/model/petRequest';
+import { PetTypeSelect } from '@/features/pet-types/PetTypeSelect';
+import { usePetTypes } from '@/features/pet-types/api';
 
 export const Route = createFileRoute('/customer/pets')({
-  component: CustomerPetsPage,
+  component: PetDtosPage,
 });
 
 // Helper to get high-quality pet photos for maximum aesthetic impact
@@ -94,12 +96,18 @@ function getPetBreed(pet: { name?: string; type?: string }) {
   return 'Khác';
 }
 
-function CustomerPetsPage() {
+function PetDtosPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingPet, setEditingPet] = useState<CustomerPet | null>(null);
+  const [editingPet, setEditingPet] = useState<PetDto | null>(null);
   const [petDialogOpen, setPetDialogOpen] = useState(false);
-  const ownerQuery = useMyOwnerProfile();
+  const ownerQuery = useGetMyOwnerProfile();
   const removePet = useRemoveMyPet();
+  const petTypesQuery = usePetTypes();
+  const petTypeLabel = useMemo(() => {
+    const byId = new Map((petTypesQuery.data ?? []).map((pt) => [pt.id, pt.name]));
+    return (id?: number | null) =>
+      id != null ? (byId.get(id) ?? `#${id}`) : 'Chưa phân loại';
+  }, [petTypesQuery.data]);
 
   const pets = useMemo(
     () =>
@@ -256,7 +264,7 @@ function CustomerPetsPage() {
                         </p>
 
                         <p className="mt-1 text-[12px] font-bold text-slate-500">
-                          Pet type ID: {p.petTypeId || 'N/A'} â€¢ Weight:{' '}
+                          {petTypeLabel(p.petTypeId)} • Cân nặng:{' '}
                           {p.weight != null ? `${p.weight} kg` : 'N/A'}
                         </p>
                         <p className="mt-1 text-[12px] font-bold text-slate-500">
@@ -304,11 +312,16 @@ function CustomerPetsPage() {
                             if (!p.id) return;
                             if (!window.confirm(`Xóa hồ sơ ${p.name ?? `#${p.id}`}?`))
                               return;
-                            removePet.mutate(p.id, {
-                              onSuccess: () => toast.success('Đã xóa hồ sơ thú cưng'),
-                              onError: (err: Error) =>
-                                toast.error(err.message || 'Xóa thú cưng thất bại'),
-                            });
+                            removePet.mutate(
+                              { petId: p.id },
+                              {
+                                onSuccess: () => toast.success('Đã xóa hồ sơ thú cưng'),
+                                onError: (err) =>
+                                  toast.error(
+                                    (err as Error).message || 'Xóa thú cưng thất bại',
+                                  ),
+                              },
+                            );
                           }}
                         >
                           <Trash2 className="size-4" />
@@ -337,16 +350,16 @@ function PetEditorDialog({
   onOpenChange,
 }: {
   open: boolean;
-  pet: CustomerPet | null;
+  pet: PetDto | null;
   onOpenChange: (open: boolean) => void;
 }) {
   const addPet = useAddMyPet();
   const updatePet = useUpdateMyPet();
-  const [form, setForm] = useState<PetPayload>({
+  const [form, setForm] = useState<PetRequest>({
     name: '',
     birthDate: '',
     type: '',
-    petTypeId: '',
+    petTypeId: undefined,
     isActive: true,
     weight: undefined,
     photoId: '',
@@ -358,7 +371,7 @@ function PetEditorDialog({
       name: pet?.name ?? '',
       birthDate: pet?.birthDate ?? '',
       type: pet?.type ?? '',
-      petTypeId: pet?.petTypeId ?? '',
+      petTypeId: pet?.petTypeId ?? undefined,
       isActive: pet?.isActive ?? true,
       weight: pet?.weight,
       photoId: pet?.photoId ?? '',
@@ -381,7 +394,7 @@ function PetEditorDialog({
               name: form.name.trim(),
               birthDate: form.birthDate || undefined,
               type: form.type.trim(),
-              petTypeId: form.petTypeId?.trim() || undefined,
+              petTypeId: form.petTypeId ?? undefined,
               isActive: form.isActive ?? true,
               weight: form.weight,
               photoId: form.photoId?.trim() || undefined,
@@ -392,25 +405,28 @@ function PetEditorDialog({
             }
             if (pet?.id) {
               updatePet.mutate(
-                { petId: pet.id, payload },
+                { petId: pet.id, data: payload },
                 {
                   onSuccess: () => {
                     toast.success('Đã cập nhật hồ sơ thú cưng');
                     onOpenChange(false);
                   },
-                  onError: (err: Error) =>
-                    toast.error(err.message || 'Cập nhật thú cưng thất bại'),
+                  onError: (err) =>
+                    toast.error((err as Error).message || 'Cập nhật thú cưng thất bại'),
                 },
               );
             } else {
-              addPet.mutate(payload, {
-                onSuccess: () => {
-                  toast.success('Đã thêm thú cưng');
-                  onOpenChange(false);
+              addPet.mutate(
+                { data: payload },
+                {
+                  onSuccess: () => {
+                    toast.success('Đã thêm thú cưng');
+                    onOpenChange(false);
+                  },
+                  onError: (err) =>
+                    toast.error((err as Error).message || 'Thêm thú cưng thất bại'),
                 },
-                onError: (err: Error) =>
-                  toast.error(err.message || 'Thêm thú cưng thất bại'),
-              });
+              );
             }
           }}
         >
@@ -437,14 +453,11 @@ function PetEditorDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pet-type-id">Pet type ID</Label>
-            <Input
+            <Label htmlFor="pet-type-id">Loại pet (catalog)</Label>
+            <PetTypeSelect
               id="pet-type-id"
-              value={form.petTypeId ?? ''}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, petTypeId: event.target.value }))
-              }
-              placeholder="dog, cat, rabbit..."
+              value={form.petTypeId}
+              onChange={(v) => setForm((prev) => ({ ...prev, petTypeId: v }))}
             />
           </div>
           <div className="space-y-2">
