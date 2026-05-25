@@ -32,7 +32,7 @@ public record OwnerResponse(
     }
 
     public record PetDto(Long id, String name, LocalDate birthDate, String type,
-                         String petTypeId, Boolean isActive, BigDecimal weight, String photoId) {
+                         Long petTypeId, Boolean isActive, BigDecimal weight, String photoId) {
         public static PetDto from(Pet pet) {
             return new PetDto(
                     pet.getId(),

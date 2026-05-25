@@ -22,9 +22,10 @@ spring:
 petclinic:
   security:
     endpoints:
-      # Authenticated USER xem được catalog pet (cho dropdown FE)
+      # Authenticated USER xem được catalog pet + pet types (cho dropdown FE)
       user:
         - { method: GET, path: /api/v1/pets/** }
+        - { method: GET, path: /api/v1/pet-types/** }
         - { method: GET, path: /api/v1/owners/me }
         - { method: PATCH, path: /api/v1/owners/me }
         - { method: POST, path: /api/v1/owners/me/pets }

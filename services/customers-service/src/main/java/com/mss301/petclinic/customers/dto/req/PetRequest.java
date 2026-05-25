@@ -13,7 +13,7 @@ public record PetRequest(
         @NotBlank String name,
         @PastOrPresent LocalDate birthDate,
         @NotBlank String type,
-        String petTypeId,
+        Long petTypeId,
         Boolean isActive,
         @DecimalMin("0.0") BigDecimal weight,
         String photoId

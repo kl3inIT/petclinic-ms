@@ -14,7 +14,7 @@ public record PetResponse(
         String name,
         LocalDate birthDate,
         String type,
-        String petTypeId,
+        Long petTypeId,
         Boolean isActive,
         BigDecimal weight,
         String photoId,
