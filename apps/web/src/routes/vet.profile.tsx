@@ -48,8 +48,8 @@ function VetProfilePage() {
       updateMutation.mutate(
         {
           data: {
-            phoneNumber: value.phoneNumber.trim() || undefined,
-            resume: value.resume.trim() || undefined,
+            phoneNumber: value.phoneNumber.trim(),
+            resume: value.resume.trim(),
           },
         },
         {
