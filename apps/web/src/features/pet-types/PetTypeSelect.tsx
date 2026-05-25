@@ -20,19 +20,28 @@ interface Props {
  * value=undefined hoặc null đều biểu diễn "chưa chọn"; gửi undefined ra BE để bỏ qua.
  */
 export function PetTypeSelect({ value, onChange, placeholder, disabled, id }: Props) {
-  const { data, isLoading } = usePetTypes();
+  const { data, isLoading, isError } = usePetTypes();
+  const items = data ?? [];
+  const empty = !isLoading && items.length === 0;
+  const effectivePlaceholder = isLoading
+    ? 'Đang tải loại pet…'
+    : isError
+      ? 'Lỗi tải catalog'
+      : empty
+        ? 'Catalog trống — liên hệ admin'
+        : (placeholder ?? 'Chọn loại…');
 
   return (
     <Select
-      disabled={disabled || isLoading}
+      disabled={disabled || isLoading || empty || isError}
       value={value == null ? '' : String(value)}
       onValueChange={(v) => onChange(v ? Number(v) : undefined)}
     >
       <SelectTrigger id={id}>
-        <SelectValue placeholder={placeholder ?? 'Chọn loại…'} />
+        <SelectValue placeholder={effectivePlaceholder} />
       </SelectTrigger>
       <SelectContent>
-        {(data ?? []).map((pt) => (
+        {items.map((pt) => (
           <SelectItem key={pt.id} value={String(pt.id)}>
             {pt.name}
           </SelectItem>
