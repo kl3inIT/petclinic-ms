@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { z } from 'zod';
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,7 +22,6 @@ import {
   HelpCircle,
   RefreshCcw,
   Search,
-  Plus,
   Edit2,
   Calendar,
 } from 'lucide-react';
@@ -46,7 +46,12 @@ import {
   WORKHOUR_ORDER,
 } from '@/features/vets/labels';
 
+const searchSchema = z.object({
+  petId: z.coerce.number().int().positive().optional().catch(undefined),
+});
+
 export const Route = createFileRoute('/customer/book')({
+  validateSearch: searchSchema,
   component: BookVisitPage,
 });
 
@@ -214,9 +219,11 @@ async function listVetWorkSchedule(vetId: number) {
 
 function BookVisitPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: '/customer/book' });
   const qc = useQueryClient();
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const appliedPetIdRef = useRef<number | undefined>(undefined);
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const d = new Date();
@@ -288,6 +295,19 @@ function BookVisitPage() {
     const originalIndex = vets.findIndex((v) => v.id === selectedVetRaw.id);
     return getVetDisplayData(selectedVetRaw, originalIndex >= 0 ? originalIndex : 0);
   }, [selectedVetRaw, vets]);
+
+  useEffect(() => {
+    const requestedPetId = search.petId;
+    if (!requestedPetId || appliedPetIdRef.current === requestedPetId) return;
+
+    const petIndex = pets.findIndex((pet) => pet.id === requestedPetId);
+    if (petIndex < 0) return;
+
+    appliedPetIdRef.current = requestedPetId;
+    form.setFieldValue('petId', requestedPetId);
+    setPetPage(Math.floor(petIndex / 8));
+    setStep(2);
+  }, [form, pets, search.petId]);
 
   const vetScheduleQuery = useQuery({
     queryKey: ['vet-work-schedule', values.vetId],
@@ -572,30 +592,18 @@ function BookVisitPage() {
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-[#7C6CF5]/10 to-transparent"></div>
                 </div>
 
-                {/* Filter and Add Block with premium input styling */}
-                <div className="flex flex-col items-center justify-between gap-5 sm:flex-row">
-                  <div className="relative w-full sm:max-w-md">
-                    <Search className="absolute top-1/2 left-4 size-4.5 -translate-y-1/2 text-[#667085]" />
-                    <Input
-                      placeholder="Tìm kiếm thú cưng..."
-                      className="h-12 rounded-xl border-[#ECECF5] bg-[#FAFAFF] pl-11 text-[14.5px] font-semibold shadow-sm transition-all focus-visible:bg-white focus-visible:ring-[#7C6CF5]"
-                      value={searchTerm}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setPetPage(0);
-                      }}
-                    />
-                  </div>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="h-12 w-full rounded-xl border-[#7C6CF5]/30 px-6 font-bold text-[#7C6CF5] transition-all hover:bg-[#7C6CF5]/5 sm:w-auto"
-                  >
-                    <Link to="/customer/pets">
-                      <Plus className="mr-1.5 size-4.5 stroke-[2.5px]" /> Thêm thú cưng
-                      mới
-                    </Link>
-                  </Button>
+                {/* Filter — booking flow chỉ chọn pet đã có. Quản lý pet ở /customer/pets. */}
+                <div className="relative w-full">
+                  <Search className="absolute top-1/2 left-4 size-4.5 -translate-y-1/2 text-[#667085]" />
+                  <Input
+                    placeholder="Tìm kiếm thú cưng..."
+                    className="h-12 rounded-xl border-[#ECECF5] bg-[#FAFAFF] pl-11 text-[14.5px] font-semibold shadow-sm transition-all focus-visible:bg-white focus-visible:ring-[#7C6CF5]"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPetPage(0);
+                    }}
+                  />
                 </div>
 
                 {/* Pet Selection Grid - STRICTLY 2 cards per row, LARGE cards */}

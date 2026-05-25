@@ -1,4 +1,4 @@
-import { Link, Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
 import {
   LayoutDashboard,
   Users,
@@ -11,20 +11,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { useAuthStore } from '@/features/auth/store';
+import { requireAnyRole } from '@/features/auth/guards';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { ChatWidget } from '@/features/ai/components/ChatWidget';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: ({ location }) => {
-    const { accessToken } = useAuthStore.getState();
-    if (!accessToken) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw redirect({
-        to: '/login',
-        search: { redirect: location.href },
-      });
-    }
+    // /admin/** chỉ cho ADMIN role (mặc dù requireAnyRole đã có ADMIN bypass).
+    requireAnyRole({ redirectFrom: location.href, allowedRoles: ['ADMIN'] });
   },
   component: AdminLayout,
 });

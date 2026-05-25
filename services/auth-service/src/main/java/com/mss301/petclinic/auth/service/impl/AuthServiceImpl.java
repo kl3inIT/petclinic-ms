@@ -169,6 +169,31 @@ public class AuthServiceImpl implements AuthService {
         return UserResponse.from(saved);
     }
 
+    @Override
+    @Transactional
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId.toString()));
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            // Audit failure trước khi throw — admin grep được brute-force pattern.
+            audit.passwordChangeFailure(userId);
+            throw new BadRequestAlertException(
+                    "Mật khẩu hiện tại không đúng.",
+                    "User", "invalid-current-password");
+        }
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BadRequestAlertException(
+                    "Mật khẩu mới phải khác mật khẩu hiện tại.",
+                    "User", "password-unchanged");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        // Force re-login trên các thiết bị khác — refresh token cũ không còn rotate được.
+        // Caller (FE) sau đó gọi /logout để clear session hiện tại cũng phải re-login.
+        refreshTokenService.revokeAllForUser(userId);
+        audit.passwordChangeSuccess(userId);
+    }
+
     /** Lấy UUID của admin đang login từ SecurityContext. Null nếu không có (test/internal). */
     private static UUID currentAdminId() {
         var auth = org.springframework.security.core.context.SecurityContextHolder

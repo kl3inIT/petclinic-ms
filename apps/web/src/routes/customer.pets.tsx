@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import {
   CalendarCheck,
@@ -10,6 +10,8 @@ import {
   Plus,
   Pencil,
   Trash2,
+  ImagePlus,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,8 +41,22 @@ export const Route = createFileRoute('/customer/pets')({
   component: CustomerPetsPage,
 });
 
+function getPreviewablePhotoUrl(photoId?: string | null) {
+  const value = photoId?.trim();
+  if (!value) return null;
+  return /^(https?:|blob:|data:image\/)/i.test(value) ? value : null;
+}
+
 // Helper to get high-quality pet photos for maximum aesthetic impact
-function getPetPhoto(pet: { name?: string; type?: string; id?: number }) {
+function getPetPhoto(pet: {
+  name?: string;
+  type?: string;
+  id?: number;
+  photoId?: string | null;
+}) {
+  const previewablePhoto = getPreviewablePhotoUrl(pet.photoId);
+  if (previewablePhoto) return previewablePhoto;
+
   const name = (pet.name ?? '').toLowerCase();
   const type = (pet.type ?? '').toLowerCase();
 
@@ -123,9 +139,10 @@ function CustomerPetsPage() {
     return pets.filter(
       (p) =>
         (p.name ?? '').toLowerCase().includes(term) ||
-        (p.type ?? '').toLowerCase().includes(term),
+        (p.type ?? '').toLowerCase().includes(term) ||
+        petTypeLabel(p.petTypeId).toLowerCase().includes(term),
     );
-  }, [pets, searchTerm]);
+  }, [petTypeLabel, pets, searchTerm]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-8 font-sans text-slate-800 antialiased">
@@ -221,7 +238,7 @@ function CustomerPetsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {filteredPets.map((p, idx) => {
-                const displayBreed = getPetBreed(p);
+                const displayBreed = p.type?.trim() || getPetBreed(p);
                 const displayPhoto = getPetPhoto(p);
                 const age = p.birthDate
                   ? `${new Date().getFullYear() - parseInt(p.birthDate.substring(0, 4))} tuổi`
@@ -256,7 +273,7 @@ function CustomerPetsPage() {
 
                         <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-bold text-slate-500">
                           <PawPrint className="size-3.5 text-slate-400" />
-                          {p.type ?? 'Khác'} • {displayBreed}
+                          {petTypeLabel(p.petTypeId)} • {displayBreed}
                         </p>
 
                         <p className="mt-1 text-[12px] font-bold text-slate-500">
@@ -264,12 +281,8 @@ function CustomerPetsPage() {
                         </p>
 
                         <p className="mt-1 text-[12px] font-bold text-slate-500">
-                          {petTypeLabel(p.petTypeId)} • Cân nặng:{' '}
+                          Giống: {displayBreed} • Cân nặng:{' '}
                           {p.weight != null ? `${p.weight} kg` : 'N/A'}
-                        </p>
-                        <p className="mt-1 text-[12px] font-bold text-slate-500">
-                          Photo ID: {p.photoId || 'N/A'} â€¢ Status:{' '}
-                          {p.isActive === false ? 'Inactive' : 'Active'}
                         </p>
 
                         <div className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-100/30 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black text-emerald-600">
@@ -364,6 +377,8 @@ function PetEditorDialog({
     weight: undefined,
     photoId: '',
   });
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [selectedPhotoName, setSelectedPhotoName] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -376,13 +391,37 @@ function PetEditorDialog({
       weight: pet?.weight,
       photoId: pet?.photoId ?? '',
     });
+    setPhotoPreviewUrl(getPreviewablePhotoUrl(pet?.photoId));
+    setSelectedPhotoName(pet?.photoId ?? '');
   }, [open, pet]);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(photoPreviewUrl);
+    };
+  }, [photoPreviewUrl]);
+
+  const handlePhotoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn file ảnh');
+      event.target.value = '';
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(file);
+    setPhotoPreviewUrl(nextPreviewUrl);
+    setSelectedPhotoName(file.name);
+    setForm((prev) => ({ ...prev, photoId: file.name }));
+  };
 
   const pending = addPet.isPending || updatePet.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{pet ? 'Sửa hồ sơ thú cưng' : 'Thêm thú cưng'}</DialogTitle>
         </DialogHeader>
@@ -399,8 +438,8 @@ function PetEditorDialog({
               weight: form.weight,
               photoId: form.photoId?.trim() || undefined,
             };
-            if (!payload.name || !payload.type) {
-              toast.error('Vui lòng nhập tên và loại thú cưng');
+            if (!payload.name || !payload.petTypeId || !payload.type) {
+              toast.error('Vui lòng nhập tên, loài pet và giống');
               return;
             }
             if (pet?.id) {
@@ -442,22 +481,23 @@ function PetEditorDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pet-type">Loại</Label>
+            <Label htmlFor="pet-type-id">Loài pet</Label>
+            <PetTypeSelect
+              id="pet-type-id"
+              value={form.petTypeId}
+              onChange={(v) => setForm((prev) => ({ ...prev, petTypeId: v }))}
+              placeholder="Chọn chó, mèo, thỏ..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pet-type">Giống</Label>
             <Input
               id="pet-type"
               value={form.type}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, type: event.target.value }))
               }
-              placeholder="dog, cat, rabbit..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pet-type-id">Loại pet (catalog)</Label>
-            <PetTypeSelect
-              id="pet-type-id"
-              value={form.petTypeId}
-              onChange={(v) => setForm((prev) => ({ ...prev, petTypeId: v }))}
+              placeholder="Golden Retriever, Mèo Anh lông ngắn..."
             />
           </div>
           <div className="space-y-2">
@@ -508,15 +548,51 @@ function PetEditorDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pet-photo-id">Photo ID</Label>
-            <Input
-              id="pet-photo-id"
-              value={form.photoId ?? ''}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, photoId: event.target.value }))
-              }
-              placeholder="file/photo id"
-            />
+            <Label htmlFor="pet-photo">Ảnh thú cưng</Label>
+            <div className="grid gap-3 sm:grid-cols-[132px_1fr]">
+              <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-200 bg-slate-50">
+                {photoPreviewUrl ? (
+                  <img
+                    src={photoPreviewUrl}
+                    alt={form.name || 'Ảnh thú cưng'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <ImagePlus className="size-8" />
+                    <span className="text-xs font-semibold">Chưa có ảnh</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col justify-center gap-3">
+                <Input
+                  id="pet-photo"
+                  type="file"
+                  accept="image/*"
+                  className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-indigo-700"
+                  onChange={handlePhotoFileChange}
+                />
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+                  <span className="truncate">
+                    {selectedPhotoName || 'Chọn ảnh để xem preview trước khi lưu'}
+                  </span>
+                  {(photoPreviewUrl || selectedPhotoName) && (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-md p-1 text-slate-500 hover:bg-white hover:text-rose-600"
+                      onClick={() => {
+                        setPhotoPreviewUrl(null);
+                        setSelectedPhotoName('');
+                        setForm((prev) => ({ ...prev, photoId: '' }));
+                      }}
+                      aria-label="Xóa ảnh đã chọn"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

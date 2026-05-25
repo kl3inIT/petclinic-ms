@@ -45,4 +45,14 @@ public interface AuthService {
      * @throws com.mss301.petclinic.common.web.exception.ResourceNotFoundException user không tồn tại
      */
     UserResponse linkVet(UUID userId, Long vetId);
+
+    /**
+     * Đổi mật khẩu cho user đang đăng nhập.
+     *
+     * <p>Verify currentPassword qua PasswordEncoder.matches; sai → throw
+     * {@link com.mss301.petclinic.common.web.exception.BadRequestAlertException}
+     * (errorKey {@code invalid-current-password}). Update mật khẩu mới + revoke
+     * refresh tokens hiện có (force re-login trên device khác).
+     */
+    void changePassword(UUID userId, String currentPassword, String newPassword);
 }
