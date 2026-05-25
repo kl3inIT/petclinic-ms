@@ -20,6 +20,7 @@ export const Route = createFileRoute('/admin/owners')({
 function OwnersPage() {
   const [lastNameFilter, setLastNameFilter] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingOwner, setEditingOwner] = useState<OwnerResponse | null>(null);
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [deletingOwner, setDeletingOwner] = useState<OwnerResponse | null>(null);
 
@@ -51,7 +52,7 @@ function OwnersPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-base">Tìm kiếm</CardTitle>
           <div className="relative w-[260px]">
-            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
             <Input
               placeholder="Lọc theo họ…"
               value={lastNameFilter}
@@ -65,6 +66,7 @@ function OwnersPage() {
             data={listQuery.data?.content ?? []}
             isLoading={listQuery.isLoading}
             onView={(o) => o.id !== undefined && setViewingId(o.id)}
+            onEdit={(o) => setEditingOwner(o)}
             onDelete={(o) => setDeletingOwner(o)}
           />
           {listQuery.data ? (
@@ -77,6 +79,13 @@ function OwnersPage() {
       </Card>
 
       <OwnerFormDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <OwnerFormDialog
+        // key resets form state khi đổi owner đang sửa
+        key={editingOwner?.id ?? 'edit'}
+        open={!!editingOwner}
+        owner={editingOwner}
+        onOpenChange={(o) => !o && setEditingOwner(null)}
+      />
       <OwnerDetailDialog
         ownerId={viewingId}
         onOpenChange={(o) => !o && setViewingId(null)}
