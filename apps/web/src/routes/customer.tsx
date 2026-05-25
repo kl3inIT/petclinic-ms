@@ -58,7 +58,7 @@ function CustomerLayout() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8F8FF]">
+    <div className="customer-layout-hide-scrollbar min-h-screen bg-[#F8F8FF]">
       <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/95 shadow-sm shadow-slate-200/40 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5">
           <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2">

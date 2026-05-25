@@ -146,3 +146,22 @@
   background-repeat: no-repeat;
   background-position: center;
 }
+
+/* Customer area — ẩn toàn bộ thanh cuộn mà vẫn cho phép scroll.
+ * Áp dụng cho root layout + mọi descendant + html khi customer layout render
+ * (vì scroll chính của trang xảy ra ở <html>, không phải ở wrapper div). */
+.customer-layout-hide-scrollbar,
+.customer-layout-hide-scrollbar *,
+html:has(.customer-layout-hide-scrollbar),
+body:has(.customer-layout-hide-scrollbar) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.customer-layout-hide-scrollbar::-webkit-scrollbar,
+.customer-layout-hide-scrollbar *::-webkit-scrollbar,
+html:has(.customer-layout-hide-scrollbar)::-webkit-scrollbar,
+body:has(.customer-layout-hide-scrollbar)::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
