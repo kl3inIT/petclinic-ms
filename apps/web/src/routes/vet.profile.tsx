@@ -87,14 +87,12 @@ function VetProfilePage() {
       const orig = {
         firstName: profile?.firstName ?? '',
         lastName: profile?.lastName ?? '',
-        email: profile?.email ?? '',
         phoneNumber: profile?.phoneNumber ?? '',
         resume: profile?.resume ?? '',
       };
       const v = {
         firstName: value.firstName.trim(),
         lastName: value.lastName.trim(),
-        email: value.email.trim(),
         phoneNumber: value.phoneNumber.trim(),
         resume: value.resume.trim(),
       };
@@ -102,7 +100,6 @@ function VetProfilePage() {
       const data: Record<string, string | undefined> = {};
       if (v.firstName !== orig.firstName) data.firstName = v.firstName;
       if (v.lastName !== orig.lastName) data.lastName = v.lastName;
-      if (v.email !== orig.email) data.email = v.email;
       if (v.phoneNumber !== orig.phoneNumber) data.phoneNumber = v.phoneNumber;
       if (v.resume !== orig.resume) data.resume = v.resume;
 
@@ -136,7 +133,6 @@ function VetProfilePage() {
     return (
       formValues.firstName.trim() !== (profile.firstName ?? '') ||
       formValues.lastName.trim() !== (profile.lastName ?? '') ||
-      formValues.email.trim() !== (profile.email ?? '') ||
       formValues.phoneNumber.trim() !== (profile.phoneNumber ?? '') ||
       formValues.resume.trim() !== (profile.resume ?? '')
     );
@@ -365,19 +361,26 @@ function VetProfilePage() {
                       <Field
                         label="Email"
                         name={field.name}
-                        hint="Phải duy nhất. Ảnh hưởng tới hoá đơn và lịch hẹn."
+                        hint="Đổi email sẽ phát hành sau (workflow xác thực qua mã OTP). Liên hệ admin nếu cần đổi gấp."
                         icon={Mail}
                       >
-                        <Input
-                          id={field.name}
-                          type="email"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="ten.vet@petclinic.local"
-                          className="h-11"
-                        />
-                        <FieldError field={field} />
+                        <div className="relative">
+                          <Input
+                            id={field.name}
+                            type="email"
+                            value={field.state.value}
+                            readOnly
+                            tabIndex={-1}
+                            placeholder="ten.vet@petclinic.local"
+                            className="h-11 cursor-not-allowed bg-slate-50 pr-32 text-slate-600"
+                          />
+                          <span
+                            title="Đổi email sẽ phát hành sau"
+                            className="pointer-events-none absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50/70 px-2 py-1 text-xs font-bold text-amber-700"
+                          >
+                            <LockKeyhole className="size-3.5" /> Sẽ có sau
+                          </span>
+                        </div>
                       </Field>
                     )}
                   />
