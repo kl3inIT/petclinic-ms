@@ -415,25 +415,39 @@ function WeekHeatmap({
                     <th
                       key={workday}
                       className={cn(
-                        'min-w-28 px-2 py-2 text-center',
-                        isToday && 'bg-emerald-50/40',
+                        'min-w-28 px-2 py-2 text-center align-bottom',
+                        isToday &&
+                          'border-x-2 border-emerald-400 bg-gradient-to-b from-emerald-100 to-emerald-50/60 shadow-[0_2px_0_0_rgb(52,211,153)]',
                       )}
                     >
-                      <div
-                        className={cn(
-                          'text-sm font-bold',
-                          isToday ? 'text-emerald-700' : 'text-slate-800',
-                        )}
-                      >
-                        {WORKDAY_LABEL[workday]}
-                      </div>
-                      <div
-                        className={cn(
-                          'text-xs font-medium',
-                          isToday ? 'text-emerald-600' : 'text-slate-400',
-                        )}
-                      >
-                        {formatShortDate(date)}
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={cn(
+                              'font-bold',
+                              isToday
+                                ? 'text-base text-emerald-700'
+                                : 'text-sm text-slate-800',
+                            )}
+                          >
+                            {WORKDAY_LABEL[workday]}
+                          </span>
+                          {isToday && (
+                            <span className="rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider text-white uppercase shadow-sm">
+                              Hôm nay
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className={cn(
+                            'tabular-nums',
+                            isToday
+                              ? 'text-sm font-extrabold text-emerald-800'
+                              : 'text-xs font-medium text-slate-400',
+                          )}
+                        >
+                          {formatShortDate(date)}
+                        </div>
                       </div>
                     </th>
                   );
