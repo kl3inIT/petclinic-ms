@@ -5,24 +5,40 @@ import {
   CalendarCheck,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Coffee,
   LayoutGrid,
+  MapPin,
   Minus,
   Moon,
+  PawPrint,
+  Phone,
   RotateCcw,
   Sun,
   Sunrise,
   Sunset,
+  User as UserIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useMySchedule } from '@/features/vet-me/api';
+import { useMyProfile, useMySchedule } from '@/features/vet-me/api';
+import { useGetOwner } from '@/lib/api/generated/owners/owners';
+import { useGetPet } from '@/lib/api/generated/pets/pets';
+import { useSearchVisits } from '@/lib/api/generated/visits/visits';
 import { CircleProgress } from '@/features/vet-me/components/charts/CircleProgress';
 import { EmptyState } from '@/features/vet-me/components/EmptyState';
 import {
@@ -32,6 +48,9 @@ import {
   WORKHOUR_ORDER,
 } from '@/features/vets/labels';
 import type {
+  OwnerResponse,
+  PetResponse,
+  VisitResponse,
   WorkScheduleSlotResponse,
   WorkScheduleSlotResponseWorkHour,
   WorkScheduleSlotResponseWorkday,
@@ -48,7 +67,13 @@ function VetSchedulePage() {
   const [mode, setMode] = useState<ViewMode>('week');
   const [weekOffset, setWeekOffset] = useState(0);
   const scheduleQuery = useMySchedule();
+  const profileQuery = useMyProfile();
+  const vetId = profileQuery.data?.id;
   const slots = useMemo(() => scheduleQuery.data ?? [], [scheduleQuery.data]);
+  const [selectedSlot, setSelectedSlot] = useState<{
+    date: Date;
+    workHour: WorkScheduleSlotResponseWorkHour;
+  } | null>(null);
 
   const today = useMemo(() => startOfDay(new Date()), []);
   const todayWorkday = JS_DAY_TO_WORKDAY[today.getDay()];
@@ -104,12 +129,26 @@ function VetSchedulePage() {
           todayWorkday={todayWorkday}
           today={today}
           occupied={occupied}
+          onSlotClick={(date, workHour) => setSelectedSlot({ date, workHour })}
         />
       ) : mode === 'today' ? (
-        <TodayView slots={slots} todayWorkday={todayWorkday} />
+        <TodayView
+          slots={slots}
+          todayWorkday={todayWorkday}
+          today={today}
+          onSlotClick={(date, workHour) => setSelectedSlot({ date, workHour })}
+        />
       ) : (
         <SummaryView perDay={perDay} totalSlots={totalSlots} coveragePct={coveragePct} />
       )}
+
+      <SlotDetailDialog
+        open={selectedSlot != null}
+        onOpenChange={(open) => !open && setSelectedSlot(null)}
+        vetId={vetId}
+        date={selectedSlot?.date ?? null}
+        workHour={selectedSlot?.workHour ?? null}
+      />
     </div>
   );
 }
@@ -261,6 +300,7 @@ function WeekHeatmap({
   todayWorkday,
   today,
   occupied,
+  onSlotClick,
 }: {
   weekStart: Date;
   weekDays: { workday: WorkScheduleSlotResponseWorkday; date: Date }[];
@@ -269,6 +309,7 @@ function WeekHeatmap({
   todayWorkday?: WorkScheduleSlotResponseWorkday;
   today: Date;
   occupied: Set<string>;
+  onSlotClick: (date: Date, workHour: WorkScheduleSlotResponseWorkHour) => void;
 }) {
   return (
     <Card className="border-slate-200/70 bg-white shadow-sm">
@@ -370,6 +411,7 @@ function WeekHeatmap({
                   occupied={occupied}
                   todayWorkday={todayWorkday}
                   today={today}
+                  onSlotClick={onSlotClick}
                 />
               ))}
             </tbody>
@@ -420,12 +462,14 @@ function ShiftGroupRows({
   occupied,
   todayWorkday,
   today,
+  onSlotClick,
 }: {
   group: ShiftGroup;
   weekDays: { workday: WorkScheduleSlotResponseWorkday; date: Date }[];
   occupied: Set<string>;
   todayWorkday?: WorkScheduleSlotResponseWorkday;
   today: Date;
+  onSlotClick: (date: Date, workHour: WorkScheduleSlotResponseWorkHour) => void;
 }) {
   return (
     <>
@@ -458,7 +502,11 @@ function ShiftGroupRows({
                 key={`${workday}-${hour}`}
                 className={cn('p-1.5 align-middle', isToday && 'bg-emerald-50/40')}
               >
-                <HeatCell on={isOn} today={isToday} />
+                <HeatCell
+                  on={isOn}
+                  today={isToday}
+                  onClick={isOn ? () => onSlotClick(date, hour) : undefined}
+                />
               </td>
             );
           })}
@@ -468,19 +516,30 @@ function ShiftGroupRows({
   );
 }
 
-function HeatCell({ on, today }: { on: boolean; today: boolean }) {
+function HeatCell({
+  on,
+  today,
+  onClick,
+}: {
+  on: boolean;
+  today: boolean;
+  onClick?: () => void;
+}) {
   if (on) {
     return (
-      <div
+      <button
+        type="button"
+        onClick={onClick}
+        title="Xem chi tiết ca trực"
         className={cn(
-          'flex h-9 items-center justify-center rounded-md text-xs font-bold text-white shadow-sm',
+          'flex h-9 w-full items-center justify-center rounded-md text-xs font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-1',
           today
             ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 ring-2 ring-emerald-300'
             : 'bg-gradient-to-br from-violet-500 to-violet-600',
         )}
       >
         <CheckCircle2 className="size-4" />
-      </div>
+      </button>
     );
   }
   return (
@@ -498,9 +557,13 @@ function HeatCell({ on, today }: { on: boolean; today: boolean }) {
 function TodayView({
   slots,
   todayWorkday,
+  today,
+  onSlotClick,
 }: {
   slots: WorkScheduleSlotResponse[];
   todayWorkday?: WorkScheduleSlotResponseWorkday;
+  today: Date;
+  onSlotClick: (date: Date, workHour: WorkScheduleSlotResponseWorkHour) => void;
 }) {
   if (!todayWorkday) return null;
   const todaySlots = slots.filter((s) => s.workday === todayWorkday);
@@ -546,9 +609,11 @@ function TodayView({
                       status === 'done' && 'bg-slate-300',
                     )}
                   />
-                  <div
+                  <button
+                    type="button"
+                    onClick={() => onSlotClick(today, hour)}
                     className={cn(
-                      'flex items-center justify-between gap-3 rounded-lg border px-4 py-3 transition-colors',
+                      'flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-colors hover:bg-violet-50/60 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400',
                       status === 'live' && 'border-emerald-200 bg-emerald-50/60',
                       status === 'upcoming' && 'border-violet-100 bg-white',
                       status === 'done' && 'border-slate-100 bg-slate-50/60',
@@ -577,7 +642,7 @@ function TodayView({
                       </span>
                     </div>
                     <StatusBadge status={status} />
-                  </div>
+                  </button>
                 </li>
               );
             })}
@@ -805,4 +870,321 @@ function isSameDay(a: Date, b: Date): boolean {
 
 function pad2(value: number): string {
   return value.toString().padStart(2, '0');
+}
+
+function parseWorkHourRange(hour: WorkScheduleSlotResponseWorkHour): {
+  startHour: number;
+  endHour: number;
+} {
+  const m = /^HOUR_(\d+)_(\d+)$/.exec(hour);
+  return { startHour: m ? Number(m[1]) : 0, endHour: m ? Number(m[2]) : 0 };
+}
+
+function toApiInstant(date: Date, hour: number): string {
+  const d = new Date(date);
+  d.setHours(hour, 0, 0, 0);
+  return d.toISOString();
+}
+
+interface SlotDetailDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  vetId?: number;
+  date: Date | null;
+  workHour: WorkScheduleSlotResponseWorkHour | null;
+}
+
+function SlotDetailDialog({
+  open,
+  onOpenChange,
+  vetId,
+  date,
+  workHour,
+}: SlotDetailDialogProps) {
+  const range = workHour ? parseWorkHourRange(workHour) : { startHour: 0, endHour: 0 };
+  const fromIso = date && workHour ? toApiInstant(date, range.startHour) : undefined;
+  const toIso = date && workHour ? toApiInstant(date, range.endHour) : undefined;
+
+  const visitsQuery = useSearchVisits(
+    {
+      vetId,
+      from: fromIso,
+      to: toIso,
+      pageable: { page: 0, size: 20, sort: ['scheduledAt,asc'] },
+    },
+    {
+      query: { enabled: open && vetId != null && !!fromIso && !!toIso },
+    },
+  );
+
+  const visits = visitsQuery.data?.content ?? [];
+  const activeCount = visits.filter((v) => v.status !== 'CANCELLED').length;
+
+  const dateLabel = date
+    ? date.toLocaleDateString('vi-VN', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : '';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-950">
+                <CalendarCheck className="size-5 text-violet-600" />
+                Ca trực {workHour ? formatHour(workHour) : ''}
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-sm text-slate-500">
+                {dateLabel || 'Chi tiết khung giờ trực'}
+              </DialogDescription>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700 tabular-nums">
+                {activeCount} ca khám
+              </span>
+              <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                {activeCount === 0 ? 'Trống' : 'Có lịch hẹn'}
+              </span>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-2 pt-2">
+          {visitsQuery.isLoading ? (
+            <>
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </>
+          ) : visitsQuery.isError ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              Không tải được danh sách ca khám. Vui lòng thử lại.
+            </div>
+          ) : visits.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/40 py-8 text-center">
+              <Coffee className="size-10 text-slate-300" />
+              <p className="text-sm font-bold text-slate-700">Chưa có ca khám nào</p>
+              <p className="max-w-sm text-xs text-slate-500">
+                Khung giờ này chưa có khách hàng đặt lịch. Bạn vẫn đang trực và sẵn sàng
+                tiếp nhận booking mới.
+              </p>
+            </div>
+          ) : (
+            visits.map((visit) => <VisitRow key={visit.id} visit={visit} />)
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function VisitRow({ visit }: { visit: VisitResponse }) {
+  const [expanded, setExpanded] = useState(false);
+  const petQuery = useGetPet(visit.petId as number, {
+    query: { enabled: visit.petId != null },
+  });
+  const pet = petQuery.data;
+  const ownerQuery = useGetOwner(pet?.ownerId as number, {
+    query: { enabled: pet?.ownerId != null },
+  });
+  const owner = ownerQuery.data;
+
+  const scheduled = visit.scheduledAt ? new Date(visit.scheduledAt) : null;
+  const timeLabel = scheduled
+    ? `${pad2(scheduled.getHours())}:${pad2(scheduled.getMinutes())}`
+    : '—';
+
+  const ownerName = owner
+    ? `${owner.firstName ?? ''} ${owner.lastName ?? ''}`.trim() ||
+      `Owner #${pet?.ownerId}`
+    : ownerQuery.isLoading
+      ? 'Đang tải…'
+      : `Owner #${pet?.ownerId ?? '—'}`;
+  const cancelled = visit.status === 'CANCELLED';
+
+  return (
+    <div
+      className={cn(
+        'overflow-hidden rounded-xl border transition-colors',
+        cancelled
+          ? 'border-slate-200 bg-slate-50/60 opacity-70'
+          : 'border-slate-200 bg-white hover:border-violet-200',
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700">
+            <PawPrint className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-sm font-bold text-slate-950">
+                {petQuery.isLoading ? 'Đang tải…' : (pet?.name ?? `Pet #${visit.petId}`)}
+              </p>
+              <VisitStatusChip status={visit.status} />
+            </div>
+            <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs font-medium text-slate-500">
+              <UserIcon className="size-3" /> {ownerName}
+              <span className="text-slate-300">·</span>
+              <Clock3 className="size-3" /> {timeLabel}
+            </p>
+          </div>
+        </div>
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 text-slate-400 transition-transform',
+            expanded && 'rotate-180',
+          )}
+        />
+      </button>
+
+      {expanded && (
+        <div className="border-t border-slate-100 bg-slate-50/40 px-4 py-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <PetMini pet={pet} loading={petQuery.isLoading} />
+            <OwnerMini
+              owner={owner}
+              loading={ownerQuery.isLoading}
+              ownerId={pet?.ownerId}
+            />
+          </div>
+          {visit.reason && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+              <p className="mb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                Lý do khám
+              </p>
+              <p className="font-medium">{visit.reason}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PetMini({ pet, loading }: { pet?: PetResponse; loading: boolean }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+      <p className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+        <PawPrint className="size-3" /> Thú cưng
+      </p>
+      {loading ? (
+        <Skeleton className="h-16 w-full" />
+      ) : !pet ? (
+        <p className="text-xs text-slate-400">Không có thông tin.</p>
+      ) : (
+        <dl className="space-y-1 text-xs">
+          <MiniRow label="Tên" value={pet.name ?? '—'} />
+          <MiniRow label="Loại" value={pet.type ?? '—'} />
+          <MiniRow label="Ngày sinh" value={pet.birthDate ?? '—'} />
+          <MiniRow
+            label="Cân nặng"
+            value={pet.weight != null ? `${pet.weight} kg` : '—'}
+          />
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function OwnerMini({
+  owner,
+  loading,
+  ownerId,
+}: {
+  owner?: OwnerResponse;
+  loading: boolean;
+  ownerId?: number;
+}) {
+  return (
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 text-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-violet-700 uppercase">
+          <UserIcon className="size-3" /> Khách hàng
+        </p>
+        {ownerId != null && (
+          <span className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[10px] font-bold text-violet-700">
+            #{ownerId}
+          </span>
+        )}
+      </div>
+      {loading ? (
+        <Skeleton className="h-16 w-full" />
+      ) : !owner ? (
+        <p className="text-xs text-slate-400">Không có thông tin.</p>
+      ) : (
+        <dl className="space-y-1 text-xs">
+          <MiniRow
+            label="Họ tên"
+            value={`${owner.firstName ?? ''} ${owner.lastName ?? ''}`.trim() || '—'}
+          />
+          <MiniRow label="SĐT" value={owner.telephone ?? '—'} icon={Phone} />
+          <MiniRow
+            label="Địa chỉ"
+            value={[owner.address, owner.city].filter(Boolean).join(', ') || '—'}
+            icon={MapPin}
+          />
+          <MiniRow
+            label="Tổng pet"
+            value={`${owner.pets?.length ?? 0} bé`}
+            icon={PawPrint}
+          />
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function MiniRow({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon?: LucideIcon;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2 border-b border-dashed border-slate-200/60 pb-1 last:border-none last:pb-0">
+      <dt className="inline-flex items-center gap-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+        {Icon && <Icon className="size-3" />}
+        {label}
+      </dt>
+      <dd className="max-w-[70%] truncate text-right text-xs font-semibold text-slate-800">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function VisitStatusChip({ status }: { status?: VisitResponse['status'] }) {
+  if (!status) return null;
+  const map = {
+    SCHEDULED: { label: 'Đã đặt', cls: 'border-violet-200 bg-violet-50 text-violet-700' },
+    IN_PROGRESS: {
+      label: 'Đang khám',
+      cls: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    },
+    COMPLETED: { label: 'Hoàn tất', cls: 'border-slate-200 bg-slate-50 text-slate-600' },
+    CANCELLED: { label: 'Đã huỷ', cls: 'border-rose-200 bg-rose-50 text-rose-600' },
+  } as const;
+  const cfg = map[status];
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold',
+        cfg.cls,
+      )}
+    >
+      {cfg.label}
+    </span>
+  );
 }
