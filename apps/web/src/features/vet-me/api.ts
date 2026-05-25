@@ -70,6 +70,7 @@ export function useUpdateMyProfile() {
         : {}),
       onSuccess: (data) => {
         qc.setQueryData(getGetMyVetProfileQueryKey(), data);
+        void qc.invalidateQueries({ queryKey: getGetMyVetProfileQueryKey() });
       },
     },
   });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
 import { toast } from 'sonner';
@@ -69,14 +69,19 @@ function VetProfilePage() {
   const badgesQuery = useMyBadges(0, 1);
   const scheduleQuery = useMySchedule();
 
+  const formDefaults = useMemo(
+    () => ({
+      firstName: profileQuery.data?.firstName ?? '',
+      lastName: profileQuery.data?.lastName ?? '',
+      email: profileQuery.data?.email ?? '',
+      phoneNumber: profileQuery.data?.phoneNumber ?? '',
+      resume: profileQuery.data?.resume ?? '',
+    }),
+    [profileQuery.data],
+  );
+
   const form = useForm({
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phoneNumber: '',
-      resume: '',
-    },
+    defaultValues: formDefaults,
     validators: { onChange: profileFormSchema },
     onSubmit: ({ value }) => {
       const orig = {
@@ -117,19 +122,7 @@ function VetProfilePage() {
     },
   });
 
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    if (profileQuery.data && !hydrated) {
-      form.reset({
-        firstName: profileQuery.data.firstName ?? '',
-        lastName: profileQuery.data.lastName ?? '',
-        email: profileQuery.data.email ?? '',
-        phoneNumber: profileQuery.data.phoneNumber ?? '',
-        resume: profileQuery.data.resume ?? '',
-      });
-      setHydrated(true);
-    }
-  }, [profileQuery.data, hydrated, form]);
+  const hydrated = profileQuery.data != null;
 
   const profile = profileQuery.data;
   const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
