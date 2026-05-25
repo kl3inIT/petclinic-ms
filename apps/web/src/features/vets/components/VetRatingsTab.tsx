@@ -124,7 +124,13 @@ export function VetRatingsTab({ vetId }: Props) {
                   </div>
                   {r.description && <p className="text-sm">{r.description}</p>}
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => setDeleting(r)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Xóa đánh giá"
+                  title="Xóa đánh giá"
+                  onClick={() => setDeleting(r)}
+                >
                   <Trash2 className="size-4 text-destructive" />
                 </Button>
               </CardContent>
@@ -169,9 +175,10 @@ export function VetRatingsTab({ vetId }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() =>
-                deleting && deleteMutation.mutate({ vetId, ratingId: deleting.id ?? 0 })
-              }
+              onClick={() => {
+                if (deleting?.id == null) return;
+                deleteMutation.mutate({ vetId, ratingId: deleting.id });
+              }}
             >
               Xóa
             </AlertDialogAction>

@@ -238,9 +238,10 @@ export function VetAlbumTab({ vetId }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() =>
-                deleting && deleteAlbum.mutate({ vetId, photoId: deleting.id ?? 0 })
-              }
+              onClick={() => {
+                if (deleting?.id == null) return;
+                deleteAlbum.mutate({ vetId, photoId: deleting.id });
+              }}
             >
               Xóa
             </AlertDialogAction>

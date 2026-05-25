@@ -125,12 +125,15 @@ export function VetScheduleTab({ vetId }: Props) {
           <Button
             variant="outline"
             onClick={() => clearMutation.mutate({ vetId })}
-            disabled={clearMutation.isPending}
+            disabled={clearMutation.isPending || replaceMutation.isPending}
           >
             <Eraser />
             Xóa hết
           </Button>
-          <Button onClick={save} disabled={!dirty || replaceMutation.isPending}>
+          <Button
+            onClick={save}
+            disabled={!dirty || replaceMutation.isPending || clearMutation.isPending}
+          >
             <Save />
             Lưu lịch
           </Button>

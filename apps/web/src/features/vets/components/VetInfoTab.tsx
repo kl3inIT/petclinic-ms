@@ -48,7 +48,9 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
     mutation: {
       onSuccess: (data) => {
         toast.success('Đã cập nhật hồ sơ');
-        qc.setQueryData(getGetVetQueryKey(vet.id ?? 0), data);
+        if (vet.id != null) {
+          qc.setQueryData(getGetVetQueryKey(vet.id), data);
+        }
         void qc.invalidateQueries({
           predicate: (q) => {
             const k = q.queryKey[0];
@@ -85,9 +87,10 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
       resume: vet.resume ?? '',
     },
     validators: { onChange: vetSchema },
-    onSubmit: ({ value }) =>
+    onSubmit: ({ value }) => {
+      if (vet.id == null) return;
       updateMutation.mutate({
-        id: vet.id ?? 0,
+        id: vet.id,
         data: {
           firstName: value.firstName,
           lastName: value.lastName,
@@ -97,7 +100,8 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
           active,
           specialtyNames,
         },
-      }),
+      });
+    },
   });
 
   useEffect(() => {
@@ -277,7 +281,13 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMutation.mutate({ id: vet.id ?? 0 })}>
+            <AlertDialogAction
+              disabled={vet.id == null || deleteMutation.isPending}
+              onClick={() => {
+                if (vet.id == null) return;
+                deleteMutation.mutate({ id: vet.id });
+              }}
+            >
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

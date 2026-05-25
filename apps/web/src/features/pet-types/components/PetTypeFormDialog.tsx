@@ -41,8 +41,9 @@ export function PetTypeFormDialog({ open, onOpenChange, petType }: Props) {
     },
     validators: { onChange: petTypeFormSchema },
     onSubmit: ({ value }) => {
+      // Edit mode: code là business key bất biến → luôn dùng giá trị gốc, bỏ qua input.
       const payload = {
-        code: value.code,
+        code: isEdit ? (petType?.code ?? value.code) : value.code,
         name: value.name,
         displayOrder: value.displayOrder,
       };
@@ -109,6 +110,8 @@ export function PetTypeFormDialog({ open, onOpenChange, petType }: Props) {
                   id={field.name}
                   placeholder="dog"
                   value={field.state.value}
+                  disabled={isEdit}
+                  readOnly={isEdit}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />

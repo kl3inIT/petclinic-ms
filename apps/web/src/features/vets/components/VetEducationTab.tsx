@@ -127,10 +127,22 @@ export function VetEducationTab({ vetId }: Props) {
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => setEditing(edu)}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Sửa bằng cấp ${edu.degree ?? ''}`.trim()}
+                    title="Sửa"
+                    onClick={() => setEditing(edu)}
+                  >
                     <Pencil className="size-4" />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => setDeleting(edu)}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Xóa bằng cấp ${edu.degree ?? ''}`.trim()}
+                    title="Xóa"
+                    onClick={() => setDeleting(edu)}
+                  >
                     <Trash2 className="size-4 text-destructive" />
                   </Button>
                 </div>
@@ -166,10 +178,11 @@ export function VetEducationTab({ vetId }: Props) {
           title="Sửa bằng cấp"
           initial={editing}
           busy={updateMutation.isPending}
-          onSubmit={(data) =>
+          onSubmit={(data) => {
+            if (editing.id == null) return;
             updateMutation.mutate({
               vetId,
-              educationId: editing.id ?? 0,
+              educationId: editing.id,
               data: {
                 schoolName: data.schoolName,
                 degree: data.degree,
@@ -177,8 +190,8 @@ export function VetEducationTab({ vetId }: Props) {
                 startDate: data.startDate,
                 endDate: data.endDate || undefined,
               },
-            })
-          }
+            });
+          }}
         />
       )}
 
@@ -193,10 +206,10 @@ export function VetEducationTab({ vetId }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() =>
-                deleting &&
-                deleteMutation.mutate({ vetId, educationId: deleting.id ?? 0 })
-              }
+              onClick={() => {
+                if (deleting?.id == null) return;
+                deleteMutation.mutate({ vetId, educationId: deleting.id });
+              }}
             >
               Xóa
             </AlertDialogAction>

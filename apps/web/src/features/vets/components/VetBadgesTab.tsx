@@ -243,9 +243,10 @@ export function VetBadgesTab({ vetId }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() =>
-                deleting && deleteMutation.mutate({ vetId, badgeId: deleting.id ?? 0 })
-              }
+              onClick={() => {
+                if (deleting?.id == null) return;
+                deleteMutation.mutate({ vetId, badgeId: deleting.id });
+              }}
             >
               Xóa
             </AlertDialogAction>

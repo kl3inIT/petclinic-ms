@@ -91,7 +91,9 @@ function CustomerProfilePage() {
   // Khi đó ownerQuery error 400 (missing-customer-id) hoặc 404 (not found).
   const ownerLinkError =
     ownerQuery.isError &&
-    (ownerQuery.error as { response?: { status?: number } })?.response?.status === 400;
+    [400, 404].includes(
+      (ownerQuery.error as { response?: { status?: number } })?.response?.status ?? -1,
+    );
 
   return (
     <>
