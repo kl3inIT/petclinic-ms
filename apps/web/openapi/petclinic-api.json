@@ -65,6 +65,10 @@
       "description": "Education history of a veterinarian"
     },
     {
+      "name": "Vet Reviews",
+      "description": "Queue duyệt thay đổi từ vet (staff/admin only)"
+    },
+    {
       "name": "Vets",
       "description": "Veterinarian management"
     },
@@ -1334,6 +1338,81 @@
         }
       }
     },
+    "/api/v1/vets/{vetId}/photo/reject": {
+      "post": {
+        "tags": ["Vet Photo"],
+        "summary": "Reject vet photo — STAFF/ADMIN only",
+        "description": "Body: { reason: '...' }. Đổi status → REJECTED. Photo ẩn khỏi public.",
+        "operationId": "rejectVetPhoto",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/photo/approve": {
+      "post": {
+        "tags": ["Vet Photo"],
+        "summary": "Approve vet photo — STAFF/ADMIN only",
+        "description": "Đổi status PENDING/REJECTED → APPROVED. Photo hiển thị public.",
+        "operationId": "approveVetPhoto",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/vets/{vetId}/educations": {
       "get": {
         "tags": ["Vet Educations"],
@@ -1398,6 +1477,98 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EducationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/educations/{educationId}/reject": {
+      "post": {
+        "tags": ["Vet Educations"],
+        "summary": "Reject education — STAFF/ADMIN only",
+        "description": "Body: { reason: '...' }",
+        "operationId": "rejectVetEducation",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "educationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EducationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/educations/{educationId}/approve": {
+      "post": {
+        "tags": ["Vet Educations"],
+        "summary": "Approve education — STAFF/ADMIN only",
+        "operationId": "approveVetEducation",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "educationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -1972,6 +2143,50 @@
         }
       }
     },
+    "/api/v1/vets/reviews/photos": {
+      "get": {
+        "tags": ["Vet Reviews"],
+        "summary": "List photo PENDING của tất cả vet (review queue)",
+        "operationId": "listPendingVetPhotos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VetPhotoResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/reviews/educations": {
+      "get": {
+        "tags": ["Vet Reviews"],
+        "summary": "List education PENDING của tất cả vet (review queue)",
+        "operationId": "listPendingVetEducations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EducationResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/vets/me/work-schedule": {
       "get": {
         "tags": ["Vet Me (self-service)"],
@@ -2419,6 +2634,46 @@
           }
         }
       }
+    },
+    "/api/v1/visits/availability": {
+      "get": {
+        "tags": ["Visits"],
+        "summary": "Số slot còn trống của vet vào 1 ngày",
+        "description": "Trả 12 work-hour 8h-20h với taken/remaining. FE dùng để hiển thị 'Còn X slot' / 'Đã đầy' trên booking calendar. capacity hiện = 2.",
+        "operationId": "getSlotAvailability",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlotAvailabilityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2775,13 +3030,13 @@
       "PagePetResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "pageable": {
             "$ref": "#/components/schemas/PageableObject"
@@ -2789,15 +3044,15 @@
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
           "first": {
             "type": "boolean"
           },
           "last": {
             "type": "boolean"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
           },
           "number": {
             "type": "integer",
@@ -2897,13 +3152,13 @@
       "PageOwnerResponse": {
         "type": "object",
         "properties": {
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "pageable": {
             "$ref": "#/components/schemas/PageableObject"
@@ -2911,15 +3166,15 @@
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
           "first": {
             "type": "boolean"
           },
           "last": {
             "type": "boolean"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
           },
           "number": {
             "type": "integer",
@@ -3008,6 +3263,19 @@
           "presignedUrl": {
             "type": "string",
             "format": "url"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reviewedBy": {
+            "type": "string"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rejectReason": {
+            "type": "string"
           }
         }
       },
@@ -3064,6 +3332,9 @@
           "id": {
             "type": "integer",
             "format": "int64"
+          },
+          "cardCode": {
+            "type": "string"
           },
           "firstName": {
             "type": "string"
@@ -3198,6 +3469,19 @@
           "endDate": {
             "type": "string",
             "format": "date"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reviewedBy": {
+            "type": "string"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rejectReason": {
+            "type": "string"
           }
         }
       },
@@ -3358,15 +3642,15 @@
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
           "first": {
             "type": "boolean"
           },
           "last": {
             "type": "boolean"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
           },
           "number": {
             "type": "integer",
@@ -3412,15 +3696,15 @@
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
           "first": {
             "type": "boolean"
           },
           "last": {
             "type": "boolean"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
           },
           "number": {
             "type": "integer",
@@ -3478,15 +3762,15 @@
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
           "first": {
             "type": "boolean"
           },
           "last": {
             "type": "boolean"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
           },
           "number": {
             "type": "integer",
@@ -3524,15 +3808,15 @@
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
           "first": {
             "type": "boolean"
           },
           "last": {
             "type": "boolean"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
           },
           "number": {
             "type": "integer",
@@ -3570,15 +3854,15 @@
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
           "first": {
             "type": "boolean"
           },
           "last": {
             "type": "boolean"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
           },
           "number": {
             "type": "integer",
@@ -3749,6 +4033,37 @@
           },
           "empty": {
             "type": "boolean"
+          }
+        }
+      },
+      "SlotAvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "capacity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotInfo"
+            }
+          }
+        }
+      },
+      "SlotInfo": {
+        "type": "object",
+        "properties": {
+          "workHour": {
+            "type": "string"
+          },
+          "taken": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remaining": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       }

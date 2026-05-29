@@ -10,13 +10,13 @@ import type { SortObject } from './sortObject';
 import type { PetResponse } from './petResponse';
 
 export interface PagePetResponse {
-  totalElements?: number;
   totalPages?: number;
+  totalElements?: number;
   pageable?: PageableObject;
   sort?: SortObject;
+  numberOfElements?: number;
   first?: boolean;
   last?: boolean;
-  numberOfElements?: number;
   number?: number;
   size?: number;
   content?: PetResponse[];

@@ -9,6 +9,7 @@ import {
   CreditCard,
   Eye,
   FileText,
+  GraduationCap,
   IdCard,
   Info,
   LockKeyhole,
@@ -48,6 +49,8 @@ import {
   useMySchedule,
   useUpdateMyProfile,
 } from '@/features/vet-me/api';
+import { useListVetEducations } from '@/lib/api/generated/vet-educations/vet-educations';
+import type { EducationResponse } from '@/lib/api/generated/model';
 import { CircleProgress } from '@/features/vet-me/components/charts/CircleProgress';
 import { StarRating } from '@/features/vet-me/components/StarRating';
 import { VetAvatar } from '@/features/vet-me/components/VetAvatar';
@@ -226,6 +229,7 @@ function VetProfilePage() {
                   value={profile?.id ? `#${profile.id}` : '—'}
                   mono
                 />
+                <DefRow label="Mã thẻ" value={profile?.cardCode ?? '—'} mono />
                 <DefRow label="Tên đăng nhập" value={username} mono />
                 <DefRow
                   label="Trạng thái"
@@ -464,6 +468,8 @@ function VetProfilePage() {
           </SectionCard>
         </div>
       </div>
+
+      <EducationSection vetId={profile?.id} />
 
       {hydrated && (
         <StickyActionBar
@@ -915,6 +921,107 @@ function StatTile({
   );
 }
 
+function EducationSection({ vetId }: { vetId: number | undefined }) {
+  const { data, isLoading, isError, error } = useListVetEducations(
+    vetId ?? 0,
+    { pageable: { page: 0, size: 50, sort: ['startDate,desc'] } },
+    { query: { enabled: vetId != null } },
+  );
+
+  const items: EducationResponse[] = data?.content ?? [];
+
+  return (
+    <SectionCard
+      icon={GraduationCap}
+      title="Học vấn & bằng cấp"
+      subtitle="Trình độ học vấn hiển thị ở trang chi tiết bác sĩ"
+      action={
+        <Badge
+          variant="outline"
+          className="rounded-full border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-amber-700 uppercase"
+        >
+          Chỉnh sửa qua admin
+        </Badge>
+      }
+    >
+      {vetId == null || isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <p className="font-semibold">Không tải được danh sách học vấn.</p>
+          <p className="mt-1 text-xs text-destructive/80">
+            {error instanceof Error ? error.message : 'Vui lòng thử lại sau.'}
+          </p>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
+          <GraduationCap className="mx-auto size-8 text-slate-300" />
+          <p className="mt-2 text-sm font-medium text-slate-600">
+            Chưa có bằng cấp nào được ghi nhận
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Liên hệ quản trị viên / staff để bổ sung trường, ngành, bằng cấp vào hồ sơ.
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((edu) => (
+            <EducationRow key={edu.id} edu={edu} />
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 flex items-start gap-2 text-xs text-slate-500">
+        <LockKeyhole className="mt-0.5 size-3.5 shrink-0" />
+        <span>
+          Bằng cấp do quản trị viên / staff xác minh và cập nhật.{' '}
+          <span className="font-semibold text-slate-600">
+            Tính năng tự cập nhật học vấn sắp ra mắt
+          </span>{' '}
+          (chờ endpoint{' '}
+          <code className="rounded bg-slate-100 px-1">vet-me/educations</code> từ
+          backend).
+        </span>
+      </p>
+    </SectionCard>
+  );
+}
+
+function EducationRow({ edu }: { edu: EducationResponse }) {
+  const start = formatYearMonth(edu.startDate);
+  const end = formatYearMonth(edu.endDate) ?? 'Hiện tại';
+  const range = start ? `${start} – ${end}` : end;
+  return (
+    <li className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 transition-colors hover:border-violet-200 hover:bg-violet-50/30">
+      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+        <GraduationCap className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-slate-950">
+          {edu.degree || 'Bằng cấp'}
+          {edu.fieldOfStudy && (
+            <span className="font-medium text-slate-600"> · {edu.fieldOfStudy}</span>
+          )}
+        </p>
+        <p className="mt-0.5 truncate text-xs text-slate-600">{edu.schoolName ?? '—'}</p>
+        <p className="mt-1 text-[11px] font-medium tracking-wide text-slate-500">
+          {range}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+function formatYearMonth(iso?: string): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
 function FormSkeleton() {
   return (
     <div className="space-y-6">
@@ -956,8 +1063,14 @@ function VetIdCardDialog({
   fullName,
 }: VetIdCardDialogProps) {
   const issuedYear = new Date().getFullYear();
-  const idPadded = profile?.id != null ? String(profile.id).padStart(4, '0') : '----';
-  const cardCode = `PC-VET-${idPadded}`;
+  // cardCode do BE sinh tự động qua Postgres GENERATED column (xem changeset
+  // 012-add-vet-card-code.yaml + Vet.cardCode @Generated). Format `PC-VET-{LPAD(id,4)}`.
+  // Fallback chỉ chạy khi profile chưa load.
+  const cardCode =
+    profile?.cardCode ??
+    (profile?.id != null
+      ? `PC-VET-${String(profile.id).padStart(4, '0')}`
+      : 'PC-VET-----');
   const specialtyNames = (profile?.specialties ?? [])
     .map((s) => s.name)
     .filter(Boolean) as string[];

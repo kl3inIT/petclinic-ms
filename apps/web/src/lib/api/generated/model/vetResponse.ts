@@ -9,6 +9,7 @@ import type { SpecialtyResponse } from './specialtyResponse';
 
 export interface VetResponse {
   id?: number;
+  cardCode?: string;
   firstName?: string;
   lastName?: string;
   email?: string;

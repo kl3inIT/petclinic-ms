@@ -14,4 +14,8 @@ export interface EducationResponse {
   fieldOfStudy?: string;
   startDate?: string;
   endDate?: string;
+  status?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  rejectReason?: string;
 }

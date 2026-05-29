@@ -26,8 +26,10 @@ import type {
 import type {
   BookVisitRequest,
   CompleteVisitRequest,
+  GetSlotAvailabilityParams,
   PageVisitResponse,
   SearchVisitsParams,
+  SlotAvailabilityResponse,
   VisitResponse,
 } from '.././model';
 
@@ -767,6 +769,253 @@ export function useGetVisitSuspense<
   queryKey: DataTag<QueryKey, TData, TError>;
 } {
   const queryOptions = getGetVisitSuspenseQueryOptions(id, options);
+
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * Trả 12 work-hour 8h-20h với taken/remaining. FE dùng để hiển thị 'Còn X slot' / 'Đã đầy' trên booking calendar. capacity hiện = 2.
+ * @summary Số slot còn trống của vet vào 1 ngày
+ */
+export const getSlotAvailability = (
+  params: GetSlotAvailabilityParams,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<SlotAvailabilityResponse>({
+    url: `/api/v1/visits/availability`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getGetSlotAvailabilityQueryKey = (params?: GetSlotAvailabilityParams) => {
+  return [`/api/v1/visits/availability`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetSlotAvailabilityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSlotAvailability>>, TError, TData>
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSlotAvailabilityQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSlotAvailability>>> = ({
+    signal,
+  }) => getSlotAvailability(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSlotAvailability>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSlotAvailabilityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSlotAvailability>>
+>;
+export type GetSlotAvailabilityQueryError = ErrorType<unknown>;
+
+export function useGetSlotAvailability<
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSlotAvailability>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSlotAvailability>>,
+          TError,
+          Awaited<ReturnType<typeof getSlotAvailability>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSlotAvailability<
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSlotAvailability>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSlotAvailability>>,
+          TError,
+          Awaited<ReturnType<typeof getSlotAvailability>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSlotAvailability<
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSlotAvailability>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Số slot còn trống của vet vào 1 ngày
+ */
+
+export function useGetSlotAvailability<
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSlotAvailability>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSlotAvailabilityQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetSlotAvailabilitySuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSlotAvailability>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSlotAvailabilityQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSlotAvailability>>> = ({
+    signal,
+  }) => getSlotAvailability(params, signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getSlotAvailability>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSlotAvailabilitySuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSlotAvailability>>
+>;
+export type GetSlotAvailabilitySuspenseQueryError = ErrorType<unknown>;
+
+export function useGetSlotAvailabilitySuspense<
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSlotAvailability>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSlotAvailabilitySuspense<
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSlotAvailability>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSlotAvailabilitySuspense<
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSlotAvailability>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Số slot còn trống của vet vào 1 ngày
+ */
+
+export function useGetSlotAvailabilitySuspense<
+  TData = Awaited<ReturnType<typeof getSlotAvailability>>,
+  TError = ErrorType<unknown>,
+>(
+  params: GetSlotAvailabilityParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getSlotAvailability>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetSlotAvailabilitySuspenseQueryOptions(params, options);
 
   const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
     TData,

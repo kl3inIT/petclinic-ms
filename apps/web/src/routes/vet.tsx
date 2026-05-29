@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquareQuote,
+  Settings,
   Stethoscope,
   UserCircle,
 } from 'lucide-react';
@@ -29,7 +30,13 @@ export const Route = createFileRoute('/vet')({
 });
 
 interface NavItem {
-  to: '/vet' | '/vet/profile' | '/vet/schedule' | '/vet/ratings' | '/vet/badges';
+  to:
+    | '/vet'
+    | '/vet/profile'
+    | '/vet/schedule'
+    | '/vet/ratings'
+    | '/vet/badges'
+    | '/vet/settings';
   label: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
@@ -41,6 +48,7 @@ const navItems: NavItem[] = [
   { to: '/vet/schedule', label: 'Lịch trực', icon: CalendarDays },
   { to: '/vet/ratings', label: 'Đánh giá', icon: MessageSquareQuote },
   { to: '/vet/badges', label: 'Huy hiệu', icon: Award },
+  { to: '/vet/settings', label: 'Cài đặt', icon: Settings },
 ];
 
 function VetLayout() {

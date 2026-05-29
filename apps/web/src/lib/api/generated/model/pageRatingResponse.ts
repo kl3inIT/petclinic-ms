@@ -14,9 +14,9 @@ export interface PageRatingResponse {
   totalElements?: number;
   pageable?: PageableObject;
   sort?: SortObject;
+  numberOfElements?: number;
   first?: boolean;
   last?: boolean;
-  numberOfElements?: number;
   number?: number;
   size?: number;
   content?: RatingResponse[];

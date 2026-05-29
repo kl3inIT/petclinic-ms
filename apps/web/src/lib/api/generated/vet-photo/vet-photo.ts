@@ -23,7 +23,11 @@ import type {
   UseSuspenseQueryResult,
 } from '@tanstack/react-query';
 
-import type { UploadVetPhotoBody, VetPhotoResponse } from '.././model';
+import type {
+  RejectVetPhotoBody,
+  UploadVetPhotoBody,
+  VetPhotoResponse,
+} from '.././model';
 
 import { apiMutator } from '../../mutator';
 import type { ErrorType, BodyType } from '../../mutator';
@@ -402,6 +406,168 @@ export const useDeleteVetPhoto = <TError = ErrorType<unknown>, TContext = unknow
   TContext
 > => {
   const mutationOptions = getDeleteVetPhotoMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Body: { reason: '...' }. Đổi status → REJECTED. Photo ẩn khỏi public.
+ * @summary Reject vet photo — STAFF/ADMIN only
+ */
+export const rejectVetPhoto = (
+  vetId: number,
+  rejectVetPhotoBody: BodyType<RejectVetPhotoBody>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<VetPhotoResponse>({
+    url: `/api/v1/vets/${vetId}/photo/reject`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: rejectVetPhotoBody,
+    signal,
+  });
+};
+
+export const getRejectVetPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectVetPhoto>>,
+    TError,
+    { vetId: number; data: BodyType<RejectVetPhotoBody> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectVetPhoto>>,
+  TError,
+  { vetId: number; data: BodyType<RejectVetPhotoBody> },
+  TContext
+> => {
+  const mutationKey = ['rejectVetPhoto'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectVetPhoto>>,
+    { vetId: number; data: BodyType<RejectVetPhotoBody> }
+  > = (props) => {
+    const { vetId, data } = props ?? {};
+
+    return rejectVetPhoto(vetId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectVetPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectVetPhoto>>
+>;
+export type RejectVetPhotoMutationBody = BodyType<RejectVetPhotoBody>;
+export type RejectVetPhotoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Reject vet photo — STAFF/ADMIN only
+ */
+export const useRejectVetPhoto = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectVetPhoto>>,
+      TError,
+      { vetId: number; data: BodyType<RejectVetPhotoBody> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectVetPhoto>>,
+  TError,
+  { vetId: number; data: BodyType<RejectVetPhotoBody> },
+  TContext
+> => {
+  const mutationOptions = getRejectVetPhotoMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Đổi status PENDING/REJECTED → APPROVED. Photo hiển thị public.
+ * @summary Approve vet photo — STAFF/ADMIN only
+ */
+export const approveVetPhoto = (vetId: number, signal?: AbortSignal) => {
+  return apiMutator<VetPhotoResponse>({
+    url: `/api/v1/vets/${vetId}/photo/approve`,
+    method: 'POST',
+    signal,
+  });
+};
+
+export const getApproveVetPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveVetPhoto>>,
+    TError,
+    { vetId: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveVetPhoto>>,
+  TError,
+  { vetId: number },
+  TContext
+> => {
+  const mutationKey = ['approveVetPhoto'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveVetPhoto>>,
+    { vetId: number }
+  > = (props) => {
+    const { vetId } = props ?? {};
+
+    return approveVetPhoto(vetId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveVetPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveVetPhoto>>
+>;
+
+export type ApproveVetPhotoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Approve vet photo — STAFF/ADMIN only
+ */
+export const useApproveVetPhoto = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof approveVetPhoto>>,
+      TError,
+      { vetId: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof approveVetPhoto>>,
+  TError,
+  { vetId: number },
+  TContext
+> => {
+  const mutationOptions = getApproveVetPhotoMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

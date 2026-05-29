@@ -12,4 +12,8 @@ export interface VetPhotoResponse {
   sizeBytes?: number;
   uploadedAt?: string;
   presignedUrl?: string;
+  status?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  rejectReason?: string;
 }

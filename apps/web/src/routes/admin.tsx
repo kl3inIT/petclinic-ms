@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   LogOut,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
@@ -18,8 +19,9 @@ import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: ({ location }) => {
-    // /admin/** chỉ cho ADMIN role (mặc dù requireAnyRole đã có ADMIN bypass).
-    requireAnyRole({ redirectFrom: location.href, allowedRoles: ['ADMIN'] });
+    // /admin/** cho ADMIN + STAFF (STAFF có quyền duyệt thay đổi vet).
+    // Trang nào chỉ ADMIN (vd /admin/llm-config) tự render conditionally qua isAdmin.
+    requireAnyRole({ redirectFrom: location.href, allowedRoles: ['ADMIN', 'STAFF'] });
   },
   component: AdminLayout,
 });
@@ -30,6 +32,7 @@ interface NavItem {
     | '/admin/owners'
     | '/admin/pets'
     | '/admin/vets'
+    | '/admin/vet-reviews'
     | '/admin/visits'
     | '/admin/llm-config';
   label: string;
@@ -44,6 +47,7 @@ const navItems: NavItem[] = [
   { to: '/admin/owners', label: 'Owners', icon: Users },
   { to: '/admin/pets', label: 'Pets', icon: PawPrint },
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },
+  { to: '/admin/vet-reviews', label: 'Duyệt thay đổi', icon: ShieldCheck },
   { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, adminOnly: true },
 ];
 
