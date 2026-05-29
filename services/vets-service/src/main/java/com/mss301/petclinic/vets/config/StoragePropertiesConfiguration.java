@@ -4,9 +4,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Activator cho {@link StorageProperties} — tách record (POJO) khỏi @Configuration
- * để giảm coupling test (xem CLAUDE.md "Configuration binding pattern").
+ * Activator cho {@link StorageCleanupProperties} (orphan-cleanup job — vet-specific).
+ * {@code StorageProperties} (cấu hình MinIO chung) giờ do
+ * {@code shared/common-storage} kích hoạt qua auto-config — không khai báo lại ở đây.
  */
 @Configuration
-@EnableConfigurationProperties({StorageProperties.class, StorageCleanupProperties.class})
+@EnableConfigurationProperties(StorageCleanupProperties.class)
 public class StoragePropertiesConfiguration {}

@@ -13,8 +13,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mss301.petclinic.common.storage.StorageProperties;
+import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
-import com.mss301.petclinic.vets.config.StorageProperties;
 import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
 import com.mss301.petclinic.vets.dto.req.VetRequest;
 import com.mss301.petclinic.vets.dto.res.VetResponse;
@@ -27,7 +28,6 @@ import com.mss301.petclinic.vets.repository.SpecialtyRepository;
 import com.mss301.petclinic.vets.repository.VetPhotoRepository;
 import com.mss301.petclinic.vets.repository.VetRepository;
 import com.mss301.petclinic.vets.repository.VetSpecifications;
-import com.mss301.petclinic.vets.service.StorageService;
 import com.mss301.petclinic.vets.service.VetService;
 
 @Service
