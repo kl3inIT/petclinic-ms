@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/changelog/changes/005-add-customer-link.yaml
   - include:
       file: db/changelog/changes/006-seed-dev-users.yaml
+  - include:
+      file: db/changelog/changes/007-seed-dev-users-vet3-vet5.yaml
