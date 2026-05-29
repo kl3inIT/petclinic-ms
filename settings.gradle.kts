@@ -33,10 +33,8 @@ include(":services:auth-service")
 include(":services:customers-service")
 include(":services:vets-service")
 include(":services:visits-service")
-
 include(":services:workflow-service")
-
 include(":services:admin-server")
 include(":services:mcp-server")
 include(":services:genai-service")
-
+include(":services:reviews-service")

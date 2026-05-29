@@ -17,8 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   deployWorkflowDefinition,
   getWorkflowDefinitionXml,
-  listWorkflowServiceTasks,
-  type ServiceTaskCatalogItem,
 } from '@/features/workflows/api';
 import { BpmnVietnameseModule } from '@/features/workflows/bpmnVietnamese';
 
@@ -82,11 +80,6 @@ export function WorkflowDesigner({
   const [isImported, setIsImported] = useState(false);
   // Track the previous external key so we only sync when parent explicitly changes it
   const prevControlledKeyRef = useRef<string | undefined>(undefined);
-
-  const catalogQuery = useQuery({
-    queryKey: ['workflow-designer', 'service-tasks'],
-    queryFn: listWorkflowServiceTasks,
-  });
 
   const definitionQuery = useQuery({
     queryKey: ['workflow-designer', 'definition', loadedKey],
@@ -260,20 +253,6 @@ export function WorkflowDesigner({
       .catch((err: Error) => toast.error(err.message));
   };
 
-  const applyServiceTask = (item: ServiceTaskCatalogItem) => {
-    const modeler = modelerRef.current;
-    if (!modeler || !selected) return;
-    if (selected.type !== 'bpmn:ServiceTask') {
-      toast.error('Chọn một service task BPMN trước');
-      return;
-    }
-    const selection = modeler.get<Selection>('selection');
-    const [element] = selection.get();
-    const modeling = modeler.get<Modeling>('modeling');
-    modeling.updateProperties(element, { name: item.name });
-    toast.success(`Đã áp dụng ${item.name}`);
-  };
-
   const downloadXml = async () => {
     const modeler = modelerRef.current;
     if (!modeler) return;
@@ -391,40 +370,6 @@ export function WorkflowDesigner({
           </div>
         </div>
 
-        {/* Service tasks bar */}
-        <div className="flex min-h-10 items-center gap-2 border-b bg-muted/40 px-5 py-1.5">
-          <span className="shrink-0 text-xs font-medium text-slate-500">
-            Tác vụ dịch vụ
-          </span>
-          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
-            {(catalogQuery.data ?? []).map((item) => (
-              <Button
-                key={item.id}
-                type="button"
-                variant="outline"
-                size="sm"
-                title={item.description}
-                onClick={() => applyServiceTask(item)}
-                disabled={selected?.type !== 'bpmn:ServiceTask'}
-                className="shrink-0 text-xs"
-              >
-                {item.name}
-                <Badge variant="secondary" className="ml-1 font-mono text-[10px]">
-                  {item.taskType}
-                </Badge>
-              </Button>
-            ))}
-            {catalogQuery.isLoading && (
-              <span className="self-center text-xs text-muted-foreground">Đang tải…</span>
-            )}
-          </div>
-          {selected && (
-            <span className="shrink-0 truncate text-xs text-muted-foreground">
-              {selected.type} · {selected.name || selected.id}
-            </span>
-          )}
-        </div>
-
         {/* Canvas + Properties */}
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_400px]">
           <div ref={canvasRef} className="min-w-0 bg-white" />
@@ -496,35 +441,7 @@ export function WorkflowDesigner({
         </div>
       </div>
 
-      <div className="flex min-h-12 items-center gap-2 border-b bg-muted/25 px-4 py-2">
-        <div className="flex shrink-0 items-center gap-2 text-sm font-medium">
-          Tác vụ dịch vụ
-        </div>
-        <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
-          {(catalogQuery.data ?? []).map((item) => (
-            <Button
-              key={item.id}
-              type="button"
-              variant="outline"
-              size="sm"
-              title={item.description}
-              onClick={() => applyServiceTask(item)}
-              disabled={selected?.type !== 'bpmn:ServiceTask'}
-              className="shrink-0"
-            >
-              {item.name}
-              <Badge variant="secondary" className="ml-1 font-mono text-[10px]">
-                {item.taskType}
-              </Badge>
-            </Button>
-          ))}
-          {catalogQuery.isLoading && (
-            <span className="self-center text-sm text-muted-foreground">Đang tải…</span>
-          )}
-        </div>
-      </div>
-
-      <div className="grid h-[calc(100%-6.5rem)] grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid h-[calc(100%-3.5rem)] grid-cols-[minmax(0,1fr)_340px]">
         <div ref={canvasRef} className="min-w-0 bg-white" />
         <aside ref={propertiesRef} className="overflow-auto border-l bg-background" />
       </div>
