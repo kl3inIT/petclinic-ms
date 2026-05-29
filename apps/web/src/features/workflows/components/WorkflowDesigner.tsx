@@ -20,9 +20,22 @@ import {
   listWorkflowServiceTasks,
   type ServiceTaskCatalogItem,
 } from '@/features/workflows/api';
+import { BpmnVietnameseModule } from '@/features/workflows/bpmnVietnamese';
 
 type Modeling = {
   updateProperties: (element: unknown, properties: Record<string, unknown>) => void;
+};
+
+type Canvas = {
+  getRootElement: () => {
+    id: string;
+    businessObject?: {
+      id?: string;
+      name?: string;
+    };
+  };
+  resized?: () => void;
+  zoom: (mode: string) => void;
 };
 
 type Selection = {
@@ -43,6 +56,7 @@ interface WorkflowDesignerProps {
   onProcessKeyChange?: (processKey: string) => void;
   onDeployed?: () => void;
   chrome?: 'default' | 'flowset';
+  active?: boolean;
 }
 
 export function WorkflowDesigner({
@@ -51,15 +65,23 @@ export function WorkflowDesigner({
   onProcessKeyChange,
   onDeployed,
   chrome = 'default',
+  active = true,
 }: WorkflowDesignerProps) {
+  const initialKey = controlledProcessKey || initialProcessKey;
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const propertiesRef = useRef<HTMLDivElement | null>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
-  const [processKey, setProcessKey] = useState(initialProcessKey);
+  const [processKey, setProcessKey] = useState(initialKey);
   // null = new blank canvas not yet loaded from backend
-  const [loadedKey, setLoadedKey] = useState<string | null>(initialProcessKey || null);
-  const [selected, setSelected] = useState<{ id: string; type: string; name?: string } | null>(null);
+  const [loadedKey, setLoadedKey] = useState<string | null>(initialKey || null);
+  const [selected, setSelected] = useState<{
+    id: string;
+    type: string;
+    name?: string;
+  } | null>(null);
   const [isImported, setIsImported] = useState(false);
+  // Track the previous external key so we only sync when parent explicitly changes it
+  const prevControlledKeyRef = useRef<string | undefined>(undefined);
 
   const catalogQuery = useQuery({
     queryKey: ['workflow-designer', 'service-tasks'],
@@ -75,18 +97,19 @@ export function WorkflowDesigner({
   const deployMutation = useMutation({
     mutationFn: async () => {
       const modeler = modelerRef.current;
-      if (!modeler) throw new Error('Modeler is not ready');
+      if (!modeler) throw new Error('Bộ vẽ BPMN chưa sẵn sàng');
       const name = processKey.trim();
-      if (!name) throw new Error('Enter a process name before deploying');
+      if (!name) throw new Error('Nhập mã quy trình trước khi deploy');
+      applyProcessKey(modeler, name);
       const { xml } = await modeler.saveXML({ format: true });
       return deployWorkflowDefinition(`${name}.bpmn`, xml);
     },
     onSuccess: (result) => {
-      toast.success(`Deployed ${result.name}`);
+      toast.success(`Đã triển khai ${result.name}`);
       setLoadedKey(processKey.trim());
       onDeployed?.();
     },
-    onError: (err: Error) => toast.error(err.message || 'Deploy failed'),
+    onError: (err: Error) => toast.error(err.message || 'Triển khai thất bại'),
   });
 
   const modules = useMemo(
@@ -95,16 +118,37 @@ export function WorkflowDesigner({
       BpmnPropertiesProviderModule,
       ZeebePropertiesProviderModule,
       ZeebeBehaviorsModule,
+      BpmnVietnameseModule,
     ],
     [],
   );
 
-  // Sync when parent passes a controlled processKey (e.g. opened from Processes tab)
+  const normalizeProcessId = (value: string) => {
+    const normalized = value.trim().replace(/[^A-Za-z0-9_.-]/g, '_');
+    return /^[A-Za-z_]/.test(normalized) ? normalized : `Process_${normalized}`;
+  };
+
+  const applyProcessKey = (modeler: BpmnModeler, value: string) => {
+    const canvas = modeler.get<Canvas>('canvas');
+    const rootElement = canvas.getRootElement();
+    const modeling = modeler.get<Modeling>('modeling');
+    const processId = normalizeProcessId(value);
+
+    modeling.updateProperties(rootElement, {
+      id: processId,
+      name: value,
+    });
+  };
+
+  // Sync only when the parent explicitly changes controlledProcessKey (e.g. "Open in Modeler")
+  // Do NOT depend on loadedKey — that would re-load the old key after every deploy.
   useEffect(() => {
-    if (!controlledProcessKey || controlledProcessKey === loadedKey) return;
+    if (controlledProcessKey === prevControlledKeyRef.current) return;
+    prevControlledKeyRef.current = controlledProcessKey;
+    if (!controlledProcessKey) return;
     setProcessKey(controlledProcessKey);
     setLoadedKey(controlledProcessKey);
-  }, [controlledProcessKey, loadedKey]);
+  }, [controlledProcessKey]);
 
   // Mount modeler; if no initial key start with a blank canvas immediately
   useEffect(() => {
@@ -122,7 +166,9 @@ export function WorkflowDesigner({
     });
     modelerRef.current = modeler;
 
-    const eventBus = modeler.get<{ on: (event: string, cb: () => void) => void }>('eventBus');
+    const eventBus = modeler.get<{ on: (event: string, cb: () => void) => void }>(
+      'eventBus',
+    );
     eventBus.on('selection.changed', () => {
       const selection = modeler.get<Selection>('selection');
       const [element] = selection.get();
@@ -133,10 +179,13 @@ export function WorkflowDesigner({
       );
     });
 
-    if (!initialProcessKey) {
+    let cancelled = false;
+
+    if (!initialKey) {
       (modeler as DiagramModeler)
         .createDiagram()
         .then(() => {
+          if (cancelled) return;
           const canvas = modeler.get<{ zoom: (mode: string) => void }>('canvas');
           canvas.zoom('fit-viewport');
           setIsImported(true);
@@ -145,10 +194,11 @@ export function WorkflowDesigner({
     }
 
     return () => {
+      cancelled = true;
       modeler.destroy();
       modelerRef.current = null;
     };
-  }, [modules]);
+  }, [initialKey, modules]);
 
   // Load XML into canvas whenever the backend returns a definition
   useEffect(() => {
@@ -165,14 +215,28 @@ export function WorkflowDesigner({
         setIsImported(true);
       })
       .catch((err: Error) => {
-        toast.error(err.message || 'Could not load BPMN');
+        toast.error(err.message || 'Không thể tải BPMN');
       });
   }, [definitionQuery.data?.bpmnXml]);
+
+  useEffect(() => {
+    if (!active || !isImported) return;
+    const modeler = modelerRef.current;
+    if (!modeler) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const canvas = modeler.get<Canvas>('canvas');
+      canvas.resized?.();
+      canvas.zoom('fit-viewport');
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [active, isImported]);
 
   const loadDefinition = () => {
     const trimmed = processKey.trim();
     if (!trimmed) {
-      toast.error('Enter a process name to load');
+      toast.error('Nhập mã quy trình để tải');
       return;
     }
     setLoadedKey(trimmed);
@@ -200,14 +264,14 @@ export function WorkflowDesigner({
     const modeler = modelerRef.current;
     if (!modeler || !selected) return;
     if (selected.type !== 'bpmn:ServiceTask') {
-      toast.error('Select a BPMN service task first');
+      toast.error('Chọn một service task BPMN trước');
       return;
     }
     const selection = modeler.get<Selection>('selection');
     const [element] = selection.get();
     const modeling = modeler.get<Modeling>('modeling');
     modeling.updateProperties(element, { name: item.name });
-    toast.success(`Applied ${item.name}`);
+    toast.success(`Đã áp dụng ${item.name}`);
   };
 
   const downloadXml = async () => {
@@ -242,9 +306,9 @@ export function WorkflowDesigner({
           const name = file.name.replace(/\.bpmn$|\.xml$/i, '');
           setProcessKey((prev) => prev || name);
           setLoadedKey(null);
-          toast.success(`Imported ${file.name}`);
+          toast.success(`Đã import ${file.name}`);
         })
-        .catch((err: Error) => toast.error(err.message || 'Could not import BPMN'));
+        .catch((err: Error) => toast.error(err.message || 'Không thể import BPMN'));
     };
     input.click();
   };
@@ -258,45 +322,52 @@ export function WorkflowDesigner({
         <div className="flex min-h-[64px] items-center gap-2 border-b bg-white px-5">
           <Input
             value={processKey}
-            onChange={(e) => setProcessKey(e.target.value)}
+            onChange={(e) => {
+              const nextKey = e.target.value;
+              setProcessKey(nextKey);
+              const modeler = modelerRef.current;
+              if (modeler && isImported && nextKey.trim()) {
+                applyProcessKey(modeler, nextKey);
+              }
+            }}
             onKeyDown={(e) => e.key === 'Enter' && loadDefinition()}
-            placeholder="Process key — e.g. VisitApproval"
-            className="h-9 w-72 rounded-[3px] border-slate-300 font-mono text-sm shadow-none"
-            aria-label="Process key"
+            placeholder="Mã quy trình - vd: VisitApproval"
+            className="h-9 w-72 rounded-md border-slate-300 font-mono text-sm shadow-none"
+            aria-label="Mã quy trình"
           />
           <Button
             variant="outline"
-            className="h-9 rounded-[3px]"
+            className="h-9 rounded-md"
             onClick={loadDefinition}
             disabled={!processKey.trim() || definitionQuery.isFetching}
-            title="Load or create the process with this key"
+            title="Tải hoặc tạo quy trình với mã này"
           >
             <FolderOpen className="size-4" />
-            {definitionQuery.isFetching ? 'Loading…' : 'Load'}
+            {definitionQuery.isFetching ? 'Đang tải…' : 'Tải'}
           </Button>
           <Button
             variant="outline"
-            className="h-9 rounded-[3px]"
+            className="h-9 rounded-md"
             onClick={handleNew}
-            title="Start a new blank diagram"
+            title="Tạo sơ đồ trống mới"
           >
             <Plus className="size-4" />
-            New
+            Mới
           </Button>
           <Button
             variant="outline"
-            className="h-9 rounded-[3px]"
+            className="h-9 rounded-md"
             onClick={handleImportFile}
-            title="Import a .bpmn file from your computer"
+            title="Nhập file .bpmn từ máy"
           >
             <Upload className="size-4" />
-            Import
+            Nhập file
           </Button>
 
           <div className="ml-auto flex items-center gap-2">
             {definitionQuery.data && (
               <Badge variant={definitionQuery.data.deployed ? 'default' : 'secondary'}>
-                {definitionQuery.data.deployed ? 'Deployed' : 'New'}
+                {definitionQuery.data.deployed ? 'Đã triển khai' : 'Mới'}
               </Badge>
             )}
             <Button
@@ -306,23 +377,25 @@ export function WorkflowDesigner({
               disabled={!isImported}
             >
               <Download className="size-4" />
-              Export
+              Xuất file
             </Button>
             <Button
-              className="h-9 rounded-[3px] bg-[#0f5b6b] px-4 hover:bg-[#0d4d5b]"
+              className="h-9 px-4"
               onClick={() => deployMutation.mutate()}
               disabled={!canDeploy}
-              title={!processKey.trim() ? 'Enter a process name first' : undefined}
+              title={!processKey.trim() ? 'Nhập mã quy trình trước' : undefined}
             >
               <Rocket className="size-4" />
-              {deployMutation.isPending ? 'Deploying…' : 'Deploy'}
+              {deployMutation.isPending ? 'Đang triển khai…' : 'Triển khai'}
             </Button>
           </div>
         </div>
 
         {/* Service tasks bar */}
-        <div className="flex min-h-10 items-center gap-2 border-b bg-slate-50 px-5 py-1.5">
-          <span className="shrink-0 text-xs font-medium text-slate-500">Service tasks</span>
+        <div className="flex min-h-10 items-center gap-2 border-b bg-muted/40 px-5 py-1.5">
+          <span className="shrink-0 text-xs font-medium text-slate-500">
+            Tác vụ dịch vụ
+          </span>
           <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
             {(catalogQuery.data ?? []).map((item) => (
               <Button
@@ -342,7 +415,7 @@ export function WorkflowDesigner({
               </Button>
             ))}
             {catalogQuery.isLoading && (
-              <span className="self-center text-xs text-muted-foreground">Loading…</span>
+              <span className="self-center text-xs text-muted-foreground">Đang tải…</span>
             )}
           </div>
           {selected && (
@@ -370,24 +443,34 @@ export function WorkflowDesigner({
             onChange={(e) => setProcessKey(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && loadDefinition()}
             className="h-9 w-72"
-            placeholder="Process key"
-            aria-label="Process key"
+            placeholder="Mã quy trình"
+            aria-label="Mã quy trình"
           />
-          <Button variant="secondary" size="sm" onClick={loadDefinition} disabled={!processKey.trim()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={loadDefinition}
+            disabled={!processKey.trim()}
+          >
             <FolderOpen className="size-4" />
-            Load
+            Tải
           </Button>
           <Button variant="outline" size="sm" onClick={handleNew}>
             <Plus className="size-4" />
-            New
+            Mới
           </Button>
-          <Button variant="outline" size="sm" onClick={handleImportFile} title="Import a .bpmn file">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImportFile}
+            title="Nhập file .bpmn"
+          >
             <Upload className="size-4" />
-            Import
+            Nhập file
           </Button>
           {definitionQuery.data && (
             <Badge variant={definitionQuery.data.deployed ? 'default' : 'secondary'}>
-              {definitionQuery.data.deployed ? 'Deployed' : 'New'}
+              {definitionQuery.data.deployed ? 'Đã triển khai' : 'Mới'}
             </Badge>
           )}
           {selected && (
@@ -397,20 +480,25 @@ export function WorkflowDesigner({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={downloadXml} disabled={!isImported}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={downloadXml}
+            disabled={!isImported}
+          >
             <Download className="size-4" />
-            Export
+            Xuất file
           </Button>
           <Button size="sm" onClick={() => deployMutation.mutate()} disabled={!canDeploy}>
             <Rocket className="size-4" />
-            {deployMutation.isPending ? 'Deploying…' : 'Deploy'}
+            {deployMutation.isPending ? 'Đang triển khai…' : 'Triển khai'}
           </Button>
         </div>
       </div>
 
       <div className="flex min-h-12 items-center gap-2 border-b bg-muted/25 px-4 py-2">
         <div className="flex shrink-0 items-center gap-2 text-sm font-medium">
-          Service tasks
+          Tác vụ dịch vụ
         </div>
         <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
           {(catalogQuery.data ?? []).map((item) => (
@@ -431,7 +519,7 @@ export function WorkflowDesigner({
             </Button>
           ))}
           {catalogQuery.isLoading && (
-            <span className="self-center text-sm text-muted-foreground">Loading…</span>
+            <span className="self-center text-sm text-muted-foreground">Đang tải…</span>
           )}
         </div>
       </div>

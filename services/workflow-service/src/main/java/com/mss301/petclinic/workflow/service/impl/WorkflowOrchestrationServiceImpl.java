@@ -282,6 +282,17 @@ public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationSe
         }
     }
 
+    @Override
+    public void deleteProcessInstance(String processInstanceId) {
+        try {
+            postEmptyCommand("/process-instances/" + processInstanceId + "/deletion", "delete process instance " + processInstanceId);
+            log.info("Process instance {} marked for deletion", processInstanceId);
+        } catch (Exception e) {
+            log.error("deleteProcessInstance failed for {}: {}", processInstanceId, e.getMessage());
+            throw new IllegalStateException("Failed to delete process instance: " + e.getMessage(), e);
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static WorkflowInstanceResponse pending(String id) {
@@ -419,6 +430,22 @@ public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationSe
         if (first != null) return String.valueOf(first);
         Object second = map.get(secondKey);
         return second != null ? String.valueOf(second) : def;
+    }
+
+    private void postEmptyCommand(String path, String operation) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(operateBaseUrl + path))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("Authorization", operateBasicAuth)
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                .build();
+
+        HttpResponse<String> res = operateHttp.send(req, HttpResponse.BodyHandlers.ofString());
+        log.info("Operate command {} POST {} -> {}", operation, path, res.statusCode());
+        if (res.statusCode() < 200 || res.statusCode() >= 300) {
+            throw new IllegalStateException("Camunda rejected " + operation + " (" + res.statusCode() + "): " + res.body());
+        }
     }
 
     private static class OperateNotFoundException extends RuntimeException {

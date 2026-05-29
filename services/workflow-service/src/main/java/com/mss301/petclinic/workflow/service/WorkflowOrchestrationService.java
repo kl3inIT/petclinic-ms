@@ -26,4 +26,6 @@ public interface WorkflowOrchestrationService {
     void completeUserTask(String userTaskKey, Map<String, Object> variables);
 
     void terminateProcessInstance(String processInstanceId);
+
+    void deleteProcessInstance(String processInstanceId);
 }

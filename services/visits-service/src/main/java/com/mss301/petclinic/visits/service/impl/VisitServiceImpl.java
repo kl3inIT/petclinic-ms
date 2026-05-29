@@ -24,6 +24,7 @@ import com.mss301.petclinic.visits.client.VetSummary;
 import com.mss301.petclinic.visits.client.WorkflowServiceClient;
 import com.mss301.petclinic.visits.client.WorkflowStartRequest;
 import com.mss301.petclinic.visits.client.WorkflowStartResponse;
+import com.mss301.petclinic.visits.config.WorkflowCallbackProperties;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
@@ -52,15 +53,18 @@ public class VisitServiceImpl implements VisitService {
     private final ObjectProvider<EventPublisher> events;
     /** Optional — workflow-service có thể chưa start hoặc down. Booking vẫn thành công. */
     private final ObjectProvider<WorkflowServiceClient> workflowClient;
+    private final WorkflowCallbackProperties workflowProperties;
 
     public VisitServiceImpl(VisitRepository repository,
                             RemoteClientsFacade remoteClients,
                             ObjectProvider<EventPublisher> events,
-                            ObjectProvider<WorkflowServiceClient> workflowClient) {
+                            ObjectProvider<WorkflowServiceClient> workflowClient,
+                            WorkflowCallbackProperties workflowProperties) {
         this.repository = repository;
         this.remoteClients = remoteClients;
         this.events = events;
         this.workflowClient = workflowClient;
+        this.workflowProperties = workflowProperties;
     }
 
     @Override
@@ -188,12 +192,13 @@ public class VisitServiceImpl implements VisitService {
                 return;
             }
             WorkflowStartRequest req = new WorkflowStartRequest(
-                    "visit-booking",
+                    workflowProperties.visitBookingProcessId(),
                     Map.of("visitId", saved.getId())
             );
             WorkflowStartResponse resp = client.startProcess(req);
             saved.setProcessInstanceKey(Long.parseLong(resp.processInstanceKey()));
-            log.info("Started workflow process {} for visit {}", resp.processInstanceKey(), saved.getId());
+            log.info("Started workflow process {} ({}) for visit {}",
+                    resp.processInstanceKey(), workflowProperties.visitBookingProcessId(), saved.getId());
         } catch (Exception ex) {
             log.warn("Failed to start workflow process for visit {}: {}", saved.getId(), ex.getMessage());
         }

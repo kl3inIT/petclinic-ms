@@ -25,4 +25,6 @@ public interface WorkflowDesignerService {
     WorkflowDefinitionXmlResponse resolveInstanceDiagramXml(String bpmnProcessId, String numericProcessDefinitionKey);
 
     WorkflowDefinitionDeploymentResponse deployDefinition(DeployWorkflowDefinitionRequest request);
+
+    void deleteDefinition(String processDefinitionKey);
 }

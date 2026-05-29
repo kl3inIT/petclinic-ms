@@ -93,6 +93,12 @@ export async function deployWorkflowDefinition(name: string, bpmnXml: string) {
   return data;
 }
 
+export async function deleteWorkflowDefinition(processDefinitionKey: string) {
+  await apiClient.delete(
+    `/api/v1/workflows/designer/definitions/${encodeURIComponent(processDefinitionKey)}`,
+  );
+}
+
 export async function startWorkflow(
   processDefinitionKey: string,
   variables: Record<string, unknown> = {},
@@ -145,6 +151,12 @@ export async function listProcessInstances(processDefinitionId?: string, state?:
 export async function terminateWorkflowInstance(processInstanceKey: string) {
   await apiClient.post(
     `/api/v1/workflows/instances/${encodeURIComponent(processInstanceKey)}/terminate`,
+  );
+}
+
+export async function deleteWorkflowInstance(processInstanceKey: string) {
+  await apiClient.delete(
+    `/api/v1/workflows/instances/${encodeURIComponent(processInstanceKey)}`,
   );
 }
 

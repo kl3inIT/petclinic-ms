@@ -302,7 +302,7 @@ function GenericCompletePanel({
     <div className="space-y-3">
       <div className="space-y-1.5">
         <Label htmlFor="taskVars" className="text-xs text-muted-foreground">
-          Output Variables (JSON)
+          Biến đầu ra (JSON)
         </Label>
         <Textarea
           id="taskVars"
@@ -319,7 +319,7 @@ function GenericCompletePanel({
       </div>
       <Button className="w-full" disabled={isPending} onClick={handleComplete}>
         <CheckCheck className="size-4" />
-        {isPending ? 'Đang xử lý…' : 'Complete Task'}
+        {isPending ? 'Đang xử lý…' : 'Hoàn thành việc'}
       </Button>
     </div>
   );
@@ -330,7 +330,7 @@ function GenericCompletePanel({
 export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
   const queryClient = useQueryClient();
 
-  const { data: instance } = useQuery({
+  const { data: instance, isLoading: instanceLoading } = useQuery({
     queryKey: ['workflow-instance', task.processInstanceKey],
     queryFn: () => getWorkflowInstance(task.processInstanceKey!),
     enabled: !!task.processInstanceKey,
@@ -352,11 +352,11 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
     mutationFn: (vars: Record<string, unknown>) =>
       completeUserTask(task.userTaskKey, vars),
     onSuccess: () => {
-      toast.success('Task đã hoàn thành');
+      toast.success('Việc đã hoàn thành');
       invalidate();
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message || 'Không thể complete task'),
+    onError: (e: Error) => toast.error(e.message || 'Không thể hoàn thành việc'),
   });
 
   const approveMutation = useMutation({
@@ -433,12 +433,12 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2">
             <ClipboardList className="size-5 text-muted-foreground" />
-            {task.name ?? task.elementId ?? 'User Task'}
+            {task.name ?? task.elementId ?? 'Việc người dùng'}
             <Badge
               variant="outline"
               className="border-amber-300 text-[10px] text-amber-600"
             >
-              PENDING
+              ĐANG CHỜ
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -447,21 +447,21 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <ClipboardList className="size-3.5 shrink-0" />
-            <span>Process:</span>
+            <span>Quy trình:</span>
             <span className="font-medium text-foreground">
               {task.processDefinitionId ?? '—'}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <User className="size-3.5 shrink-0" />
-            <span>Assignee:</span>
+            <span>Người phụ trách:</span>
             <span className="font-medium text-foreground">
-              {task.assignee ?? 'Unassigned'}
+              {task.assignee ?? 'Chưa gán'}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Calendar className="size-3.5 shrink-0" />
-            <span>Created:</span>
+            <span>Ngày tạo:</span>
             <span className="font-medium text-foreground">
               {formatDate(task.creationDate)}
             </span>
@@ -480,14 +480,14 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
         {Object.keys(variables).length > 0 && (
           <div className="space-y-2">
             <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-              Process Variables
+              Biến quy trình
             </p>
             <div className="max-h-40 overflow-y-auto rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[180px] py-1.5 text-xs">Name</TableHead>
-                    <TableHead className="py-1.5 text-xs">Value</TableHead>
+                    <TableHead className="w-[180px] py-1.5 text-xs">Tên</TableHead>
+                    <TableHead className="py-1.5 text-xs">Giá trị</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -516,29 +516,54 @@ export function UserTaskDialog({ task, onClose }: UserTaskDialogProps) {
                 ? 'Bắt đầu khám'
                 : isCompleteTask
                   ? 'Kết quả khám'
-                  : 'Complete Task'}
+                  : 'Hoàn thành việc'}
           </p>
-          {isApproveTask && visitId ? (
-            <ApproveVisitPanel
-              visitId={visitId}
-              isPending={isAnyPending}
-              onApprove={() => approveMutation.mutate()}
-              onReject={() => rejectMutation.mutate()}
-            />
-          ) : isStartTask && visitId ? (
-            <StartExamPanel
-              visitId={visitId}
-              isPending={isAnyPending}
-              onStart={() => startMutation.mutate()}
-            />
-          ) : isCompleteTask && visitId ? (
-            <CompleteExamPanel
-              visitId={visitId}
-              isPending={isAnyPending}
-              onComplete={(diagnosis, treatment, fee) =>
-                completeExamMutation.mutate({ diagnosis, treatment, fee })
-              }
-            />
+          {isApproveTask ? (
+            instanceLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải dữ liệu visit…</p>
+            ) : !visitId ? (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                Không tìm thấy <code>visitId</code> trong biến quy trình. Quy trình này có
+                thể được khởi động thủ công (không qua luồng đặt lịch thực tế).
+              </p>
+            ) : (
+              <ApproveVisitPanel
+                visitId={visitId}
+                isPending={isAnyPending}
+                onApprove={() => approveMutation.mutate()}
+                onReject={() => rejectMutation.mutate()}
+              />
+            )
+          ) : isStartTask ? (
+            instanceLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải dữ liệu visit…</p>
+            ) : !visitId ? (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                Không tìm thấy <code>visitId</code> trong biến quy trình.
+              </p>
+            ) : (
+              <StartExamPanel
+                visitId={visitId}
+                isPending={isAnyPending}
+                onStart={() => startMutation.mutate()}
+              />
+            )
+          ) : isCompleteTask ? (
+            instanceLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải dữ liệu visit…</p>
+            ) : !visitId ? (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                Không tìm thấy <code>visitId</code> trong biến quy trình.
+              </p>
+            ) : (
+              <CompleteExamPanel
+                visitId={visitId}
+                isPending={isAnyPending}
+                onComplete={(diagnosis, treatment, fee) =>
+                  completeExamMutation.mutate({ diagnosis, treatment, fee })
+                }
+              />
+            )
           ) : isConfirmTask ? (
             <DoctorConfirmPanel
               isPending={completeMutation.isPending}

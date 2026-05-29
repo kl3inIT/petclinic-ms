@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,5 +65,12 @@ public class WorkflowDesignerController {
     @Operation(summary = "Deploy BPMN XML", description = "Deploys a BPMN diagram into the Camunda repository at runtime.")
     public WorkflowDefinitionDeploymentResponse deployDefinition(@Valid @RequestBody DeployWorkflowDefinitionRequest request) {
         return workflowDesignerService.deployDefinition(request);
+    }
+
+    @DeleteMapping("/definitions/{processDefinitionKey}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete BPMN process definition", description = "Deletes one deployed Camunda 8 process definition version by numeric process definition key.")
+    public void deleteDefinition(@PathVariable String processDefinitionKey) {
+        workflowDesignerService.deleteDefinition(processDefinitionKey);
     }
 }

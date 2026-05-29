@@ -6,16 +6,13 @@ import {
   ClipboardList,
   Database,
   Grid2X2,
-  Info,
   LayoutDashboard,
   ListTree,
-  Menu,
   PencilRuler,
+  Plus,
   RefreshCw,
-  Settings,
-  Shield,
-  Users,
   Workflow,
+  X,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -42,11 +39,7 @@ type FlowsetSection =
   | 'incidents'
   | 'tasks'
   | 'decisions'
-  | 'deployments'
-  | 'engines'
-  | 'users'
-  | 'roles'
-  | 'about';
+  | 'deployments';
 
 type MenuItem = {
   id: FlowsetSection;
@@ -54,50 +47,43 @@ type MenuItem = {
   icon: ComponentType<{ className?: string }>;
 };
 
-const MENU_GROUPS: Array<{ label: string; items: MenuItem[] }> = [
+type ModelerTab = {
+  id: string;
+  processKey: string;
+  title: string;
+};
+
+const MENU_GROUPS: Array<{ items: MenuItem[] }> = [
   {
-    label: 'MAIN',
     items: [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { id: 'modeler', label: 'Process Modeler', icon: PencilRuler },
-      { id: 'processes', label: 'Processes', icon: ListTree },
-      { id: 'instances', label: 'Process instances', icon: Activity },
-      { id: 'incidents', label: 'Incidents', icon: AlertTriangle },
-      { id: 'tasks', label: 'User tasks', icon: ClipboardList },
+      { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+      { id: 'modeler', label: 'Thiết kế', icon: PencilRuler },
+      { id: 'processes', label: 'Quy trình', icon: ListTree },
+      { id: 'instances', label: 'Lượt chạy', icon: Activity },
+      { id: 'incidents', label: 'Sự cố', icon: AlertTriangle },
+      { id: 'tasks', label: 'Việc người dùng', icon: ClipboardList },
     ],
   },
   {
-    label: 'DMN',
-    items: [{ id: 'decisions', label: 'Decisions', icon: Grid2X2 }],
+    items: [{ id: 'decisions', label: 'Quyết định', icon: Grid2X2 }],
   },
   {
-    label: 'SYSTEM',
-    items: [
-      { id: 'deployments', label: 'Deployments', icon: Database },
-      { id: 'engines', label: 'BPM engines', icon: Settings },
-      { id: 'users', label: 'Users', icon: Users },
-      { id: 'roles', label: 'Roles', icon: Shield },
-    ],
-  },
-  {
-    label: 'SUPPORT',
-    items: [{ id: 'about', label: 'About', icon: Info }],
+    items: [{ id: 'deployments', label: 'Bản deploy', icon: Database }],
   },
 ];
 
-const SECTION_META: Record<FlowsetSection, { title: string; icon: ComponentType<{ className?: string }> }> = {
-  dashboard: { title: 'Dashboard', icon: LayoutDashboard },
-  modeler: { title: 'BPMN Modeler', icon: PencilRuler },
-  processes: { title: 'Processes', icon: ListTree },
-  instances: { title: 'Process instances', icon: Activity },
-  incidents: { title: 'Incidents', icon: AlertTriangle },
-  tasks: { title: 'User tasks', icon: ClipboardList },
-  decisions: { title: 'Decisions', icon: Grid2X2 },
-  deployments: { title: 'Deployments', icon: Database },
-  engines: { title: 'BPM engines', icon: Settings },
-  users: { title: 'Users', icon: Users },
-  roles: { title: 'Roles', icon: Shield },
-  about: { title: 'About', icon: Info },
+const SECTION_META: Record<
+  FlowsetSection,
+  { title: string; icon: ComponentType<{ className?: string }> }
+> = {
+  dashboard: { title: 'Tổng quan', icon: LayoutDashboard },
+  modeler: { title: 'Thiết kế BPMN', icon: PencilRuler },
+  processes: { title: 'Quy trình', icon: ListTree },
+  instances: { title: 'Lượt chạy quy trình', icon: Activity },
+  incidents: { title: 'Sự cố', icon: AlertTriangle },
+  tasks: { title: 'Việc người dùng', icon: ClipboardList },
+  decisions: { title: 'Quyết định', icon: Grid2X2 },
+  deployments: { title: 'Bản deploy', icon: Database },
 };
 
 function MetricTile({
@@ -113,7 +99,7 @@ function MetricTile({
     <div className="rounded-[3px] border bg-white p-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate-600">{label}</p>
-        <Icon className="size-5 text-[#0f5b6b]" />
+        <Icon className="size-5 text-primary" />
       </div>
       <p className="mt-3 text-3xl font-semibold text-slate-900">{value}</p>
     </div>
@@ -162,20 +148,34 @@ function DashboardPanel({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MetricTile label="Process definitions" value={definitions.length} icon={ListTree} />
-        <MetricTile label="Active instances" value={activeInstances} icon={Activity} />
-        <MetricTile label="Open user tasks" value={tasks.length} icon={ClipboardList} />
-        <MetricTile label="Deployments" value={deployments.length} icon={Database} />
+        <MetricTile
+          label="Định nghĩa quy trình"
+          value={definitions.length}
+          icon={ListTree}
+        />
+        <MetricTile
+          label="Lượt chạy đang hoạt động"
+          value={activeInstances}
+          icon={Activity}
+        />
+        <MetricTile
+          label="Việc người dùng đang mở"
+          value={tasks.length}
+          icon={ClipboardList}
+        />
+        <MetricTile label="Bản deploy" value={deployments.length} icon={Database} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="rounded-[3px] border bg-white">
           <div className="border-b px-4 py-3">
-            <h3 className="font-semibold text-slate-900">Latest processes</h3>
+            <h3 className="font-semibold text-slate-900">Quy trình mới nhất</h3>
           </div>
           <div className="divide-y">
             {definitions.length === 0 ? (
-              <div className="px-4 py-10 text-sm text-slate-500">No deployed process yet.</div>
+              <div className="px-4 py-10 text-sm text-slate-500">
+                Chưa có quy trình được deploy.
+              </div>
             ) : (
               definitions.slice(0, 8).map((definition) => (
                 <button
@@ -188,7 +188,9 @@ function DashboardPanel({
                     <p className="truncate text-sm font-medium text-slate-900">
                       {definition.name || definition.key}
                     </p>
-                    <p className="truncate font-mono text-xs text-slate-500">{definition.key}</p>
+                    <p className="truncate font-mono text-xs text-slate-500">
+                      {definition.key}
+                    </p>
                   </div>
                   <Badge variant="secondary">v{definition.version}</Badge>
                 </button>
@@ -199,11 +201,11 @@ function DashboardPanel({
 
         <div className="space-y-3">
           <Button
-            className="h-12 w-full justify-start rounded-[3px] bg-[#0f5b6b] hover:bg-[#0d4d5b]"
+            className="h-12 w-full justify-start rounded-[3px] bg-primary hover:bg-primary/90"
             onClick={onOpenProcesses}
           >
             <ListTree className="size-4" />
-            Manage processes
+            Quản lý quy trình
           </Button>
           <Button
             variant="outline"
@@ -211,7 +213,7 @@ function DashboardPanel({
             onClick={onOpenInstances}
           >
             <Activity className="size-4" />
-            Monitor process instances
+            Theo dõi lượt chạy
           </Button>
           <Button
             variant="outline"
@@ -219,7 +221,7 @@ function DashboardPanel({
             onClick={onOpenTasks}
           >
             <ClipboardList className="size-4" />
-            Work on user tasks
+            Xử lý việc người dùng
           </Button>
         </div>
       </div>
@@ -242,10 +244,10 @@ function WorkflowNavButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex h-10 shrink-0 items-center gap-2 rounded-[3px] border px-3 text-sm font-semibold transition',
+        'flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition',
         active
-          ? 'border-[#0f5b6b] bg-[#0f5b6b] text-white'
-          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
+          ? 'bg-primary text-primary-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
       )}
     >
       <Icon className="size-4 shrink-0" />
@@ -254,10 +256,18 @@ function WorkflowNavButton({
   );
 }
 
+function newTabId(processKey: string) {
+  return `${processKey || 'new'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export function WorkflowControlCenter() {
   const queryClient = useQueryClient();
   const [section, setSection] = useState<FlowsetSection>('modeler');
-  const [selectedProcessKey, setSelectedProcessKey] = useState('');
+  const [modelerTabs, setModelerTabs] = useState<ModelerTab[]>([
+    { id: newTabId(''), processKey: '', title: 'Quy trình mới' },
+  ]);
+  const [activeModelerTabId, setActiveModelerTabId] = useState<string | null>(null);
+  const activeTabId = activeModelerTabId ?? modelerTabs[0]?.id ?? '';
 
   const definitionsQuery = useQuery({
     queryKey: ['workflow-definitions'],
@@ -277,130 +287,225 @@ export function WorkflowControlCenter() {
   };
 
   const openProcessInModeler = (processKey: string) => {
-    setSelectedProcessKey(processKey);
+    if (!processKey) {
+      const tab = { id: newTabId(''), processKey: '', title: 'Quy trình mới' };
+      setModelerTabs((current) => [...current, tab]);
+      setActiveModelerTabId(tab.id);
+      setSection('modeler');
+      return;
+    }
+
+    const existing = modelerTabs.find((tab) => tab.processKey === processKey);
+    if (existing) {
+      setActiveModelerTabId(existing.id);
+      setSection('modeler');
+      return;
+    }
+
+    const tab = { id: newTabId(processKey), processKey, title: processKey };
+    setModelerTabs((current) => [...current, tab]);
+    setActiveModelerTabId(tab.id);
+    setSection('modeler');
+  };
+
+  const updateModelerTabKey = (tabId: string, processKey: string) => {
+    setModelerTabs((current) =>
+      current.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, processKey, title: processKey || 'Quy trình mới' }
+          : tab,
+      ),
+    );
+  };
+
+  const closeModelerTab = (tabId: string) => {
+    setModelerTabs((current) => {
+      if (current.length === 1) {
+        const replacement = { id: newTabId(''), processKey: '', title: 'Quy trình mới' };
+        setActiveModelerTabId(replacement.id);
+        return [replacement];
+      }
+
+      const index = current.findIndex((tab) => tab.id === tabId);
+      const next = current.filter((tab) => tab.id !== tabId);
+      if (activeTabId === tabId) {
+        const fallback = next[Math.max(0, index - 1)] ?? next[0];
+        if (fallback) {
+          setActiveModelerTabId(fallback.id);
+        }
+      }
+      return next;
+    });
+  };
+
+  const openBlankModelerTab = () => {
+    const tab = { id: newTabId(''), processKey: '', title: 'Quy trình mới' };
+    setModelerTabs((current) => [...current, tab]);
+    setActiveModelerTabId(tab.id);
     setSection('modeler');
   };
 
   return (
-    <div className="flex h-[calc(100vh-132px)] min-h-[640px] flex-col overflow-hidden rounded-md border bg-white">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b bg-white px-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <Button variant="ghost" size="icon" className="size-9 rounded-[3px]">
-              <Menu className="size-5" />
-            </Button>
-            <div className="flex min-w-0 items-center gap-3 border-r pr-4">
-              <Workflow className="size-7 text-[#0f5b6b]" />
-              <div className="min-w-0">
-                <p className="truncate text-lg font-bold text-slate-950">Flowset Control</p>
-                <p className="truncate text-xs text-[#0f5b6b]">MSS301 Petclinic</p>
-              </div>
-            </div>
-            <div className="flex min-w-0 items-center gap-3">
-              <HeaderIcon className="size-5 text-[#0f5b6b]" />
-              <h1 className="truncate text-xl font-bold text-slate-950">{meta.title}</h1>
-            </div>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[3px] border bg-background">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Workflow className="size-5 shrink-0 text-primary" />
+          <div className="flex min-w-0 items-center gap-2 border-r pr-3">
+            <span className="truncate text-base font-semibold">Quản lý Workflow</span>
           </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <Badge variant="outline" className="h-8 gap-2 rounded-[3px] px-3 text-sm">
-              <span className="size-2 rounded-full bg-emerald-500" />
-              Petclinic Engine
-            </Badge>
-            <Badge variant="secondary" className="h-8 rounded-[3px] px-3">
-              Camunda 8
-            </Badge>
-            <Button
-              variant="outline"
-              className="h-9 rounded-[3px]"
-              onClick={refreshAll}
-              disabled={definitionsQuery.isFetching}
-            >
-              <RefreshCw className={cn('size-4', definitionsQuery.isFetching && 'animate-spin')} />
-              Refresh
-            </Button>
+          <div className="flex min-w-0 items-center gap-2">
+            <HeaderIcon className="size-4 shrink-0 text-muted-foreground" />
+            <h1 className="truncate text-base font-medium text-muted-foreground">
+              {meta.title}
+            </h1>
           </div>
-        </header>
+        </div>
 
-        <nav className="flex h-12 shrink-0 items-center gap-4 overflow-x-auto border-b bg-slate-50 px-3">
-          {MENU_GROUPS.map((group) => (
-            <div key={group.label} className="flex shrink-0 items-center gap-2">
-              <span className="text-xs font-bold text-[#0f5b6b]">{group.label}</span>
-              {group.items.map((item) => (
-                <WorkflowNavButton
-                  key={item.id}
-                  item={item}
-                  active={section === item.id}
-                  onClick={() => setSection(item.id)}
-                />
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant="outline" className="h-7 gap-1.5 px-2 text-xs">
+            <span className="size-1.5 rounded-full bg-emerald-500" />
+            Petclinic Engine
+          </Badge>
+          <Badge variant="secondary" className="h-7 px-2 text-xs">
+            Camunda 8
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshAll}
+            disabled={definitionsQuery.isFetching}
+          >
+            <RefreshCw
+              className={cn('size-4', definitionsQuery.isFetching && 'animate-spin')}
+            />
+            Làm mới
+          </Button>
+        </div>
+      </header>
+
+      <nav className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto border-b bg-muted/40 px-2">
+        {MENU_GROUPS.map((group, groupIndex) => (
+          <div key={groupIndex} className="flex shrink-0 items-center gap-1.5">
+            {groupIndex > 0 && <div className="mx-1 h-5 w-px bg-slate-300" />}
+            {group.items.map((item) => (
+              <WorkflowNavButton
+                key={item.id}
+                item={item}
+                active={section === item.id}
+                onClick={() => setSection(item.id)}
+              />
+            ))}
+          </div>
+        ))}
+      </nav>
+
+      <div
+        className={cn(
+          'min-h-0 flex-1 bg-muted/20',
+          section === 'instances' ? 'overflow-hidden' : 'overflow-auto',
+          section === 'modeler' ? 'p-0' : section === 'instances' ? 'p-1' : 'p-3',
+        )}
+      >
+        {section === 'dashboard' && (
+          <DashboardPanel
+            definitions={definitions}
+            onOpenProcesses={() => setSection('processes')}
+            onOpenInstances={() => setSection('instances')}
+            onOpenTasks={() => setSection('tasks')}
+          />
+        )}
+
+        {section === 'modeler' && (
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto border-b bg-muted/40 px-2">
+              {modelerTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveModelerTabId(tab.id)}
+                  className={cn(
+                    'group flex h-8 max-w-[240px] shrink-0 items-center gap-2 rounded-md border px-3 text-sm font-medium',
+                    activeTabId === tab.id
+                      ? 'border-primary bg-background text-primary shadow-sm'
+                      : 'border-transparent text-muted-foreground hover:bg-background',
+                  )}
+                  title={tab.title}
+                >
+                  <span className="truncate">{tab.title}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="rounded p-0.5 opacity-70 hover:bg-muted hover:opacity-100"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      closeModelerTab(tab.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        closeModelerTab(tab.id);
+                      }
+                    }}
+                  >
+                    <X className="size-3.5" />
+                  </span>
+                </button>
+              ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0"
+                onClick={openBlankModelerTab}
+              >
+                <Plus className="size-4" />
+                Tab mới
+              </Button>
+            </div>
+
+            <div className="relative min-h-0 flex-1 overflow-hidden">
+              {modelerTabs.map((tab) => (
+                <div
+                  key={tab.id}
+                  className={cn(
+                    'absolute inset-0 min-h-0',
+                    activeTabId === tab.id ? 'block' : 'hidden',
+                  )}
+                >
+                  <WorkflowDesigner
+                    chrome="flowset"
+                    processKey={tab.processKey}
+                    active={activeTabId === tab.id}
+                    onProcessKeyChange={(processKey) =>
+                      updateModelerTabKey(tab.id, processKey)
+                    }
+                    onDeployed={refreshAll}
+                  />
+                </div>
               ))}
             </div>
-          ))}
-        </nav>
+          </div>
+        )}
 
-        <div
-          className={cn(
-            'min-h-0 flex-1 bg-[#f7f8fa]',
-            section === 'instances' ? 'overflow-hidden' : 'overflow-auto',
-            section === 'modeler' ? 'p-0' : section === 'instances' ? 'p-2' : 'p-4',
-          )}
-        >
-          {section === 'dashboard' && (
-            <DashboardPanel
-              definitions={definitions}
-              onOpenProcesses={() => setSection('processes')}
-              onOpenInstances={() => setSection('instances')}
-              onOpenTasks={() => setSection('tasks')}
-            />
-          )}
+        {section === 'processes' && (
+          <ProcessDefinitionList onLoad={openProcessInModeler} />
+        )}
+        {section === 'instances' && <ProcessInstancesTab />}
+        {section === 'tasks' && <UserTasksTab />}
+        {section === 'deployments' && <DeploymentList />}
 
-          {section === 'modeler' && (
-            <WorkflowDesigner
-              chrome="flowset"
-              processKey={selectedProcessKey}
-              onProcessKeyChange={setSelectedProcessKey}
-              onDeployed={refreshAll}
-            />
-          )}
-
-          {section === 'processes' && <ProcessDefinitionList onLoad={openProcessInModeler} />}
-          {section === 'instances' && <ProcessInstancesTab />}
-          {section === 'tasks' && <UserTasksTab />}
-          {section === 'deployments' && <DeploymentList />}
-
-          {section === 'incidents' && (
-            <EmptyModule title="Incidents">
-              Incident management will be backed by the Camunda 8 incident search API. Current
-              process incidents are still visible from Process instances.
-            </EmptyModule>
-          )}
-          {section === 'decisions' && (
-            <EmptyModule title="Decisions">
-              DMN decision management is reserved for the next workflow increment.
-            </EmptyModule>
-          )}
-          {section === 'engines' && (
-            <EmptyModule title="BPM engines">
-              Petclinic Engine is configured against local Camunda 8 and exposed through the
-              workflow-service API.
-            </EmptyModule>
-          )}
-          {section === 'users' && (
-            <EmptyModule title="Users">
-              User administration remains owned by Petclinic auth-service.
-            </EmptyModule>
-          )}
-          {section === 'roles' && (
-            <EmptyModule title="Roles">
-              Role administration remains owned by Petclinic auth-service.
-            </EmptyModule>
-          )}
-          {section === 'about' && (
-            <EmptyModule title="Flowset-style Workflow Control">
-              This screen mirrors Flowset Control navigation while running on Spring Boot 4,
-              Camunda 8, and the Petclinic workflow-service.
-            </EmptyModule>
-          )}
-        </div>
+        {section === 'incidents' && (
+          <EmptyModule title="Sự cố">
+            Quản lý sự cố sẽ dùng API tìm kiếm incident của Camunda 8. Hiện tại sự cố vẫn
+            xem được trong màn hình lượt chạy quy trình.
+          </EmptyModule>
+        )}
+        {section === 'decisions' && (
+          <EmptyModule title="Quyết định">
+            Quản lý quyết định DMN sẽ được bổ sung ở bước tiếp theo.
+          </EmptyModule>
+        )}
+      </div>
     </div>
   );
 }

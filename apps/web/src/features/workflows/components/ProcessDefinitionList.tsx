@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pause, Pencil, Play, RefreshCw, Rocket, Search, Trash2, X } from 'lucide-react';
+import { Play, RefreshCw, Rocket, Search, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  deleteWorkflowDefinition,
   listWorkflowDefinitions,
   startWorkflow,
   type WorkflowDefinitionSummary,
@@ -58,7 +59,12 @@ export function ProcessDefinitionList({ onLoad }: ProcessDefinitionListProps) {
     latestOnly: true,
   });
 
-  const { data: definitions = [], isLoading, refetch, isFetching } = useQuery({
+  const {
+    data: definitions = [],
+    isLoading,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ['workflow-definitions'],
     queryFn: listWorkflowDefinitions,
   });
@@ -78,16 +84,34 @@ export function ProcessDefinitionList({ onLoad }: ProcessDefinitionListProps) {
   const startMutation = useMutation({
     mutationFn: (key: string) => startWorkflow(key, {}),
     onSuccess: (result) => {
-      toast.success(`Run started: ${result.bpmnProcessId ?? result.processDefinitionKey ?? result.processInstanceKey}`);
+      toast.success(
+        `Đã chạy quy trình: ${result.bpmnProcessId ?? result.processDefinitionKey ?? result.processInstanceKey}`,
+      );
       void queryClient.invalidateQueries({ queryKey: ['process-instances'] });
       void queryClient.invalidateQueries({ queryKey: ['user-tasks'] });
       void queryClient.invalidateQueries({ queryKey: ['workflow-dashboard'] });
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to start instance'),
+    onError: (err: Error) => toast.error(err.message || 'Không thể chạy quy trình'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (keys: string[]) => {
+      await Promise.all(keys.map((key) => deleteWorkflowDefinition(key)));
+    },
+    onSuccess: (_, keys) => {
+      toast.success(`Đã gửi yêu cầu xóa ${keys.length} phiên bản quy trình`);
+      setSelected(new Set());
+      void queryClient.invalidateQueries({ queryKey: ['workflow-definitions'] });
+      void queryClient.invalidateQueries({ queryKey: ['workflow-deployments'] });
+      void queryClient.invalidateQueries({ queryKey: ['process-instances'] });
+      void queryClient.invalidateQueries({ queryKey: ['workflow-dashboard'] });
+    },
+    onError: (err: Error) => toast.error(err.message || 'Không thể xóa quy trình'),
   });
 
   const allVisibleSelected =
-    filteredDefinitions.length > 0 && filteredDefinitions.every((definition) => selected.has(definition.id));
+    filteredDefinitions.length > 0 &&
+    filteredDefinitions.every((definition) => selected.has(definition.id));
 
   const toggleAllVisible = () => {
     setSelected((current) => {
@@ -115,41 +139,49 @@ export function ProcessDefinitionList({ onLoad }: ProcessDefinitionListProps) {
 
   return (
     <div className="flex h-full min-h-[640px] flex-col gap-3 bg-white p-1">
-      <div className="border bg-slate-50 p-3">
+      <div className="border bg-muted/40 p-3">
         <details open>
-          <summary className="cursor-pointer text-sm font-semibold text-slate-800">Filter</summary>
+          <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+            Bộ lọc
+          </summary>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_180px_180px_auto]">
             <div className="space-y-1">
-              <Label className="text-xs">Name contains</Label>
+              <Label className="text-xs">Tên chứa</Label>
               <Input
                 value={filters.name}
-                onChange={(event) => setFilters((current) => ({ ...current, name: event.target.value }))}
-                className="h-9 rounded-[3px]"
-                placeholder="Start typing name"
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, name: event.target.value }))
+                }
+                className="h-9 rounded-md"
+                placeholder="Nhập tên"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Key contains</Label>
+              <Label className="text-xs">Mã chứa</Label>
               <Input
                 value={filters.key}
-                onChange={(event) => setFilters((current) => ({ ...current, key: event.target.value }))}
-                className="h-9 rounded-[3px]"
-                placeholder="Start typing key"
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, key: event.target.value }))
+                }
+                className="h-9 rounded-md"
+                placeholder="Nhập mã"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Status</Label>
+              <Label className="text-xs">Trạng thái</Label>
               <Select
                 value={filters.state}
-                onValueChange={(value) => setFilters((current) => ({ ...current, state: value }))}
+                onValueChange={(value) =>
+                  setFilters((current) => ({ ...current, state: value }))
+                }
               >
-                <SelectTrigger className="h-9 rounded-[3px]">
+                <SelectTrigger className="h-9 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="SUSPENDED">Suspended</SelectItem>
+                  <SelectItem value="ALL">Tất cả</SelectItem>
+                  <SelectItem value="ACTIVE">Hoạt động</SelectItem>
+                  <SelectItem value="SUSPENDED">Tạm dừng</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -158,56 +190,67 @@ export function ProcessDefinitionList({ onLoad }: ProcessDefinitionListProps) {
                 type="checkbox"
                 checked={filters.latestOnly}
                 onChange={(event) =>
-                  setFilters((current) => ({ ...current, latestOnly: event.target.checked }))
+                  setFilters((current) => ({
+                    ...current,
+                    latestOnly: event.target.checked,
+                  }))
                 }
               />
-              Latest version only
+              Chỉ phiên bản mới nhất
             </label>
             <div className="flex items-end gap-2">
-              <Button className="h-9 rounded-[3px] bg-[#0f5b6b] hover:bg-[#0d4d5b]">
+              <Button className="h-9 rounded-md bg-primary hover:bg-primary/90">
                 <Search className="size-4" />
-                Apply
+                Áp dụng
               </Button>
               <Button
                 variant="outline"
-                className="h-9 rounded-[3px]"
-                onClick={() => setFilters({ name: '', key: '', state: 'ALL', latestOnly: true })}
+                className="h-9 rounded-md"
+                onClick={() =>
+                  setFilters({ name: '', key: '', state: 'ALL', latestOnly: true })
+                }
               >
                 <X className="size-4" />
-                Clear
+                Xóa
               </Button>
             </div>
           </div>
         </details>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border bg-slate-50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 border bg-muted/40 px-3 py-2">
         <Button
-          className="h-9 rounded-[3px] bg-emerald-600 hover:bg-emerald-700"
+          className="h-9 rounded-md bg-emerald-600 hover:bg-emerald-700"
           onClick={() => refetch()}
           disabled={isFetching}
         >
           <RefreshCw className={`size-4 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
+          Làm mới
         </Button>
-        <Button className="h-9 rounded-[3px] bg-[#0f5b6b] hover:bg-[#0d4d5b]" onClick={() => onLoad('')}>
+        <Button
+          className="h-9 rounded-md bg-primary hover:bg-primary/90"
+          onClick={() => onLoad('')}
+        >
           <Rocket className="size-4" />
-          Upload BPMN XML
+          Tải BPMN XML
         </Button>
-        <Button variant="outline" className="h-9 rounded-[3px]" disabled={selected.size === 0}>
+        <Button
+          variant="outline"
+          className="h-9 rounded-md"
+          disabled={selected.size === 0 || deleteMutation.isPending}
+          onClick={() => {
+            const keys = Array.from(selected);
+            const ok = window.confirm(
+              `Xóa ${keys.length} phiên bản quy trình đã chọn? Các lượt chạy đang hoạt động phải được hủy trước.`,
+            );
+            if (ok) deleteMutation.mutate(keys);
+          }}
+        >
           <Trash2 className="size-4" />
-          Remove
-        </Button>
-        <Button variant="outline" className="h-9 rounded-[3px]" disabled>
-          <Play className="size-4" />
-          Activate
-        </Button>
-        <Button variant="outline" className="h-9 rounded-[3px]" disabled>
-          <Pause className="size-4" />
-          Suspend
+          {deleteMutation.isPending ? 'Đang xóa...' : 'Xóa'}
         </Button>
         <span className="ml-auto text-sm text-slate-500">
-          {filteredDefinitions.length} process definition{filteredDefinitions.length === 1 ? '' : 's'}
+          {filteredDefinitions.length} quy trình
         </span>
       </div>
 
@@ -220,27 +263,33 @@ export function ProcessDefinitionList({ onLoad }: ProcessDefinitionListProps) {
                   type="checkbox"
                   checked={allVisibleSelected}
                   onChange={toggleAllVisible}
-                  aria-label="Select all visible process definitions"
+                  aria-label="Chọn tất cả quy trình đang hiển thị"
                 />
               </TableHead>
-              <TableHead className="min-w-[260px]">Name</TableHead>
-              <TableHead className="min-w-[240px]">Key</TableHead>
-              <TableHead className="w-[90px]">Version</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
-              <TableHead className="w-[190px] text-right">Actions</TableHead>
+              <TableHead className="min-w-[260px]">Tên</TableHead>
+              <TableHead className="min-w-[240px]">Mã</TableHead>
+              <TableHead className="w-[90px]">Phiên bản</TableHead>
+              <TableHead className="w-[120px]">Trạng thái</TableHead>
+              <TableHead className="w-[190px] text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-40 text-center text-sm text-slate-500">
-                  Loading process definitions...
+                <TableCell
+                  colSpan={6}
+                  className="h-40 text-center text-sm text-slate-500"
+                >
+                  Đang tải quy trình...
                 </TableCell>
               </TableRow>
             ) : filteredDefinitions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-52 text-center text-sm text-slate-500">
-                  No deployed processes.
+                <TableCell
+                  colSpan={6}
+                  className="h-52 text-center text-sm text-slate-500"
+                >
+                  Chưa có quy trình được deploy.
                 </TableCell>
               </TableRow>
             ) : (
@@ -251,14 +300,14 @@ export function ProcessDefinitionList({ onLoad }: ProcessDefinitionListProps) {
                       type="checkbox"
                       checked={selected.has(definition.id)}
                       onChange={() => toggleOne(definition.id)}
-                      aria-label={`Select process ${definition.key}`}
+                      aria-label={`Chọn quy trình ${definition.key}`}
                     />
                   </TableCell>
                   <TableCell>
                     <button
                       type="button"
                       onClick={() => onLoad(definition.key)}
-                      className="text-left font-semibold text-[#0f5b6b] hover:underline"
+                      className="text-left font-semibold text-primary hover:underline"
                     >
                       {definition.name || definition.key}
                     </button>
@@ -268,35 +317,37 @@ export function ProcessDefinitionList({ onLoad }: ProcessDefinitionListProps) {
                   </TableCell>
                   <TableCell className="font-mono text-xs">{definition.key}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="rounded-[3px]">
+                    <Badge variant="secondary" className="rounded-md">
                       v{definition.version}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {definition.suspended ? (
-                      <Badge variant="outline" className="rounded-[3px] border-amber-300 text-amber-700">
-                        Suspended
+                      <Badge
+                        variant="outline"
+                        className="rounded-md border-amber-300 text-amber-700"
+                      >
+                        Tạm dừng
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="rounded-[3px] border-emerald-300 text-emerald-700">
-                        Active
+                      <Badge
+                        variant="outline"
+                        className="rounded-md border-emerald-300 text-emerald-700"
+                      >
+                        Hoạt động
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" className="rounded-[3px]" onClick={() => onLoad(definition.key)}>
-                        <Pencil className="size-3.5" />
-                        Open
-                      </Button>
                       <Button
                         size="sm"
-                        className="rounded-[3px] bg-[#0f5b6b] hover:bg-[#0d4d5b]"
+                        className="rounded-md bg-primary hover:bg-primary/90"
                         onClick={() => startMutation.mutate(definition.key)}
                         disabled={definition.suspended || startMutation.isPending}
                       >
                         <Play className="size-3.5" />
-                        {startMutation.isPending ? 'Running...' : 'Run'}
+                        {startMutation.isPending ? 'Đang chạy...' : 'Chạy'}
                       </Button>
                     </div>
                   </TableCell>
@@ -306,7 +357,6 @@ export function ProcessDefinitionList({ onLoad }: ProcessDefinitionListProps) {
           </TableBody>
         </Table>
       </div>
-
     </div>
   );
 }

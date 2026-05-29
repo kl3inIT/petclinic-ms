@@ -55,8 +55,14 @@ type CanvasApi = {
 };
 
 type EventBusApi = {
-  on: (event: string, cb: (event: { element?: { id: string; type: string } }) => void) => void;
-  off: (event: string, cb: (event: { element?: { id: string; type: string } }) => void) => void;
+  on: (
+    event: string,
+    cb: (event: { element?: { id: string; type: string } }) => void,
+  ) => void;
+  off: (
+    event: string,
+    cb: (event: { element?: { id: string; type: string } }) => void,
+  ) => void;
 };
 
 type BpmnWaypoint = {
@@ -103,6 +109,16 @@ const NODE_STATE_CLASS: Record<string, string> = {
   INCIDENT: 'border-red-300 bg-red-50 text-red-700',
 };
 
+const STATE_LABEL: Record<string, string> = {
+  ACTIVE: 'Đang chạy',
+  PENDING: 'Đang chờ',
+  COMPLETED: 'Hoàn thành',
+  CANCELED: 'Đã hủy',
+  TERMINATED: 'Đã kết thúc',
+  INCIDENT: 'Sự cố',
+  CREATED: 'Đã tạo',
+};
+
 function isTerminal(state?: string) {
   return state === 'COMPLETED' || state === 'CANCELED' || state === 'TERMINATED';
 }
@@ -122,7 +138,17 @@ function formatDate(iso?: string): string {
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '-';
   if (typeof value === 'object') return JSON.stringify(value, null, 2);
-  return String(value);
+  if (typeof value === 'symbol') return value.description ?? value.toString();
+  if (typeof value === 'function') return value.name || '[function]';
+  if (typeof value === 'string') return value;
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    return value.toString();
+  }
+  return '-';
 }
 
 function localName(node: Element) {
@@ -154,7 +180,10 @@ function parseBpmnDiagram(xml?: string): ParsedBpmnDiagram | null {
     const id = getAttr(element, 'id');
     const name = getAttr(element, 'name');
     const type = `bpmn:${localName(element)}`;
-    if (id && !['BPMNShape', 'BPMNEdge', 'Bounds', 'waypoint'].includes(localName(element))) {
+    if (
+      id &&
+      !['BPMNShape', 'BPMNEdge', 'Bounds', 'waypoint'].includes(localName(element))
+    ) {
       elementMeta.set(id, { type, name });
     }
   });
@@ -204,7 +233,7 @@ function parseBpmnDiagram(xml?: string): ParsedBpmnDiagram | null {
     ...shapes.flatMap((shape) => [shape.y, shape.y + shape.height]),
     ...edges.flatMap((edge) => edge.waypoints.map((point) => point.y)),
   ];
-  const padding = 35;
+  const padding = 10;
   const minX = Math.min(...allX) - padding;
   const minY = Math.min(...allY) - padding;
   const maxX = Math.max(...allX) + padding;
@@ -221,7 +250,11 @@ function nodeForShape(shape: BpmnShape, flowNodes: FlowNodeRecord[]) {
   return flowNodes.find((node) => node.elementId === shape.elementId);
 }
 
-function shapeStroke(shape: BpmnShape, flowNodes: FlowNodeRecord[], selectedElementId: string | null) {
+function shapeStroke(
+  shape: BpmnShape,
+  flowNodes: FlowNodeRecord[],
+  selectedElementId: string | null,
+) {
   if (shape.elementId === selectedElementId) return '#f59e0b';
   const node = nodeForShape(shape, flowNodes);
   if (node?.state === 'ACTIVE') return '#0284c7';
@@ -238,8 +271,78 @@ function shapeFill(shape: BpmnShape, flowNodes: FlowNodeRecord[]) {
   return '#ffffff';
 }
 
-function shortLabel(label: string, max = 26) {
-  return label.length > max ? `${label.slice(0, max - 1)}…` : label;
+function wrapLabel(label: string, maxCharsPerLine: number, maxLines = 3) {
+  const normalized = label.trim().replace(/\s+/g, ' ');
+  if (!normalized) return [''];
+
+  const words = normalized.split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  words.forEach((word) => {
+    if (!current) {
+      current = word;
+      return;
+    }
+    if (`${current} ${word}`.length <= maxCharsPerLine) {
+      current = `${current} ${word}`;
+      return;
+    }
+    lines.push(current);
+    current = word;
+  });
+  if (current) lines.push(current);
+
+  const splitLongWords = lines.flatMap((line) => {
+    if (line.length <= maxCharsPerLine) return [line];
+    const chunks: string[] = [];
+    for (let i = 0; i < line.length; i += maxCharsPerLine) {
+      chunks.push(line.slice(i, i + maxCharsPerLine));
+    }
+    return chunks;
+  });
+
+  if (splitLongWords.length <= maxLines) return splitLongWords;
+  const lastLine = splitLongWords[maxLines - 1] ?? '';
+  return [
+    ...splitLongWords.slice(0, maxLines - 1),
+    `${lastLine.slice(0, Math.max(1, maxCharsPerLine - 1))}…`,
+  ];
+}
+
+function ShapeLabel({ shape, type }: { shape: BpmnShape; type: string }) {
+  if (type.includes('event')) return null;
+
+  const hasTaskIcon = type.includes('task');
+  const maxChars = Math.max(8, Math.floor((shape.width - (hasTaskIcon ? 34 : 16)) / 7.2));
+  const lines = wrapLabel(
+    shape.name || shape.elementId,
+    maxChars,
+    Math.max(2, Math.floor((shape.height - 18) / 15)),
+  );
+  const lineHeight = 15;
+  const blockHeight = (lines.length - 1) * lineHeight;
+  const startY = shape.y + shape.height / 2 - blockHeight / 2 + 4;
+  const x = shape.x + shape.width / 2 + (hasTaskIcon ? 7 : 0);
+
+  return (
+    <text
+      x={x}
+      y={startY}
+      textAnchor="middle"
+      className="pointer-events-none fill-slate-950 text-[12px] font-medium"
+    >
+      {lines.map((line, index) => (
+        <tspan
+          key={`${shape.elementId}-label-${index}`}
+          x={x}
+          dy={index === 0 ? 0 : lineHeight}
+        >
+          {line}
+        </tspan>
+      ))}
+    </text>
+  );
 }
 
 function BpmnTaskMarker({ shape }: { shape: BpmnShape }) {
@@ -307,19 +410,42 @@ function DeployedBpmnDiagram({
   onSelect: (elementId: string) => void;
   zoom: number;
 }) {
-  const [minX = 0, minY = 0, width = 1, height = 1] = diagram.viewBox.split(' ').map(Number);
+  const [minX = 0, minY = 0, width = 1, height = 1] = diagram.viewBox
+    .split(' ')
+    .map(Number);
   const centerX = minX + width / 2;
   const centerY = minY + height / 2;
 
   return (
-    <svg className="h-full w-full bg-white" viewBox={diagram.viewBox} role="img" aria-label="Deployed BPMN diagram">
+    <svg
+      className="h-full w-full bg-white"
+      viewBox={diagram.viewBox}
+      role="img"
+      aria-label="Sơ đồ BPMN đã deploy"
+    >
       <defs>
-        <marker id="flowset-arrow" markerHeight="10" markerUnits="strokeWidth" markerWidth="10" orient="auto" refX="9" refY="3">
+        <marker
+          id="flowset-arrow"
+          markerHeight="10"
+          markerUnits="strokeWidth"
+          markerWidth="10"
+          orient="auto"
+          refX="9"
+          refY="3"
+        >
           <path d="M0,0 L0,6 L9,3 z" fill="#1f2937" />
         </marker>
       </defs>
-      <g transform={`translate(${centerX} ${centerY}) scale(${zoom}) translate(${-centerX} ${-centerY})`}>
-        <g fill="none" stroke="#1f2937" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2">
+      <g
+        transform={`translate(${centerX} ${centerY}) scale(${zoom}) translate(${-centerX} ${-centerY})`}
+      >
+        <g
+          fill="none"
+          stroke="#1f2937"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2.2"
+        >
           {diagram.edges.map((edge) => (
             <polyline
               key={edge.id}
@@ -334,8 +460,6 @@ function DeployedBpmnDiagram({
           const type = shape.type.toLowerCase();
           const selected = selectedElementId === shape.elementId;
           const strokeWidth = selected ? 4 : nodeForShape(shape, flowNodes) ? 3 : 2.2;
-          const label = shortLabel(shape.name || shape.elementId);
-
           return (
             <g
               key={shape.id}
@@ -362,7 +486,9 @@ function DeployedBpmnDiagram({
                     r={Math.min(shape.width, shape.height) / 2}
                     fill={fill}
                     stroke={stroke}
-                    strokeWidth={type.includes('endevent') ? strokeWidth + 1.5 : strokeWidth}
+                    strokeWidth={
+                      type.includes('endevent') ? strokeWidth + 1.5 : strokeWidth
+                    }
                   />
                   {type.includes('startevent') && (
                     <circle
@@ -391,16 +517,7 @@ function DeployedBpmnDiagram({
                   <BpmnTaskMarker shape={shape} />
                 </>
               )}
-              {!type.includes('event') && (
-                <text
-                  x={shape.x + shape.width / 2}
-                  y={shape.y + shape.height / 2 + 5}
-                  textAnchor="middle"
-                  className="pointer-events-none fill-slate-900 text-[13px] font-semibold"
-                >
-                  {label}
-                </text>
-              )}
+              <ShapeLabel shape={shape} type={type} />
             </g>
           );
         })}
@@ -413,9 +530,12 @@ function StateBadge({ state }: { state: string }) {
   return (
     <Badge
       variant="outline"
-      className={cn('w-fit rounded-[3px]', STATE_CLASS[state] ?? 'border-slate-300 text-slate-600')}
+      className={cn(
+        'w-fit rounded-[3px]',
+        STATE_CLASS[state] ?? 'border-slate-300 text-slate-600',
+      )}
     >
-      {state}
+      {STATE_LABEL[state] ?? state}
     </Badge>
   );
 }
@@ -429,7 +549,7 @@ function NodeBadge({ state }: { state: string }) {
         NODE_STATE_CLASS[state] ?? 'border-slate-300 text-slate-600',
       )}
     >
-      {state}
+      {STATE_LABEL[state] ?? state}
     </Badge>
   );
 }
@@ -447,16 +567,22 @@ export function InstanceMonitor({ instanceKey, open, onClose }: InstanceMonitorP
   const [modelerVersion, setModelerVersion] = useState(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
-  const [diagramState, setDiagramState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [diagramState, setDiagramState] = useState<'loading' | 'ready' | 'error'>(
+    'loading',
+  );
   const [diagramError, setDiagramError] = useState<string | null>(null);
-  const [fallbackZoom, setFallbackZoom] = useState(1);
-  const [diagramHeight, setDiagramHeight] = useState(300);
+  const [fallbackZoom, setFallbackZoom] = useState(1.18);
+  const [diagramHeight, setDiagramHeight] = useState(318);
 
-  const { data: instance, refetch, isFetching } = useQuery<WorkflowInstance>({
+  const {
+    data: instance,
+    refetch,
+    isFetching,
+  } = useQuery<WorkflowInstance>({
     queryKey: ['workflow-instance', instanceKey],
     queryFn: () => getWorkflowInstance(instanceKey),
     refetchInterval: (query) => {
-      const data = query.state.data as WorkflowInstance | undefined;
+      const data = query.state.data;
       if (isTerminal(data?.state) && (data?.flowNodes?.length ?? 0) > 0) return false;
       return 2000;
     },
@@ -501,8 +627,7 @@ export function InstanceMonitor({ instanceKey, open, onClose }: InstanceMonitorP
       if (cancelled || !canvasRef.current) return;
 
       try {
-        const Viewer = (NavigatedViewer as any).default || NavigatedViewer;
-        modeler = new Viewer({
+        modeler = new NavigatedViewer({
           container: canvasRef.current,
           moddleExtensions: {
             zeebe: zeebeModdle,
@@ -546,7 +671,12 @@ export function InstanceMonitor({ instanceKey, open, onClose }: InstanceMonitorP
     const eventBus = modeler.get<EventBusApi>('eventBus');
     const onClick = (event: { element?: { id: string; type: string } }) => {
       const element = event.element;
-      if (!element || element.type === 'bpmn:Process' || element.type === 'bpmn:Collaboration') return;
+      if (
+        !element ||
+        element.type === 'bpmn:Process' ||
+        element.type === 'bpmn:Collaboration'
+      )
+        return;
       setSelectedElementId(element.id);
     };
     eventBus.on('element.click', onClick);
@@ -602,7 +732,8 @@ export function InstanceMonitor({ instanceKey, open, onClose }: InstanceMonitorP
       } catch (error) {
         if (cancelled) return;
         window.clearTimeout(forceReady);
-        const message = error instanceof Error ? error.message : 'Could not import deployed BPMN XML';
+        const message =
+          error instanceof Error ? error.message : 'Không thể import BPMN XML đã deploy';
         console.error('BPMN import failed', error);
         setDiagramState('error');
         setDiagramError(message);
@@ -623,20 +754,30 @@ export function InstanceMonitor({ instanceKey, open, onClose }: InstanceMonitorP
     const canvas = modeler.get<CanvasApi>('canvas');
 
     instance?.flowNodes.forEach((node) => {
-      canvas.removeMarker(node.elementId, 'flowset-node-active');
-      canvas.removeMarker(node.elementId, 'flowset-node-completed');
-      canvas.removeMarker(node.elementId, 'flowset-node-incident');
-      canvas.removeMarker(node.elementId, 'flowset-node-selected');
+      try {
+        canvas.removeMarker(node.elementId, 'flowset-node-active');
+        canvas.removeMarker(node.elementId, 'flowset-node-completed');
+        canvas.removeMarker(node.elementId, 'flowset-node-incident');
+        canvas.removeMarker(node.elementId, 'flowset-node-selected');
 
-      if (node.state === 'ACTIVE') canvas.addMarker(node.elementId, 'flowset-node-active');
-      if (node.state === 'COMPLETED') canvas.addMarker(node.elementId, 'flowset-node-completed');
-      if (node.state === 'INCIDENT' || node.state === 'TERMINATED') {
-        canvas.addMarker(node.elementId, 'flowset-node-incident');
+        if (node.state === 'ACTIVE')
+          canvas.addMarker(node.elementId, 'flowset-node-active');
+        if (node.state === 'COMPLETED')
+          canvas.addMarker(node.elementId, 'flowset-node-completed');
+        if (node.state === 'INCIDENT' || node.state === 'TERMINATED') {
+          canvas.addMarker(node.elementId, 'flowset-node-incident');
+        }
+      } catch {
+        // element ID not found in diagram registry — skip silently
       }
     });
 
     if (selectedElementId) {
-      canvas.addMarker(selectedElementId, 'flowset-node-selected');
+      try {
+        canvas.addMarker(selectedElementId, 'flowset-node-selected');
+      } catch {
+        // element ID not found in diagram registry — skip silently
+      }
     }
   }, [diagramState, instance?.flowNodes, selectedElementId]);
 
@@ -656,7 +797,10 @@ export function InstanceMonitor({ instanceKey, open, onClose }: InstanceMonitorP
     const maxDiagram = Math.max(minDiagram, rect.height - minRuntime);
 
     const onPointerMove = (moveEvent: PointerEvent) => {
-      const nextHeight = Math.min(maxDiagram, Math.max(minDiagram, startHeight + moveEvent.clientY - startY));
+      const nextHeight = Math.min(
+        maxDiagram,
+        Math.max(minDiagram, startHeight + moveEvent.clientY - startY),
+      );
       setDiagramHeight(nextHeight);
     };
 
@@ -673,8 +817,8 @@ export function InstanceMonitor({ instanceKey, open, onClose }: InstanceMonitorP
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
-        <style>
-          {`
+      <style>
+        {`
             .flowset-instance-viewer .djs-palette,
             .flowset-instance-viewer .djs-context-pad,
             .flowset-instance-viewer .djs-popup,
@@ -700,335 +844,458 @@ export function InstanceMonitor({ instanceKey, open, onClose }: InstanceMonitorP
               padding-bottom: 0.35rem;
             }
           `}
-        </style>
+      </style>
 
-          <header className="flex h-12 shrink-0 items-center justify-between border-b bg-white px-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <Activity className="size-5 text-[#0f5b6b]" />
-              <h2 className="truncate text-base font-bold text-slate-950">
-                Process instance "{instanceKey}"
-              </h2>
-              <StateBadge state={state} />
-              {processDefinitionId && (
-                <Badge variant="secondary" className="h-7 rounded-full px-3 text-xs">
-                  {processDefinitionId}
-                </Badge>
-              )}
-              {!isTerminal(state) && <span className="size-2 animate-pulse rounded-full bg-sky-500" />}
-            </div>
+      <header className="flex h-11 shrink-0 items-center justify-between border-b bg-white px-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Activity className="size-5 text-[#0f5b6b]" />
+          <h2 className="truncate text-base font-bold text-slate-950">
+            Lượt chạy "{instanceKey}"
+          </h2>
+          <StateBadge state={state} />
+          {processDefinitionId && (
+            <Badge variant="secondary" className="h-7 rounded-full px-3 text-xs">
+              {processDefinitionId}
+            </Badge>
+          )}
+          {!isTerminal(state) && (
+            <span className="size-2 animate-pulse rounded-full bg-sky-500" />
+          )}
+        </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-[3px]"
-                onClick={() => refetch()}
-                disabled={isFetching}
-              >
-                <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} />
-                Refresh
-              </Button>
-            </div>
-          </header>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-[3px]"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={cn('size-4', isFetching && 'animate-spin')} />
+            Làm mới
+          </Button>
+        </div>
+      </header>
 
-          <div className={cn('grid min-h-0 flex-1', infoOpen ? 'grid-cols-[minmax(0,1fr)_360px]' : 'grid-cols-[minmax(0,1fr)_56px]')}>
-            <section ref={layoutRef} className="flex min-w-0 flex-col overflow-hidden">
-              <div
-                className="relative shrink-0 overflow-hidden border-b bg-white"
-                style={{ height: diagramHeight }}
-              >
-                {definitionXml?.bpmnXml && deployedDiagram && (
-                  <div className="absolute inset-0 z-0 overflow-hidden bg-white">
-                    <DeployedBpmnDiagram
-                      diagram={deployedDiagram}
-                      flowNodes={flowNodes}
-                      selectedElementId={selectedElementId}
-                      onSelect={setSelectedElementId}
-                      zoom={fallbackZoom}
-                    />
-                  </div>
-                )}
-                <div
-                  ref={canvasRef}
-                  className={cn(
-                    'flowset-instance-viewer absolute inset-0 z-10 h-full w-full',
-                    'pointer-events-none opacity-0',
-                  )}
+      <div
+        className={cn(
+          'grid min-h-0 flex-1',
+          infoOpen ? 'grid-cols-[minmax(0,1fr)_360px]' : 'grid-cols-[minmax(0,1fr)_56px]',
+        )}
+      >
+        <section ref={layoutRef} className="flex min-w-0 flex-col overflow-hidden">
+          <div
+            className="relative shrink-0 overflow-hidden border-b bg-white"
+            style={{ height: diagramHeight }}
+          >
+            {definitionXml?.bpmnXml && deployedDiagram && (
+              <div className="absolute inset-0 z-0 overflow-hidden bg-white">
+                <DeployedBpmnDiagram
+                  diagram={deployedDiagram}
+                  flowNodes={flowNodes}
+                  selectedElementId={selectedElementId}
+                  onSelect={setSelectedElementId}
+                  zoom={fallbackZoom}
                 />
-                {definitionXml?.bpmnXml && deployedDiagram && (
-                  <div className="absolute right-3 top-3 z-20 flex flex-col overflow-hidden rounded-[3px] border bg-white shadow-sm">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-9 rounded-none border-b"
-                      title="Reset zoom"
-                      onClick={() => setFallbackZoom(1)}
-                    >
-                      <CircleDot className="size-4 text-[#0f5b6b]" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-9 rounded-none border-b text-lg font-semibold"
-                      title="Zoom in"
-                      onClick={() => setFallbackZoom((value) => Math.min(3, Number((value + 0.25).toFixed(2))))}
-                    >
-                      +
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-9 rounded-none text-lg font-semibold"
-                      title="Zoom out"
-                      onClick={() => setFallbackZoom((value) => Math.max(0.35, Number((value - 0.25).toFixed(2))))}
-                    >
-                      -
-                    </Button>
-                  </div>
-                )}
-                {!definitionXml?.bpmnXml && xmlLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">
-                    Loading deployed BPMN XML...
-                  </div>
-                )}
-                {!definitionXml?.bpmnXml && xmlError && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-sm text-red-600">
-                    <p className="font-semibold">Could not load deployed BPMN XML</p>
-                    <p className="text-xs">
-                      {(xmlFetchError as Error | undefined)?.message
-                        ?? 'Ensure Camunda 8 is running (docker compose --profile workflow up -d).'}
-                    </p>
-                  </div>
-                )}
-                {!definitionXml?.deployed && definitionXml?.bpmnXml && diagramState !== 'error' && (
-                  <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-[3px] border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                    Fallback diagram — deployed BPMN not found in Camunda
-                  </div>
-                )}
-                {definitionXml?.bpmnXml && diagramState === 'loading' && !deployedDiagram && null}
-                {diagramState === 'error' && !deployedDiagram && (
-                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-white/80 text-sm text-red-600">
-                    <p className="font-semibold">Could not import deployed BPMN diagram</p>
-                    <p className="max-w-xl text-center text-xs">{diagramError}</p>
-                  </div>
-                )}
               </div>
-
-              <div
-                role="separator"
-                aria-orientation="horizontal"
-                title="Drag to resize diagram and runtime panels"
-                className="group relative z-30 h-3 shrink-0 cursor-row-resize bg-slate-50"
-                onPointerDown={startResize}
-              >
-                <div className="absolute left-1/2 top-1/2 h-1 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-300 transition group-hover:bg-[#0f5b6b]" />
+            )}
+            <div
+              ref={canvasRef}
+              className={cn(
+                'flowset-instance-viewer absolute inset-0 z-10 h-full w-full',
+                'pointer-events-none opacity-0',
+              )}
+            />
+            {definitionXml?.bpmnXml && deployedDiagram && (
+              <div className="absolute top-3 right-3 z-20 flex flex-col overflow-hidden rounded-[3px] border bg-white shadow-sm">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 rounded-none border-b"
+                  title="Đặt lại thu phóng"
+                  onClick={() => setFallbackZoom(1.18)}
+                >
+                  <CircleDot className="size-4 text-[#0f5b6b]" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 rounded-none border-b text-lg font-semibold"
+                  title="Phóng to"
+                  onClick={() =>
+                    setFallbackZoom((value) =>
+                      Math.min(3, Number((value + 0.25).toFixed(2))),
+                    )
+                  }
+                >
+                  +
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 rounded-none text-lg font-semibold"
+                  title="Thu nhỏ"
+                  onClick={() =>
+                    setFallbackZoom((value) =>
+                      Math.max(0.35, Number((value - 0.25).toFixed(2))),
+                    )
+                  }
+                >
+                  -
+                </Button>
               </div>
-
-              <div className="min-h-0 flex-1 overflow-hidden bg-slate-50 p-2 pt-0">
-                <Tabs defaultValue="runtime" className="flex h-full min-h-0 flex-col">
-                  <TabsList className="h-8 w-fit shrink-0 rounded-[3px] bg-white">
-                    <TabsTrigger value="runtime" className="gap-1.5 rounded-[3px]">
-                      <ListTree className="size-3.5" />
-                      Runtime
-                    </TabsTrigger>
-                    <TabsTrigger value="history" className="gap-1.5 rounded-[3px]" disabled>
-                      <Clock3 className="size-3.5" />
-                      History
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="runtime" className="mt-2 min-h-0 flex-1 overflow-hidden rounded-[3px] border bg-white">
-                    <div className="grid h-full min-h-0 grid-cols-[32%_minmax(0,1fr)]">
-                      <div className="flex min-h-0 flex-col overflow-hidden border-r p-3">
-                        <h3 className="mb-3 text-sm font-semibold text-slate-900">Activity instances</h3>
-                        <div className="flex min-h-0 flex-1 flex-col rounded-[3px] border">
-                          <div className="border-b bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-                            Activity Id
-                          </div>
-                          <div className="min-h-0 flex-1 overflow-auto">
-                            {flowNodes.length === 0 ? (
-                              <div className="px-3 py-10 text-center text-sm text-slate-500">
-                                Waiting for Camunda to index activity data...
-                              </div>
-                            ) : (
-                              <div className="py-1">
-                                <button
-                                  type="button"
-                                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-slate-50"
-                                  onClick={() => setSelectedElementId(null)}
-                                >
-                                  <span className="text-slate-400">⌄</span>
-                                  <span className="truncate font-mono text-xs">{instanceKey}</span>
-                                </button>
-                                {flowNodes.map((node: FlowNodeRecord, index) => (
-                                  <button
-                                    key={`${node.elementId}-${index}`}
-                                    type="button"
-                                    className={cn(
-                                      'flex w-full items-center justify-between gap-2 px-7 py-1.5 text-left text-sm hover:bg-slate-50',
-                                      selectedElementId === node.elementId && 'bg-sky-50',
-                                    )}
-                                    onClick={() => setSelectedElementId(node.elementId)}
-                                  >
-                                    <span className="truncate">{node.elementName || node.elementId}</span>
-                                    <NodeBadge state={node.state} />
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <Tabs defaultValue="variables" className="flex min-h-0 flex-col p-3">
-                        <TabsList className="h-8 w-fit shrink-0 rounded-[3px] bg-white">
-                          <TabsTrigger value="variables" className="gap-1.5 rounded-[3px]">
-                            <Braces className="size-3.5" />
-                            Variables ({Object.keys(instance?.variables ?? {}).length})
-                          </TabsTrigger>
-                          <TabsTrigger value="tasks" className="gap-1.5 rounded-[3px]">
-                            <ClipboardList className="size-3.5" />
-                            User tasks ({userTasks.length})
-                          </TabsTrigger>
-                          <TabsTrigger value="jobs" className="gap-1.5 rounded-[3px]" disabled>
-                            <Settings className="size-3.5" />
-                            Jobs (0)
-                          </TabsTrigger>
-                          <TabsTrigger value="external" className="gap-1.5 rounded-[3px]" disabled>
-                            <Workflow className="size-3.5" />
-                            External tasks (0)
-                          </TabsTrigger>
-                          <TabsTrigger value="incidents" className="gap-1.5 rounded-[3px]" disabled>
-                            <AlertTriangle className="size-3.5" />
-                            Incidents (0)
-                          </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="variables" className="mt-2 min-h-0 flex-1 overflow-auto rounded-[3px] border bg-white">
-                          <Table className="flowset-runtime-table">
-                            <TableHeader>
-                              <TableRow className="bg-slate-50">
-                                <TableHead className="w-[220px]">Name</TableHead>
-                                <TableHead className="w-[120px]">Type</TableHead>
-                                <TableHead>Value</TableHead>
-                                <TableHead className="w-[220px]">Scope</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {!instance || Object.keys(instance.variables).length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={4} className="h-32 text-center text-sm text-slate-500">
-                                    No variables.
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                                Object.entries(instance.variables).map(([name, value]) => (
-                                  <TableRow key={name}>
-                                    <TableCell className="font-semibold text-[#0f5b6b]">{name}</TableCell>
-                                    <TableCell className="text-sm">{Array.isArray(value) ? 'Array' : value === null ? 'Null' : typeof value}</TableCell>
-                                    <TableCell className="max-w-[520px] truncate font-mono text-xs">{formatValue(value)}</TableCell>
-                                    <TableCell className="truncate font-mono text-xs text-slate-500">{instanceKey}</TableCell>
-                                  </TableRow>
-                                ))
-                              )}
-                            </TableBody>
-                          </Table>
-                        </TabsContent>
-
-                        <TabsContent value="tasks" className="mt-2 min-h-0 flex-1 overflow-auto rounded-[3px] border bg-white">
-                          <Table className="flowset-runtime-table">
-                            <TableHeader>
-                              <TableRow className="bg-slate-50">
-                                <TableHead>Task id</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Element</TableHead>
-                                <TableHead>State</TableHead>
-                                <TableHead>Assignee</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {userTasks.length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={5} className="h-32 text-center text-sm text-slate-500">
-                                    No user tasks for this instance.
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                                userTasks.map((task) => (
-                                  <TableRow key={task.userTaskKey}>
-                                    <TableCell className="font-mono text-xs">{task.userTaskKey}</TableCell>
-                                    <TableCell>{task.name || '-'}</TableCell>
-                                    <TableCell className="font-mono text-xs">{task.elementId || '-'}</TableCell>
-                                    <TableCell><NodeBadge state={task.state} /></TableCell>
-                                    <TableCell>{task.assignee || 'Unassigned'}</TableCell>
-                                  </TableRow>
-                                ))
-                              )}
-                            </TableBody>
-                          </Table>
-                        </TabsContent>
-                      </Tabs>
-                    </div>
-                  </TabsContent>
-                </Tabs>
+            )}
+            {!definitionXml?.bpmnXml && xmlLoading && (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">
+                Đang tải BPMN XML đã deploy...
               </div>
-            </section>
-
-            <aside className="flex min-h-0 border-l bg-white">
-              {infoOpen && (
-                <div className="min-w-0 flex-1 overflow-auto p-4">
-                  <h3 className="mb-4 font-semibold text-slate-950">Instance information</h3>
-                  <div className="space-y-3">
-                    <InfoField label="Id" value={instanceKey} mono />
-                    <InfoField label="Start time" value={formatDate(instance?.startDate)} />
-                    <InfoField label="End time" value={formatDate(instance?.endDate)} />
-                    <InfoField label="Business key" value="-" />
-                    <InfoField label="Process definition" value={processDefinitionId || '-'} mono />
-                    <InfoField label="State" value={state} />
-                  </div>
+            )}
+            {!definitionXml?.bpmnXml && xmlError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center text-sm text-red-600">
+                <p className="font-semibold">Không thể tải BPMN XML đã deploy</p>
+                <p className="text-xs">
+                  {(xmlFetchError as Error | undefined)?.message ??
+                    'Kiểm tra Camunda 8 đã chạy chưa (docker compose --profile workflow up -d).'}
+                </p>
+              </div>
+            )}
+            {!definitionXml?.deployed &&
+              definitionXml?.bpmnXml &&
+              diagramState !== 'error' && (
+                <div className="pointer-events-none absolute top-3 left-3 z-20 rounded-[3px] border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                  Sơ đồ tạm - chưa tìm thấy BPMN đã deploy trong Camunda
                 </div>
               )}
-              <div className="flex w-14 shrink-0 flex-col items-center gap-2 border-l bg-slate-50 py-3">
-                <Button
-                  variant={infoOpen ? 'default' : 'outline'}
-                  size="icon"
-                  className="size-9 rounded-[3px]"
-                  onClick={() => setInfoOpen((value) => !value)}
-                  title="View process instance details"
-                >
-                  <Info className="size-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="size-9 rounded-[3px]" onClick={() => refetch()} title="Reload process instance details">
-                  <RefreshCw className="size-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="size-9 rounded-[3px]" disabled title="Activate is not available for Camunda 8 process instances">
-                  <Play className="size-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="size-9 rounded-[3px]" disabled title="Suspend is not available for Camunda 8 process instances">
-                  <Pause className="size-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="size-9 rounded-[3px]" disabled title="Migration is not implemented yet">
-                  <FileText className="size-4" />
-                </Button>
-                    <Button variant="outline" size="icon" className="size-9 rounded-[3px]" disabled title="Terminate from the Process instances grid">
-                  <CircleDot className="size-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="size-9 rounded-[3px]" onClick={onClose} title="Close">
-                  <X className="size-4" />
-                </Button>
+            {definitionXml?.bpmnXml &&
+              diagramState === 'loading' &&
+              !deployedDiagram &&
+              null}
+            {diagramState === 'error' && !deployedDiagram && (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-white/80 text-sm text-red-600">
+                <p className="font-semibold">Không thể import sơ đồ BPMN đã deploy</p>
+                <p className="max-w-xl text-center text-xs">{diagramError}</p>
               </div>
-            </aside>
+            )}
           </div>
 
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            title="Kéo để đổi kích thước vùng sơ đồ và vùng thực thi"
+            className="group relative z-30 h-3 shrink-0 cursor-row-resize bg-slate-50"
+            onPointerDown={startResize}
+          >
+            <div className="absolute top-1/2 left-1/2 h-1 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-300 transition group-hover:bg-[#0f5b6b]" />
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-hidden bg-slate-50 p-1 pt-0">
+            <Tabs defaultValue="runtime" className="flex h-full min-h-0 flex-col">
+              <TabsList className="h-8 w-fit shrink-0 rounded-[3px] bg-white">
+                <TabsTrigger value="runtime" className="gap-1.5 rounded-[3px]">
+                  <ListTree className="size-3.5" />
+                  Thực thi
+                </TabsTrigger>
+                <TabsTrigger value="history" className="gap-1.5 rounded-[3px]" disabled>
+                  <Clock3 className="size-3.5" />
+                  Lịch sử
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent
+                value="runtime"
+                className="mt-2 min-h-0 flex-1 overflow-hidden rounded-[3px] border bg-white"
+              >
+                <div className="grid h-full min-h-0 grid-cols-[32%_minmax(0,1fr)]">
+                  <div className="flex min-h-0 flex-col overflow-hidden border-r p-3">
+                    <h3 className="mb-3 text-sm font-semibold text-slate-900">
+                      Hoạt động
+                    </h3>
+                    <div className="flex min-h-0 flex-1 flex-col rounded-[3px] border">
+                      <div className="border-b bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                        ID hoạt động
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-auto">
+                        {flowNodes.length === 0 ? (
+                          <div className="px-3 py-10 text-center text-sm text-slate-500">
+                            Đang chờ Camunda index dữ liệu hoạt động...
+                          </div>
+                        ) : (
+                          <div className="py-1">
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-slate-50"
+                              onClick={() => setSelectedElementId(null)}
+                            >
+                              <span className="text-slate-400">⌄</span>
+                              <span className="truncate font-mono text-xs">
+                                {instanceKey}
+                              </span>
+                            </button>
+                            {flowNodes.map((node: FlowNodeRecord, index) => (
+                              <button
+                                key={`${node.elementId}-${index}`}
+                                type="button"
+                                className={cn(
+                                  'flex w-full items-center justify-between gap-2 px-7 py-1.5 text-left text-sm hover:bg-slate-50',
+                                  selectedElementId === node.elementId && 'bg-sky-50',
+                                )}
+                                onClick={() => setSelectedElementId(node.elementId)}
+                              >
+                                <span className="truncate">
+                                  {node.elementName || node.elementId}
+                                </span>
+                                <NodeBadge state={node.state} />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Tabs defaultValue="variables" className="flex min-h-0 flex-col p-3">
+                    <TabsList className="h-8 w-fit shrink-0 rounded-[3px] bg-white">
+                      <TabsTrigger value="variables" className="gap-1.5 rounded-[3px]">
+                        <Braces className="size-3.5" />
+                        Biến ({Object.keys(instance?.variables ?? {}).length})
+                      </TabsTrigger>
+                      <TabsTrigger value="tasks" className="gap-1.5 rounded-[3px]">
+                        <ClipboardList className="size-3.5" />
+                        Việc người dùng ({userTasks.length})
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="jobs"
+                        className="gap-1.5 rounded-[3px]"
+                        disabled
+                      >
+                        <Settings className="size-3.5" />
+                        Job (0)
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="external"
+                        className="gap-1.5 rounded-[3px]"
+                        disabled
+                      >
+                        <Workflow className="size-3.5" />
+                        Tác vụ ngoài (0)
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="incidents"
+                        className="gap-1.5 rounded-[3px]"
+                        disabled
+                      >
+                        <AlertTriangle className="size-3.5" />
+                        Sự cố (0)
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent
+                      value="variables"
+                      className="mt-2 min-h-0 flex-1 overflow-auto rounded-[3px] border bg-white"
+                    >
+                      <Table className="flowset-runtime-table">
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="w-[220px]">Tên</TableHead>
+                            <TableHead className="w-[120px]">Loại</TableHead>
+                            <TableHead>Giá trị</TableHead>
+                            <TableHead className="w-[220px]">Phạm vi</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {!instance || Object.keys(instance.variables).length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={4}
+                                className="h-32 text-center text-sm text-slate-500"
+                              >
+                                Chưa có biến.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            Object.entries(instance.variables).map(([name, value]) => (
+                              <TableRow key={name}>
+                                <TableCell className="font-semibold text-[#0f5b6b]">
+                                  {name}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {Array.isArray(value)
+                                    ? 'Mảng'
+                                    : value === null
+                                      ? 'Rỗng'
+                                      : typeof value}
+                                </TableCell>
+                                <TableCell className="max-w-[520px] truncate font-mono text-xs">
+                                  {formatValue(value)}
+                                </TableCell>
+                                <TableCell className="truncate font-mono text-xs text-slate-500">
+                                  {instanceKey}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+
+                    <TabsContent
+                      value="tasks"
+                      className="mt-2 min-h-0 flex-1 overflow-auto rounded-[3px] border bg-white"
+                    >
+                      <Table className="flowset-runtime-table">
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead>ID việc</TableHead>
+                            <TableHead>Tên</TableHead>
+                            <TableHead>Phần tử</TableHead>
+                            <TableHead>Trạng thái</TableHead>
+                            <TableHead>Người phụ trách</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {userTasks.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={5}
+                                className="h-32 text-center text-sm text-slate-500"
+                              >
+                                Chưa có việc người dùng cho lượt chạy này.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            userTasks.map((task) => (
+                              <TableRow key={task.userTaskKey}>
+                                <TableCell className="font-mono text-xs">
+                                  {task.userTaskKey}
+                                </TableCell>
+                                <TableCell>{task.name || '-'}</TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  {task.elementId || '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <NodeBadge state={task.state} />
+                                </TableCell>
+                                <TableCell>{task.assignee || 'Chưa gán'}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </section>
+
+        <aside className="flex min-h-0 border-l bg-white">
+          {infoOpen && (
+            <div className="min-w-0 flex-1 overflow-auto p-4">
+              <h3 className="mb-4 font-semibold text-slate-950">Thông tin lượt chạy</h3>
+              <div className="space-y-3">
+                <InfoField label="ID" value={instanceKey} mono />
+                <InfoField label="Bắt đầu" value={formatDate(instance?.startDate)} />
+                <InfoField label="Kết thúc" value={formatDate(instance?.endDate)} />
+                <InfoField label="Khóa nghiệp vụ" value="-" />
+                <InfoField
+                  label="Định nghĩa quy trình"
+                  value={processDefinitionId || '-'}
+                  mono
+                />
+                <InfoField label="Trạng thái" value={STATE_LABEL[state] ?? state} />
+              </div>
+            </div>
+          )}
+          <div className="flex w-14 shrink-0 flex-col items-center gap-2 border-l bg-slate-50 py-3">
+            <Button
+              variant={infoOpen ? 'default' : 'outline'}
+              size="icon"
+              className="size-9 rounded-[3px]"
+              onClick={() => setInfoOpen((value) => !value)}
+              title="Xem thông tin lượt chạy"
+            >
+              <Info className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-[3px]"
+              onClick={() => refetch()}
+              title="Tải lại thông tin lượt chạy"
+            >
+              <RefreshCw className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-[3px]"
+              disabled
+              title="Camunda 8 không hỗ trợ kích hoạt lượt chạy theo kiểu Camunda 7"
+            >
+              <Play className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-[3px]"
+              disabled
+              title="Camunda 8 không hỗ trợ tạm dừng lượt chạy theo kiểu Camunda 7"
+            >
+              <Pause className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-[3px]"
+              disabled
+              title="Chưa triển khai migration"
+            >
+              <FileText className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-[3px]"
+              disabled
+              title="Hủy từ bảng lượt chạy"
+            >
+              <CircleDot className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-9 rounded-[3px]"
+              onClick={onClose}
+              title="Đóng"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
 
-function InfoField({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+function InfoField({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
     <div>
       <p className="mb-1 text-xs font-semibold text-slate-500">{label}</p>
-      <p className={cn('break-all rounded-[3px] border bg-slate-50 px-2 py-1.5 text-sm', mono && 'font-mono text-xs')}>
+      <p
+        className={cn(
+          'rounded-[3px] border bg-slate-50 px-2 py-1.5 text-sm break-all',
+          mono && 'font-mono text-xs',
+        )}
+      >
         {value}
       </p>
     </div>

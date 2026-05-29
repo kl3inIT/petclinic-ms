@@ -224,7 +224,8 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
     public WorkflowDefinitionDeploymentResponse deployDefinition(DeployWorkflowDefinitionRequest request) {
         String resourceName = normalizeResourceName(request.name());
         try {
-            String deployableXml = toCamunda8Bpmn(request.bpmnXml());
+            String requestedProcessId = resourceName.replaceFirst("\\.bpmn$", "");
+            String deployableXml = toCamunda8Bpmn(request.bpmnXml(), requestedProcessId);
             BpmnMetadata metadata = extractMetadata(deployableXml, resourceName);
             DeploymentEvent deployment = requireClient().newDeployResourceCommand()
                     .addResourceStringUtf8(deployableXml, resourceName)
@@ -271,6 +272,29 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
                     "deploymentFailed"
             );
         }
+    }
+
+    @Override
+    @Transactional
+    public void deleteDefinition(String processDefinitionKey) {
+        if (processDefinitionKey == null || processDefinitionKey.isBlank()) {
+            throw new BadRequestAlertException("Process definition key is required.", ENTITY_NAME, "processDefinitionKeyRequired");
+        }
+        if (!processDefinitionKey.matches("\\d+")) {
+            throw new BadRequestAlertException(
+                    "Camunda 8 deletes process definitions by numeric processDefinitionKey, not BPMN id.",
+                    ENTITY_NAME,
+                    "numericProcessDefinitionKeyRequired"
+            );
+        }
+
+        postCommand(
+                "/v2/resources/" + processDefinitionKey + "/deletion",
+                Map.of("deleteHistory", true),
+                "delete process definition " + processDefinitionKey
+        );
+        definitions.entrySet().removeIf(entry -> processDefinitionKey.equals(entry.getValue().id()));
+        log.info("Deleted Camunda process definition resource {}", processDefinitionKey);
     }
 
     private CamundaClient requireClient() {
@@ -404,6 +428,33 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
         return objectMapper.readValue(response.body(), Map.class);
     }
 
+    private void postCommand(String path, Object body, String operation) {
+        try {
+            String bodyJson = objectMapper.writeValueAsString(body != null ? body : Map.of());
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(operateBaseUrl + path))
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", operateBasicAuth)
+                    .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
+                    .build();
+
+            HttpResponse<String> response = operateHttp.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new BadRequestAlertException(
+                        "Camunda rejected " + operation + " (" + response.statusCode() + "): " + response.body(),
+                        ENTITY_NAME,
+                        "camundaCommandRejected"
+                );
+            }
+        } catch (IOException ex) {
+            throw new BadRequestAlertException("Camunda command failed: " + ex.getMessage(), ENTITY_NAME, "camundaCommandFailed");
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new BadRequestAlertException("Camunda command interrupted.", ENTITY_NAME, "camundaCommandInterrupted");
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private static List<CamundaDefinition> extractCamundaDefinitions(Map<String, Object> result) {
         if (result == null) {
@@ -454,13 +505,23 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
         return trimmed.endsWith(".bpmn") ? trimmed : trimmed + ".bpmn";
     }
 
-    private static String toCamunda8Bpmn(String bpmnXml) {
+    private static String normalizeBpmnId(String id) {
+        if (id == null || id.isBlank()) {
+            return "";
+        }
+        String normalized = id.trim().replaceAll("[^A-Za-z0-9_.-]", "_");
+        return normalized.matches("^[A-Za-z_].*") ? normalized : "Process_" + normalized;
+    }
+
+    private static String toCamunda8Bpmn(String bpmnXml, String requestedProcessId) {
         try {
             Document document = parseXml(bpmnXml);
             Element root = document.getDocumentElement();
             if (!root.hasAttribute("xmlns:zeebe")) {
                 root.setAttributeNS(XMLConstants.XMLNS_ATTRIBUTE_NS_URI, "xmlns:zeebe", ZEEBE_NS);
             }
+            String normalizedProcessId = normalizeBpmnId(requestedProcessId);
+            String previousProcessId = null;
 
             NodeList tasks = document.getElementsByTagNameNS(BPMN_NS, "serviceTask");
             for (int i = 0; i < tasks.getLength(); i++) {
@@ -476,8 +537,33 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
             NodeList processes = document.getElementsByTagNameNS(BPMN_NS, "process");
             for (int i = 0; i < processes.getLength(); i++) {
                 Element process = (Element) processes.item(i);
+                if (i == 0 && !normalizedProcessId.isBlank()) {
+                    previousProcessId = process.getAttribute("id");
+                    process.setAttribute("id", normalizedProcessId);
+                    if (process.getAttribute("name").isBlank() || process.getAttribute("name").equals(previousProcessId)) {
+                        process.setAttribute("name", requestedProcessId);
+                    }
+                }
                 process.removeAttribute("camunda:historyTimeToLive");
                 process.removeAttributeNS("http://camunda.org/schema/1.0/bpmn", "historyTimeToLive");
+            }
+
+            if (previousProcessId != null && !previousProcessId.isBlank() && !previousProcessId.equals(normalizedProcessId)) {
+                NodeList participants = document.getElementsByTagNameNS(BPMN_NS, "participant");
+                for (int i = 0; i < participants.getLength(); i++) {
+                    Element participant = (Element) participants.item(i);
+                    if (previousProcessId.equals(participant.getAttribute("processRef"))) {
+                        participant.setAttribute("processRef", normalizedProcessId);
+                    }
+                }
+
+                NodeList planes = document.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNPlane");
+                for (int i = 0; i < planes.getLength(); i++) {
+                    Element plane = (Element) planes.item(i);
+                    if (previousProcessId.equals(plane.getAttribute("bpmnElement"))) {
+                        plane.setAttribute("bpmnElement", normalizedProcessId);
+                    }
+                }
             }
 
             return writeXml(document);

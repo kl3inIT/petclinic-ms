@@ -9,5 +9,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  */
 @ConfigurationProperties(prefix = "petclinic.workflow")
 public record WorkflowCallbackProperties(
-        @DefaultValue("petclinic-workflow-secret") String callbackToken
+        @DefaultValue("petclinic-workflow-secret") String callbackToken,
+        @DefaultValue("visit-booking") String visitBookingProcessId
 ) {}

@@ -13,7 +13,7 @@ export const Route = createFileRoute('/admin/workflows')({
 
 function WorkflowsPage() {
   return (
-    <div className="h-[calc(100vh-5rem)] overflow-hidden p-4">
+    <div className="-m-6 h-screen overflow-hidden p-1">
       <WorkflowControlCenter />
     </div>
   );

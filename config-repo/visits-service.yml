@@ -4,6 +4,9 @@ petclinic:
     # Phải khớp với petclinic.workflow.callback-token bên workflow-service.
     # Override qua env var PETCLINIC_WORKFLOW_CALLBACK_TOKEN trong prod.
     callback-token: ${PETCLINIC_WORKFLOW_CALLBACK_TOKEN:petclinic-workflow-secret}
+    # Quy trình Camunda 8 được start tự động khi đặt lịch mới.
+    # Đổi key này khi muốn lịch mới chạy theo bản quy trình khác.
+    visit-booking-process-id: ${PETCLINIC_WORKFLOW_VISIT_BOOKING_PROCESS_ID:visit-booking}
 
 # Datasource creds + URL khác env → visits-service-<profile>.yml.
 

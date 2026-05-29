@@ -1,0 +1,80 @@
+  <?xml version="1.0" encoding="UTF-8"?>
+  <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"  
+                    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"        
+                    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"        
+                    xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"        
+                    id="Defs_Child"
+  targetNamespace="http://bpmn.io/schema/bpmn">
+    <bpmn:process id="chon-lai-bac-si" name="Chọn lại bác sĩ phù hợp"        
+  isExecutable="true">
+
+      <bpmn:startEvent id="Start_1" name="Bắt đầu chọn bác sĩ mới">
+        <bpmn:outgoing>F1</bpmn:outgoing>
+      </bpmn:startEvent>
+
+      <bpmn:userTask id="Task_QuanLyChon" name="Quản lý chọn bác sĩ phù hợp  
+  với loại thú cưng">
+        <bpmn:extensionElements>
+          <zeebe:assignmentDefinition assignee="manager" />
+          <zeebe:ioMapping>
+            <zeebe:output source="=bacSiMoiId" target="bacSiMoiId" />        
+            <zeebe:output source="=bacSiMoiTen" target="bacSiMoiTen" />      
+          </zeebe:ioMapping>
+        </bpmn:extensionElements>
+        <bpmn:incoming>F1</bpmn:incoming>
+        <bpmn:outgoing>F2</bpmn:outgoing>
+      </bpmn:userTask>
+
+      <bpmn:userTask id="Task_BacSiMoiXacNhan" name="Bác sĩ mới xác nhận nhận
+   lịch khám">
+        <bpmn:extensionElements>
+          <zeebe:assignmentDefinition assignee="doctor" />
+        </bpmn:extensionElements>
+        <bpmn:incoming>F2</bpmn:incoming>
+        <bpmn:outgoing>F3</bpmn:outgoing>
+      </bpmn:userTask>
+
+      <bpmn:endEvent id="End_1" name="Bác sĩ mới đã xác nhận">
+        <bpmn:incoming>F3</bpmn:incoming>
+      </bpmn:endEvent>
+
+      <bpmn:sequenceFlow id="F1" sourceRef="Start_1"
+  targetRef="Task_QuanLyChon" />
+      <bpmn:sequenceFlow id="F2" sourceRef="Task_QuanLyChon"
+  targetRef="Task_BacSiMoiXacNhan" />
+      <bpmn:sequenceFlow id="F3" sourceRef="Task_BacSiMoiXacNhan"
+  targetRef="End_1" />
+    </bpmn:process>
+
+    <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+      <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="chon-lai-bac-si">      
+        <bpmndi:BPMNShape id="Sh_Start" bpmnElement="Start_1">
+          <dc:Bounds x="152" y="82" width="36" height="36" />
+          <bpmndi:BPMNLabel><dc:Bounds x="125" y="125" width="90" height="27"
+   /></bpmndi:BPMNLabel>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="Sh_QuanLy" bpmnElement="Task_QuanLyChon">      
+          <dc:Bounds x="250" y="60" width="210" height="80" />
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="Sh_BacSiMoi"
+  bpmnElement="Task_BacSiMoiXacNhan">
+          <dc:Bounds x="522" y="60" width="200" height="80" />
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="Sh_End" bpmnElement="End_1">
+          <dc:Bounds x="784" y="82" width="36" height="36" />
+          <bpmndi:BPMNLabel><dc:Bounds x="758" y="125" width="88" height="27"
+   /></bpmndi:BPMNLabel>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNEdge id="Ed_F1" bpmnElement="F1">
+          <di:waypoint x="188" y="100" /><di:waypoint x="250" y="100" />     
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge id="Ed_F2" bpmnElement="F2">
+          <di:waypoint x="460" y="100" /><di:waypoint x="522" y="100" />     
+        </bpmndi:BPMNEdge>
+        <bpmndi:BPMNEdge id="Ed_F3" bpmnElement="F3">
+          <di:waypoint x="722" y="100" /><di:waypoint x="784" y="100" />     
+        </bpmndi:BPMNEdge>
+      </bpmndi:BPMNPlane>
+    </bpmndi:BPMNDiagram>
+  </bpmn:definitions>
