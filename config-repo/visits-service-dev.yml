@@ -8,10 +8,11 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   # Visits publish visit.scheduled / visit.completed → cần RabbitMQ.
+  # Phase đơn thuốc — lưu PDF lên MinIO → thêm profile `storage`.
   docker:
     compose:
       profiles:
-        active: ["db", "mq"]
+        active: ["db", "mq", "storage"]
 
 logging:
   level:

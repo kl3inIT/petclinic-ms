@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/004-seed-dev-data.yaml
   - include:
       file: db/changelog/changes/005-notification-saga.yaml
+  - include:
+      file: db/changelog/changes/007-create-prescriptions.yaml

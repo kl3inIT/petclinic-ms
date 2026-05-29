@@ -204,6 +204,7 @@ services:
       mc mb --ignore-existing local/pet-photos;
       mc mb --ignore-existing local/invoices;
       mc mb --ignore-existing local/avatars;
+      mc mb --ignore-existing local/prescriptions;
       mc anonymous set download local/pet-photos;
       mc anonymous set download local/avatars;
       exit 0;
@@ -385,6 +386,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      minio: { condition: service_healthy }
       config-server: { condition: service_healthy }
       discovery-server: { condition: service_healthy }
       customers-service: { condition: service_healthy }
@@ -396,6 +398,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
+      MINIO_ENDPOINT: http://minio:9000
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:

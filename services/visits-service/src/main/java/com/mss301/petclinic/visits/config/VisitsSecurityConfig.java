@@ -2,6 +2,7 @@ package com.mss301.petclinic.visits.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -22,6 +23,15 @@ import com.mss301.petclinic.common.security.endpoints.SecurityEndpointsPropertie
  *       check qua bean {@link com.mss301.petclinic.visits.security.VisitSecurity}. Vd:
  *       {@code @PreAuthorize("@visitSecurity.canView(#id, authentication)")}</li>
  * </ol>
+ *
+ * <h4>Hardcoded rule — GET đơn thuốc</h4>
+ * {@code GET /api/v1/visits/*&#47;prescription[/pdf]} cần reach cho cả VET (chỉ role
+ * {@code VET}, không kèm {@code STAFF}) lẫn chủ nuôi (role {@code USER}). YAML bucket
+ * {@code user} = USER/STAFF/ADMIN (không gồm VET); còn nếu đẩy GET vào {@code custom-roles
+ * VET} thì rule này (apply TRƯỚC bucket {@code user}) sẽ match request của chủ nuôi trước và
+ * chặn họ (first-match-wins). Vì vậy hardcode 1 rule cấp reach cho 4 role TRƯỚC
+ * {@link EndpointSecurityCustomizer#apply}; quyền sở hữu thực sự do
+ * {@code @PreAuthorize @visitSecurity.canView} lọc.
  *
  * <p>{@link EnableMethodSecurity} bật {@code @PreAuthorize}/{@code @PostAuthorize} annotation
  * support. {@code prePostEnabled=true} là default Spring Security 6+ nhưng khai báo explicit
@@ -47,6 +57,15 @@ public class VisitsSecurityConfig {
                                     "/swagger-ui/**",
                                     "/swagger-ui.html")
                             .permitAll();
+
+                    // GET đơn thuốc — cấp reach cho VET + chủ nuôi + STAFF + ADMIN. Phải khai
+                    // báo TRƯỚC apply() để win first-match vs bucket `user` (GET /visits/**).
+                    // Ownership thực sự lọc bởi @PreAuthorize @visitSecurity.canView ở controller.
+                    auth.requestMatchers(HttpMethod.GET,
+                                    "/api/v1/visits/*/prescription",
+                                    "/api/v1/visits/*/prescription/pdf")
+                            .hasAnyRole("VET", "USER", "STAFF", "ADMIN");
+
                     EndpointSecurityCustomizer.apply(auth, endpoints);
                     auth.anyRequest().authenticated();
                 })
