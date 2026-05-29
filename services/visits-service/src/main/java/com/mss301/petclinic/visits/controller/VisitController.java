@@ -1,6 +1,7 @@
 package com.mss301.petclinic.visits.controller;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
+import com.mss301.petclinic.visits.dto.res.SlotAvailabilityResponse;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
 import com.mss301.petclinic.visits.model.VisitStatus;
 import com.mss301.petclinic.visits.service.VisitService;
@@ -75,6 +77,18 @@ public class VisitController {
     ) {
         UUID customerFilter = isPrivileged(jwt) ? null : currentUserId(jwt);
         return service.search(customerFilter, vetId, petId, status, from, to, pageable);
+    }
+
+    @GetMapping("/availability")
+    @Operation(
+            summary = "Số slot còn trống của vet vào 1 ngày",
+            description = "Trả 12 work-hour 8h-20h với taken/remaining. FE dùng để hiển thị " +
+                          "'Còn X slot' / 'Đã đầy' trên booking calendar. capacity hiện = 2."
+    )
+    public SlotAvailabilityResponse getSlotAvailability(
+            @RequestParam Long vetId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return service.getAvailability(vetId, date);
     }
 
     @GetMapping("/{id}")
