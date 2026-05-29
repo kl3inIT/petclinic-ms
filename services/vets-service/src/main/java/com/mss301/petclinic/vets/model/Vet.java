@@ -15,6 +15,9 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
+
 import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 @Entity
@@ -44,6 +47,16 @@ public class Vet extends AbstractAuditingEntity {
     @Column(columnDefinition = "TEXT")
     private String resume;
 
+    /**
+     * Mã thẻ bác sĩ — Postgres tự sinh từ id (xem changeset 012). Format
+     * {@code PC-VET-{LPAD(id, 4, '0')}}. App KHÔNG write column này:
+     * {@code insertable=false, updatable=false} + {@link Generated} để Hibernate
+     * refresh value sau INSERT/UPDATE.
+     */
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
+    @Column(name = "card_code", insertable = false, updatable = false, length = 20)
+    private String cardCode;
+
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "vet_specialties",
@@ -69,6 +82,7 @@ public class Vet extends AbstractAuditingEntity {
     public String getPhoneNumber() { return phoneNumber; }
     public boolean isActive() { return active; }
     public String getResume() { return resume; }
+    public String getCardCode() { return cardCode; }
     public Set<Specialty> getSpecialties() { return specialties; }
 
     public void setFirstName(String firstName) { this.firstName = firstName; }

@@ -1,0 +1,26 @@
+databaseChangeLog:
+  # Mã thẻ bác sĩ — đứng độc lập với id auto-increment để hiển thị trên thẻ ID,
+  # QR code, biên lai. Computed từ id qua Postgres GENERATED COLUMN:
+  #   id=1   -> PC-VET-0001
+  #   id=42  -> PC-VET-0042
+  #   id=12345 -> PC-VET-12345 (vẫn hợp lệ, LPAD chỉ pad nếu < 4 chữ số)
+  #
+  # JPA-side: field cardCode trong Vet entity có @Generated(event=INSERT) để
+  # Hibernate refresh value sau INSERT — app không write column này.
+  - changeSet:
+      id: 012-add-vet-card-code
+      author: mss301
+      changes:
+        - sql:
+            comment: Computed card code column — derive từ id, immutable
+            sql: >-
+              ALTER TABLE vets.vets
+              ADD COLUMN card_code VARCHAR(20)
+              GENERATED ALWAYS AS ('PC-VET-' || LPAD(id::text, 4, '0')) STORED
+            dbms: postgresql
+
+        - addUniqueConstraint:
+            schemaName: vets
+            tableName: vets
+            columnNames: card_code
+            constraintName: uk_vets_card_code

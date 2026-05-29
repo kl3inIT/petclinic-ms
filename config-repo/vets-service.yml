@@ -60,6 +60,12 @@ petclinic:
         - { method: POST,  path: /api/v1/vets }
         - { method: PATCH, path: /api/v1/vets/** }
         - { method: PUT,   path: /api/v1/vets/** }
+        # Review queue + approve/reject — STAFF/ADMIN only
+        - { method: GET,   path: /api/v1/vets/reviews/** }
+        - { method: POST,  path: /api/v1/vets/*/photo/approve }
+        - { method: POST,  path: /api/v1/vets/*/photo/reject }
+        - { method: POST,  path: /api/v1/vets/*/educations/*/approve }
+        - { method: POST,  path: /api/v1/vets/*/educations/*/reject }
       # Admin only — hard delete + catalog management
       admin:
         - { method: DELETE, path: /api/v1/vets/** }

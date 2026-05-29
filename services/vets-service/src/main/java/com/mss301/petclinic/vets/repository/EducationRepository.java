@@ -1,5 +1,6 @@
 package com.mss301.petclinic.vets.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -17,4 +18,7 @@ public interface EducationRepository extends JpaRepository<Education, Long> {
      * GET /api/v1/vets/{vetId}/educations/{eduId} mà eduId thuộc vetId khác → 404 (không leak existence).
      */
     Optional<Education> findByIdAndVetId(Long id, Long vetId);
+
+    /** Lọc theo status — admin review queue. */
+    List<Education> findByStatus(String status);
 }

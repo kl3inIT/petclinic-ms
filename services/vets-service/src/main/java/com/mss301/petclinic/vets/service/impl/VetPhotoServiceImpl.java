@@ -2,20 +2,21 @@ package com.mss301.petclinic.vets.service.impl;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.mss301.petclinic.vets.config.StorageProperties;
+import com.mss301.petclinic.common.storage.StorageProperties;
+import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.vets.dto.res.VetPhotoResponse;
 import com.mss301.petclinic.vets.exception.VetNotFoundException;
 import com.mss301.petclinic.vets.exception.VetPhotoNotFoundException;
 import com.mss301.petclinic.vets.model.VetPhoto;
 import com.mss301.petclinic.vets.repository.VetPhotoRepository;
 import com.mss301.petclinic.vets.repository.VetRepository;
-import com.mss301.petclinic.vets.service.StorageService;
 import com.mss301.petclinic.vets.service.VetPhotoService;
 
 @Service
@@ -75,6 +76,11 @@ public class VetPhotoServiceImpl implements VetPhotoService {
             photo.setContentType(file.getContentType());
             photo.setSizeBytes(file.getSize());
             photo.setUploadedAt(java.time.OffsetDateTime.now());
+            // Mỗi lần upload mới → reset về PENDING, chờ staff/admin duyệt lại.
+            photo.setStatus("PENDING");
+            photo.setReviewedBy(null);
+            photo.setReviewedAt(null);
+            photo.setRejectReason(null);
             VetPhoto saved = photoRepository.save(photo);
             return VetPhotoResponse.from(saved, storage.presignedGet(key, props.presignedTtl()));
         } catch (RuntimeException ex) {
@@ -83,6 +89,33 @@ public class VetPhotoServiceImpl implements VetPhotoService {
             }
             throw ex;
         }
+    }
+
+    @Override
+    @Transactional
+    public VetPhotoResponse approvePhoto(Long vetId, String reviewer) {
+        ensureVetExists(vetId);
+        VetPhoto photo = photoRepository.findById(vetId)
+                .orElseThrow(() -> new VetPhotoNotFoundException(vetId.toString()));
+        photo.approve(reviewer);
+        return VetPhotoResponse.from(photo, storage.presignedGet(photo.getObjectKey(), props.presignedTtl()));
+    }
+
+    @Override
+    @Transactional
+    public VetPhotoResponse rejectPhoto(Long vetId, String reviewer, String reason) {
+        ensureVetExists(vetId);
+        VetPhoto photo = photoRepository.findById(vetId)
+                .orElseThrow(() -> new VetPhotoNotFoundException(vetId.toString()));
+        photo.reject(reviewer, reason);
+        return VetPhotoResponse.from(photo, storage.presignedGet(photo.getObjectKey(), props.presignedTtl()));
+    }
+
+    @Override
+    public List<VetPhotoResponse> listPendingPhotos() {
+        return photoRepository.findByStatus("PENDING").stream()
+                .map(p -> VetPhotoResponse.from(p, storage.presignedGet(p.getObjectKey(), props.presignedTtl())))
+                .toList();
     }
 
     @Override
