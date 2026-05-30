@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -39,6 +40,13 @@ export function BookVisitDialog({ open, onOpenChange }: Props) {
   const vetsQuery = useListVets({
     pageable: { page: 0, size: 200, sort: ['lastName,asc'] },
   });
+  const minDateTime = useMemo(() => {
+    const d = new Date(Date.now() + 60 * 60 * 1000);
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    const tzOffsetMs = d.getTimezoneOffset() * 60 * 1000;
+    return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+  }, []);
 
   const bookMutation = useBookVisit({
     mutation: {
@@ -151,6 +159,8 @@ export function BookVisitDialog({ open, onOpenChange }: Props) {
                 <Input
                   id={field.name}
                   type="datetime-local"
+                  min={minDateTime}
+                  step={3600}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}

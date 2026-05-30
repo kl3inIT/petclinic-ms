@@ -9,7 +9,7 @@ import com.mss301.petclinic.vets.dto.res.VetResponse;
 
 public interface VetService {
 
-    Page<VetResponse> findAll(String lastName, Long specialtyId, Pageable pageable);
+    Page<VetResponse> findAll(String lastName, Long specialtyId, Boolean active, Pageable pageable);
 
     VetResponse findById(Long id);
 

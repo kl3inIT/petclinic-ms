@@ -11,5 +11,11 @@ export interface VetResponse {
   id?: number;
   firstName?: string;
   lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  active?: boolean;
+  resume?: string;
   specialties?: SpecialtyResponse[];
+  photoUrl?: string;
+  averageRating?: number;
 }

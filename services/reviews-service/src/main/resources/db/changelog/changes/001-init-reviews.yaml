@@ -1,0 +1,223 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-schema-reviews
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS reviews
+            dbms: postgresql
+
+  - changeSet:
+      id: 002-create-table-reviews
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: reviews
+            tableName: reviews
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              # Polymorphic target — VET/PRODUCT/VISIT.
+              # Target_id KHÔNG có FK constraint (target sống ở 3 schema khác — vets/products/visits).
+              # Orphan cleanup = job định kỳ (out-of-scope v1).
+              - column:
+                  name: target_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              # BIGINT vì cả 3 target service (vets/products/visits) đều dùng BIGSERIAL PK.
+              # KHÔNG dùng UUID (overkill + không match visits-service.getById Long).
+              - column:
+                  name: target_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              # Author = JWT sub UUID. authorName = snapshot lúc tạo (denorm) — chống thay đổi profile làm sai lệch review.
+              - column:
+                  name: author_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author_name
+                  type: VARCHAR(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rating
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: comment
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              # State machine: PUBLISHED / PENDING_MODERATION / FLAGGED / HIDDEN / DELETED
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              # Denorm: count(review_votes WHERE vote_type=HELPFUL). Recompute trong service.vote().
+              - column:
+                  name: helpful_count
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              # Audit columns (from AbstractAuditingEntity)
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+              # Optimistic locking
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 003-create-table-review-votes
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: reviews
+            tableName: review_votes
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: review_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_review_votes_review
+                    referencedTableSchemaName: reviews
+                    referencedTableName: reviews
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              # HELPFUL / NOT_HELPFUL
+              - column:
+                  name: vote_type
+                  type: VARCHAR(15)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+
+  - changeSet:
+      id: 004-add-constraints-and-indexes
+      author: mss301
+      changes:
+        # Domain validation — defense-in-depth với DTO @Min/@Max.
+        - sql:
+            sql: >-
+              ALTER TABLE reviews.reviews
+              ADD CONSTRAINT reviews_rating_check
+              CHECK (rating BETWEEN 1 AND 5)
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              ALTER TABLE reviews.reviews
+              ADD CONSTRAINT reviews_target_type_check
+              CHECK (target_type IN ('VET', 'PRODUCT', 'VISIT'))
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              ALTER TABLE reviews.reviews
+              ADD CONSTRAINT reviews_status_check
+              CHECK (status IN ('PUBLISHED', 'PENDING_MODERATION', 'FLAGGED', 'HIDDEN', 'DELETED'))
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              ALTER TABLE reviews.review_votes
+              ADD CONSTRAINT review_votes_vote_type_check
+              CHECK (vote_type IN ('HELPFUL', 'NOT_HELPFUL'))
+            dbms: postgresql
+
+        # 1 user 1 review / target (adopt từ Champlain products-Rating composite identity).
+        - addUniqueConstraint:
+            schemaName: reviews
+            tableName: reviews
+            columnNames: author_id, target_type, target_id
+            constraintName: uk_reviews_author_target
+
+        # 1 user 1 vote / review (upsert/flip trong service.vote()).
+        - addUniqueConstraint:
+            schemaName: reviews
+            tableName: review_votes
+            columnNames: review_id, user_id
+            constraintName: uk_review_votes_user
+
+        # List/filter "reviews của target X status Y" — main query.
+        - createIndex:
+            schemaName: reviews
+            tableName: reviews
+            indexName: idx_reviews_target
+            columns:
+              - column:
+                  name: target_type
+              - column:
+                  name: target_id
+              - column:
+                  name: status
+
+        # "Reviews của tôi" cho USER + ownership check.
+        - createIndex:
+            schemaName: reviews
+            tableName: reviews
+            indexName: idx_reviews_author
+            columns:
+              - column:
+                  name: author_id
+
+        # Moderation queue.
+        - createIndex:
+            schemaName: reviews
+            tableName: reviews
+            indexName: idx_reviews_status
+            columns:
+              - column:
+                  name: status

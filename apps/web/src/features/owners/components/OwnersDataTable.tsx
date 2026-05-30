@@ -5,7 +5,7 @@ import {
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { MoreHorizontal, Trash2, Eye } from 'lucide-react';
+import { MoreHorizontal, Trash2, Eye, Pencil } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -31,10 +31,11 @@ interface Props {
   data: OwnerResponse[];
   isLoading?: boolean;
   onView: (owner: OwnerResponse) => void;
+  onEdit: (owner: OwnerResponse) => void;
   onDelete: (owner: OwnerResponse) => void;
 }
 
-export function OwnersDataTable({ data, isLoading, onView, onDelete }: Props) {
+export function OwnersDataTable({ data, isLoading, onView, onEdit, onDelete }: Props) {
   const [actionRowId, setActionRowId] = useState<number | null>(null);
 
   const columns = useMemo<ColumnDef<OwnerResponse>[]>(
@@ -103,6 +104,9 @@ export function OwnersDataTable({ data, isLoading, onView, onDelete }: Props) {
                 <DropdownMenuItem onSelect={() => onView(owner)}>
                   <Eye className="size-4" /> Xem chi tiết
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => onEdit(owner)}>
+                  <Pencil className="size-4" /> Sửa
+                </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" onSelect={() => onDelete(owner)}>
                   <Trash2 className="size-4" /> Xóa
                 </DropdownMenuItem>
@@ -112,7 +116,7 @@ export function OwnersDataTable({ data, isLoading, onView, onDelete }: Props) {
         },
       },
     ],
-    [actionRowId, onView, onDelete],
+    [actionRowId, onView, onEdit, onDelete],
   );
 
   const table = useReactTable({

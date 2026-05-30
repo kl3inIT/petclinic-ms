@@ -1,0 +1,47 @@
+# Profanity word list. 1 từ / dòng. Lowercase. # = comment.
+# Long words (≥4 chars) match substring; short words (≤3 chars) match word-boundary.
+
+# English — common
+fuck
+shit
+bitch
+bastard
+asshole
+damn
+cunt
+dick
+piss
+crap
+prick
+slut
+whore
+retard
+moron
+
+# English — short (word boundary only)
+ass
+fag
+jew
+
+# Vietnamese — common (deaccent đã apply, không cần dấu)
+cho chet
+dien
+ngu
+khung
+do ngu
+dm
+dmm
+vcl
+vl
+clm
+cmm
+clgt
+dcm
+ditme
+dume
+
+# Slurs (FR-CA — for compat với Champlain bad-words list)
+tabarnak
+calice
+crisse
+maudit

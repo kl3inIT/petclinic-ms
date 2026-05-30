@@ -12,6 +12,7 @@ package consumer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -123,4 +124,27 @@ func (c *Consumer) Close() {
 	if c.conn != nil {
 		_ = c.conn.Close()
 	}
+}
+
+// Publish — gửi JSON-serializable event lên exchange chính với routingKey.
+// Spring AMQP Jackson3JsonMessageConverter expect contentType=application/json (KHÔNG cần
+// __TypeId__ header khi @RabbitListener parameter type quyết định target class).
+//
+// Dùng cho saga choreography: mailer publish notified/failed event để visits-service
+// SagaHandler update state.
+func (c *Consumer) Publish(ctx context.Context, routingKey string, payload any) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal %s: %w", routingKey, err)
+	}
+	pub := amqp.Publishing{
+		ContentType:  "application/json",
+		DeliveryMode: amqp.Persistent,
+		Body:         body,
+	}
+	if err := c.ch.PublishWithContext(ctx, c.exchange, routingKey, false, false, pub); err != nil {
+		return fmt.Errorf("publish %s: %w", routingKey, err)
+	}
+	c.log.Debug("event published", "routingKey", routingKey)
+	return nil
 }

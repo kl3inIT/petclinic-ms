@@ -1,0 +1,23 @@
+databaseChangeLog:
+
+  # Phase K — Link user account ↔ vet entity (1-1, optional).
+  # vet_id NULL = user thường (customer/admin/staff). Non-null = bác sĩ thú y.
+  # KHÔNG FK constraint sang vets schema vì cross-schema FK Postgres support kém + vets-service
+  # có thể chạy độc lập (microservice boundary). Integrity check ở app layer khi admin link vet.
+  #
+  # JwtTokenProvider sẽ thêm claim `vetId` nếu non-null → vets-service dùng claim này cho
+  # endpoint /api/v1/vets/me/* (resolve vetId KHÔNG cần extra DB round-trip).
+
+  - changeSet:
+      id: 004-001-add-users-vet-id
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: auth
+            tableName: users
+            columns:
+              - column:
+                  name: vet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: true

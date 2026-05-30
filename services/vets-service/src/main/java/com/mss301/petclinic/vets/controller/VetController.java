@@ -36,13 +36,18 @@ public class VetController {
     }
 
     @GetMapping
-    @Operation(summary = "List vets (paginated)", description = "Filter optional by lastName (contains, case-insensitive) and/or specialtyId. Use ?page=0&size=20&sort=lastName,asc.")
+    @Operation(
+            summary = "List vets (paginated)",
+            description = "Filter optional: lastName (contains, case-insensitive), specialtyId, active. " +
+                          "Use ?page=0&size=20&sort=lastName,asc."
+    )
     public Page<VetResponse> listVets(
             @RequestParam(required = false) String lastName,
             @RequestParam(required = false) Long specialtyId,
+            @RequestParam(required = false) Boolean active,
             Pageable pageable
     ) {
-        return service.findAll(lastName, specialtyId, pageable);
+        return service.findAll(lastName, specialtyId, active, pageable);
     }
 
     @GetMapping("/{id}")
@@ -53,22 +58,31 @@ public class VetController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create vet", description = "specialtyNames must match existing specialties (seeded via Liquibase).")
+    @Operation(
+            summary = "Create vet",
+            description = "email bắt buộc + unique (duplicate → 400 errorKey email-exists). " +
+                          "specialtyNames phải khớp specialty đã seed (Liquibase)."
+    )
     public VetResponse createVet(@RequestBody @Valid VetRequest request) {
         return service.create(request);
     }
 
     @PatchMapping("/{id}")
-    @Operation(summary = "Update vet — partial (null fields = không đổi)",
-            description = "specialtyNames null=giữ nguyên, []=clear all, [...]=REPLACE. " +
-                          "specialty name không tồn tại → 400 BadRequestAlertException.")
-    public VetResponse updateVet(@PathVariable Long id, @RequestBody UpdateVetRequest request) {
+    @Operation(
+            summary = "Update vet — partial (null fields = không đổi)",
+            description = "firstName/lastName/email blank → 400. " +
+                          "email duplicate → 400 (email-exists). " +
+                          "phoneNumber/resume = \"\" để clear. " +
+                          "active = false để soft-deactivate. " +
+                          "specialtyNames null=giữ nguyên, []=clear, [...]=REPLACE."
+    )
+    public VetResponse updateVet(@PathVariable Long id, @RequestBody @Valid UpdateVetRequest request) {
         return service.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete vet by id")
+    @Operation(summary = "Delete vet by id (hard delete — dùng PATCH active=false để soft-deactivate)")
     public void deleteVet(@PathVariable Long id) {
         service.deleteById(id);
     }

@@ -6,6 +6,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -86,7 +89,7 @@ func run() error {
 	subscribe("mailer.visit.scheduled", "visit.scheduled", "visit-scheduled",
 		makeVisitScheduledHandler(m, idem, cfg.AppBaseURL, log))
 	subscribe("mailer.visit.completed", "visit.completed", "visit-completed",
-		makeVisitCompletedHandler(m, idem, cfg.AppBaseURL, log))
+		makeVisitCompletedHandler(m, idem, cfg.AppBaseURL, cons, log))
 
 	// Health HTTP server — k8s/CI ping liveness/readiness.
 	srv := &http.Server{
@@ -208,7 +211,14 @@ func makeVisitScheduledHandler(m *mailer.Mailer, idem *store.Idempotency, appURL
 	}
 }
 
-func makeVisitCompletedHandler(m *mailer.Mailer, idem *store.Idempotency, appURL string, log *slog.Logger) consumer.Handler {
+// makeVisitCompletedHandler — gắn thêm saga choreography ack/failed publish.
+// Saga: visits-service publish VisitCompleted → mailer gửi mail → publish
+//   - visit.notification.ack  nếu OK   → visits-service đánh saga COMPLETED
+//   - visit.notification.failed nếu fail → visits-service trigger compensating transaction
+//
+// cons param dùng để publish back (cùng channel với consume — không cần connection riêng).
+func makeVisitCompletedHandler(m *mailer.Mailer, idem *store.Idempotency, appURL string,
+	cons *consumer.Consumer, log *slog.Logger) consumer.Handler {
 	return func(ctx context.Context, body []byte) error {
 		ev, ok, err := claim[events.VisitCompleted](ctx, body, idem, "visit.completed",
 			func(e *events.VisitCompleted) string { return e.EventID },
@@ -217,7 +227,7 @@ func makeVisitCompletedHandler(m *mailer.Mailer, idem *store.Idempotency, appURL
 		if err != nil || !ok {
 			return err
 		}
-		return m.Send(ctx, ev.CustomerEmail,
+		sendErr := m.Send(ctx, ev.CustomerEmail,
 			fmt.Sprintf("Tóm tắt buổi khám của %s — Petclinic MSS301", ev.PetName),
 			"visit-completed", map[string]any{
 				"CustomerUsername":     ev.CustomerUsername,
@@ -231,7 +241,64 @@ func makeVisitCompletedHandler(m *mailer.Mailer, idem *store.Idempotency, appURL
 				"Fee":                  ev.Fee,
 				"AppBaseURL":           appURL,
 			})
+		publishSagaAck(ctx, cons, "visit", strconv.FormatInt(ev.VisitID, 10),
+			ev.EventID, ev.CustomerEmail, sendErr, log)
+		// Trả nil dù mail fail — saga failed event đã publish, không cần requeue/DLQ
+		// (consumer outer dispatch sẽ ack message gốc visit.completed).
+		// Nếu trả sendErr → message gốc rớt DLQ + saga failed event cũng publish → double signal.
+		return nil
 	}
+}
+
+// publishSagaAck — publish ack/failed event sau khi notifier thử gửi mail xong.
+// sendErr nil → notification.ack; not nil → notification.failed với errorMessage.
+func publishSagaAck(ctx context.Context, cons *consumer.Consumer,
+	domain, entityID, originalEventID, recipient string, sendErr error, log *slog.Logger) {
+	now := time.Now().UTC()
+	if sendErr == nil {
+		ack := events.NotificationAck{
+			EventID:         newUUIDv4(),
+			EventType:       domain + ".notification.ack",
+			OccurredAt:      now,
+			Source:          "mailer-service",
+			OriginalEventID: originalEventID,
+			Domain:          domain,
+			EntityID:        entityID,
+			Recipient:       recipient,
+		}
+		if err := cons.Publish(ctx, ack.EventType, ack); err != nil {
+			log.Error("publish notification.ack failed", "err", err, "domain", domain, "entityId", entityID)
+		}
+		return
+	}
+	failed := events.NotificationFailed{
+		EventID:         newUUIDv4(),
+		EventType:       domain + ".notification.failed",
+		OccurredAt:      now,
+		Source:          "mailer-service",
+		OriginalEventID: originalEventID,
+		Domain:          domain,
+		EntityID:        entityID,
+		Recipient:       recipient,
+		ErrorMessage:    sendErr.Error(),
+	}
+	if err := cons.Publish(ctx, failed.EventType, failed); err != nil {
+		log.Error("publish notification.failed failed", "err", err, "domain", domain, "entityId", entityID)
+	}
+}
+
+// newUUIDv4 — RFC 4122 v4 UUID dùng crypto/rand. Tránh thêm dep github.com/google/uuid
+// chỉ để generate 1 UUID per publish. 16 random bytes + set version (0x40) + variant (0x80).
+func newUUIDv4() string {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		// Fallback timestamp-based — không thực sự unique nhưng đủ cho dev khi rand fail.
+		return fmt.Sprintf("00000000-0000-4000-8000-%012d", time.Now().UnixNano())
+	}
+	b[6] = (b[6] & 0x0f) | 0x40 // version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // variant RFC 4122
+	hex := hex.EncodeToString(b[:])
+	return hex[0:8] + "-" + hex[8:12] + "-" + hex[12:16] + "-" + hex[16:20] + "-" + hex[20:32]
 }
 
 func newLogger(level string) *slog.Logger {

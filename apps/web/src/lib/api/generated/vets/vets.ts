@@ -5,11 +5,7 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
-import {
-  useMutation,
-  useQuery,
-  useSuspenseQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -24,442 +20,657 @@ import type {
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
-  UseSuspenseQueryResult
+  UseSuspenseQueryResult,
 } from '@tanstack/react-query';
 
 import type {
   ListVetsParams,
   PageVetResponse,
+  UpdateVetRequest,
   VetRequest,
-  VetResponse
+  VetResponse,
 } from '.././model';
 
 import { apiMutator } from '../../mutator';
-import type { ErrorType , BodyType } from '../../mutator';
-
-
-
+import type { ErrorType, BodyType } from '../../mutator';
 
 /**
- * Filter optional by lastName. Use ?page=0&size=20&sort=lastName,asc.
+ * Filter optional: lastName (contains, case-insensitive), specialtyId, active. Use ?page=0&size=20&sort=lastName,asc.
  * @summary List vets (paginated)
  */
-export const listVets = (
-    params: ListVetsParams,
- signal?: AbortSignal
+export const listVets = (params: ListVetsParams, signal?: AbortSignal) => {
+  return apiMutator<PageVetResponse>({
+    url: `/api/v1/vets`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getListVetsQueryKey = (params?: ListVetsParams) => {
+  return [`/api/v1/vets`, ...(params ? [params] : [])] as const;
+};
+
+export const getListVetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>;
+  },
 ) => {
-      
-      
-      return apiMutator<PageVetResponse>(
-      {url: `/api/v1/vets`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getListVetsQueryKey(params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listVets>>> = ({ signal }) =>
+    listVets(params, signal);
 
-export const getListVetsQueryKey = (params?: ListVetsParams,) => {
-    return [
-    `/api/v1/vets`, ...(params ? [params]: [])
-    ] as const;
-    }
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listVets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getListVetsQueryOptions = <TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(params: ListVetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>, }
-) => {
+export type ListVetsQueryResult = NonNullable<Awaited<ReturnType<typeof listVets>>>;
+export type ListVetsQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListVetsQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVets>>> = ({ signal }) => listVets(params, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListVetsQueryResult = NonNullable<Awaited<ReturnType<typeof listVets>>>
-export type ListVetsQueryError = ErrorType<unknown>
-
-
-export function useListVets<TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(
- params: ListVetsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>> & Pick<
+export function useListVets<
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listVets>>,
           TError,
           Awaited<ReturnType<typeof listVets>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListVets<TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(
- params: ListVetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListVets<
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listVets>>,
           TError,
           Awaited<ReturnType<typeof listVets>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListVets<TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(
- params: ListVetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListVets<
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary List vets (paginated)
  */
 
-export function useListVets<TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(
- params: ListVetsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListVets<
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListVetsQueryOptions(params, options);
 
-  const queryOptions = getListVetsQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getListVetsSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(params: ListVetsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>, }
+export const getListVetsSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListVetsQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getListVetsQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listVets>>> = ({ signal }) =>
+    listVets(params, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof listVets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVets>>> = ({ signal }) => listVets(params, signal);
+export type ListVetsSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listVets>>
+>;
+export type ListVetsSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListVetsSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof listVets>>>
-export type ListVetsSuspenseQueryError = ErrorType<unknown>
-
-
-export function useListVetsSuspense<TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(
- params: ListVetsParams, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListVetsSuspense<TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(
- params: ListVetsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListVetsSuspense<TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(
- params: ListVetsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListVetsSuspense<
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListVetsSuspense<
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListVetsSuspense<
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary List vets (paginated)
  */
 
-export function useListVetsSuspense<TData = Awaited<ReturnType<typeof listVets>>, TError = ErrorType<unknown>>(
- params: ListVetsParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListVetsSuspense<
+  TData = Awaited<ReturnType<typeof listVets>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListVetsParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listVets>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListVetsSuspenseQueryOptions(params, options);
 
-  const queryOptions = getListVetsSuspenseQueryOptions(params,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
+/**
+ * email bắt buộc + unique (duplicate → 400 errorKey email-exists). specialtyNames phải khớp specialty đã seed (Liquibase).
+ * @summary Create vet
+ */
+export const createVet = (vetRequest: BodyType<VetRequest>, signal?: AbortSignal) => {
+  return apiMutator<VetResponse>({
+    url: `/api/v1/vets`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: vetRequest,
+    signal,
+  });
+};
 
+export const getCreateVetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVet>>,
+    TError,
+    { data: BodyType<VetRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createVet>>,
+  TError,
+  { data: BodyType<VetRequest> },
+  TContext
+> => {
+  const mutationKey = ['createVet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createVet>>,
+    { data: BodyType<VetRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createVet(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateVetMutationResult = NonNullable<Awaited<ReturnType<typeof createVet>>>;
+export type CreateVetMutationBody = BodyType<VetRequest>;
+export type CreateVetMutationError = ErrorType<unknown>;
 
 /**
- * specialtyNames must match existing specialties (seeded via Liquibase).
  * @summary Create vet
  */
-export const createVet = (
-    vetRequest: BodyType<VetRequest>,
- signal?: AbortSignal
-) => {
-      
-      
-      return apiMutator<VetResponse>(
-      {url: `/api/v1/vets`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: vetRequest, signal
-    },
-      );
-    }
-  
+export const useCreateVet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createVet>>,
+      TError,
+      { data: BodyType<VetRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createVet>>,
+  TError,
+  { data: BodyType<VetRequest> },
+  TContext
+> => {
+  const mutationOptions = getCreateVetMutationOptions(options);
 
-
-export const getCreateVetMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVet>>, TError,{data: BodyType<VetRequest>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createVet>>, TError,{data: BodyType<VetRequest>}, TContext> => {
-
-const mutationKey = ['createVet'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVet>>, {data: BodyType<VetRequest>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createVet(data,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateVetMutationResult = NonNullable<Awaited<ReturnType<typeof createVet>>>
-    export type CreateVetMutationBody = BodyType<VetRequest>
-    export type CreateVetMutationError = ErrorType<unknown>
-
-    /**
- * @summary Create vet
- */
-export const useCreateVet = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVet>>, TError,{data: BodyType<VetRequest>}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createVet>>,
-        TError,
-        {data: BodyType<VetRequest>},
-        TContext
-      > => {
-
-      const mutationOptions = getCreateVetMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary Get vet by id
  */
-export const getVet = (
-    id: number,
- signal?: AbortSignal
+export const getVet = (id: number, signal?: AbortSignal) => {
+  return apiMutator<VetResponse>({ url: `/api/v1/vets/${id}`, method: 'GET', signal });
+};
+
+export const getGetVetQueryKey = (id?: number) => {
+  return [`/api/v1/vets/${id}`] as const;
+};
+
+export const getGetVetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>;
+  },
 ) => {
-      
-      
-      return apiMutator<VetResponse>(
-      {url: `/api/v1/vets/${id}`, method: 'GET', signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getGetVetQueryKey(id);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVet>>> = ({ signal }) =>
+    getVet(id, signal);
 
-export const getGetVetQueryKey = (id?: number,) => {
-    return [
-    `/api/v1/vets/${id}`
-    ] as const;
-    }
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getGetVetQueryOptions = <TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>, }
-) => {
+export type GetVetQueryResult = NonNullable<Awaited<ReturnType<typeof getVet>>>;
+export type GetVetQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetVetQueryKey(id);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVet>>> = ({ signal }) => getVet(id, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetVetQueryResult = NonNullable<Awaited<ReturnType<typeof getVet>>>
-export type GetVetQueryError = ErrorType<unknown>
-
-
-export function useGetVet<TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>> & Pick<
+export function useGetVet<
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getVet>>,
           TError,
           Awaited<ReturnType<typeof getVet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetVet<TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetVet<
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>> &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getVet>>,
           TError,
           Awaited<ReturnType<typeof getVet>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetVet<TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetVet<
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary Get vet by id
  */
 
-export function useGetVet<TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetVet<
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetVetQueryOptions(id, options);
 
-  const queryOptions = getGetVetQueryOptions(id,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getGetVetSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>, }
+export const getGetVetSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetVetQueryKey(id);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetVetQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVet>>> = ({ signal }) =>
+    getVet(id, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getVet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVet>>> = ({ signal }) => getVet(id, signal);
+export type GetVetSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getVet>>>;
+export type GetVetSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetVetSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getVet>>>
-export type GetVetSuspenseQueryError = ErrorType<unknown>
-
-
-export function useGetVetSuspense<TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(
- id: number, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetVetSuspense<TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetVetSuspense<TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetVetSuspense<
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetVetSuspense<
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetVetSuspense<
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary Get vet by id
  */
 
-export function useGetVetSuspense<TData = Awaited<ReturnType<typeof getVet>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetVetSuspense<
+  TData = Awaited<ReturnType<typeof getVet>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getVet>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetVetSuspenseQueryOptions(id, options);
 
-  const queryOptions = getGetVetSuspenseQueryOptions(id,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
+/**
+ * @summary Delete vet by id (hard delete — dùng PATCH active=false để soft-deactivate)
+ */
+export const deleteVet = (id: number) => {
+  return apiMutator<void>({ url: `/api/v1/vets/${id}`, method: 'DELETE' });
+};
 
+export const getDeleteVetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteVet>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteVet>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ['deleteVet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteVet>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteVet(id);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteVetMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVet>>>;
+
+export type DeleteVetMutationError = ErrorType<unknown>;
 
 /**
- * @summary Delete vet by id
+ * @summary Delete vet by id (hard delete — dùng PATCH active=false để soft-deactivate)
  */
-export const deleteVet = (
-    id: number,
- ) => {
-      
-      
-      return apiMutator<void>(
-      {url: `/api/v1/vets/${id}`, method: 'DELETE'
-    },
-      );
-    }
-  
+export const useDeleteVet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteVet>>,
+      TError,
+      { id: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteVet>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationOptions = getDeleteVetMutationOptions(options);
 
-
-export const getDeleteVetMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVet>>, TError,{id: number}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteVet>>, TError,{id: number}, TContext> => {
-
-const mutationKey = ['deleteVet'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVet>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  deleteVet(id,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteVetMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVet>>>
-    
-    export type DeleteVetMutationError = ErrorType<unknown>
-
-    /**
- * @summary Delete vet by id
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * firstName/lastName/email blank → 400. email duplicate → 400 (email-exists). phoneNumber/resume = "" để clear. active = false để soft-deactivate. specialtyNames null=giữ nguyên, []=clear, [...]=REPLACE.
+ * @summary Update vet — partial (null fields = không đổi)
  */
-export const useDeleteVet = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVet>>, TError,{id: number}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteVet>>,
-        TError,
-        {id: number},
-        TContext
-      > => {
+export const updateVet = (id: number, updateVetRequest: BodyType<UpdateVetRequest>) => {
+  return apiMutator<VetResponse>({
+    url: `/api/v1/vets/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateVetRequest,
+  });
+};
 
-      const mutationOptions = getDeleteVetMutationOptions(options);
+export const getUpdateVetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateVet>>,
+    TError,
+    { id: number; data: BodyType<UpdateVetRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateVet>>,
+  TError,
+  { id: number; data: BodyType<UpdateVetRequest> },
+  TContext
+> => {
+  const mutationKey = ['updateVet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateVet>>,
+    { id: number; data: BodyType<UpdateVetRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateVet(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateVetMutationResult = NonNullable<Awaited<ReturnType<typeof updateVet>>>;
+export type UpdateVetMutationBody = BodyType<UpdateVetRequest>;
+export type UpdateVetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update vet — partial (null fields = không đổi)
+ */
+export const useUpdateVet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateVet>>,
+      TError,
+      { id: number; data: BodyType<UpdateVetRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateVet>>,
+  TError,
+  { id: number; data: BodyType<UpdateVetRequest> },
+  TContext
+> => {
+  const mutationOptions = getUpdateVetMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};

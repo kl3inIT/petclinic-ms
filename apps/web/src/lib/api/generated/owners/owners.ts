@@ -5,11 +5,7 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
-import {
-  useMutation,
-  useQuery,
-  useSuspenseQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -24,441 +20,1447 @@ import type {
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
-  UseSuspenseQueryResult
+  UseSuspenseQueryResult,
 } from '@tanstack/react-query';
 
 import type {
   ListOwnersParams,
   OwnerRequest,
   OwnerResponse,
-  PageOwnerResponse
+  PageOwnerResponse,
+  PetRequest,
+  UpdateOwnerRequest,
 } from '.././model';
 
 import { apiMutator } from '../../mutator';
-import type { ErrorType , BodyType } from '../../mutator';
+import type { ErrorType, BodyType } from '../../mutator';
 
+/**
+ * @summary Update pet in owner aggregate
+ */
+export const updatePet = (
+  id: number,
+  petId: number,
+  petRequest: BodyType<PetRequest>,
+) => {
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/${id}/pets/${petId}`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    data: petRequest,
+  });
+};
 
+export const getUpdatePetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePet>>,
+    TError,
+    { id: number; petId: number; data: BodyType<PetRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePet>>,
+  TError,
+  { id: number; petId: number; data: BodyType<PetRequest> },
+  TContext
+> => {
+  const mutationKey = ['updatePet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePet>>,
+    { id: number; petId: number; data: BodyType<PetRequest> }
+  > = (props) => {
+    const { id, petId, data } = props ?? {};
 
+    return updatePet(id, petId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePetMutationResult = NonNullable<Awaited<ReturnType<typeof updatePet>>>;
+export type UpdatePetMutationBody = BodyType<PetRequest>;
+export type UpdatePetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update pet in owner aggregate
+ */
+export const useUpdatePet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updatePet>>,
+      TError,
+      { id: number; petId: number; data: BodyType<PetRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updatePet>>,
+  TError,
+  { id: number; petId: number; data: BodyType<PetRequest> },
+  TContext
+> => {
+  const mutationOptions = getUpdatePetMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Remove pet from owner aggregate
+ */
+export const removePet = (id: number, petId: number) => {
+  return apiMutator<void>({
+    url: `/api/v1/owners/${id}/pets/${petId}`,
+    method: 'DELETE',
+  });
+};
+
+export const getRemovePetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removePet>>,
+    TError,
+    { id: number; petId: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removePet>>,
+  TError,
+  { id: number; petId: number },
+  TContext
+> => {
+  const mutationKey = ['removePet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removePet>>,
+    { id: number; petId: number }
+  > = (props) => {
+    const { id, petId } = props ?? {};
+
+    return removePet(id, petId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemovePetMutationResult = NonNullable<Awaited<ReturnType<typeof removePet>>>;
+
+export type RemovePetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove pet from owner aggregate
+ */
+export const useRemovePet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof removePet>>,
+      TError,
+      { id: number; petId: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof removePet>>,
+  TError,
+  { id: number; petId: number },
+  TContext
+> => {
+  const mutationOptions = getRemovePetMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Update current customer's pet
+ */
+export const updateMyPet = (petId: number, petRequest: BodyType<PetRequest>) => {
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/me/pets/${petId}`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    data: petRequest,
+  });
+};
+
+export const getUpdateMyPetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyPet>>,
+    TError,
+    { petId: number; data: BodyType<PetRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyPet>>,
+  TError,
+  { petId: number; data: BodyType<PetRequest> },
+  TContext
+> => {
+  const mutationKey = ['updateMyPet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyPet>>,
+    { petId: number; data: BodyType<PetRequest> }
+  > = (props) => {
+    const { petId, data } = props ?? {};
+
+    return updateMyPet(petId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyPetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyPet>>
+>;
+export type UpdateMyPetMutationBody = BodyType<PetRequest>;
+export type UpdateMyPetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update current customer's pet
+ */
+export const useUpdateMyPet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateMyPet>>,
+      TError,
+      { petId: number; data: BodyType<PetRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyPet>>,
+  TError,
+  { petId: number; data: BodyType<PetRequest> },
+  TContext
+> => {
+  const mutationOptions = getUpdateMyPetMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Remove current customer's pet
+ */
+export const removeMyPet = (petId: number) => {
+  return apiMutator<void>({ url: `/api/v1/owners/me/pets/${petId}`, method: 'DELETE' });
+};
+
+export const getRemoveMyPetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeMyPet>>,
+    TError,
+    { petId: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeMyPet>>,
+  TError,
+  { petId: number },
+  TContext
+> => {
+  const mutationKey = ['removeMyPet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeMyPet>>,
+    { petId: number }
+  > = (props) => {
+    const { petId } = props ?? {};
+
+    return removeMyPet(petId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveMyPetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeMyPet>>
+>;
+
+export type RemoveMyPetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove current customer's pet
+ */
+export const useRemoveMyPet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof removeMyPet>>,
+      TError,
+      { petId: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof removeMyPet>>,
+  TError,
+  { petId: number },
+  TContext
+> => {
+  const mutationOptions = getRemoveMyPetMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 /**
  * Filter optional by lastName (contains, case-insensitive). Use ?page=0&size=20&sort=lastName,asc.
  * @summary List owners (paginated)
  */
-export const listOwners = (
-    params: ListOwnersParams,
- signal?: AbortSignal
+export const listOwners = (params: ListOwnersParams, signal?: AbortSignal) => {
+  return apiMutator<PageOwnerResponse>({
+    url: `/api/v1/owners`,
+    method: 'GET',
+    params,
+    signal,
+  });
+};
+
+export const getListOwnersQueryKey = (params?: ListOwnersParams) => {
+  return [`/api/v1/owners`, ...(params ? [params] : [])] as const;
+};
+
+export const getListOwnersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    >;
+  },
 ) => {
-      
-      
-      return apiMutator<PageOwnerResponse>(
-      {url: `/api/v1/owners`, method: 'GET',
-        params, signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getListOwnersQueryKey(params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listOwners>>> = ({ signal }) =>
+    listOwners(params, signal);
 
-export const getListOwnersQueryKey = (params?: ListOwnersParams,) => {
-    return [
-    `/api/v1/owners`, ...(params ? [params]: [])
-    ] as const;
-    }
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOwners>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getListOwnersQueryOptions = <TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(params: ListOwnersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>>, }
-) => {
+export type ListOwnersQueryResult = NonNullable<Awaited<ReturnType<typeof listOwners>>>;
+export type ListOwnersQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListOwnersQueryKey(params);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOwners>>> = ({ signal }) => listOwners(params, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListOwnersQueryResult = NonNullable<Awaited<ReturnType<typeof listOwners>>>
-export type ListOwnersQueryError = ErrorType<unknown>
-
-
-export function useListOwners<TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(
- params: ListOwnersParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>> & Pick<
+export function useListOwners<
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOwners>>,
           TError,
           Awaited<ReturnType<typeof listOwners>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOwners<TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(
- params: ListOwnersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListOwners<
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOwners>>,
           TError,
           Awaited<ReturnType<typeof listOwners>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOwners<TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(
- params: ListOwnersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListOwners<
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary List owners (paginated)
  */
 
-export function useListOwners<TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(
- params: ListOwnersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListOwners<
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListOwnersQueryOptions(params, options);
 
-  const queryOptions = getListOwnersQueryOptions(params,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getListOwnersSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(params: ListOwnersParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>>, }
+export const getListOwnersSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListOwnersQueryKey(params);
 
-  const queryKey =  queryOptions?.queryKey ?? getListOwnersQueryKey(params);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listOwners>>> = ({ signal }) =>
+    listOwners(params, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof listOwners>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOwners>>> = ({ signal }) => listOwners(params, signal);
+export type ListOwnersSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOwners>>
+>;
+export type ListOwnersSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListOwnersSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof listOwners>>>
-export type ListOwnersSuspenseQueryError = ErrorType<unknown>
-
-
-export function useListOwnersSuspense<TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(
- params: ListOwnersParams, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOwnersSuspense<TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(
- params: ListOwnersParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOwnersSuspense<TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(
- params: ListOwnersParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOwnersSuspense<
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListOwnersSuspense<
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListOwnersSuspense<
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary List owners (paginated)
  */
 
-export function useListOwnersSuspense<TData = Awaited<ReturnType<typeof listOwners>>, TError = ErrorType<unknown>>(
- params: ListOwnersParams, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useListOwnersSuspense<
+  TData = Awaited<ReturnType<typeof listOwners>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListOwnersParams,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof listOwners>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getListOwnersSuspenseQueryOptions(params, options);
 
-  const queryOptions = getListOwnersSuspenseQueryOptions(params,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
-
-
-
 
 /**
  * @summary Create owner
  */
 export const createOwner = (
-    ownerRequest: BodyType<OwnerRequest>,
- signal?: AbortSignal
+  ownerRequest: BodyType<OwnerRequest>,
+  signal?: AbortSignal,
 ) => {
-      
-      
-      return apiMutator<OwnerResponse>(
-      {url: `/api/v1/owners`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: ownerRequest, signal
-    },
-      );
-    }
-  
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: ownerRequest,
+    signal,
+  });
+};
 
+export const getCreateOwnerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createOwner>>,
+    TError,
+    { data: BodyType<OwnerRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createOwner>>,
+  TError,
+  { data: BodyType<OwnerRequest> },
+  TContext
+> => {
+  const mutationKey = ['createOwner'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
-export const getCreateOwnerMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOwner>>, TError,{data: BodyType<OwnerRequest>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createOwner>>, TError,{data: BodyType<OwnerRequest>}, TContext> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createOwner>>,
+    { data: BodyType<OwnerRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
 
-const mutationKey = ['createOwner'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+    return createOwner(data);
+  };
 
-      
+  return { mutationFn, ...mutationOptions };
+};
 
+export type CreateOwnerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createOwner>>
+>;
+export type CreateOwnerMutationBody = BodyType<OwnerRequest>;
+export type CreateOwnerMutationError = ErrorType<unknown>;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOwner>>, {data: BodyType<OwnerRequest>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createOwner(data,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateOwnerMutationResult = NonNullable<Awaited<ReturnType<typeof createOwner>>>
-    export type CreateOwnerMutationBody = BodyType<OwnerRequest>
-    export type CreateOwnerMutationError = ErrorType<unknown>
-
-    /**
+/**
  * @summary Create owner
  */
-export const useCreateOwner = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOwner>>, TError,{data: BodyType<OwnerRequest>}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createOwner>>,
-        TError,
-        {data: BodyType<OwnerRequest>},
-        TContext
-      > => {
+export const useCreateOwner = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createOwner>>,
+      TError,
+      { data: BodyType<OwnerRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createOwner>>,
+  TError,
+  { data: BodyType<OwnerRequest> },
+  TContext
+> => {
+  const mutationOptions = getCreateOwnerMutationOptions(options);
 
-      const mutationOptions = getCreateOwnerMutationOptions(options);
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Add pet to owner
+ */
+export const addPet = (
+  id: number,
+  petRequest: BodyType<PetRequest>,
+  signal?: AbortSignal,
+) => {
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/${id}/pets`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: petRequest,
+    signal,
+  });
+};
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+export const getAddPetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addPet>>,
+    TError,
+    { id: number; data: BodyType<PetRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addPet>>,
+  TError,
+  { id: number; data: BodyType<PetRequest> },
+  TContext
+> => {
+  const mutationKey = ['addPet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addPet>>,
+    { id: number; data: BodyType<PetRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addPet(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddPetMutationResult = NonNullable<Awaited<ReturnType<typeof addPet>>>;
+export type AddPetMutationBody = BodyType<PetRequest>;
+export type AddPetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add pet to owner
+ */
+export const useAddPet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof addPet>>,
+      TError,
+      { id: number; data: BodyType<PetRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof addPet>>,
+  TError,
+  { id: number; data: BodyType<PetRequest> },
+  TContext
+> => {
+  const mutationOptions = getAddPetMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Add pet to current customer
+ */
+export const addMyPet = (petRequest: BodyType<PetRequest>, signal?: AbortSignal) => {
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/me/pets`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    data: petRequest,
+    signal,
+  });
+};
+
+export const getAddMyPetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addMyPet>>,
+    TError,
+    { data: BodyType<PetRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addMyPet>>,
+  TError,
+  { data: BodyType<PetRequest> },
+  TContext
+> => {
+  const mutationKey = ['addMyPet'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addMyPet>>,
+    { data: BodyType<PetRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return addMyPet(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddMyPetMutationResult = NonNullable<Awaited<ReturnType<typeof addMyPet>>>;
+export type AddMyPetMutationBody = BodyType<PetRequest>;
+export type AddMyPetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add pet to current customer
+ */
+export const useAddMyPet = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof addMyPet>>,
+      TError,
+      { data: BodyType<PetRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof addMyPet>>,
+  TError,
+  { data: BodyType<PetRequest> },
+  TContext
+> => {
+  const mutationOptions = getAddMyPetMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary Get owner by id
  */
-export const getOwner = (
-    id: number,
- signal?: AbortSignal
+export const getOwner = (id: number, signal?: AbortSignal) => {
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/${id}`,
+    method: 'GET',
+    signal,
+  });
+};
+
+export const getGetOwnerQueryKey = (id?: number) => {
+  return [`/api/v1/owners/${id}`] as const;
+};
+
+export const getGetOwnerQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>;
+  },
 ) => {
-      
-      
-      return apiMutator<OwnerResponse>(
-      {url: `/api/v1/owners/${id}`, method: 'GET', signal
-    },
-      );
-    }
-  
+  const { query: queryOptions } = options ?? {};
 
+  const queryKey = queryOptions?.queryKey ?? getGetOwnerQueryKey(id);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwner>>> = ({ signal }) =>
+    getOwner(id, signal);
 
-export const getGetOwnerQueryKey = (id?: number,) => {
-    return [
-    `/api/v1/owners/${id}`
-    ] as const;
-    }
+  return { queryKey, queryFn, enabled: !!id, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOwner>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    
-export const getGetOwnerQueryOptions = <TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>, }
-) => {
+export type GetOwnerQueryResult = NonNullable<Awaited<ReturnType<typeof getOwner>>>;
+export type GetOwnerQueryError = ErrorType<unknown>;
 
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetOwnerQueryKey(id);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwner>>> = ({ signal }) => getOwner(id, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetOwnerQueryResult = NonNullable<Awaited<ReturnType<typeof getOwner>>>
-export type GetOwnerQueryError = ErrorType<unknown>
-
-
-export function useGetOwner<TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(
- id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>> & Pick<
+export function useGetOwner<
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>> &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getOwner>>,
           TError,
           Awaited<ReturnType<typeof getOwner>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetOwner<TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>> & Pick<
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOwner<
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getOwner>>,
           TError,
           Awaited<ReturnType<typeof getOwner>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetOwner<TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOwner<
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary Get owner by id
  */
 
-export function useGetOwner<TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetOwner<
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetOwnerQueryOptions(id, options);
 
-  const queryOptions = getGetOwnerQueryOptions(id,options)
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
-
-
-
-export const getGetOwnerSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>, }
+export const getGetOwnerSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>
+    >;
+  },
 ) => {
+  const { query: queryOptions } = options ?? {};
 
-const {query: queryOptions} = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetOwnerQueryKey(id);
 
-  const queryKey =  queryOptions?.queryKey ?? getGetOwnerQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwner>>> = ({ signal }) =>
+    getOwner(id, signal);
 
-  
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getOwner>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwner>>> = ({ signal }) => getOwner(id, signal);
+export type GetOwnerSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getOwner>>
+>;
+export type GetOwnerSuspenseQueryError = ErrorType<unknown>;
 
-      
-
-      
-
-   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetOwnerSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getOwner>>>
-export type GetOwnerSuspenseQueryError = ErrorType<unknown>
-
-
-export function useGetOwnerSuspense<TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(
- id: number, options: { query:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetOwnerSuspense<TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetOwnerSuspense<TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOwnerSuspense<
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOwnerSuspense<
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOwnerSuspense<
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
  * @summary Get owner by id
  */
 
-export function useGetOwnerSuspense<TData = Awaited<ReturnType<typeof getOwner>>, TError = ErrorType<unknown>>(
- id: number, options?: { query?:Partial<UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>>, }
- , queryClient?: QueryClient 
- ):  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useGetOwnerSuspense<
+  TData = Awaited<ReturnType<typeof getOwner>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<Awaited<ReturnType<typeof getOwner>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetOwnerSuspenseQueryOptions(id, options);
 
-  const queryOptions = getGetOwnerSuspenseQueryOptions(id,options)
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
-  const query = useSuspenseQuery(queryOptions, queryClient) as  UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
+  query.queryKey = queryOptions.queryKey;
 
   return query;
 }
 
+/**
+ * @summary Delete owner by id
+ */
+export const deleteOwner = (id: number) => {
+  return apiMutator<void>({ url: `/api/v1/owners/${id}`, method: 'DELETE' });
+};
 
+export const getDeleteOwnerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteOwner>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteOwner>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ['deleteOwner'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteOwner>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteOwner(id);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteOwnerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteOwner>>
+>;
+
+export type DeleteOwnerMutationError = ErrorType<unknown>;
 
 /**
  * @summary Delete owner by id
  */
-export const deleteOwner = (
-    id: number,
- ) => {
-      
-      
-      return apiMutator<void>(
-      {url: `/api/v1/owners/${id}`, method: 'DELETE'
-    },
-      );
-    }
-  
+export const useDeleteOwner = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteOwner>>,
+      TError,
+      { id: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteOwner>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationOptions = getDeleteOwnerMutationOptions(options);
 
-
-export const getDeleteOwnerMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOwner>>, TError,{id: number}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteOwner>>, TError,{id: number}, TContext> => {
-
-const mutationKey = ['deleteOwner'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOwner>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
-
-          return  deleteOwner(id,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteOwnerMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOwner>>>
-    
-    export type DeleteOwnerMutationError = ErrorType<unknown>
-
-    /**
- * @summary Delete owner by id
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Update owner by id
  */
-export const useDeleteOwner = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOwner>>, TError,{id: number}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteOwner>>,
+export const updateOwner = (
+  id: number,
+  updateOwnerRequest: BodyType<UpdateOwnerRequest>,
+) => {
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/${id}`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateOwnerRequest,
+  });
+};
+
+export const getUpdateOwnerMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateOwner>>,
+    TError,
+    { id: number; data: BodyType<UpdateOwnerRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateOwner>>,
+  TError,
+  { id: number; data: BodyType<UpdateOwnerRequest> },
+  TContext
+> => {
+  const mutationKey = ['updateOwner'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateOwner>>,
+    { id: number; data: BodyType<UpdateOwnerRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateOwner(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateOwnerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateOwner>>
+>;
+export type UpdateOwnerMutationBody = BodyType<UpdateOwnerRequest>;
+export type UpdateOwnerMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update owner by id
+ */
+export const useUpdateOwner = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateOwner>>,
+      TError,
+      { id: number; data: BodyType<UpdateOwnerRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateOwner>>,
+  TError,
+  { id: number; data: BodyType<UpdateOwnerRequest> },
+  TContext
+> => {
+  const mutationOptions = getUpdateOwnerMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Get owner profile of current customer
+ */
+export const getMyOwnerProfile = (signal?: AbortSignal) => {
+  return apiMutator<OwnerResponse>({ url: `/api/v1/owners/me`, method: 'GET', signal });
+};
+
+export const getGetMyOwnerProfileQueryKey = () => {
+  return [`/api/v1/owners/me`] as const;
+};
+
+export const getGetMyOwnerProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getMyOwnerProfile>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyOwnerProfileQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyOwnerProfile>>> = ({
+    signal,
+  }) => getMyOwnerProfile(signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyOwnerProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetMyOwnerProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyOwnerProfile>>
+>;
+export type GetMyOwnerProfileQueryError = ErrorType<unknown>;
+
+export function useGetMyOwnerProfile<
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyOwnerProfile>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyOwnerProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getMyOwnerProfile>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyOwnerProfile<
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyOwnerProfile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyOwnerProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getMyOwnerProfile>>
+        >,
+        'initialData'
+      >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyOwnerProfile<
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyOwnerProfile>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get owner profile of current customer
+ */
+
+export function useGetMyOwnerProfile<
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getMyOwnerProfile>>, TError, TData>
+    >;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetMyOwnerProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+export const getGetMyOwnerProfileSuspenseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: Partial<
+    UseSuspenseQueryOptions<Awaited<ReturnType<typeof getMyOwnerProfile>>, TError, TData>
+  >;
+}) => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyOwnerProfileQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyOwnerProfile>>> = ({
+    signal,
+  }) => getMyOwnerProfile(signal);
+
+  return { queryKey, queryFn, ...queryOptions } as UseSuspenseQueryOptions<
+    Awaited<ReturnType<typeof getMyOwnerProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetMyOwnerProfileSuspenseQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyOwnerProfile>>
+>;
+export type GetMyOwnerProfileSuspenseQueryError = ErrorType<unknown>;
+
+export function useGetMyOwnerProfileSuspense<
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options: {
+    query: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getMyOwnerProfile>>,
         TError,
-        {id: number},
-        TContext
-      > => {
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyOwnerProfileSuspense<
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getMyOwnerProfile>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyOwnerProfileSuspense<
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getMyOwnerProfile>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get owner profile of current customer
+ */
 
-      const mutationOptions = getDeleteOwnerMutationOptions(options);
+export function useGetMyOwnerProfileSuspense<
+  TData = Awaited<ReturnType<typeof getMyOwnerProfile>>,
+  TError = ErrorType<unknown>,
+>(
+  options?: {
+    query?: Partial<
+      UseSuspenseQueryOptions<
+        Awaited<ReturnType<typeof getMyOwnerProfile>>,
+        TError,
+        TData
+      >
+    >;
+  },
+  queryClient?: QueryClient,
+): UseSuspenseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getGetMyOwnerProfileSuspenseQueryOptions(options);
 
-      return useMutation(mutationOptions, queryClient);
-    }
-    
+  const query = useSuspenseQuery(queryOptions, queryClient) as UseSuspenseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * @summary Update owner profile of current customer
+ */
+export const updateMyOwnerProfile = (
+  updateOwnerRequest: BodyType<UpdateOwnerRequest>,
+) => {
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/me`,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    data: updateOwnerRequest,
+  });
+};
+
+export const getUpdateMyOwnerProfileMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyOwnerProfile>>,
+    TError,
+    { data: BodyType<UpdateOwnerRequest> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyOwnerProfile>>,
+  TError,
+  { data: BodyType<UpdateOwnerRequest> },
+  TContext
+> => {
+  const mutationKey = ['updateMyOwnerProfile'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyOwnerProfile>>,
+    { data: BodyType<UpdateOwnerRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMyOwnerProfile(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyOwnerProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyOwnerProfile>>
+>;
+export type UpdateMyOwnerProfileMutationBody = BodyType<UpdateOwnerRequest>;
+export type UpdateMyOwnerProfileMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update owner profile of current customer
+ */
+export const useUpdateMyOwnerProfile = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateMyOwnerProfile>>,
+      TError,
+      { data: BodyType<UpdateOwnerRequest> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyOwnerProfile>>,
+  TError,
+  { data: BodyType<UpdateOwnerRequest> },
+  TContext
+> => {
+  const mutationOptions = getUpdateMyOwnerProfileMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};

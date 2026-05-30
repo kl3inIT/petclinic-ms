@@ -4,13 +4,17 @@
 plugins {
     id("petclinic.java-conventions")
     `java-library`                                        // adds `api` / `implementation` configurations
-    id("io.spring.dependency-management")                 // import Spring Boot BOM cho version resolution
 }
 
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.boot:spring-boot-dependencies:${libs.versions.springBoot.get()}")
-    }
+dependencies {
+    // Spring Boot BOM — native Gradle platform(), thay thế spring-dep-management plugin.
+    // api() exports BOM constraints to consumers; annotationProcessor khai báo riêng vì
+    // không kế thừa từ api/implementation.
+    val bootBom = platform("org.springframework.boot:spring-boot-dependencies:${libs.versions.springBoot.get()}")
+    api(bootBom)
+    "annotationProcessor"(bootBom)
+    "testImplementation"(bootBom)
+    "testAnnotationProcessor"(bootBom)
 }

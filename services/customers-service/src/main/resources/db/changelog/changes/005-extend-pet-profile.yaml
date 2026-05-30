@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-001-extend-pet-profile
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: customers
+            tableName: pets
+            columns:
+              - column:
+                  name: pet_type_id
+                  type: VARCHAR(100)
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+              - column:
+                  name: weight
+                  type: NUMERIC(8,2)
+              - column:
+                  name: photo_id
+                  type: VARCHAR(100)

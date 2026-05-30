@@ -55,13 +55,19 @@ spring:
         log-prompt: true
         log-completion: true
 
-    # MCP client — Spring AI 2.0 Streamable HTTP transport (SSE deprecated).
-    # mcp-server expose protocol STREAMABLE ở /mcp; client phải match.
-    # Property prefix verified ở McpStreamableHttpClientProperties: spring.ai.mcp.client.streamable-http
+    # MCP client — Spring AI 2.0 Streamable HTTP transport. mcp-server protocol STATELESS
+    # (cùng wire format STREAMABLE, không Mcp-Session-Id).
     mcp:
       client:
         type: SYNC
         request-timeout: 30s
+        # Lazy init — KHÔNG khởi tạo MCP client lúc boot. Lý do: mcp-server siết
+        # /mcp/** authenticated (MCP spec 2025-11-25 = OAuth 2.1 RS). Init lúc boot
+        # KHÔNG có SecurityContext của user → 401.
+        # Defer đến lần đầu user chat → McpClientAuthConfig customizer forward JWT thật.
+        initialized: false
+        toolcallback:
+          enabled: true                      # ChatClient auto-expose MCP tools làm tool callback
         streamable-http:
           connections:
             petclinic-mcp:
@@ -95,6 +101,18 @@ petclinic:
 # Trống → AesGcmEncryptor auto-generate ephemeral key (cảnh báo log) — OK cho dev local,
 # KHÔNG ok cho prod (restart sẽ làm DB row unreadable).
 petclinic.crypto.key: ${PETCLINIC_CRYPTO_KEY:}
+
+# RBAC — Least Privilege (slide MSS301 #70). Reactive variant ở
+# ReactiveEndpointSecurityCustomizer (genai-service dùng WebFlux stack).
+petclinic:
+  security:
+    endpoints:
+      # USER+ — chat endpoints (USER nói chuyện với pet care AI)
+      user:
+        - { path: /api/v1/ai/** }
+      # Admin only — LLM config (BYOK API key, model selection, validate)
+      admin:
+        - { path: /api/v1/admin/llm/** }
 
 management:
   endpoints:

@@ -14,6 +14,9 @@ export const bookVisitSchema = z.object({
     .min(1, 'Chọn thời gian')
     .refine((v) => new Date(v).getTime() > Date.now(), {
       message: 'Phải là thời gian trong tương lai',
+    })
+    .refine((v) => new Date(v).getMinutes() === 0, {
+      message: 'Chọn khung giờ bắt đầu đúng đầu giờ',
     }),
   // Empty string ở form-state; strip về undefined ở submit để không gửi key rỗng.
   reason: z.string().max(500, 'Tối đa 500 ký tự'),

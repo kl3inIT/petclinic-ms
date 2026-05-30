@@ -1,5 +1,6 @@
 package com.mss301.petclinic.customers.dto.res;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.mss301.petclinic.customers.model.Pet;
@@ -13,10 +14,15 @@ public record PetResponse(
         String name,
         LocalDate birthDate,
         String type,
+        Long petTypeId,
+        Boolean isActive,
+        BigDecimal weight,
+        String photoId,
         Long ownerId
 ) {
     public static PetResponse from(Pet pet) {
         return new PetResponse(pet.getId(), pet.getName(), pet.getBirthDate(),
-                pet.getType(), pet.getOwnerId());
+                pet.getType(), pet.getPetTypeId(), pet.getIsActive(), pet.getWeight(),
+                pet.getPhotoId(), pet.getOwnerId());
     }
 }

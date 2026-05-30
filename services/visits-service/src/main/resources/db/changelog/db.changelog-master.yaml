@@ -5,3 +5,7 @@ databaseChangeLog:
       file: db/changelog/changes/004-seed-dev-data.yaml
   - include:
       file: db/changelog/changes/005-add-process-instance-key.yaml
+  - include:
+      file: db/changelog/changes/005-notification-saga.yaml
+  - include:
+      file: db/changelog/changes/006-relax-vet-slot-unique.yaml

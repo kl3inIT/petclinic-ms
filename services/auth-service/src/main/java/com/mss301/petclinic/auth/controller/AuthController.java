@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.mss301.petclinic.auth.dto.req.ChangePasswordRequest;
 import com.mss301.petclinic.auth.dto.req.LoginRequest;
 import com.mss301.petclinic.auth.dto.req.RefreshRequest;
 import com.mss301.petclinic.auth.dto.req.RegisterRequest;
@@ -66,5 +67,16 @@ public class AuthController {
     public ResponseEntity<UserResponse> me(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(authService.getCurrentUser(userId));
+    }
+
+    @PostMapping("/me/password")
+    @Operation(summary = "Change current user's password — revoke other refresh tokens",
+            description = "Verify currentPassword, update + force re-login trên các device khác.")
+    public ResponseEntity<Void> changeMyPassword(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        authService.changePassword(userId, request.currentPassword(), request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 }

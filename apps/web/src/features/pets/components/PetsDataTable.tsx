@@ -16,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { PetResponse } from '@/lib/api/generated/model/petResponse';
+import { usePetTypes } from '@/features/pet-types/api';
 
 interface Props {
   data: PetResponse[];
@@ -29,6 +30,12 @@ function fmtDate(iso?: string): string {
 }
 
 export function PetsDataTable({ data, isLoading }: Props) {
+  const petTypesQuery = usePetTypes();
+  const petTypeLabel = useMemo(() => {
+    const byId = new Map((petTypesQuery.data ?? []).map((pt) => [pt.id, pt.name]));
+    return (id?: number | null) => (id != null ? (byId.get(id) ?? `#${id}`) : '—');
+  }, [petTypesQuery.data]);
+
   const columns = useMemo<ColumnDef<PetResponse>[]>(
     () => [
       {
@@ -47,8 +54,15 @@ export function PetsDataTable({ data, isLoading }: Props) {
       },
       {
         accessorKey: 'type',
-        header: 'Loài',
+        header: 'Loài (free-text)',
         cell: ({ row }) => <Badge variant="outline">{row.original.type ?? '—'}</Badge>,
+      },
+      {
+        accessorKey: 'petTypeId',
+        header: 'Loại (catalog)',
+        cell: ({ row }) => (
+          <Badge variant="secondary">{petTypeLabel(row.original.petTypeId)}</Badge>
+        ),
       },
       {
         accessorKey: 'birthDate',
@@ -66,7 +80,7 @@ export function PetsDataTable({ data, isLoading }: Props) {
           ),
       },
     ],
-    [],
+    [petTypeLabel],
   );
 
   const table = useReactTable({

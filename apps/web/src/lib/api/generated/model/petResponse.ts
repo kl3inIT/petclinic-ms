@@ -11,5 +11,9 @@ export interface PetResponse {
   name?: string;
   birthDate?: string;
   type?: string;
+  petTypeId?: number;
+  isActive?: boolean;
+  weight?: number;
+  photoId?: string;
   ownerId?: number;
 }

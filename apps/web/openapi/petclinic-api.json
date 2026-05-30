@@ -25,12 +25,44 @@
       "description": "Pet lookup (read-only) — write qua /owners"
     },
     {
+      "name": "PetTypes",
+      "description": "Catalog loại pet — read mọi role, write ADMIN"
+    },
+    {
       "name": "Owners",
       "description": "Owner & Pet management"
     },
     {
+      "name": "Vet Badges",
+      "description": "Achievement badges của veterinarian"
+    },
+    {
       "name": "Specialties",
       "description": "Veterinarian specialties (read-only, seeded via Liquibase)"
+    },
+    {
+      "name": "Vet Album",
+      "description": "Gallery 1-N của veterinarian (binary ở MinIO)"
+    },
+    {
+      "name": "Vet Work Schedule",
+      "description": "Weekly availability template (Workday × WorkHour)"
+    },
+    {
+      "name": "Vet Ratings",
+      "description": "Customer ratings (1-5 stars) of a veterinarian"
+    },
+    {
+      "name": "Vet Photo",
+      "description": "Avatar 1-1 của veterinarian (binary ở MinIO)"
+    },
+    {
+      "name": "Vet Me (self-service)",
+      "description": "Bác sĩ thú y tự xem/sửa data của chính mình. vetId từ JWT claim."
+    },
+    {
+      "name": "Vet Educations",
+      "description": "Education history of a veterinarian"
     },
     {
       "name": "Vets",
@@ -44,9 +76,7 @@
   "paths": {
     "/api/v1/auth/register": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Create a new user account",
         "operationId": "register",
         "requestBody": {
@@ -75,9 +105,7 @@
     },
     "/api/v1/auth/refresh": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Exchange refresh token for new access+refresh pair (rotation)",
         "operationId": "refresh",
         "requestBody": {
@@ -104,11 +132,32 @@
         }
       }
     },
+    "/api/v1/auth/me/password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Change current user's password — revoke other refresh tokens",
+        "description": "Verify currentPassword, update + force re-login trên các device khác.",
+        "operationId": "changeMyPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Revoke ALL refresh tokens for current user",
         "operationId": "logout",
         "responses": {
@@ -120,9 +169,7 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Authenticate; receive access token (15min) + refresh token (7d)",
         "operationId": "login",
         "requestBody": {
@@ -149,11 +196,91 @@
         }
       }
     },
+    "/api/v1/users/{id}/vet-link": {
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Phase K — admin link user account ↔ vet entity",
+        "description": "ADMIN only. Sau khi link, user cần logout/login để token mới carry claim vetId. vets-service /me/* dùng claim này để resolve. KHÔNG verify vetId tồn tại cross-schema — vets-service trả 404 nếu sai.",
+        "operationId": "linkVet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkVetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/customer-link": {
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Phase L — admin link user account ↔ customer (owner) entity",
+        "description": "ADMIN only. Sau khi link, user cần logout/login để token mới carry claim customerId. KHÔNG verify customerId tồn tại cross-schema — customers-service tự enforce qua event consume.",
+        "operationId": "linkCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkCustomerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users/{id}": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Look up user by id — for cross-service event enrichment",
         "operationId": "getUser",
         "parameters": [
@@ -183,9 +310,7 @@
     },
     "/api/v1/auth/me": {
       "get": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Current authenticated user from JWT sub claim",
         "operationId": "me",
         "responses": {
@@ -204,9 +329,7 @@
     },
     "/.well-known/jwks.json": {
       "get": {
-        "tags": [
-          "jwks-controller"
-        ],
+        "tags": ["jwks-controller"],
         "operationId": "jwks",
         "responses": {
           "200": {
@@ -223,11 +346,287 @@
         }
       }
     },
+    "/api/v1/pet-types/{id}": {
+      "get": {
+        "tags": ["PetTypes"],
+        "summary": "Get pet type by id",
+        "operationId": "getPetType",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetTypeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["PetTypes"],
+        "summary": "Update pet type (ADMIN only)",
+        "operationId": "updatePetType",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetTypeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetTypeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["PetTypes"],
+        "summary": "Delete pet type (ADMIN only — chặn nếu còn pet đang dùng)",
+        "operationId": "deletePetType",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/owners/{id}/pets/{petId}": {
+      "put": {
+        "tags": ["Owners"],
+        "summary": "Update pet in owner aggregate",
+        "operationId": "updatePet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Owners"],
+        "summary": "Remove pet from owner aggregate",
+        "operationId": "removePet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/owners/me/pets/{petId}": {
+      "put": {
+        "tags": ["Owners"],
+        "summary": "Update current customer's pet",
+        "operationId": "updateMyPet",
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Owners"],
+        "summary": "Remove current customer's pet",
+        "operationId": "removeMyPet",
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/pet-types": {
+      "get": {
+        "tags": ["PetTypes"],
+        "summary": "List pet types (sắp xếp theo display_order)",
+        "operationId": "listPetTypes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PetTypeResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["PetTypes"],
+        "summary": "Create pet type (ADMIN only)",
+        "operationId": "createPetType",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetTypeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetTypeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/owners": {
       "get": {
-        "tags": [
-          "Owners"
-        ],
+        "tags": ["Owners"],
         "summary": "List owners (paginated)",
         "description": "Filter optional by lastName (contains, case-insensitive). Use ?page=0&size=20&sort=lastName,asc.",
         "operationId": "listOwners",
@@ -263,9 +662,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Owners"
-        ],
+        "tags": ["Owners"],
         "summary": "Create owner",
         "operationId": "createOwner",
         "requestBody": {
@@ -292,44 +689,11 @@
         }
       }
     },
-    "/api/v1/pets": {
-      "get": {
-        "tags": [
-          "Pets"
-        ],
-        "summary": "List pets (paginated) — dùng cho FE dropdown, OpenAPI client",
-        "operationId": "listPets",
-        "parameters": [
-          {
-            "name": "pageable",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/Pageable"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PagePetResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/pets/{id}": {
-      "get": {
-        "tags": [
-          "Pets"
-        ],
-        "summary": "Get pet by id (returns ownerId for cross-service validation)",
-        "operationId": "getPet",
+    "/api/v1/owners/{id}/pets": {
+      "post": {
+        "tags": ["Owners"],
+        "summary": "Add pet to owner",
+        "operationId": "addPet",
         "parameters": [
           {
             "name": "id",
@@ -341,13 +705,52 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
-            "description": "OK",
+          "201": {
+            "description": "Created",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PetResponse"
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/owners/me/pets": {
+      "post": {
+        "tags": ["Owners"],
+        "summary": "Add pet to current customer",
+        "operationId": "addMyPet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
                 }
               }
             }
@@ -357,9 +760,7 @@
     },
     "/api/v1/owners/{id}": {
       "get": {
-        "tags": [
-          "Owners"
-        ],
+        "tags": ["Owners"],
         "summary": "Get owner by id",
         "operationId": "getOwner",
         "parameters": [
@@ -387,9 +788,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Owners"
-        ],
+        "tags": ["Owners"],
         "summary": "Delete owner by id",
         "operationId": "deleteOwner",
         "parameters": [
@@ -408,15 +807,377 @@
             "description": "No Content"
           }
         }
+      },
+      "patch": {
+        "tags": ["Owners"],
+        "summary": "Update owner by id",
+        "operationId": "updateOwner",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOwnerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/owners/me": {
+      "get": {
+        "tags": ["Owners"],
+        "summary": "Get owner profile of current customer",
+        "operationId": "getMyOwnerProfile",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Owners"],
+        "summary": "Update owner profile of current customer",
+        "operationId": "updateMyOwnerProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOwnerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pets": {
+      "get": {
+        "tags": ["Pets"],
+        "summary": "List pets (paginated, optional filters)",
+        "description": "Filter optional: ownerId, petTypeId, isActive. Pageable nhận page/size/sort theo convention orval.",
+        "operationId": "listPets",
+        "parameters": [
+          {
+            "name": "ownerId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "petTypeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagePetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pets/{id}": {
+      "get": {
+        "tags": ["Pets"],
+        "summary": "Get pet by id (returns ownerId for cross-service validation)",
+        "operationId": "getPet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/work-schedule": {
+      "get": {
+        "tags": ["Vet Work Schedule"],
+        "summary": "List work-schedule slots of a vet",
+        "description": "Trả empty list nếu vet chưa set lịch. 404 nếu vet không tồn tại. Slot sort theo (workday Mon→Sun, workHour 8h→20h).",
+        "operationId": "listVetWorkSchedule",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkScheduleSlotResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Vet Work Schedule"],
+        "summary": "Replace work-schedule of a vet (idempotent)",
+        "description": "Body: { slots: [{workday, workHour}, ...] }. Empty slots = clear all (tương đương DELETE). Duplicate slot trong request → 400 error.slot-duplicate. Invalid enum value → 400 ProblemDetail. Vet không tồn tại → 404.",
+        "operationId": "replaceVetWorkSchedule",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkScheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkScheduleSlotResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Vet Work Schedule"],
+        "summary": "Clear all work-schedule slots of a vet",
+        "operationId": "clearVetWorkSchedule",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/photo": {
+      "get": {
+        "tags": ["Vet Photo"],
+        "summary": "Get photo metadata + presigned URL",
+        "description": "Trả 404 nếu vet chưa upload photo. Presigned URL TTL config qua petclinic.storage.minio.presigned-ttl (default 1h).",
+        "operationId": "getVetPhoto",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Vet Photo"],
+        "summary": "Upload or replace vet photo (idempotent)",
+        "description": "Multipart field 'file'. Max 10MB (config). Content-type: image/jpeg|png|webp. File quá lớn → 400 error.file-too-large. Type khác → 400 error.unsupported-media. Re-upload overwrite cùng key MinIO + upsert DB row.",
+        "operationId": "uploadVetPhoto",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Vet Photo"],
+        "summary": "Delete vet photo (xoá MinIO object trước, DB row sau)",
+        "operationId": "deleteVetPhoto",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
       }
     },
     "/api/v1/vets": {
       "get": {
-        "tags": [
-          "Vets"
-        ],
+        "tags": ["Vets"],
         "summary": "List vets (paginated)",
-        "description": "Filter optional by lastName. Use ?page=0&size=20&sort=lastName,asc.",
+        "description": "Filter optional: lastName (contains, case-insensitive), specialtyId, active. Use ?page=0&size=20&sort=lastName,asc.",
         "operationId": "listVets",
         "parameters": [
           {
@@ -425,6 +1186,23 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "specialtyId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -450,11 +1228,9 @@
         }
       },
       "post": {
-        "tags": [
-          "Vets"
-        ],
+        "tags": ["Vets"],
         "summary": "Create vet",
-        "description": "specialtyNames must match existing specialties (seeded via Liquibase).",
+        "description": "email bắt buộc + unique (duplicate → 400 errorKey email-exists). specialtyNames phải khớp specialty đã seed (Liquibase).",
         "operationId": "createVet",
         "requestBody": {
           "content": {
@@ -480,11 +1256,453 @@
         }
       }
     },
+    "/api/v1/vets/{vetId}/ratings": {
+      "get": {
+        "tags": ["Vet Ratings"],
+        "summary": "List ratings of a vet (paginated)",
+        "description": "Vet không tồn tại → 404. Use ?page=0&size=20&sort=rateDate,desc.",
+        "operationId": "listVetRatings",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageRatingResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Vet Ratings"],
+        "summary": "Add or update rating of a vet (UPSERT)",
+        "description": "score 1-5 (out of range → 400 ProblemDetail). customerName lấy từ JWT claim 'username' (auth-service ký vào access token) — client không thể giả mạo identity. Vet không tồn tại → 404. JWT thiếu claim 'username' → 400 (token version cũ → cần login lại). POST lần thứ 2 của cùng customer trên cùng vet → UPSERT (update rating cũ + đổi rateDate). Unique (vet_id, customer_name) ở DB layer. Body field customerName (nếu có) bị Jackson silently ignore.",
+        "operationId": "addVetRating",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/educations": {
+      "get": {
+        "tags": ["Vet Educations"],
+        "summary": "List educations of a vet (paginated)",
+        "description": "Vet không tồn tại → 404. Use ?page=0&size=20&sort=startDate,desc.",
+        "operationId": "listVetEducations",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageEducationResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Vet Educations"],
+        "summary": "Add education to a vet",
+        "description": "Vet không tồn tại → 404. endDate < startDate → 400 error.date-invalid. endDate null = đang học.",
+        "operationId": "addVetEducation",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EducationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EducationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/badges": {
+      "get": {
+        "tags": ["Vet Badges"],
+        "summary": "List badges of a vet (paginated)",
+        "description": "Vet không tồn tại → 404. Use ?page=0&size=20&sort=awardedDate,desc.",
+        "operationId": "listVetBadges",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageBadgeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Vet Badges"],
+        "summary": "Add badge to a vet",
+        "description": "title từ enum BadgeTitle (ROOKIE/EXPERIENCED/MASTER/SURGERY_EXPERT/RESEARCH_AWARD/TOP_RATED). awardedDate không được trong tương lai → 400 error.date-future. 1 vet có thể nhận cùng badge nhiều lần (vd kỷ niệm năm). Vet không tồn tại → 404.",
+        "operationId": "addVetBadge",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BadgeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadgeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/album": {
+      "get": {
+        "tags": ["Vet Album"],
+        "summary": "List album photos (paginated, kèm presigned URL từng item)",
+        "description": "Vet không tồn tại → 404. Use ?page=0&size=20&sort=uploadedAt,desc.",
+        "operationId": "listVetAlbumPhotos",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageVetAlbumPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Vet Album"],
+        "summary": "Upload photo to album",
+        "description": "Multipart 'file' (required) + 'caption' (optional). Validation giống photo. 201 + Location header. Vet không tồn tại → 404.",
+        "operationId": "uploadVetAlbumPhoto",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "caption",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetAlbumPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/educations/{educationId}": {
+      "get": {
+        "tags": ["Vet Educations"],
+        "summary": "Get one education of a vet",
+        "description": "Trả 404 nếu vet không tồn tại, hoặc education không tồn tại, hoặc education tồn tại nhưng thuộc vet khác (không leak existence).",
+        "operationId": "getVetEducation",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "educationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EducationResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Vet Educations"],
+        "summary": "Delete education",
+        "operationId": "deleteVetEducation",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "educationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Vet Educations"],
+        "summary": "Update education — partial (null fields = không đổi)",
+        "description": "schoolName/degree blank → 400. fieldOfStudy = \"\" để clear. Date sau khi merge: endDate < startDate → 400 error.date-invalid. Để clear endDate hiện không support qua PATCH — dùng DELETE.",
+        "operationId": "updateVetEducation",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "educationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEducationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EducationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/vets/{id}": {
       "get": {
-        "tags": [
-          "Vets"
-        ],
+        "tags": ["Vets"],
         "summary": "Get vet by id",
         "operationId": "getVet",
         "parameters": [
@@ -512,10 +1730,8 @@
         }
       },
       "delete": {
-        "tags": [
-          "Vets"
-        ],
-        "summary": "Delete vet by id",
+        "tags": ["Vets"],
+        "summary": "Delete vet by id (hard delete — dùng PATCH active=false để soft-deactivate)",
         "operationId": "deleteVet",
         "parameters": [
           {
@@ -533,13 +1749,331 @@
             "description": "No Content"
           }
         }
+      },
+      "patch": {
+        "tags": ["Vets"],
+        "summary": "Update vet — partial (null fields = không đổi)",
+        "description": "firstName/lastName/email blank → 400. email duplicate → 400 (email-exists). phoneNumber/resume = \"\" để clear. active = false để soft-deactivate. specialtyNames null=giữ nguyên, []=clear, [...]=REPLACE.",
+        "operationId": "updateVet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me": {
+      "get": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Profile của vet đang login",
+        "operationId": "getMyVetProfile",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Sửa profile của vet đang login (PATCH partial)",
+        "operationId": "updateMyVetProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/work-schedule/check": {
+      "get": {
+        "tags": ["Vet Work Schedule"],
+        "summary": "Check vet availability at (workday, workHour)",
+        "description": "Phase H — visits-service gọi trước khi bookVisit để chống double-booking. Trả {available: true|false}. Invalid enum value → 400 ProblemDetail. Vet không tồn tại → 404.",
+        "operationId": "checkVetAvailability",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "workday",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MONDAY",
+                "TUESDAY",
+                "WEDNESDAY",
+                "THURSDAY",
+                "FRIDAY",
+                "SATURDAY",
+                "SUNDAY"
+              ]
+            }
+          },
+          {
+            "name": "workHour",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "HOUR_8_9",
+                "HOUR_9_10",
+                "HOUR_10_11",
+                "HOUR_11_12",
+                "HOUR_12_13",
+                "HOUR_13_14",
+                "HOUR_14_15",
+                "HOUR_15_16",
+                "HOUR_16_17",
+                "HOUR_17_18",
+                "HOUR_18_19",
+                "HOUR_19_20"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetAvailabilityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/ratings/summary": {
+      "get": {
+        "tags": ["Vet Ratings"],
+        "summary": "Get rating summary of a vet",
+        "description": "Trả {count, average (null nếu count=0), distribution Map<1..5, count>}. Distribution luôn có đủ 5 key, value=0 nếu không có rating ở score đó.",
+        "operationId": "getVetRatingsSummary",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/top-rated": {
+      "get": {
+        "tags": ["Vet Ratings"],
+        "summary": "Top-N vets theo average rating",
+        "description": "Chỉ active=true vet, có ít nhất 1 rating. Sort: AVG(score) DESC, tiebreak COUNT(ratings) DESC. limit 1-50 (default 3). Out of range → 400 error.limit-invalid. Empty list nếu chưa có rating nào.",
+        "operationId": "listTopRatedVets",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 3
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TopRatedVetResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/work-schedule": {
+      "get": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Lịch trực của vet đang login",
+        "operationId": "listMyWorkSchedule",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkScheduleSlotResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/ratings": {
+      "get": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Ratings customer chấm cho vet đang login (paginated)",
+        "operationId": "listMyRatings",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageRatingResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/ratings/summary": {
+      "get": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Summary ratings của vet đang login (count, average, distribution)",
+        "operationId": "getMyRatingsSummary",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/badges": {
+      "get": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Badges của vet đang login (paginated)",
+        "operationId": "listMyBadges",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageBadgeResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/specialties": {
       "get": {
-        "tags": [
-          "Specialties"
-        ],
+        "tags": ["Specialties"],
         "summary": "List all specialties",
         "operationId": "listSpecialties",
         "responses": {
@@ -559,11 +2093,105 @@
         }
       }
     },
+    "/api/v1/vets/{vetId}/ratings/{ratingId}": {
+      "delete": {
+        "tags": ["Vet Ratings"],
+        "summary": "Delete rating (rating tồn tại nhưng thuộc vet khác → 404, không leak)",
+        "operationId": "deleteVetRating",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "ratingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/badges/{badgeId}": {
+      "delete": {
+        "tags": ["Vet Badges"],
+        "summary": "Delete badge (path-tamper qua vet khác → 404, không leak)",
+        "operationId": "deleteVetBadge",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "badgeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/vets/{vetId}/album/{photoId}": {
+      "delete": {
+        "tags": ["Vet Album"],
+        "summary": "Delete album photo (path-tamper qua vet khác → 404)",
+        "operationId": "deleteVetAlbumPhoto",
+        "parameters": [
+          {
+            "name": "vetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "photoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/visits": {
       "get": {
-        "tags": [
-          "Visits"
-        ],
+        "tags": ["Visits"],
         "summary": "List visits — USER thấy của mình, STAFF/ADMIN/VET thấy theo filter",
         "operationId": "searchVisits",
         "parameters": [
@@ -591,12 +2219,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "SCHEDULED",
-                "IN_PROGRESS",
-                "COMPLETED",
-                "CANCELLED"
-              ]
+              "enum": ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]
             }
           },
           {
@@ -640,9 +2263,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Visits"
-        ],
+        "tags": ["Visits"],
         "summary": "Đặt visit cho pet với vet vào giờ xác định",
         "operationId": "bookVisit",
         "requestBody": {
@@ -671,9 +2292,7 @@
     },
     "/api/v1/visits/{id}/start": {
       "patch": {
-        "tags": [
-          "Visits"
-        ],
+        "tags": ["Visits"],
         "summary": "Mark visit IN_PROGRESS (vet/staff)",
         "operationId": "startVisit",
         "parameters": [
@@ -703,9 +2322,7 @@
     },
     "/api/v1/visits/{id}/complete": {
       "patch": {
-        "tags": [
-          "Visits"
-        ],
+        "tags": ["Visits"],
         "summary": "Vet đóng visit + ghi diagnosis/treatment/fee",
         "operationId": "completeVisit",
         "parameters": [
@@ -745,10 +2362,8 @@
     },
     "/api/v1/visits/{id}/cancel": {
       "patch": {
-        "tags": [
-          "Visits"
-        ],
-        "summary": "Cancel visit — USER chỉ hủy của mình; STAFF/ADMIN hủy được hết",
+        "tags": ["Visits"],
+        "summary": "Cancel visit — owner hoặc STAFF/ADMIN/VET",
         "operationId": "cancelVisit",
         "parameters": [
           {
@@ -777,10 +2392,8 @@
     },
     "/api/v1/visits/{id}": {
       "get": {
-        "tags": [
-          "Visits"
-        ],
-        "summary": "Get visit detail",
+        "tags": ["Visits"],
+        "summary": "Get visit detail — owner hoặc STAFF/ADMIN/VET",
         "operationId": "getVisit",
         "parameters": [
           {
@@ -830,11 +2443,7 @@
             "minLength": 8
           }
         },
-        "required": [
-          "email",
-          "password",
-          "username"
-        ]
+        "required": ["email", "password", "username"]
       },
       "UserResponse": {
         "type": "object",
@@ -858,6 +2467,14 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "customerId": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -869,9 +2486,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "refreshToken"
-        ]
+        "required": ["refreshToken"]
       },
       "AuthResponse": {
         "type": "object",
@@ -909,6 +2524,21 @@
           }
         }
       },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "maxLength": 72,
+            "minLength": 8
+          }
+        },
+        "required": ["currentPassword", "newPassword"]
+      },
       "LoginRequest": {
         "type": "object",
         "properties": {
@@ -921,36 +2551,100 @@
             "minLength": 1
           }
         },
-        "required": [
-          "password",
-          "username"
-        ]
+        "required": ["password", "username"]
       },
-      "OwnerRequest": {
+      "LinkVetRequest": {
         "type": "object",
         "properties": {
-          "firstName": {
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": ["vetId"]
+      },
+      "LinkCustomerRequest": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": ["customerId"]
+      },
+      "PetTypeRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 0,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "displayOrder": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        },
+        "required": ["code", "name"]
+      },
+      "PetTypeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PetRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
             "type": "string",
             "minLength": 1
           },
-          "lastName": {
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "type": {
             "type": "string",
             "minLength": 1
           },
-          "address": {
-            "type": "string"
+          "petTypeId": {
+            "type": "integer",
+            "format": "int64"
           },
-          "city": {
-            "type": "string"
+          "isActive": {
+            "type": "boolean"
           },
-          "telephone": {
+          "weight": {
+            "type": "number",
+            "minimum": 0
+          },
+          "photoId": {
             "type": "string"
           }
         },
-        "required": [
-          "firstName",
-          "lastName"
-        ]
+        "required": ["name", "type"]
       },
       "OwnerResponse": {
         "type": "object",
@@ -998,6 +2692,62 @@
           },
           "type": {
             "type": "string"
+          },
+          "petTypeId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "photoId": {
+            "type": "string"
+          }
+        }
+      },
+      "OwnerRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "telephone": {
+            "type": "string"
+          }
+        },
+        "required": ["firstName", "lastName"]
+      },
+      "UpdateOwnerRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "telephone": {
+            "type": "string"
           }
         }
       },
@@ -1033,19 +2783,11 @@
             "type": "integer",
             "format": "int32"
           },
-          "size": {
-            "type": "integer",
-            "format": "int32"
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
-          "content": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PetResponse"
-            }
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "first": {
             "type": "boolean"
@@ -1057,11 +2799,19 @@
             "type": "integer",
             "format": "int32"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
+          "number": {
+            "type": "integer",
+            "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PetResponse"
+            }
           },
           "empty": {
             "type": "boolean"
@@ -1071,26 +2821,26 @@
       "PageableObject": {
         "type": "object",
         "properties": {
-          "offset": {
-            "type": "integer",
-            "format": "int64"
+          "unpaged": {
+            "type": "boolean"
           },
           "paged": {
             "type": "boolean"
           },
-          "pageSize": {
+          "pageNumber": {
             "type": "integer",
             "format": "int32"
           },
-          "pageNumber": {
+          "pageSize": {
             "type": "integer",
             "format": "int32"
           },
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
-          "unpaged": {
-            "type": "boolean"
+          "offset": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -1111,6 +2861,19 @@
           "type": {
             "type": "string"
           },
+          "petTypeId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "photoId": {
+            "type": "string"
+          },
           "ownerId": {
             "type": "integer",
             "format": "int64"
@@ -1120,13 +2883,13 @@
       "SortObject": {
         "type": "object",
         "properties": {
-          "empty": {
+          "unsorted": {
             "type": "boolean"
           },
           "sorted": {
             "type": "boolean"
           },
-          "unsorted": {
+          "empty": {
             "type": "boolean"
           }
         }
@@ -1142,19 +2905,11 @@
             "type": "integer",
             "format": "int32"
           },
-          "size": {
-            "type": "integer",
-            "format": "int32"
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
-          "content": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OwnerResponse"
-            }
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "first": {
             "type": "boolean"
@@ -1166,14 +2921,93 @@
             "type": "integer",
             "format": "int32"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
+          "number": {
+            "type": "integer",
+            "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerResponse"
+            }
           },
           "empty": {
             "type": "boolean"
+          }
+        }
+      },
+      "WorkScheduleRequest": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkScheduleSlotResponse"
+            }
+          }
+        },
+        "required": ["slots"]
+      },
+      "WorkScheduleSlotResponse": {
+        "type": "object",
+        "properties": {
+          "workday": {
+            "type": "string",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ]
+          },
+          "workHour": {
+            "type": "string",
+            "enum": [
+              "HOUR_8_9",
+              "HOUR_9_10",
+              "HOUR_10_11",
+              "HOUR_11_12",
+              "HOUR_12_13",
+              "HOUR_13_14",
+              "HOUR_14_15",
+              "HOUR_15_16",
+              "HOUR_16_17",
+              "HOUR_17_18",
+              "HOUR_18_19",
+              "HOUR_19_20"
+            ]
+          }
+        },
+        "required": ["workHour", "workday"]
+      },
+      "VetPhotoResponse": {
+        "type": "object",
+        "properties": {
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "presignedUrl": {
+            "type": "string",
+            "format": "url"
           }
         }
       },
@@ -1188,6 +3022,20 @@
             "type": "string",
             "minLength": 1
           },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "phoneNumber": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 0
+          },
+          "resume": {
+            "type": "string"
+          },
           "specialtyNames": {
             "type": "array",
             "items": {
@@ -1196,10 +3044,7 @@
             "uniqueItems": true
           }
         },
-        "required": [
-          "firstName",
-          "lastName"
-        ]
+        "required": ["email", "firstName", "lastName"]
       },
       "SpecialtyResponse": {
         "type": "object",
@@ -1226,22 +3071,304 @@
           "lastName": {
             "type": "string"
           },
+          "email": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "resume": {
+            "type": "string"
+          },
           "specialties": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SpecialtyResponse"
             }
+          },
+          "photoUrl": {
+            "type": "string"
+          },
+          "averageRating": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "RatingRequest": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
+          }
+        },
+        "required": ["score"]
+      },
+      "RatingResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "rateDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EducationRequest": {
+        "type": "object",
+        "properties": {
+          "schoolName": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "degree": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "fieldOfStudy": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 0
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": ["degree", "schoolName", "startDate"]
+      },
+      "EducationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "schoolName": {
+            "type": "string"
+          },
+          "degree": {
+            "type": "string"
+          },
+          "fieldOfStudy": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "BadgeRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "enum": [
+              "ROOKIE",
+              "EXPERIENCED",
+              "MASTER",
+              "SURGERY_EXPERT",
+              "RESEARCH_AWARD",
+              "TOP_RATED"
+            ]
+          },
+          "awardedDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
+          }
+        },
+        "required": ["awardedDate", "title"]
+      },
+      "BadgeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string",
+            "enum": [
+              "ROOKIE",
+              "EXPERIENCED",
+              "MASTER",
+              "SURGERY_EXPERT",
+              "RESEARCH_AWARD",
+              "TOP_RATED"
+            ]
+          },
+          "awardedDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "VetAlbumPhotoResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "presignedUrl": {
+            "type": "string",
+            "format": "url"
+          }
+        }
+      },
+      "UpdateEducationRequest": {
+        "type": "object",
+        "properties": {
+          "schoolName": {
+            "type": "string"
+          },
+          "degree": {
+            "type": "string"
+          },
+          "fieldOfStudy": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "UpdateVetRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "resume": {
+            "type": "string"
+          },
+          "specialtyNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
           }
         }
       },
       "PageVetResponse": {
         "type": "object",
         "properties": {
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
           "totalElements": {
             "type": "integer",
             "format": "int64"
           },
-          "totalPages": {
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "number": {
             "type": "integer",
             "format": "int32"
           },
@@ -1255,9 +3382,35 @@
               "$ref": "#/components/schemas/VetResponse"
             }
           },
-          "number": {
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VetAvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PageRatingResponse": {
+        "type": "object",
+        "properties": {
+          "totalPages": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "first": {
             "type": "boolean"
@@ -1269,14 +3422,203 @@
             "type": "integer",
             "format": "int32"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RatingResponse"
+            }
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RatingSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "average": {
+            "type": "number",
+            "format": "double"
+          },
+          "distribution": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        }
+      },
+      "PageEducationResponse": {
+        "type": "object",
+        "properties": {
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
           },
           "pageable": {
             "$ref": "#/components/schemas/PageableObject"
           },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EducationResponse"
+            }
+          },
           "empty": {
             "type": "boolean"
+          }
+        }
+      },
+      "PageBadgeResponse": {
+        "type": "object",
+        "properties": {
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BadgeResponse"
+            }
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PageVetAlbumPhotoResponse": {
+        "type": "object",
+        "properties": {
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VetAlbumPhotoResponse"
+            }
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TopRatedVetResponse": {
+        "type": "object",
+        "properties": {
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "ratingCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "averageScore": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -1301,11 +3643,7 @@
             "minLength": 0
           }
         },
-        "required": [
-          "petId",
-          "scheduledAt",
-          "vetId"
-        ]
+        "required": ["petId", "scheduledAt", "vetId"]
       },
       "VisitResponse": {
         "type": "object",
@@ -1332,12 +3670,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "SCHEDULED",
-              "IN_PROGRESS",
-              "COMPLETED",
-              "CANCELLED"
-            ]
+            "enum": ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]
           },
           "reason": {
             "type": "string"
@@ -1371,20 +3704,38 @@
             "minimum": 0
           }
         },
-        "required": [
-          "diagnosis"
-        ]
+        "required": ["diagnosis"]
       },
       "PageVisitResponse": {
         "type": "object",
         "properties": {
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
           "totalPages": {
             "type": "integer",
             "format": "int32"
           },
-          "totalElements": {
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "numberOfElements": {
             "type": "integer",
-            "format": "int64"
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
           },
           "size": {
             "type": "integer",
@@ -1395,26 +3746,6 @@
             "items": {
               "$ref": "#/components/schemas/VisitResponse"
             }
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
           },
           "empty": {
             "type": "boolean"

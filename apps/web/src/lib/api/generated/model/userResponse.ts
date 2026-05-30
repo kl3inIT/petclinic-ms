@@ -12,4 +12,6 @@ export interface UserResponse {
   email?: string;
   roles?: string[];
   enabled?: boolean;
+  vetId?: number;
+  customerId?: number;
 }

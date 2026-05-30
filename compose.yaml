@@ -139,7 +139,7 @@ services:
   # Metrics scrape backend — Prometheus pull /actuator/prometheus mỗi 15s.
   # UI: http://localhost:9090  | Targets: /targets  | Graph: /graph
   prometheus:
-    image: prom/prometheus:v2.55.1
+    image: prom/prometheus:v3.11.3
     container_name: petclinic-prometheus
     profiles: ["obs", "all"]
     ports:
@@ -163,7 +163,7 @@ services:
   # Metrics visualization. Provision datasource Prometheus + 1 default dashboard tự load.
   # UI: http://localhost:3000  (admin/admin — đổi pwd lần đầu trừ khi env override)
   grafana:
-    image: grafana/grafana:11.3.0
+    image: grafana/grafana:13.0.1
     container_name: petclinic-grafana
     profiles: ["obs", "all"]
     depends_on:
@@ -412,6 +412,8 @@ services:
       - "9182:9182"
     depends_on:
       postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      minio: { condition: service_healthy }
       config-server: { condition: service_healthy }
       discovery-server: { condition: service_healthy }
     environment:
@@ -420,6 +422,8 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
+      MINIO_ENDPOINT: http://minio:9000
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
@@ -541,6 +545,40 @@ services:
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9187/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  reviews-service:
+    build: { context: ., dockerfile: services/reviews-service/Dockerfile }
+    image: petclinic-ms/reviews-service:latest
+    container_name: petclinic-reviews-service
+    profiles: ["apps"]
+    ports:
+      - "8189:8189"
+      - "9189:9189"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+      # Eligibility check VET/VISIT cần visits-service. Khi nó chưa healthy,
+      # POST /reviews sẽ 503 (circuit breaker fallback) — depends_on tránh ngay
+      # cả tình huống boot-up bị spam fail.
+      visits-service: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9189/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15

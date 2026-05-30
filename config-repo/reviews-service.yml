@@ -1,0 +1,45 @@
+# Reviews — env-agnostic config.
+# Datasource creds + URL khác env → reviews-service-<profile>.yml.
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate                  # Liquibase quản lý schema
+    properties:
+      hibernate:
+        default_schema: reviews
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+# Resilience4j cho VisitsClient eligibility check trong ReviewServiceImpl.create().
+# Instance name `visits-service` = `@CircuitBreaker(name="visits-service")` trên RemoteClientsFacade (W4).
+#
+# 4xx (NotFound 404 = visit không tồn tại, BadRequest = invalid id) — service HEALTHY,
+# data missing → ignore, không count failure. 5xx, IOException, timeout → count.
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException$NotFound
+          - org.springframework.web.client.HttpClientErrorException$BadRequest
+          - org.springframework.web.client.HttpClientErrorException$Unauthorized
+          - org.springframework.web.client.HttpClientErrorException$Forbidden
+          - com.mss301.petclinic.common.web.exception.BadRequestAlertException
+    instances:
+      visits-service:
+        base-config: default
+
+  timelimiter:
+    instances:
+      visits-service:
+        timeout-duration: 3s

@@ -38,12 +38,15 @@ interface OpenApiSpec {
   [k: string]: unknown;
 }
 
-async function fetchSpec(service: string): Promise<OpenApiSpec> {
+async function fetchSpec(service: string): Promise<OpenApiSpec | null> {
   const url = `${GATEWAY}/v3/api-docs/${service}`;
   console.log(`  Fetching ${service} from ${url}`);
   const res = await fetch(url);
   if (!res.ok) {
-    throw new Error(`Failed to fetch ${service}: HTTP ${res.status} ${res.statusText}`);
+    // Một service có thể require auth ở /v3/api-docs (vd genai) hoặc tạm down.
+    // Log warning + skip thay vì crash toàn bộ — service khác vẫn regen được.
+    console.warn(`  ! Skipped ${service}: HTTP ${res.status} ${res.statusText}`);
+    return null;
   }
   return res.json() as Promise<OpenApiSpec>;
 }
@@ -107,9 +110,21 @@ function merge(specs: ReadonlyArray<readonly [string, OpenApiSpec]>): OpenApiSpe
 async function main() {
   console.log(`Fetching ${SERVICES.length} service specs via ${GATEWAY}`);
 
-  const specs = await Promise.all(
-    SERVICES.map(async (s) => [s, await fetchSpec(s)] as const),
+  const fetched = await Promise.all(
+    SERVICES.map(
+      async (s): Promise<readonly [string, OpenApiSpec | null]> => [
+        s,
+        await fetchSpec(s),
+      ],
+    ),
   );
+  const specs = fetched.filter(
+    (entry): entry is readonly [string, OpenApiSpec] => entry[1] !== null,
+  );
+
+  if (specs.length === 0) {
+    throw new Error('No OpenAPI specs fetched — is the gateway up at ' + GATEWAY + '?');
+  }
 
   const merged = merge(specs);
   await mkdir(dirname(OUTPUT), { recursive: true });

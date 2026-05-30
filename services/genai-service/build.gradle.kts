@@ -2,13 +2,6 @@ plugins {
     id("petclinic.spring-boot-service")
 }
 
-// Spring AI BOM — scoped tới genai-service (như mcp-server). KHÔNG kéo lên convention plugin.
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.ai:spring-ai-bom:${libs.versions.springAi.get()}")
-    }
-}
-
 // WebFlux stack — exclude Tomcat transitive (kéo từ spring-cloud-config/eureka client etc.)
 // để khỏi conflict với Netty (Tomcat & Netty cùng có ReactiveManagementContextAutoConfiguration,
 // Spring Boot 4 không cho cả 2 đồng thời).
@@ -18,6 +11,9 @@ configurations.all {
 }
 
 dependencies {
+    // Spring AI BOM — native Gradle platform(). Scope: chỉ genai-service + mcp-server.
+    implementation(platform(libs.spring.ai.bom))
+
     implementation(project(":shared:common-web"))
     implementation(project(":shared:common-jpa"))
     implementation(project(":shared:common-security"))      // JWT bearer auth — chat endpoint cần ROLE_USER

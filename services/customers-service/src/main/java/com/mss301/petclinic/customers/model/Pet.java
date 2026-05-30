@@ -1,5 +1,6 @@
 package com.mss301.petclinic.customers.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import jakarta.persistence.Column;
@@ -8,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
@@ -19,9 +21,19 @@ public class Pet extends AbstractAuditingEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     private String name;
     private LocalDate birthDate;
     private String type;
+
+    @Column(name = "pet_type_id")
+    private Long petTypeId;
+
+    private Boolean isActive = true;
+    private BigDecimal weight;
+    private String photoId;
 
     /**
      * Read-only mirror cho FK <code>owner_id</code> được Hibernate ghi qua
@@ -36,18 +48,36 @@ public class Pet extends AbstractAuditingEntity {
     }
 
     public Pet(String name, LocalDate birthDate, String type) {
+        this(name, birthDate, type, null, true, null, null);
+    }
+
+    public Pet(String name, LocalDate birthDate, String type, Long petTypeId,
+               Boolean isActive, BigDecimal weight, String photoId) {
         this.name = name;
         this.birthDate = birthDate;
         this.type = type;
+        this.petTypeId = petTypeId;
+        this.isActive = isActive == null ? true : isActive;
+        this.weight = weight;
+        this.photoId = photoId;
     }
 
     public Long getId() { return id; }
+    public Long getVersion() { return version; }
     public String getName() { return name; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getType() { return type; }
+    public Long getPetTypeId() { return petTypeId; }
+    public Boolean getIsActive() { return isActive; }
+    public BigDecimal getWeight() { return weight; }
+    public String getPhotoId() { return photoId; }
     public Long getOwnerId() { return ownerId; }
 
     public void setName(String name) { this.name = name; }
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
     public void setType(String type) { this.type = type; }
+    public void setPetTypeId(Long petTypeId) { this.petTypeId = petTypeId; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    public void setWeight(BigDecimal weight) { this.weight = weight; }
+    public void setPhotoId(String photoId) { this.photoId = photoId; }
 }

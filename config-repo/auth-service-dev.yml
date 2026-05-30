@@ -14,6 +14,12 @@ spring:
       profiles:
         active: ["db", "mq"]
 
+  # Context "dev" kích hoạt seed users (changeset 006-seed-dev-users). Test
+  # profile + prod KHÔNG set context này → seed skip. Changeset KHÔNG khai
+  # báo context vẫn run mọi profile (Liquibase rule: no-context = always-run).
+  liquibase:
+    contexts: dev
+
 # JWT secret moved to config-repo/application-dev.yml (Iter 2 — shared by mọi service).
 # Auth-service ttl + algorithm-specific config có thể ở đây nếu cần.
 

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>petclinic-ms — RBAC Matrix (Least Privilege)</title>
+<style>
+  :root {
+    --bg: #0f172a; --bg-card: #1e293b; --bg-code: #0b1220;
+    --fg: #e2e8f0; --fg-dim: #94a3b8;
+    --accent: #38bdf8; --accent-2: #a78bfa; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+    --border: #334155;
+    --role-public: #6b7280;
+    --role-user: #1e40af;
+    --role-staff: #166534;
+    --role-vet: #7e22ce;
+    --role-admin: #b91c1c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; line-height: 1.6; }
+  body { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 2.4em; margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  h2 { color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 48px; }
+  h3 { color: var(--accent-2); margin-top: 28px; }
+  h4 { color: var(--fg-dim); margin-top: 20px; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85em; }
+  .lede { color: var(--fg-dim); font-size: 1.1em; margin: 0 0 32px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 16px 0; }
+  .card.ok { border-left: 4px solid var(--ok); }
+  .card.warn { border-left: 4px solid var(--warn); }
+  .card.accent { border-left: 4px solid var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { background: var(--bg-code); color: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-size: 0.88em; }
+  pre { background: var(--bg-code); padding: 16px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); font-size: 0.85em; line-height: 1.5; }
+  pre code { background: transparent; padding: 0; color: #e2e8f0; }
+  .file-label { display: inline-block; background: var(--accent); color: var(--bg); padding: 2px 10px; border-radius: 4px 4px 0 0; font-size: 0.75em; font-weight: 700; font-family: ui-monospace, monospace; margin-bottom: -1px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.92em; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--accent); font-weight: 600; background: rgba(56,189,248,0.05); }
+  td code { font-size: 0.85em; }
+  .role { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 0.78em; font-weight: 700; color: white; }
+  .role.public { background: var(--role-public); }
+  .role.user   { background: var(--role-user); }
+  .role.staff  { background: var(--role-staff); }
+  .role.vet    { background: var(--role-vet); }
+  .role.admin  { background: var(--role-admin); }
+  .method { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.75em; font-weight: 700; font-family: ui-monospace, monospace; }
+  .method.GET    { background: rgba(74,222,128,0.2); color: var(--ok); }
+  .method.POST   { background: rgba(56,189,248,0.2); color: var(--accent); }
+  .method.PUT    { background: rgba(167,139,250,0.2); color: var(--accent-2); }
+  .method.PATCH  { background: rgba(251,191,36,0.2); color: var(--warn); }
+  .method.DELETE { background: rgba(248,113,113,0.2); color: var(--bad); }
+  .method.ANY    { background: rgba(148,163,184,0.2); color: var(--fg-dim); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 700;
+    background: rgba(74,222,128,0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .tldr { background: rgba(56,189,248,0.08); border: 1px solid var(--accent); border-radius: 6px; padding: 16px; margin: 16px 0; }
+  .tldr::before { content: "TL;DR"; display: block; color: var(--accent); font-weight: 700; font-size: 0.85em; letter-spacing: 1px; margin-bottom: 6px; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  hr { border: none; border-top: 1px dashed var(--border); margin: 32px 0; }
+  .toc { background: var(--bg-card); padding: 16px 20px 16px 40px; border-radius: 6px; }
+  .toc h3 { margin-top: 0; }
+  .toc ol { margin: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .hierarchy { font-family: ui-monospace, monospace; background: var(--bg-code); padding: 16px; border-radius: 6px; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<h1>petclinic-ms — RBAC Matrix</h1>
+<p class="lede">Declarative Least Privilege per service. URL coarse-grained role rules ở <code>config-repo/&lt;service&gt;.yml</code>, per-instance fine-grained qua <code>@PreAuthorize</code>. Slide MSS301 #70 "Least Privilege".</p>
+
+<div class="toc">
+  <h3>Mục lục</h3>
+  <ol>
+    <li><a href="#concepts">Concepts</a></li>
+    <li><a href="#auth">auth-service</a></li>
+    <li><a href="#customers">customers-service</a></li>
+    <li><a href="#vets">vets-service</a></li>
+    <li><a href="#visits">visits-service (hybrid)</a></li>
+    <li><a href="#genai">genai-service (reactive)</a></li>
+    <li><a href="#how">How the customizer works</a></li>
+    <li><a href="#per-instance">Per-instance check</a></li>
+    <li><a href="#mapping">Slide mapping</a></li>
+  </ol>
+</div>
+
+<div class="tldr">
+  Mỗi Spring service khai báo endpoint rules trong <code>config-repo/&lt;service&gt;.yml</code> dưới prefix <code>petclinic.security.endpoints.*</code> với 5 buckets: <b>public</b>, <b>user</b>, <b>staff</b>, <b>admin</b>, <b>customRoles</b> (vd VET). <code>EndpointSecurityCustomizer</code> (servlet) hoặc <code>ReactiveEndpointSecurityCustomizer</code> (WebFlux) đọc properties + áp rules vào <code>SecurityFilterChain</code>. Visits-service thêm layer 2: <code>@PreAuthorize("@visitSecurity.canView(#id, authentication)")</code> cho per-instance ownership.
+</div>
+
+<h2 id="concepts">1. Concepts</h2>
+
+<h3>Role hierarchy</h3>
+<div class="hierarchy">ADMIN  >  STAFF  >  USER       (implicit qua hasAnyRole listing trong customizer)
+ADMIN  >  VET                  (custom role, áp riêng cho visits)
+PUBLIC                          (no auth needed)</div>
+
+<h3>2 lớp authorization</h3>
+<table>
+  <tr><th width="30%">Lớp</th><th>Khi nào dùng</th><th>Implementation</th></tr>
+  <tr>
+    <td><b>URL coarse-grained</b></td>
+    <td>"ROLE_X access path /Y" — không cần load entity</td>
+    <td>YAML <code>petclinic.security.endpoints.*</code> + customizer</td>
+  </tr>
+  <tr>
+    <td><b>Method-level per-instance</b></td>
+    <td>"USER chỉ xem entity của mình" — cần load entity + so sánh ownership</td>
+    <td><code>@PreAuthorize</code> + bean <code>VisitSecurity</code> (SpEL)</td>
+  </tr>
+</table>
+
+<h2 id="auth">2. auth-service <span class="badge">port 8183</span></h2>
+<div class="file-label">config-repo/auth-service.yml</div>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Role</th><th>Mục đích</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method POST">POST</span></td><td><code>/api/v1/auth/register</code></td><td><span class="role public">PUBLIC</span></td><td>Tạo account mới</td></tr>
+    <tr><td><span class="method POST">POST</span></td><td><code>/api/v1/auth/login</code></td><td><span class="role public">PUBLIC</span></td><td>Issue access+refresh token</td></tr>
+    <tr><td><span class="method POST">POST</span></td><td><code>/api/v1/auth/refresh</code></td><td><span class="role public">PUBLIC</span></td><td>Refresh access token</td></tr>
+    <tr><td><span class="method GET">GET</span></td><td><code>/.well-known/jwks.json</code></td><td><span class="role public">PUBLIC</span></td><td>Public key cho services verify JWT</td></tr>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/auth/me</code></td><td><span class="role user">USER</span></td><td>Profile mình</td></tr>
+    <tr><td><span class="method POST">POST</span></td><td><code>/api/v1/auth/logout</code></td><td><span class="role user">USER</span></td><td>Blacklist refresh token</td></tr>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/admin/users/**</code></td><td><span class="role admin">ADMIN</span></td><td>User management</td></tr>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/admin/audit/**</code></td><td><span class="role admin">ADMIN</span></td><td>Audit log</td></tr>
+  </tbody>
+</table>
+
+<h2 id="customers">3. customers-service <span class="badge">port 8181</span></h2>
+<div class="file-label">config-repo/customers-service.yml</div>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Role</th><th>Mục đích</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/pets/**</code></td><td><span class="role user">USER+</span></td><td>FE owner page dropdown</td></tr>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/owners/*</code></td><td><span class="role user">USER+</span></td><td>Owner detail (acceptable leak)</td></tr>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/owners</code></td><td><span class="role staff">STAFF+</span></td><td>List owners — PII protection</td></tr>
+    <tr><td><span class="method POST">POST</span></td><td><code>/api/v1/owners</code></td><td><span class="role staff">STAFF+</span></td><td>Create owner</td></tr>
+    <tr><td><span class="method PUT">PUT</span> <span class="method PATCH">PATCH</span></td><td><code>/api/v1/owners/**</code></td><td><span class="role staff">STAFF+</span></td><td>Update owner</td></tr>
+    <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/v1/owners/**</code></td><td><span class="role admin">ADMIN</span></td><td>Hard delete owner</td></tr>
+    <tr><td><span class="method POST">POST</span> <span class="method PUT">PUT</span> <span class="method PATCH">PATCH</span> <span class="method DELETE">DELETE</span></td><td><code>/api/v1/pets/**</code></td><td><span class="role admin">ADMIN</span></td><td>Pet catalog management</td></tr>
+  </tbody>
+</table>
+
+<h2 id="vets">4. vets-service <span class="badge">port 8182</span></h2>
+<div class="file-label">config-repo/vets-service.yml</div>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Role</th><th>Mục đích</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/vets/**</code></td><td><span class="role user">USER+</span></td><td>Catalog vet (FE booking dropdown)</td></tr>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/specialties/**</code></td><td><span class="role user">USER+</span></td><td>Catalog specialty</td></tr>
+    <tr><td><span class="method POST">POST</span> <span class="method PUT">PUT</span> <span class="method PATCH">PATCH</span></td><td><code>/api/v1/vets/**</code></td><td><span class="role staff">STAFF+</span></td><td>Create/edit vet</td></tr>
+    <tr><td><span class="method DELETE">DELETE</span></td><td><code>/api/v1/vets/**</code></td><td><span class="role admin">ADMIN</span></td><td>Hard delete vet</td></tr>
+    <tr><td><span class="method ANY">ANY</span></td><td><code>/api/v1/specialties/**</code> (non-GET)</td><td><span class="role admin">ADMIN</span></td><td>Specialty catalog management</td></tr>
+  </tbody>
+</table>
+
+<h2 id="visits">5. visits-service <span class="badge">port 8184</span> <span class="badge" style="background:rgba(167,139,250,0.15);color:var(--accent-2);border-color:var(--accent-2);">HYBRID</span></h2>
+
+<h3>5.1. URL coarse-grained</h3>
+<div class="file-label">config-repo/visits-service.yml</div>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Role</th><th>Mục đích</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method GET">GET</span></td><td><code>/api/v1/visits/**</code></td><td><span class="role user">USER+</span></td><td>List/detail visit (filter ownership ở service layer + @PreAuthorize)</td></tr>
+    <tr><td><span class="method POST">POST</span></td><td><code>/api/v1/visits</code></td><td><span class="role user">USER+</span></td><td>Book visit</td></tr>
+    <tr><td><span class="method PATCH">PATCH</span></td><td><code>/api/v1/visits/*/cancel</code></td><td><span class="role user">USER+</span></td><td>Cancel (ownership check @PreAuthorize)</td></tr>
+    <tr><td><span class="method PATCH">PATCH</span></td><td><code>/api/v1/visits/*/start</code></td><td><span class="role vet">VET</span> + <span class="role staff">STAFF</span></td><td>Mark IN_PROGRESS</td></tr>
+    <tr><td><span class="method PATCH">PATCH</span></td><td><code>/api/v1/visits/*/complete</code></td><td><span class="role vet">VET</span> + <span class="role admin">ADMIN</span></td><td>Complete + ghi clinical data</td></tr>
+  </tbody>
+</table>
+
+<h3>5.2. Method-level per-instance</h3>
+<div class="file-label">visits-service/.../controller/VisitController.java</div>
+<pre><code>@GetMapping("/{id}")
+@PreAuthorize("@visitSecurity.canView(#id, authentication)")
+public VisitResponse getVisit(@PathVariable Long id) { ... }
+
+@PatchMapping("/{id}/cancel")
+@PreAuthorize("@visitSecurity.canCancel(#id, authentication)")
+public VisitResponse cancelVisit(@PathVariable Long id, ...) { ... }
+</code></pre>
+
+<div class="card accent">
+  <p><b>VisitSecurity bean:</b> trả <code>true</code> nếu authenticated user là <b>owner</b> của visit (so <code>visit.customerUserId == jwt.subject</code>) HOẶC có privileged role (<code>STAFF</code>/<code>ADMIN</code>/<code>VET</code>). USER thường chỉ xem được visit của mình; vet xem được mọi visit để khám.</p>
+</div>
+
+<h2 id="genai">6. genai-service <span class="badge">port 8188</span> <span class="badge" style="background:rgba(74,222,128,0.15);color:var(--ok);border-color:var(--ok);">REACTIVE</span></h2>
+<div class="file-label">config-repo/genai-service.yml</div>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Role</th><th>Mục đích</th></tr></thead>
+  <tbody>
+    <tr><td><span class="method ANY">ANY</span></td><td><code>/api/v1/ai/**</code></td><td><span class="role user">USER+</span></td><td>Chat với pet care AI (streaming)</td></tr>
+    <tr><td><span class="method ANY">ANY</span></td><td><code>/api/v1/admin/llm/**</code></td><td><span class="role admin">ADMIN</span></td><td>BYOK LLM config (API key, model, validate)</td></tr>
+  </tbody>
+</table>
+<div class="card warn">
+  WebFlux stack → dùng <code>ReactiveEndpointSecurityCustomizer</code> thay vì variant servlet. Cùng YAML schema, khác builder API (<code>AuthorizeExchangeSpec</code> vs <code>AuthorizeHttpRequestsConfigurer</code>).
+</div>
+
+<h2 id="how">7. How the customizer works</h2>
+
+<h3>Servlet flow</h3>
+<div class="file-label">shared/common-security/.../endpoints/EndpointSecurityCustomizer.java</div>
+<pre><code>public static void apply(
+        AuthorizationManagerRequestMatcherRegistry registry,
+        SecurityEndpointsProperties props) {
+    for (Endpoint e : props.publicEndpoints())  applyPermitAll(registry, e);
+    for (Endpoint e : props.adminEndpoints())   applyRole(registry, e, "ADMIN");
+    props.customRoles().forEach((role, endpoints) -> { ... });   // VET, etc.
+    for (Endpoint e : props.staffEndpoints())   applyAnyRole(registry, e, "STAFF", "ADMIN");
+    for (Endpoint e : props.userEndpoints())    applyAnyRole(registry, e, "USER", "STAFF", "ADMIN");
+}
+</code></pre>
+
+<h3>Order matters</h3>
+<p>Spring Security match request theo thứ tự khai báo, dừng ở match đầu tiên. Customizer áp theo thứ tự <b>specific → broad</b>:</p>
+<ol>
+  <li>Public — permitAll, skip role check</li>
+  <li>Admin — narrowest role</li>
+  <li>Custom roles (VET, etc.)</li>
+  <li>Staff</li>
+  <li>User — broadest role, áp cuối</li>
+</ol>
+<p>Lý do: nếu áp USER trước, một request match USER pattern sẽ stop, không bao giờ đến rule ADMIN-narrower phía sau.</p>
+
+<h2 id="per-instance">8. Per-instance authorization</h2>
+
+<div class="card accent">
+  <p>URL coarse-grained KHÔNG biểu đạt được "USER chỉ xem visit của chính mình". Path <code>/api/v1/visits/123</code> chỉ biết user authenticated, không biết visit 123 thuộc ai. Cần load entity → so sánh ownership.</p>
+</div>
+
+<div class="file-label">visits-service/.../security/VisitSecurity.java</div>
+<pre><code>@Component("visitSecurity")
+public class VisitSecurity {
+    private static final Set&lt;String&gt; PRIVILEGED_ROLES =
+            Set.of("ROLE_STAFF", "ROLE_ADMIN", "ROLE_VET");
+
+    public boolean canView(Long visitId, Authentication auth) {
+        if (visitId == null || !auth.isAuthenticated()) return false;
+        if (hasPrivilegedRole(auth)) return true;          // STAFF/ADMIN/VET bypass
+        return isOwnerOf(visitId, auth);                    // USER → load + compare
+    }
+
+    private boolean isOwnerOf(Long visitId, Authentication auth) {
+        UUID currentUserId = extractUserId(auth);
+        return visitRepo.findById(visitId)
+                .map(Visit::getCustomerUserId)
+                .map(currentUserId::equals)
+                .orElse(false);
+    }
+}
+</code></pre>
+
+<p>Annotation gọi bean theo tên qua SpEL:</p>
+<pre><code>@PreAuthorize("@visitSecurity.canView(#id, authentication)")</code></pre>
+
+<h3>Tại sao bean tách riêng?</h3>
+<ul>
+  <li><b>Reusable:</b> mọi controller method (view, cancel, update...) dùng cùng bean</li>
+  <li><b>Unit-testable:</b> mock <code>VisitRepository</code>, assert decision không cần boot HTTP</li>
+  <li><b>SpEL clean:</b> annotation 1 dòng thay vì block code if/else trong controller</li>
+</ul>
+
+<h2 id="mapping">9. Slide MSS301 mapping</h2>
+
+<table>
+  <thead><tr><th>Pattern (slide)</th><th>Implementation petclinic-ms</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><b>Access Token Pattern (slide #70)</b></td>
+      <td>RS256 JWT auth-service issue + JWKS endpoint, mọi service verify qua common-security <code>JwtDecoder</code></td>
+    </tr>
+    <tr>
+      <td><b>API Gateway (slide #70)</b></td>
+      <td>api-gateway port 8180 — coarse routing + rate limit + circuit breaker + bulkhead</td>
+    </tr>
+    <tr>
+      <td><b>Rate Limiting (slide #70)</b></td>
+      <td><code>PerIpRateLimit</code> trên auth-public routes (10 req/phút Bucket4j)</td>
+    </tr>
+    <tr>
+      <td><b>Circuit Breaker (slide #70)</b></td>
+      <td>Resilience4j ở api-gateway + visits-service service-to-service calls</td>
+    </tr>
+    <tr>
+      <td><b>Least Privilege (slide #70)</b> <span class="badge">PHASE 15</span></td>
+      <td>YAML declarative + customizer + per-instance @PreAuthorize — doc này</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>References</h2>
+<ul>
+  <li><a href="security-flow.html">security-flow.html</a> — JWT auth flow chi tiết (register, login, refresh)</li>
+  <li><a href="saga.html">saga.html</a> — choreography saga pattern</li>
+  <li>Spring Security <a href="https://docs.spring.io/spring-security/reference/servlet/authorization/method-security.html" target="_blank">Method Security</a></li>
+  <li>OWASP <a href="https://owasp.org/www-community/Access_Control" target="_blank">Access Control</a> — Least Privilege</li>
+</ul>
+
+</body>
+</html>

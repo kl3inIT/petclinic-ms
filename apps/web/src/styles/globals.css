@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 
 @plugin 'tailwindcss-animate';
@@ -114,11 +115,31 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
+    font-family:
+      'Plus Jakarta Sans',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 }
 
 /* Login background — Jmix petclinic style */
+.landing-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.landing-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 .auth-bg {
   background-image: url('/brand/login-background.svg');
   background-size: cover;
@@ -134,4 +155,23 @@
 
 .workflow-designer .bio-properties-panel {
   border-left: 0;
+}
+
+/* Customer area — ẩn toàn bộ thanh cuộn mà vẫn cho phép scroll.
+ * Áp dụng cho root layout + mọi descendant + html khi customer layout render
+ * (vì scroll chính của trang xảy ra ở <html>, không phải ở wrapper div). */
+.customer-layout-hide-scrollbar,
+.customer-layout-hide-scrollbar *,
+html:has(.customer-layout-hide-scrollbar),
+body:has(.customer-layout-hide-scrollbar) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.customer-layout-hide-scrollbar::-webkit-scrollbar,
+.customer-layout-hide-scrollbar *::-webkit-scrollbar,
+html:has(.customer-layout-hide-scrollbar)::-webkit-scrollbar,
+body:has(.customer-layout-hide-scrollbar)::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }

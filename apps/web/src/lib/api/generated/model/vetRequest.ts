@@ -11,5 +11,16 @@ export interface VetRequest {
   firstName: string;
   /** @minLength 1 */
   lastName: string;
+  /**
+   * @minLength 0
+   * @maxLength 255
+   */
+  email: string;
+  /**
+   * @minLength 0
+   * @maxLength 30
+   */
+  phoneNumber?: string;
+  resume?: string;
   specialtyNames?: string[];
 }

@@ -109,9 +109,18 @@ Cross-cutting code lives in `shared/`. Services depend via `implementation(proje
   - `EventPublisher` — thin wrapper over `RabbitTemplate.convertAndSend(exchange, routingKey, event)`. Service injects this, never touches RabbitTemplate directly.
   - `EventsProperties` (`petclinic.events.*`) — exchange name (default `petclinic.events` topic), DLX name (`petclinic.events.dlx`), `enabled` flag (set `false` in `application-test.yml`).
   - `EventQueues.consumer(queueName, routingKey, props)` — returns `Declarables` with main queue (durable, `x-dead-letter-exchange` arg) + DLQ + bindings. **Per-service per-event-type queue** (vd `billing.visit.completed` + `billing.visit.completed.dlq`) for isolated retry/debug.
-  - Uses `JacksonJsonMessageConverter` (Jackson 3 — Boot 4 default; `Jackson2JsonMessageConverter` is deprecated for removal).
+  - Uses `JacksonJsonMessageConverter` (Jackson 3 — Boot 4 default; `Jackson2JsonMessageConverter` is deprecated for removal). **Default TypePrecedence = INFERRED** in Spring AMQP 4 → concrete listener param type wins over `__TypeId__` header, enabling cross-language consume (Go publisher without `__TypeId__`).
   - **Tolerant Reader on consumer:** consumer redeclares its own DTO record (NOT importing the publisher's event class). Jackson silently ignores fields the consumer doesn't model.
   - **Idempotency:** publisher does NOT guarantee exactly-once. Consumer must dedupe by `eventId` (UUID) — recommend a `processed_events` table with unique constraint, check inside the same `@Transactional` boundary as the side effect.
+  - **Saga primitives (Phase 14, added 2026-05):** `saga/SagaStatus` enum (`PENDING`/`COMPLETED`/`COMPENSATED`) + generic envelopes `saga/NotificationAck` and `saga/NotificationFailed` for choreography saga ACK/failure events from any notifier. Routing key convention `<domain>.notification.<ack|failed>` (vd `visit.notification.ack`). Domain-specific entity + handler stays in the service initiator (vd `visits-service/saga/NotificationSaga` + `NotificationSagaHandler`).
+
+- **Saga pattern (choreography, Phase 14)** — `visits-service` is the canonical reference:
+  - Initiator publishes domain event (`VisitCompletedEvent`) + creates `NotificationSaga` row (status `PENDING`, indexed by `event_id` unique) inside the same `@Transactional` boundary as the business state change.
+  - Notifier (Go `mailer-service`) processes + publishes generic `NotificationAck` / `NotificationFailed` envelope with `originalEventId` = publisher's event UUID for correlation.
+  - Initiator `@RabbitListener` updates saga row to `COMPLETED` (ack) or `COMPENSATED` (failed) + publishes domain-specific compensating event (`VisitManualFollowUpRequiredEvent`). Compensation is a real business action, not DB rollback.
+  - **Idempotency:** `markCompleted()` / `markCompensated()` no-op when `status != PENDING` → safe for broker redeliver.
+  - **Constraints documented in code:** publish + DB commit is NOT atomic (dual-write problem); production needs Transactional Outbox (event row in same TX + separate poller publishes to broker). See `microservices.io/patterns/data/transactional-outbox`.
+  - **Choreography ceiling ≤ 4-5 steps**; beyond that switch to orchestration (Temporal / Eventuate Tram / Camunda).
 
 **Auto-config descriptor:** Each shared module ships `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` (Spring Boot 3+ replacement for legacy `spring.factories`). All beans use `@ConditionalOnMissingBean` so services can override.
 

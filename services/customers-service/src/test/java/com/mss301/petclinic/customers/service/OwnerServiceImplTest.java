@@ -16,12 +16,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.customers.dto.req.OwnerRequest;
+import com.mss301.petclinic.customers.dto.req.PetRequest;
+import com.mss301.petclinic.customers.dto.req.UpdateOwnerRequest;
 import com.mss301.petclinic.customers.exception.OwnerNotFoundException;
+import com.mss301.petclinic.customers.exception.PetNotFoundException;
 import com.mss301.petclinic.customers.model.Owner;
+import com.mss301.petclinic.customers.model.Pet;
 import com.mss301.petclinic.customers.repository.OwnerRepository;
 import com.mss301.petclinic.customers.service.impl.OwnerServiceImpl;
 
@@ -36,6 +43,9 @@ import com.mss301.petclinic.customers.service.impl.OwnerServiceImpl;
 class OwnerServiceImplTest {
 
     @Mock OwnerRepository repository;
+    @Mock PetTypeService petTypeService;
+    /** Trả null → publishAfterCommit short-circuit, không cần verify event. */
+    @Mock ObjectProvider<EventPublisher> eventPublisherProvider;
     @InjectMocks OwnerServiceImpl service;
 
     @Test
@@ -90,13 +100,54 @@ class OwnerServiceImplTest {
     }
 
     @Test
+    @DisplayName("update partial changes only provided fields")
+    void update_partial_updatesProvidedFields() {
+        var owner = new Owner("Anh", "Nguyen", "Old", "Ho Chi Minh", "0901111001");
+        given(repository.findById(1L)).willReturn(Optional.of(owner));
+
+        var result = service.update(1L, new UpdateOwnerRequest(null, null, "New", "", null));
+
+        assertThat(result.firstName()).isEqualTo("Anh");
+        assertThat(result.address()).isEqualTo("New");
+        assertThat(result.city()).isNull();
+    }
+
+    @Test
+    @DisplayName("addPet appends pet inside owner aggregate")
+    void addPet_appendsPet() {
+        var owner = new Owner("Anh", "Nguyen", null, null, null);
+        given(repository.findById(1L)).willReturn(Optional.of(owner));
+        given(repository.saveAndFlush(any(Owner.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        var result = service.addPet(1L, new PetRequest("Milu", null, "dog", 1L, true, null, null));
+
+        assertThat(result.pets()).hasSize(1);
+        assertThat(result.pets().getFirst().name()).isEqualTo("Milu");
+        assertThat(result.pets().getFirst().petTypeId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("updatePet missing in owner aggregate throws PetNotFoundException")
+    void updatePet_missing_throws() {
+        var owner = new Owner("Anh", "Nguyen", null, null, null);
+        var pet = new Pet("Milu", null, "dog");
+        ReflectionTestUtils.setField(pet, "id", 7L);
+        owner.addPet(pet);
+        given(repository.findById(1L)).willReturn(Optional.of(owner));
+
+        assertThatThrownBy(() -> service.updatePet(1L, 99L,
+                new PetRequest("Tom", null, "cat", 2L, true, null, null)))
+                .isInstanceOf(PetNotFoundException.class);
+    }
+
+    @Test
     @DisplayName("deleteById missing → OwnerNotFoundException (no delete called)")
     void deleteById_missing_throws() {
-        given(repository.existsById(999L)).willReturn(false);
+        given(repository.findById(999L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.deleteById(999L))
                 .isInstanceOf(OwnerNotFoundException.class);
 
-        then(repository).should(never()).deleteById(any());
+        then(repository).should(never()).delete(any());
     }
 }

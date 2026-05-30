@@ -96,3 +96,30 @@ resilience4j:
       genaiCircuitBreaker:
         timeout-duration: 90s
         cancel-running-future: false
+
+  # Bulkhead — semaphore variant: giới hạn số call concurrent per downstream service.
+  # Khác CircuitBreaker (chặn khi đã hỏng) + TimeLimiter (cắt khi quá lâu) — Bulkhead chặn
+  # khi quá NHIỀU call đang inflight cùng lúc → bảo vệ tài nguyên (DB pool, memory, $$$ LLM cost).
+  #
+  # Sizing theo Little's Law: L = λ × W (concurrent = throughput × latency).
+  # Cấp 3-5× baseline để có headroom burst, vượt → fail-fast.
+  bulkhead:
+    configs:
+      default:
+        max-concurrent-calls: 25            # 25 đồng thời/instance; ~500 req/s ở latency 50ms
+        max-wait-duration: 0ms              # fail-fast — không xếp hàng
+    instances:
+      customersBulkhead:
+        base-config: default
+      vetsBulkhead:
+        base-config: default
+      visitsBulkhead:
+        base-config: default
+      authBulkhead:
+        max-concurrent-calls: 50            # auth login burst lúc peak hour, nới hơn
+        max-wait-duration: 0ms
+      # Genai: LLM call mỗi cái tốn $$$ + chậm 5-30s + OpenRouter rate-limit 60 req/min.
+      # 5 concurrent là tối đa hợp lý cho dev key. Vượt → trả 503 ngay, user retry.
+      genaiBulkhead:
+        max-concurrent-calls: 5
+        max-wait-duration: 0ms

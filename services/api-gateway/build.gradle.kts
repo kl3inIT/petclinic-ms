@@ -12,6 +12,10 @@ dependencies {
 
     // CircuitBreaker — servlet variant (KHÔNG dùng reactor variant vì gateway ở stack MVC).
     implementation(libs.spring.cloud.starter.circuitbreaker.resilience4j)
+    // Bulkhead — Spring Cloud abstraction không cover, dùng Resilience4j thẳng.
+    // resilience4j-spring-boot3 (đã có transitively) auto-config BulkheadRegistry từ
+    // YAML `resilience4j.bulkhead.*` → inject vào filter custom (BulkheadGatewayFilter).
+    implementation(libs.resilience4j.bulkhead)
 
     // Shared ProblemDetail format cho /fallback consistency với services khác.
     implementation(project(":shared:common-web"))

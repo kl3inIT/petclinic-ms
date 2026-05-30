@@ -1,0 +1,56 @@
+databaseChangeLog:
+
+  # Phase E1 — Badge sub-resource. Achievement/recognition badge của vet.
+  # FK CASCADE consistent với education/work-schedule/ratings.
+  # title VARCHAR(30) — enum BadgeTitle name() max 25 char ("SURGERY_EXPERT" = 14), 30 đủ buffer.
+  # Idempotency: 1 vet có thể nhận cùng 1 badge nhiều lần (vd kỷ niệm năm) → KHÔNG unique constraint.
+
+  - changeSet:
+      id: 008-001-create-table-badges
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: vets
+            tableName: badges
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: vet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_badges_vet
+                    references: vets.vets(id)
+                    deleteCascade: true
+              - column:
+                  name: title
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: awarded_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column: { name: description, type: TEXT }
+              # Audit columns
+              - column: { name: created_by,         type: VARCHAR(50) }
+              - column: { name: created_date,       type: TIMESTAMP WITH TIME ZONE }
+              - column: { name: last_modified_by,   type: VARCHAR(50) }
+              - column: { name: last_modified_date, type: TIMESTAMP WITH TIME ZONE }
+
+  - changeSet:
+      id: 008-002-index-badges-vet-id
+      author: mss301
+      changes:
+        - createIndex:
+            schemaName: vets
+            tableName: badges
+            indexName: idx_badges_vet_id
+            columns:
+              - column: { name: vet_id }

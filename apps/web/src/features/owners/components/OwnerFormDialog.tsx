@@ -15,27 +15,34 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/lib/form/FieldError';
 
-import { useCreateOwner } from '@/lib/api/generated/owners/owners';
+import { useCreateOwner, useUpdateOwner } from '@/lib/api/generated/owners/owners';
+import type { OwnerResponse } from '@/lib/api/generated/model/ownerResponse';
 import { ownerFormSchema } from '../schemas';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** null = chế độ tạo mới; OwnerResponse = chế độ sửa */
+  owner?: OwnerResponse | null;
 }
 
-export function OwnerFormDialog({ open, onOpenChange }: Props) {
+export function OwnerFormDialog({ open, onOpenChange, owner }: Props) {
   const qc = useQueryClient();
+  const isEdit = !!owner?.id;
+
+  const invalidateOwners = () =>
+    qc.invalidateQueries({
+      predicate: (q) => {
+        const first = q.queryKey[0];
+        return typeof first === 'string' && first.startsWith('/api/v1/owners');
+      },
+    });
 
   const createMutation = useCreateOwner({
     mutation: {
       onSuccess: () => {
         toast.success('Đã tạo chủ nuôi');
-        void qc.invalidateQueries({
-          predicate: (q) => {
-            const first = q.queryKey[0];
-            return typeof first === 'string' && first.startsWith('/api/v1/owners');
-          },
-        });
+        void invalidateOwners();
         form.reset();
         onOpenChange(false);
       },
@@ -43,26 +50,45 @@ export function OwnerFormDialog({ open, onOpenChange }: Props) {
     },
   });
 
+  const updateMutation = useUpdateOwner({
+    mutation: {
+      onSuccess: () => {
+        toast.success('Đã cập nhật chủ nuôi');
+        void invalidateOwners();
+        form.reset();
+        onOpenChange(false);
+      },
+      onError: (err: Error) => toast.error(err.message || 'Cập nhật thất bại'),
+    },
+  });
+
   const form = useForm({
+    // defaultValues recreated mỗi lần dialog mở (key prop reset từ parent)
     defaultValues: {
-      firstName: '',
-      lastName: '',
-      address: '',
-      city: '',
-      telephone: '',
+      firstName: owner?.firstName ?? '',
+      lastName: owner?.lastName ?? '',
+      address: owner?.address ?? '',
+      city: owner?.city ?? '',
+      telephone: owner?.telephone ?? '',
     },
     validators: { onChange: ownerFormSchema },
-    onSubmit: ({ value }) =>
-      createMutation.mutate({
-        data: {
-          firstName: value.firstName,
-          lastName: value.lastName,
-          address: value.address || undefined,
-          city: value.city || undefined,
-          telephone: value.telephone || undefined,
-        },
-      }),
+    onSubmit: ({ value }) => {
+      const data = {
+        firstName: value.firstName,
+        lastName: value.lastName,
+        address: value.address || undefined,
+        city: value.city || undefined,
+        telephone: value.telephone || undefined,
+      };
+      if (isEdit && owner?.id != null) {
+        updateMutation.mutate({ id: owner.id, data });
+      } else {
+        createMutation.mutate({ data });
+      }
+    },
   });
+
+  const pending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog
@@ -74,7 +100,9 @@ export function OwnerFormDialog({ open, onOpenChange }: Props) {
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Thêm chủ nuôi mới</DialogTitle>
+          <DialogTitle>
+            {isEdit ? `Sửa chủ nuôi #${owner?.id}` : 'Thêm chủ nuôi mới'}
+          </DialogTitle>
           <DialogDescription>
             Họ và tên bắt buộc, các trường khác tùy chọn.
           </DialogDescription>
@@ -175,8 +203,8 @@ export function OwnerFormDialog({ open, onOpenChange }: Props) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
-          <Button type="submit" form="owner-form" disabled={createMutation.isPending}>
-            {createMutation.isPending ? 'Đang lưu…' : 'Tạo'}
+          <Button type="submit" form="owner-form" disabled={pending}>
+            {pending ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : 'Tạo'}
           </Button>
         </DialogFooter>
       </DialogContent>
