@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -16,6 +17,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
@@ -48,6 +50,12 @@ public class VisitServiceImpl implements VisitService {
 
     private static final Logger log = LoggerFactory.getLogger(VisitServiceImpl.class);
     private static final ZoneId CLINIC_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+
+    /** Capacity rule: tối đa số ca/khung/vet (xem changeset 006-relax-vet-slot-unique). */
+    private static final int MAX_VISITS_PER_SLOT = 2;
+    /** "Active" = chiếm chỗ trong khung. CANCELLED không tính. */
+    private static final Set<VisitStatus> SLOT_OCCUPYING_STATUSES =
+            Set.of(VisitStatus.SCHEDULED, VisitStatus.IN_PROGRESS, VisitStatus.COMPLETED);
 
     private final VisitRepository repository;
     /** Cross-service calls qua bean tách riêng — bean boundary cần thiết để Spring AOP
@@ -117,6 +125,16 @@ public class VisitServiceImpl implements VisitService {
                     "vet-unavailable");
         }
 
+        // Capacity rule: tối đa MAX_VISITS_PER_SLOT ca/khung/vet. Constraint UNIQUE đã
+        // drop ở changeset 006 (DB không express được "max 2 per group") → check app level.
+        // ⚠️ TOCTOU: hai booking song song có thể cùng vượt qua check này. Acceptable cho
+        // learning project; production cần pg advisory lock hoặc SERIALIZABLE isolation.
+        long occupied = repository.countByVetIdAndScheduledAtAndStatusIn(
+                req.vetId(), req.scheduledAt(), SLOT_OCCUPYING_STATUSES);
+        if (occupied >= MAX_VISITS_PER_SLOT) {
+            throw new SlotTakenException();
+        }
+
         Visit visit = Visit.book(req.petId(), req.vetId(), currentUserId,
                 req.scheduledAt(), req.reason());
 
@@ -124,6 +142,7 @@ public class VisitServiceImpl implements VisitService {
         try {
             saved = repository.save(visit);
         } catch (DataIntegrityViolationException e) {
+            // Defense-in-depth: chỉ fire nếu sau này thêm lại partial unique index.
             throw new SlotTakenException();
         }
 
@@ -240,23 +259,43 @@ public class VisitServiceImpl implements VisitService {
      * Fallback: dùng public /start và /complete endpoints trực tiếp.
      */
     private void startWorkflowProcess(Visit saved) {
+        WorkflowServiceClient client = workflowClient.getIfAvailable();
+        if (client == null) {
+            log.debug("WorkflowServiceClient not available — skipping process start for visit {}", saved.getId());
+            return;
+        }
+
+        WorkflowStartResponse resp;
         try {
-            WorkflowServiceClient client = workflowClient.getIfAvailable();
-            if (client == null) {
-                log.debug("WorkflowServiceClient not available — skipping process start for visit {}", saved.getId());
-                return;
-            }
             WorkflowStartRequest req = new WorkflowStartRequest(
                     workflowProperties.visitBookingProcessId(),
                     Map.of("visitId", saved.getId())
             );
-            WorkflowStartResponse resp = client.startProcess(req);
-            saved.setProcessInstanceKey(Long.parseLong(resp.processInstanceKey()));
-            log.info("Started workflow process {} ({}) for visit {}",
-                    resp.processInstanceKey(), workflowProperties.visitBookingProcessId(), saved.getId());
-        } catch (Exception ex) {
-            log.warn("Failed to start workflow process for visit {}: {}", saved.getId(), ex.getMessage());
+            resp = client.startProcess(req);
+        } catch (RestClientException | IllegalStateException ex) {
+            // workflow-service down / no Eureka instance — booking vẫn thành công (best-effort).
+            log.warn("workflow-service unavailable — visit {} booked without orchestration: {}",
+                    saved.getId(), ex.getMessage());
+            return;
         }
+
+        // Response shape sai (null/non-numeric key) là LỖI CONTRACT, không phải outage —
+        // log ở mức error (không nuốt im lặng vào warn) nhưng vẫn để booking thành công.
+        String key = resp == null ? null : resp.processInstanceKey();
+        if (key == null || key.isBlank()) {
+            log.error("workflow-service returned no processInstanceKey for visit {} — visit not orchestrated",
+                    saved.getId());
+            return;
+        }
+        try {
+            saved.setProcessInstanceKey(Long.parseLong(key));
+        } catch (NumberFormatException nfe) {
+            log.error("workflow-service returned non-numeric processInstanceKey '{}' for visit {} — visit not orchestrated",
+                    key, saved.getId());
+            return;
+        }
+        log.info("Started workflow process {} ({}) for visit {}",
+                key, workflowProperties.visitBookingProcessId(), saved.getId());
     }
 
     private void publishCompleted(Visit v) {

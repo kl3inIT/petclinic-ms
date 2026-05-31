@@ -11,6 +11,12 @@ camunda:
     grpc-address: ${CAMUNDA_GRPC_ADDRESS}
     rest-address: ${CAMUNDA_REST_ADDRESS}
 
+petclinic:
+  workflow:
+    # Prod: bắt buộc env var, KHÔNG fallback về dev secret công khai trong repo.
+    # Thiếu env → app fail-fast lúc startup (không ship với token đoán được).
+    callback-token: ${PETCLINIC_WORKFLOW_CALLBACK_TOKEN}
+
 logging:
   level:
     io.camunda: WARN

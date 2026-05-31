@@ -37,6 +37,9 @@ public class WorkflowSecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/workflows/instances").authenticated()
                         // Các write operations khác (terminate, complete task) — chỉ staff trở lên.
                         .requestMatchers(HttpMethod.POST, "/api/v1/workflows/**").hasAnyRole("ADMIN", "STAFF", "VET")
+                        // DELETE (xóa process definition / instance) — destructive, chỉ staff trở lên.
+                        // Nếu thiếu rule này sẽ rơi xuống catch-all .authenticated() → mọi user xóa được.
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/workflows/**").hasAnyRole("ADMIN", "STAFF", "VET")
                         .requestMatchers("/api/v1/workflows/**").authenticated()
                         .anyRequest().authenticated()
                 )

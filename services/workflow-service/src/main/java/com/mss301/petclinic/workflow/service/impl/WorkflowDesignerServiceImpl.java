@@ -8,6 +8,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -28,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -51,7 +51,6 @@ import io.camunda.client.api.response.DeploymentEvent;
 import io.camunda.client.api.response.Process;
 
 @Service
-@Transactional(readOnly = true)
 public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
 
     private static final Logger log = LoggerFactory.getLogger(WorkflowDesignerServiceImpl.class);
@@ -89,7 +88,8 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
                         "Call Vets Service",
                         "call-vets-service",
                         "Calls vets-service through the load-balanced RestClient and stores the result in process variables.",
-                        List.of("visitId", "vetId")
+                        // Delegate không đọc job variable nào — chỉ GET danh sách vets.
+                        List.of()
                 ),
                 new ServiceTaskCatalogItemResponse(
                         "camel-http-call",
@@ -220,7 +220,6 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
     }
 
     @Override
-    @Transactional
     public WorkflowDefinitionDeploymentResponse deployDefinition(DeployWorkflowDefinitionRequest request) {
         String resourceName = normalizeResourceName(request.name());
         try {
@@ -275,7 +274,6 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
     }
 
     @Override
-    @Transactional
     public void deleteDefinition(String processDefinitionKey) {
         if (processDefinitionKey == null || processDefinitionKey.isBlank()) {
             throw new BadRequestAlertException("Process definition key is required.", ENTITY_NAME, "processDefinitionKeyRequired");
@@ -371,6 +369,7 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
                     .uri(URI.create(operateBaseUrl + "/v1/process-definitions/" + processDefinitionKey + "/xml"))
                     .header("Accept", "application/xml, text/xml, application/json, */*")
                     .header("Authorization", operateBasicAuth)
+                    .timeout(Duration.ofSeconds(10))
                     .GET()
                     .build();
 
@@ -418,6 +417,7 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
                 .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
                 .header("Authorization", operateBasicAuth)
+                .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
                 .build();
 
@@ -436,6 +436,7 @@ public class WorkflowDesignerServiceImpl implements WorkflowDesignerService {
                     .header("Accept", "application/json")
                     .header("Content-Type", "application/json")
                     .header("Authorization", operateBasicAuth)
+                    .timeout(Duration.ofSeconds(10))
                     .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
                     .build();
 

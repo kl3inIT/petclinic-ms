@@ -4,6 +4,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mss301.petclinic.workflow.dto.req.StartWorkflowRequest;
@@ -29,7 +29,6 @@ import io.camunda.client.CamundaClient;
 import io.camunda.client.api.response.ProcessInstanceEvent;
 
 @Service
-@Transactional(readOnly = true)
 public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationService {
 
     private static final Logger log = LoggerFactory.getLogger(WorkflowOrchestrationServiceImpl.class);
@@ -57,7 +56,6 @@ public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationSe
     }
 
     @Override
-    @Transactional
     public WorkflowInstanceResponse startProcess(StartWorkflowRequest request) {
         ProcessInstanceEvent instance = requireClient().newCreateInstanceCommand()
                 .bpmnProcessId(request.processDefinitionKey())
@@ -156,6 +154,7 @@ public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationSe
                 .uri(URI.create(operateBaseUrl + path))
                 .header("Accept", "application/json")
                 .header("Authorization", operateBasicAuth)
+                .timeout(Duration.ofSeconds(10))
                 .GET()
                 .build();
 
@@ -178,6 +177,7 @@ public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationSe
                 .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
                 .header("Authorization", operateBasicAuth)
+                .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(bodyJson))
                 .build();
 
@@ -268,7 +268,6 @@ public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationSe
     }
 
     @Override
-    @Transactional
     public void terminateProcessInstance(String processInstanceId) {
         try {
             long key = Long.parseLong(processInstanceId);
@@ -438,6 +437,7 @@ public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationSe
                 .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
                 .header("Authorization", operateBasicAuth)
+                .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString("{}"))
                 .build();
 
