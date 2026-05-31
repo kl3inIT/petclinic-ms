@@ -5,6 +5,7 @@ import {
   PawPrint,
   Stethoscope,
   CalendarCheck,
+  Workflow,
   LogOut,
   Sparkles,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ interface NavItem {
     | '/admin/pets'
     | '/admin/vets'
     | '/admin/visits'
+    | '/admin/workflows'
     | '/admin/llm-config';
   label: string;
   icon: typeof LayoutDashboard;
@@ -41,6 +43,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/admin/visits', label: 'Visits', icon: CalendarCheck },
+  { to: '/admin/workflows', label: 'Workflows', icon: Workflow },
   { to: '/admin/owners', label: 'Owners', icon: Users },
   { to: '/admin/pets', label: 'Pets', icon: PawPrint },
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },

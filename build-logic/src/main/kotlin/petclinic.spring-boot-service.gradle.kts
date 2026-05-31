@@ -8,17 +8,9 @@ import org.springframework.boot.gradle.tasks.run.BootRun
 plugins {
     id("petclinic.java-conventions")
     id("org.springframework.boot")
-    id("io.spring.dependency-management")
 }
 
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
-
-dependencyManagement {
-    imports {
-        // Spring Cloud BOM — quản lý version của mọi spring-cloud-* mà service kéo về.
-        mavenBom("org.springframework.cloud:spring-cloud-dependencies:${libs.versions.springCloud.get()}")
-    }
-}
 
 // Sinh `META-INF/build-info.properties` — Actuator /info hiện build version, time, group, artifact.
 extensions.configure<SpringBootExtension> {
@@ -37,6 +29,19 @@ tasks.named<BootRun>("bootRun") {
 }
 
 dependencies {
+    // BOMs — native Gradle platform(), thay thế spring-dep-management plugin.
+    // Boot 4 plugin KHÔNG tự-inject BOM. Cần khai báo tường minh trên mọi config
+    // vì platform() chỉ cover config extends từ nơi khai báo; annotationProcessor /
+    // developmentOnly / testImplementation là các config riêng không kế thừa implementation.
+    val bootBom = platform("org.springframework.boot:spring-boot-dependencies:${libs.versions.springBoot.get()}")
+    val cloudBom = platform("org.springframework.cloud:spring-cloud-dependencies:${libs.versions.springCloud.get()}")
+    "implementation"(bootBom)
+    "implementation"(cloudBom)
+    "annotationProcessor"(bootBom)
+    "testImplementation"(bootBom)
+    "testImplementation"(cloudBom)
+    "testAnnotationProcessor"(bootBom)
+    "developmentOnly"(bootBom)
     "implementation"(libs.spring.boot.starter.actuator)
     // Mọi service ship metrics dạng Prometheus exposition format qua /actuator/prometheus.
     // Endpoint chỉ visible khi registry có trên classpath → để ở runtime cũng được, nhưng

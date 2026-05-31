@@ -37,7 +37,9 @@ interface Props {
 export function BookVisitDialog({ open, onOpenChange }: Props) {
   const qc = useQueryClient();
   const petsQuery = useListPets({ pageable: { page: 0, size: 200, sort: ['name,asc'] } });
-  const vetsQuery = useListVets({ pageable: { page: 0, size: 200, sort: ['lastName,asc'] } });
+  const vetsQuery = useListVets({
+    pageable: { page: 0, size: 200, sort: ['lastName,asc'] },
+  });
   const minDateTime = useMemo(() => {
     const d = new Date(Date.now() + 60 * 60 * 1000);
     d.setMinutes(0, 0, 0);

@@ -9,8 +9,10 @@ databaseChangeLog:
   - changeSet:
       id: 005-create-notification-sagas
       author: petclinic-ms
+      validCheckSum: 9:3118f8791ed8011f4ba4fe40452164ee
       changes:
         - createTable:
+            schemaName: visits
             tableName: notification_sagas
             columns:
               - column:
@@ -52,12 +54,30 @@ databaseChangeLog:
                   defaultValueComputed: NOW()
                   constraints: { nullable: false }
         - createIndex:
+            schemaName: visits
             tableName: notification_sagas
             indexName: idx_notification_saga_visit
             columns:
               - column: { name: visit_id }
         - createIndex:
+            schemaName: visits
             tableName: notification_sagas
             indexName: idx_notification_saga_status
             columns:
               - column: { name: status }
+
+  - changeSet:
+      id: 005-002-move-notification-sagas-to-visits-schema
+      author: mss301
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: >-
+              DO $$
+              BEGIN
+                IF to_regclass('visits.notification_sagas') IS NULL
+                   AND to_regclass('public.notification_sagas') IS NOT NULL THEN
+                  ALTER TABLE public.notification_sagas SET SCHEMA visits;
+                END IF;
+              END $$;

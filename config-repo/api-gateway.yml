@@ -45,6 +45,8 @@ springdoc:
         url: /v3/api-docs/vets
       - name: visits-service
         url: /v3/api-docs/visits
+      - name: workflow-service
+        url: /v3/api-docs/workflow
   api-docs:
     enabled: false                          # gateway tự không có endpoint nghiệp vụ — tắt spec riêng
   show-actuator: false

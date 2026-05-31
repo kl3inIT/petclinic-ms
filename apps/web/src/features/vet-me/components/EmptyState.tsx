@@ -12,12 +12,7 @@ interface EmptyStateProps {
   action?: React.ReactNode;
 }
 
-export function EmptyState({
-  icon: Icon,
-  title,
-  description,
-  action,
-}: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
     <Card className="border-dashed">
       <CardContent className="flex flex-col items-center justify-center gap-3 py-10 text-center">

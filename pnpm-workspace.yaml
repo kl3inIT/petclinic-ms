@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 allowBuilds:
+  '@carbon/icons': true
   '@parcel/watcher': true
   '@swc/core': true
   '@tailwindcss/oxide': true

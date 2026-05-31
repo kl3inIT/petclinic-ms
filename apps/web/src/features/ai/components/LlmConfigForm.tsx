@@ -33,7 +33,9 @@ export function LlmConfigForm() {
   const validateMutation = useValidateLlmConfig();
   const testMutation = useTestCurrentLlmConfig();
 
-  const [validateResult, setValidateResult] = useState<ValidateLlmConfigResponse | null>(null);
+  const [validateResult, setValidateResult] = useState<ValidateLlmConfigResponse | null>(
+    null,
+  );
   const [testResult, setTestResult] = useState<ValidateLlmConfigResponse | null>(null);
 
   const form = useForm({
@@ -89,7 +91,8 @@ export function LlmConfigForm() {
             <>
               <dt className="text-muted-foreground">Cập nhật</dt>
               <dd className="col-span-2">
-                {new Date(current.updatedAt).toLocaleString('vi-VN')} bởi {current.updatedBy}
+                {new Date(current.updatedAt).toLocaleString('vi-VN')} bởi{' '}
+                {current.updatedBy}
               </dd>
             </>
           )}
@@ -141,7 +144,8 @@ export function LlmConfigForm() {
               />
               <FieldError field={field} />
               <p className="text-xs text-muted-foreground">
-                OpenAI-compatible endpoint. Vd: OpenRouter, OpenAI, vLLM, Ollama (compat layer).
+                OpenAI-compatible endpoint. Vd: OpenRouter, OpenAI, vLLM, Ollama (compat
+                layer).
               </p>
             </div>
           )}
@@ -205,7 +209,10 @@ export function LlmConfigForm() {
               validateMutation.mutate(value, {
                 onSuccess: (r) => setValidateResult(r),
                 onError: (err: Error) =>
-                  setValidateResult({ ok: false, message: err.message || 'Validate thất bại' }),
+                  setValidateResult({
+                    ok: false,
+                    message: err.message || 'Validate thất bại',
+                  }),
               });
             }}
           >

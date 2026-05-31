@@ -6,8 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type WorkScheduleSlotResponseWorkHour = typeof WorkScheduleSlotResponseWorkHour[keyof typeof WorkScheduleSlotResponseWorkHour];
-
+export type WorkScheduleSlotResponseWorkHour =
+  (typeof WorkScheduleSlotResponseWorkHour)[keyof typeof WorkScheduleSlotResponseWorkHour];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WorkScheduleSlotResponseWorkHour = {

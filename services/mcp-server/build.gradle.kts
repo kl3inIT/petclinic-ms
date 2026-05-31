@@ -2,16 +2,9 @@ plugins {
     id("petclinic.spring-boot-service")
 }
 
-// Spring AI BOM — quản version cho mọi spring-ai-* artifact.
-// Scope: chỉ mcp-server + genai-service. KHÔNG kéo lên convention plugin vì 6 service còn lại
-// không dùng AI và Spring AI 2.0.0-M6 vẫn còn churn → giảm blast radius khi bump.
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.ai:spring-ai-bom:${libs.versions.springAi.get()}")
-    }
-}
-
 dependencies {
+    // Spring AI BOM — native Gradle platform(). Scope: chỉ mcp-server + genai-service.
+    implementation(platform(libs.spring.ai.bom))
     // MCP server (Model Context Protocol) — expose @Tool methods qua STREAMABLE HTTP transport.
     // WebMVC variant match stack toàn project (blocking + virtual threads), KHÔNG dùng WebFlux variant.
     implementation(libs.spring.ai.starter.mcp.server.webmvc)

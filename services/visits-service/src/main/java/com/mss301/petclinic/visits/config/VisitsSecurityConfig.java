@@ -47,6 +47,7 @@ public class VisitsSecurityConfig {
                                     "/swagger-ui/**",
                                     "/swagger-ui.html")
                             .permitAll();
+                    auth.requestMatchers("/internal/**").permitAll();
                     EndpointSecurityCustomizer.apply(auth, endpoints);
                     auth.anyRequest().authenticated();
                 })

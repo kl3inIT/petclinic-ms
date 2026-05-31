@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_VetAvailabilityCheck"
+                  targetNamespace="http://mss301.petclinic/workflow">
+  <bpmn:process id="VetAvailabilityCheck" name="Vet Availability Check" isExecutable="true">
+    <bpmn:startEvent id="StartEvent" name="Start"/>
+    <bpmn:serviceTask id="CallVetsTask" name="Load vets"/>
+    <bpmn:endEvent id="EndEvent" name="Done"/>
+    <bpmn:sequenceFlow id="Flow_StartToVets" sourceRef="StartEvent" targetRef="CallVetsTask"/>
+    <bpmn:sequenceFlow id="Flow_VetsToEnd" sourceRef="CallVetsTask" targetRef="EndEvent"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_VetAvailabilityCheck">
+    <bpmndi:BPMNPlane id="BPMNPlane_VetAvailabilityCheck" bpmnElement="VetAvailabilityCheck">
+      <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent">
+        <dc:Bounds x="152" y="102" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CallVetsTask_di" bpmnElement="CallVetsTask">
+        <dc:Bounds x="240" y="80" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_di" bpmnElement="EndEvent">
+        <dc:Bounds x="392" y="102" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_StartToVets_di" bpmnElement="Flow_StartToVets">
+        <di:waypoint x="188" y="120"/>
+        <di:waypoint x="240" y="120"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_VetsToEnd_di" bpmnElement="Flow_VetsToEnd">
+        <di:waypoint x="340" y="120"/>
+        <di:waypoint x="392" y="120"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,10 @@
+spring:
+  docker:
+    compose:
+      profiles:
+        active: ["workflow"]
+
+logging:
+  level:
+    io.camunda: INFO
+    org.apache.camel: INFO

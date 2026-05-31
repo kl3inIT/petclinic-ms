@@ -4,13 +4,10 @@ plugins {
 
 // Cần Spring Cloud BOM cho spring-cloud-starter-loadbalancer (Boot BOM không cover spring-cloud-*)
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.cloud:spring-cloud-dependencies:${libs.versions.springCloud.get()}")
-    }
-}
 
 dependencies {
+    // Spring Cloud BOM — native Gradle platform(), không dùng spring-dep-management plugin.
+    api(platform("org.springframework.cloud:spring-cloud-dependencies:${libs.versions.springCloud.get()}"))
     // `api` — service consume sẽ thấy RestClient + HttpServiceProxyFactory
     api("org.springframework:spring-web")
 

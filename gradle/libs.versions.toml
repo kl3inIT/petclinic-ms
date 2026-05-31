@@ -5,7 +5,6 @@
 # Core (verified May 2026)
 java               = "25"
 springBoot         = "4.0.6"            # latest stable
-springDepMgmt      = "1.1.7"
 springCloud        = "2025.1.1"         # Oakwood — tương thích Boot 4.0.x
 
 # DB / Migration
@@ -32,6 +31,10 @@ junit              = "6.1.0"
 # AWS SDK v2 — dùng cho S3-compatible storage (MinIO). Không quản lý bởi Spring Boot BOM,
 # pin tại đây. 2.30+ stable May 2026.
 awsSdk             = "2.30.21"
+
+# BPM / integration (workflow-service)
+camunda            = "8.9.5"
+camel              = "4.14.4"            # Spring Boot 4 compatible từ 4.14.x
 
 [libraries]
 # --- Spring Boot starters (Spring MVC stack, blocking) ---
@@ -112,9 +115,16 @@ spring-ai-advisors-vector-store        = { module = "org.springframework.ai:spri
 
 # --- Plugin artifacts (dùng trong build-logic) ---
 spring-boot-gradle-plugin              = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
-spring-dep-management-plugin           = { module = "io.spring.gradle:dependency-management-plugin", version.ref = "springDepMgmt" }
 # Spotless: format/lint Java. Áp whitespace-only rules (KHÔNG reformat code body).
 spotless-gradle-plugin                 = { module = "com.diffplug.spotless:spotless-plugin-gradle", version = "8.5.1" }
+
+# --- Camunda 8 ---
+camunda-spring-boot-starter            = { module = "io.camunda:camunda-spring-boot-starter", version.ref = "camunda" }
+
+# --- Apache Camel (BOM import trong workflow-service) ---
+camel-spring-boot-bom                    = { module = "org.apache.camel.springboot:camel-spring-boot-bom", version.ref = "camel" }
+camel-spring-boot-starter                = { module = "org.apache.camel.springboot:camel-spring-boot-starter" }
+camel-http-starter                       = { module = "org.apache.camel.springboot:camel-http-starter" }
 
 # --- Test ---
 junit-bom                              = { module = "org.junit:junit-bom", version.ref = "junit" }

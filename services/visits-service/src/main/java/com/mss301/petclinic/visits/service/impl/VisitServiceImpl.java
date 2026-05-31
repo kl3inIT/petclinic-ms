@@ -3,6 +3,8 @@ package com.mss301.petclinic.visits.service.impl;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -15,6 +17,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
@@ -22,6 +25,10 @@ import com.mss301.petclinic.visits.client.PetSummary;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.UserSummary;
 import com.mss301.petclinic.visits.client.VetSummary;
+import com.mss301.petclinic.visits.client.WorkflowServiceClient;
+import com.mss301.petclinic.visits.client.WorkflowStartRequest;
+import com.mss301.petclinic.visits.client.WorkflowStartResponse;
+import com.mss301.petclinic.visits.config.WorkflowCallbackProperties;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
@@ -44,6 +51,12 @@ public class VisitServiceImpl implements VisitService {
     private static final Logger log = LoggerFactory.getLogger(VisitServiceImpl.class);
     private static final ZoneId CLINIC_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
+    /** Capacity rule: tối đa số ca/khung/vet (xem changeset 006-relax-vet-slot-unique). */
+    private static final int MAX_VISITS_PER_SLOT = 2;
+    /** "Active" = chiếm chỗ trong khung. CANCELLED không tính. */
+    private static final Set<VisitStatus> SLOT_OCCUPYING_STATUSES =
+            Set.of(VisitStatus.SCHEDULED, VisitStatus.IN_PROGRESS, VisitStatus.COMPLETED);
+
     private final VisitRepository repository;
     /** Cross-service calls qua bean tách riêng — bean boundary cần thiết để Spring AOP
      *  intercept {@code @CircuitBreaker} (gọi {@code this.remoteClients.fetchPet(...)} trong cùng class
@@ -51,16 +64,23 @@ public class VisitServiceImpl implements VisitService {
     private final RemoteClientsFacade remoteClients;
     /** Optional — broker có thể disabled (test profile) hoặc tạm down. */
     private final ObjectProvider<EventPublisher> events;
+    /** Optional — workflow-service có thể chưa start hoặc down. Booking vẫn thành công. */
+    private final ObjectProvider<WorkflowServiceClient> workflowClient;
+    private final WorkflowCallbackProperties workflowProperties;
     /** Saga state — track notification choreography per VisitCompletedEvent. Null khi broker disabled. */
     private final NotificationSagaRepository sagaRepo;
 
     public VisitServiceImpl(VisitRepository repository,
                             RemoteClientsFacade remoteClients,
                             ObjectProvider<EventPublisher> events,
+                            ObjectProvider<WorkflowServiceClient> workflowClient,
+                            WorkflowCallbackProperties workflowProperties,
                             NotificationSagaRepository sagaRepo) {
         this.repository = repository;
         this.remoteClients = remoteClients;
         this.events = events;
+        this.workflowClient = workflowClient;
+        this.workflowProperties = workflowProperties;
         this.sagaRepo = sagaRepo;
     }
 
@@ -105,6 +125,16 @@ public class VisitServiceImpl implements VisitService {
                     "vet-unavailable");
         }
 
+        // Capacity rule: tối đa MAX_VISITS_PER_SLOT ca/khung/vet. Constraint UNIQUE đã
+        // drop ở changeset 006 (DB không express được "max 2 per group") → check app level.
+        // ⚠️ TOCTOU: hai booking song song có thể cùng vượt qua check này. Acceptable cho
+        // learning project; production cần pg advisory lock hoặc SERIALIZABLE isolation.
+        long occupied = repository.countByVetIdAndScheduledAtAndStatusIn(
+                req.vetId(), req.scheduledAt(), SLOT_OCCUPYING_STATUSES);
+        if (occupied >= MAX_VISITS_PER_SLOT) {
+            throw new SlotTakenException();
+        }
+
         Visit visit = Visit.book(req.petId(), req.vetId(), currentUserId,
                 req.scheduledAt(), req.reason());
 
@@ -112,10 +142,12 @@ public class VisitServiceImpl implements VisitService {
         try {
             saved = repository.save(visit);
         } catch (DataIntegrityViolationException e) {
+            // Defense-in-depth: chỉ fire nếu sau này thêm lại partial unique index.
             throw new SlotTakenException();
         }
 
         publishScheduled(saved, pet, vet, currentUserId);
+        startWorkflowProcess(saved);
         return VisitResponse.from(saved);
     }
 
@@ -219,6 +251,51 @@ public class VisitServiceImpl implements VisitService {
         } catch (RuntimeException ex) {
             log.warn("Publish visit.scheduled failed (visit={}): {}", saved.getId(), ex.getMessage());
         }
+    }
+
+    /**
+     * Best-effort — nếu workflow-service down, booking vẫn thành công.
+     * Visit sẽ không có processInstanceKey và không được Camunda điều phối.
+     * Fallback: dùng public /start và /complete endpoints trực tiếp.
+     */
+    private void startWorkflowProcess(Visit saved) {
+        WorkflowServiceClient client = workflowClient.getIfAvailable();
+        if (client == null) {
+            log.debug("WorkflowServiceClient not available — skipping process start for visit {}", saved.getId());
+            return;
+        }
+
+        WorkflowStartResponse resp;
+        try {
+            WorkflowStartRequest req = new WorkflowStartRequest(
+                    workflowProperties.visitBookingProcessId(),
+                    Map.of("visitId", saved.getId())
+            );
+            resp = client.startProcess(req);
+        } catch (RestClientException | IllegalStateException ex) {
+            // workflow-service down / no Eureka instance — booking vẫn thành công (best-effort).
+            log.warn("workflow-service unavailable — visit {} booked without orchestration: {}",
+                    saved.getId(), ex.getMessage());
+            return;
+        }
+
+        // Response shape sai (null/non-numeric key) là LỖI CONTRACT, không phải outage —
+        // log ở mức error (không nuốt im lặng vào warn) nhưng vẫn để booking thành công.
+        String key = resp == null ? null : resp.processInstanceKey();
+        if (key == null || key.isBlank()) {
+            log.error("workflow-service returned no processInstanceKey for visit {} — visit not orchestrated",
+                    saved.getId());
+            return;
+        }
+        try {
+            saved.setProcessInstanceKey(Long.parseLong(key));
+        } catch (NumberFormatException nfe) {
+            log.error("workflow-service returned non-numeric processInstanceKey '{}' for visit {} — visit not orchestrated",
+                    key, saved.getId());
+            return;
+        }
+        log.info("Started workflow process {} ({}) for visit {}",
+                key, workflowProperties.visitBookingProcessId(), saved.getId());
     }
 
     private void publishCompleted(Visit v) {
