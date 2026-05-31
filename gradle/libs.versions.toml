@@ -23,7 +23,7 @@ springBootAdmin    = "4.0.4"
 # Spring AI 2.0.0-M6 — latest milestone (May 2026). M6 → GA churn còn có thể có break;
 # vì vậy chỉ dùng trong 2 service: mcp-server (expose tools) + genai-service (chat).
 # OpenRouter routing dùng OpenAI adapter với base-url override → 1 SDK đa-provider.
-springAi           = "2.0.0-M6"
+springAi           = "2.0.0-M8"
 
 # Test
 junit              = "6.1.0"
