@@ -272,8 +272,21 @@ function OpenInvoiceCard({ invoice }: { invoice: InvoiceResponse }) {
         </span>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        Thanh toán tại quầy khi bạn hoàn tất. Nhân viên sẽ chốt hoá đơn này.
+        Thanh toán <strong>trực tiếp tại quầy</strong> khi bạn hoàn tất — nhân viên sẽ
+        chốt hoá đơn này.
       </p>
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          disabled
+          className="cursor-not-allowed rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-400"
+        >
+          Thanh toán online
+        </button>
+        <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100">
+          Sắp ra mắt
+        </Badge>
+      </div>
     </div>
   );
 }
