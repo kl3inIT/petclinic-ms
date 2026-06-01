@@ -50,12 +50,12 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/admin/visits', label: 'Visits', icon: CalendarCheck },
-  { to: '/admin/workflows', label: 'Workflows', icon: Workflow },
+  { to: '/admin/workflows', label: 'Workflows', icon: Workflow, adminOnly: true },
   { to: '/admin/owners', label: 'Owners', icon: Users },
   { to: '/admin/pets', label: 'Pets', icon: PawPrint },
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },
   { to: '/admin/invoices', label: 'Hoá đơn', icon: Receipt },
-  { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill },
+  { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill, adminOnly: true },
   { to: '/admin/vet-reviews', label: 'Duyệt thay đổi', icon: ShieldCheck },
   { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, adminOnly: true },
 ];

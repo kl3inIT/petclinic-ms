@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import {
   flexRender,
   getCoreRowModel,
@@ -29,12 +29,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { useAuthStore } from '@/features/auth/store';
 import { type DiseaseResponse, useDiseases } from '@/features/billing/api';
 import { formatVnd } from '@/features/billing/format';
 import { DiseaseFormDialog } from '@/features/billing/components/DiseaseFormDialog';
 import { DeleteDiseaseDialog } from '@/features/billing/components/DeleteDiseaseDialog';
 
 export const Route = createFileRoute('/admin/diseases')({
+  beforeLoad: () => {
+    // CRUD danh mục bệnh chỉ ADMIN (BE cũng enforce). STAFF gõ URL trực tiếp → về /admin.
+    const user = useAuthStore.getState().user;
+    if (!user?.roles.includes('ADMIN')) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw redirect({ to: '/admin' });
+    }
+  },
   component: DiseasesAdminPage,
 });
 
