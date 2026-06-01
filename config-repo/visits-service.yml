@@ -21,9 +21,21 @@ petclinic:
         VET:
           - { method: PATCH, path: /api/v1/visits/*/start }
           - { method: PATCH, path: /api/v1/visits/*/complete }
+          # Kê đơn thuốc — chỉ VET (+ADMIN). GET/GET pdf reach hardcode trong VisitsSecurityConfig.
+          - { method: POST,  path: /api/v1/visits/*/prescription }
       # Staff vận hành (admin + cancel cho người khác — fallback support cho USER)
       staff:
         - { method: PATCH, path: /api/v1/visits/*/start }       # staff cũng start được
+
+  # Đơn thuốc — lưu PDF lên MinIO/S3 (shared/common-storage), bucket `prescriptions`.
+  storage:
+    minio:
+      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}
+      bucket: ${MINIO_BUCKET:prescriptions}
+      presigned-ttl: PT1H
+      max-file-size-bytes: 10485760  # 10 MB
 
 # Datasource creds + URL khác env → visits-service-<profile>.yml.
 
@@ -88,44 +100,3 @@ resilience4j:
         timeout-duration: 3s
       auth-service:
         timeout-duration: 3s
-
-# RBAC — Least Privilege (slide MSS301 #70). Hybrid pattern:
-#   1) URL coarse-grained — declarative ở YAML này (apply qua EndpointSecurityCustomizer)
-#   2) Per-instance fine-grained — @PreAuthorize ở Controller (vd "USER chỉ cancel visit của mình")
-#
-# VET là domain-specific role (clinical user) → custom-roles bucket. ADMIN tự động cover
-# qua hierarchy implicit trong customizer.
-petclinic:
-  security:
-    endpoints:
-      # Authenticated user — list + detail + book + cancel. Per-instance ownership
-      # check là @PreAuthorize ở controller, không phải URL pattern.
-      user:
-        - { method: GET,   path: /api/v1/visits/** }
-        - { method: POST,  path: /api/v1/visits }
-        - { method: PATCH, path: /api/v1/visits/*/cancel }
-      # Custom domain role — vet hoặc admin start/complete visit (write clinical data)
-      custom-roles:
-        VET:
-          - { method: PATCH, path: /api/v1/visits/*/start }
-          - { method: PATCH, path: /api/v1/visits/*/complete }
-          # Kê đơn thuốc — chỉ VET (+ADMIN). Service kiểm tra thêm vet phụ trách đúng visit.
-          # GET / GET pdf KHÔNG khai báo ở đây: reach được hardcode trong VisitsSecurityConfig
-          # để tránh bẫy first-match-wins chặn chủ nuôi (xem javadoc class đó).
-          - { method: POST,  path: /api/v1/visits/*/prescription }
-      # Staff vận hành (admin + cancel cho người khác — fallback support cho USER)
-      staff:
-        - { method: PATCH, path: /api/v1/visits/*/start }       # staff cũng start được
-
-  # Phase đơn thuốc — lưu PDF lên MinIO/S3 (qua shared/common-storage). Bucket riêng
-  # `prescriptions`. Dev dùng MinIO ở compose profile `storage`; prod override endpoint +
-  # IAM creds qua env. Tài liệu y tế tải qua endpoint có kiểm quyền (không phát hành
-  # presigned URL công khai) nhưng vẫn giữ presigned-ttl cho nhất quán cấu hình.
-  storage:
-    minio:
-      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
-      access-key: ${MINIO_ACCESS_KEY:minioadmin}
-      secret-key: ${MINIO_SECRET_KEY:minioadmin}
-      bucket: ${MINIO_BUCKET:prescriptions}
-      presigned-ttl: PT1H
-      max-file-size-bytes: 10485760  # 10 MB
