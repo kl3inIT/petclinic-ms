@@ -199,12 +199,14 @@ function BookVisitPage() {
 
   const [petPage, setPetPage] = useState(0);
   const ownerQuery = useGetMyOwnerProfile();
+  const ownerLoading = ownerQuery.isLoading || ownerQuery.isError;
 
   const [vetPage, setVetPage] = useState(0);
   const VET_PAGE_SIZE = 4;
   const vetsQuery = useListVets({
     pageable: { page: vetPage, size: VET_PAGE_SIZE, sort: ['lastName,asc'] },
   });
+  const vetsLoading = vetsQuery.isLoading || vetsQuery.isError;
 
   const bookMutation = useBookVisit({
     mutation: {
@@ -286,6 +288,11 @@ function BookVisitPage() {
     { vetId: values.vetId, date: selectedDate },
     { query: { enabled: values.vetId > 0 && !!selectedDate } },
   );
+  const slotLoading =
+    vetScheduleQuery.isLoading ||
+    vetScheduleQuery.isError ||
+    availabilityQuery.isLoading ||
+    availabilityQuery.isError;
 
   // Map workHour → remaining để O(1) lookup khi render slot grid.
   const remainingBySlot = useMemo(() => {
@@ -594,7 +601,7 @@ function BookVisitPage() {
                   name="petId"
                   children={(field) => (
                     <div className="space-y-8">
-                      {ownerQuery.isLoading ? (
+                      {ownerLoading ? (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                           {Array.from({ length: 4 }).map((_, i) => (
                             <Skeleton
@@ -807,7 +814,7 @@ function BookVisitPage() {
                           </p>
                         </div>
 
-                        {vetsQuery.isLoading ? (
+                        {vetsLoading ? (
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {Array.from({ length: 2 }).map((_, i) => (
                               <Skeleton
@@ -1057,8 +1064,7 @@ function BookVisitPage() {
                                 <Stethoscope className="size-11 text-slate-300" />
                                 <span>Vui lòng chọn bác sĩ phụ trách trước</span>
                               </div>
-                            ) : vetScheduleQuery.isLoading ||
-                              availabilityQuery.isLoading ? (
+                            ) : slotLoading ? (
                               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {Array.from({ length: 6 }).map((_, i) => (
                                   <Skeleton key={i} className="h-[68px] rounded-[18px]" />

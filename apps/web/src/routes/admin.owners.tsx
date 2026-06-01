@@ -29,6 +29,7 @@ function OwnersPage() {
     pageable: { page: 0, size: 50, sort: ['lastName,asc', 'firstName,asc'] },
     ...(lastNameFilter ? { lastName: lastNameFilter } : {}),
   });
+  const ownersLoading = listQuery.isLoading || listQuery.isError;
 
   return (
     <div className="space-y-6">
@@ -64,7 +65,7 @@ function OwnersPage() {
         <CardContent>
           <OwnersDataTable
             data={listQuery.data?.content ?? []}
-            isLoading={listQuery.isLoading}
+            isLoading={ownersLoading}
             onView={(o) => o.id !== undefined && setViewingId(o.id)}
             onEdit={(o) => setEditingOwner(o)}
             onDelete={(o) => setDeletingOwner(o)}

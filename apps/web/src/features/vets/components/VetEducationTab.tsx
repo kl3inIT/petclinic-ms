@@ -99,7 +99,7 @@ export function VetEducationTab({ vetId }: Props) {
         </Button>
       </div>
 
-      {listQuery.isLoading ? (
+      {listQuery.isLoading || listQuery.isError ? (
         <Skeleton className="h-24 w-full" />
       ) : (listQuery.data?.content ?? []).length === 0 ? (
         <Card>

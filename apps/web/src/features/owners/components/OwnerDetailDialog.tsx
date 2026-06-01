@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { useGetOwner } from '@/lib/api/generated/owners/owners';
 import type { PetDto } from '@/lib/api/generated/model/petDto';
@@ -33,9 +34,10 @@ function fmtDate(iso?: string): string {
 
 export function OwnerDetailDialog({ ownerId, onOpenChange }: Props) {
   const open = ownerId !== null;
-  const { data, isLoading } = useGetOwner(ownerId ?? 0, {
+  const { data, isLoading, isError } = useGetOwner(ownerId ?? 0, {
     query: { enabled: ownerId !== null },
   });
+  const ownerLoading = isLoading || isError;
 
   const [petFormOpen, setPetFormOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<PetDto | null>(null);
@@ -56,8 +58,8 @@ export function OwnerDetailDialog({ ownerId, onOpenChange }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          {isLoading ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Đang tải…</p>
+          {ownerLoading ? (
+            <Skeleton className="h-40 w-full" />
           ) : data ? (
             <div className="space-y-4">
               <div className="space-y-2 text-sm">

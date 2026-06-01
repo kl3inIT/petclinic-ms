@@ -60,7 +60,8 @@ function VetsPage() {
     ...(activeFilter !== 'all' ? { active: activeFilter === 'active' } : {}),
   };
 
-  const { data, isLoading, isError, error } = useListVets(params);
+  const { data, isLoading, isError } = useListVets(params);
+  const showLoadingSkeleton = isLoading || isError;
 
   return (
     <div className="space-y-6">
@@ -116,16 +117,8 @@ function VetsPage() {
         </CardHeader>
       </Card>
 
-      {isError && (
-        <Card>
-          <CardContent className="py-6 text-destructive">
-            Lỗi tải danh sách: {error instanceof Error ? error.message : 'unknown'}
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {isLoading
+        {showLoadingSkeleton
           ? Array.from({ length: 6 }).map((_, i) => (
               <Card key={i}>
                 <CardHeader>
@@ -189,7 +182,7 @@ function VetsPage() {
             ))}
       </div>
 
-      {!isLoading && data?.content?.length === 0 && (
+      {!showLoadingSkeleton && data?.content?.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             Không tìm thấy bác sĩ nào.

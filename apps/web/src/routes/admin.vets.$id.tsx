@@ -13,7 +13,6 @@ import type { LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { useGetVet } from '@/lib/api/generated/vets/vets';
@@ -48,27 +47,12 @@ function VetDetailPage() {
 
   const vetQuery = useGetVet(vetId);
 
-  if (vetQuery.isLoading) {
+  if (vetQuery.isLoading || vetQuery.isError || !vetQuery.data) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-64 w-full" />
       </div>
-    );
-  }
-
-  if (vetQuery.isError || !vetQuery.data) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-destructive">
-          Không tải được thông tin bác sĩ (id={id}).
-          <div className="mt-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/admin/vets">Quay lại</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     );
   }
 

@@ -11,7 +11,6 @@ import {
   FileText,
   GraduationCap,
   IdCard,
-  Info,
   LockKeyhole,
   Mail,
   MessageSquareQuote,
@@ -134,6 +133,7 @@ function VetProfilePage() {
   });
 
   const hydrated = profileQuery.data != null;
+  const profileLoading = profileQuery.isLoading || profileQuery.isError;
 
   const profile = profileQuery.data;
   const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
@@ -164,28 +164,10 @@ function VetProfilePage() {
     }
   }
 
-  if (profileQuery.isError) {
-    return (
-      <Card className="border-destructive/30 bg-white shadow-sm">
-        <CardContent className="flex items-start gap-3 p-6 text-sm text-destructive">
-          <Info className="mt-0.5 size-5 shrink-0" />
-          <div>
-            <p className="font-semibold">Không tải được hồ sơ bác sĩ.</p>
-            <p className="mt-1 text-destructive/80">
-              {profileQuery.error instanceof Error
-                ? profileQuery.error.message
-                : 'Vui lòng thử lại sau.'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6 pb-24">
       <CoverHero
-        loading={profileQuery.isLoading}
+        loading={profileLoading}
         profile={profile}
         username={username}
         fullName={fullName}
@@ -213,14 +195,14 @@ function VetProfilePage() {
                     : 'bg-white text-violet-700 hover:bg-violet-50',
                 )}
                 onClick={() => setIdCardOpen((v) => !v)}
-                disabled={profileQuery.isLoading || !profile}
+                disabled={profileLoading || !profile}
               >
                 <CreditCard className="size-3.5" />
                 {idCardOpen ? 'Ẩn thẻ' : 'Xem thẻ'}
               </Button>
             }
           >
-            {profileQuery.isLoading ? (
+            {profileLoading ? (
               <IdSkeleton />
             ) : (
               <dl className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
@@ -253,7 +235,7 @@ function VetProfilePage() {
             title="Chuyên khoa"
             subtitle="Lĩnh vực điều trị bạn được cấp"
           >
-            {profileQuery.isLoading ? (
+            {profileLoading ? (
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-7 w-20 rounded-full" />
@@ -922,7 +904,7 @@ function StatTile({
 }
 
 function EducationSection({ vetId }: { vetId: number | undefined }) {
-  const { data, isLoading, isError, error } = useListVetEducations(
+  const { data, isLoading, isError } = useListVetEducations(
     vetId ?? 0,
     { pageable: { page: 0, size: 50, sort: ['startDate,desc'] } },
     { query: { enabled: vetId != null } },
@@ -944,18 +926,11 @@ function EducationSection({ vetId }: { vetId: number | undefined }) {
         </Badge>
       }
     >
-      {vetId == null || isLoading ? (
+      {vetId == null || isLoading || isError ? (
         <div className="space-y-2">
           {Array.from({ length: 2 }).map((_, i) => (
             <Skeleton key={i} className="h-20 w-full rounded-lg" />
           ))}
-        </div>
-      ) : isError ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          <p className="font-semibold">Không tải được danh sách học vấn.</p>
-          <p className="mt-1 text-xs text-destructive/80">
-            {error instanceof Error ? error.message : 'Vui lòng thử lại sau.'}
-          </p>
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">

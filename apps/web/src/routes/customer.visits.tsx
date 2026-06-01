@@ -168,6 +168,7 @@ function CustomerVisitsPage() {
 
   const listQuery = useSearchVisits(params);
   const ownerQuery = useGetMyOwnerProfile();
+  const visitsLoading = listQuery.isLoading || listQuery.isError;
   const ownerPets = useMemo(() => ownerQuery.data?.pets ?? [], [ownerQuery.data]);
   // Hero hiển thị thú cưng "trọng tâm" — ưu tiên pet có lịch SCHEDULED gần nhất,
   // không có thì lấy pet đầu tiên trong hồ sơ.
@@ -404,7 +405,7 @@ function CustomerVisitsPage() {
         </div>
 
         <div className="space-y-1 p-3">
-          {listQuery.isLoading ? (
+          {visitsLoading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-[92px] w-full rounded-lg" />
             ))

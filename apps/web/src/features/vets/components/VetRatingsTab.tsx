@@ -60,7 +60,7 @@ export function VetRatingsTab({ vetId }: Props) {
           <CardTitle className="text-base">Tổng quan</CardTitle>
         </CardHeader>
         <CardContent>
-          {summaryQuery.isLoading ? (
+          {summaryQuery.isLoading || summaryQuery.isError ? (
             <Skeleton className="h-16 w-full" />
           ) : (
             <div className="grid grid-cols-3 gap-4 text-sm">
@@ -90,7 +90,7 @@ export function VetRatingsTab({ vetId }: Props) {
         </CardContent>
       </Card>
 
-      {listQuery.isLoading ? (
+      {listQuery.isLoading || listQuery.isError ? (
         <Skeleton className="h-32 w-full" />
       ) : (listQuery.data?.content ?? []).length === 0 ? (
         <Card>
