@@ -84,6 +84,19 @@ public class GatewayRoutesConfig {
                 .build();
     }
 
+    /**
+     * Billing — hoá đơn gộp + danh mục bệnh. Consume visit.completed (async, không qua gateway).
+     */
+    @Bean
+    public RouterFunction<ServerResponse> billingServiceRoute() {
+        return route("billing-service")
+                .route(path("/api/v1/invoices/**").or(path("/api/v1/diseases/**")), http())
+                .filter(lb("billing-service"))
+                .filter(bulkhead(bulkheadRegistry, "billingBulkhead"))
+                .filter(circuitBreaker(c -> c.setId("billingCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
     @Bean
     public RouterFunction<ServerResponse> workflowServiceRoute() {
         return route("workflow-service")
@@ -200,6 +213,15 @@ public class GatewayRoutesConfig {
                 .route(path("/v3/api-docs/workflow"), http())
                 .before(setPath("/v3/api-docs"))
                 .filter(lb("workflow-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsBillingRoute() {
+        return route("api-docs-billing")
+                .route(path("/v3/api-docs/billing"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("billing-service"))
                 .build();
     }
 

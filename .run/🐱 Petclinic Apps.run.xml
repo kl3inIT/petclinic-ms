@@ -3,6 +3,7 @@
     <toRun name="admin-server" type="SpringBootApplicationConfigurationType" />
     <toRun name="api-gateway" type="SpringBootApplicationConfigurationType" />
     <toRun name="auth-service" type="SpringBootApplicationConfigurationType" />
+    <toRun name="billing-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="customers-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="reviews-service" type="SpringBootApplicationConfigurationType" />
     <toRun name="vets-service" type="SpringBootApplicationConfigurationType" />
