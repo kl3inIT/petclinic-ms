@@ -7,6 +7,7 @@ databaseChangeLog:
   - changeSet:
       id: 006-001-seed-vets
       author: mss301
+      validCheckSum: 9:ba756f3a50f4167fe63f9c1560757399
       preConditions:
         - onFail: MARK_RAN
         - sqlCheck:

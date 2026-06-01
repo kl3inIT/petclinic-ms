@@ -70,7 +70,8 @@ const RATING_DATA: { customerName: string; score: number; description?: string }
   {
     customerName: 'Trần Minh Hà',
     score: 5,
-    description: 'Bác sĩ rất tận tâm với bé Milo. Tư vấn rõ ràng, theo dõi sau khám chu đáo.',
+    description:
+      'Bác sĩ rất tận tâm với bé Milo. Tư vấn rõ ràng, theo dõi sau khám chu đáo.',
   },
   {
     customerName: 'Lê Văn Cường',

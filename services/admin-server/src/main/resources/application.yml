@@ -9,8 +9,8 @@ spring:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 
 server:
-  port: 8185                    # next sau visits (8184); mailer chiếm 8186.
+  port: 8185                    # 8186=mailer (Go), 8187=mcp-server, 8188=genai, 8189=workflow.
 
 management:
   server:
-    port: 9185                  # convention 9xxx — đồng nhất với 5 service kia.
+    port: 9185                  # convention 9xxx — đồng nhất với các service khác.

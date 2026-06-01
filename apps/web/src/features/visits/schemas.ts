@@ -6,14 +6,8 @@ import { z } from 'zod';
  *   scheduledAt (Instant, future), reason (String, optional ≤ 500)
  */
 export const bookVisitSchema = z.object({
-  petId: z.coerce
-    .number({ message: 'Bắt buộc' })
-    .int()
-    .positive('Bắt buộc'),
-  vetId: z.coerce
-    .number({ message: 'Bắt buộc' })
-    .int()
-    .positive('Bắt buộc'),
+  petId: z.coerce.number({ message: 'Bắt buộc' }).int().positive('Bắt buộc'),
+  vetId: z.coerce.number({ message: 'Bắt buộc' }).int().positive('Bắt buộc'),
   // datetime-local sinh ra "YYYY-MM-DDTHH:MM" (no seconds, no zone) — chuyển sang ISO ở mutation.
   scheduledAt: z
     .string()

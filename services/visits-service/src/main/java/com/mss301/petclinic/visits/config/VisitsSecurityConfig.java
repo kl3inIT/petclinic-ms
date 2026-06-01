@@ -66,6 +66,7 @@ public class VisitsSecurityConfig {
                                     "/api/v1/visits/*/prescription/pdf")
                             .hasAnyRole("VET", "USER", "STAFF", "ADMIN");
 
+                    auth.requestMatchers("/internal/**").permitAll();
                     EndpointSecurityCustomizer.apply(auth, endpoints);
                     auth.anyRequest().authenticated();
                 })

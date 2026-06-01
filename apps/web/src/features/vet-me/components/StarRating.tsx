@@ -29,9 +29,7 @@ export function StarRating({
         />
       ))}
       {showNumber && (
-        <span className="ml-1 text-sm font-medium text-muted-foreground">
-          {score}
-        </span>
+        <span className="ml-1 text-sm font-medium text-muted-foreground">{score}</span>
       )}
     </div>
   );

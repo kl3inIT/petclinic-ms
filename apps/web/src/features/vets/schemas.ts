@@ -52,10 +52,10 @@ export const educationSchema = z
     startDate: z.string().min(1, 'Chọn ngày bắt đầu'),
     endDate: z.string(),
   })
-  .refine(
-    (v) => v.endDate === '' || new Date(v.endDate) >= new Date(v.startDate),
-    { message: 'Ngày kết thúc phải sau ngày bắt đầu', path: ['endDate'] },
-  );
+  .refine((v) => v.endDate === '' || new Date(v.endDate) >= new Date(v.startDate), {
+    message: 'Ngày kết thúc phải sau ngày bắt đầu',
+    path: ['endDate'],
+  });
 export type EducationInput = z.infer<typeof educationSchema>;
 
 // ─── Badge form (Phase E1) ──────────────────────────────────────────────────────

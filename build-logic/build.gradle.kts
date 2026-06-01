@@ -1,3 +1,5 @@
+
+
 // build.gradle.kts của included build "build-logic".
 // Khai báo dependency cho các convention plugin (file .gradle.kts trong src/main/kotlin).
 
@@ -8,7 +10,6 @@ plugins {
 
 dependencies {
     implementation(libs.spring.boot.gradle.plugin)
-    implementation(libs.spring.dep.management.plugin)
     implementation(libs.spotless.gradle.plugin)
 
     // Hack đã được Gradle community công nhận: expose generated type-safe accessor
@@ -18,6 +19,6 @@ dependencies {
     implementation(files(libs.javaClass.superclass.protectionDomain.codeSource.location))
 }
 
-// Gradle 9 quirk: precompiled script plugin compile classpath cần Spring Boot plugin runtime
-// để `extensions.configure<SpringBootExtension>` resolve được type SpringBootExtension.
-// `implementation(libs.spring.boot.gradle.plugin)` ở trên đã đủ — không cần thêm gì.
+// Spring Boot plugin runtime cần thiết để `extensions.configure<SpringBootExtension>` resolve type.
+// spring-dep-management plugin đã bị loại bỏ — thay bằng Gradle native platform() BOM imports
+// trong convention plugins (tương thích Gradle 9.5.x, không dùng internal ImmutableAttributes API).

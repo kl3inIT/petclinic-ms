@@ -65,7 +65,9 @@ export function useLlmConfigCurrent() {
   return useQuery({
     queryKey: LLM_CONFIG_KEY,
     queryFn: async (): Promise<LlmConfigResponse> => {
-      const { data } = await apiClient.get<LlmConfigResponse>('/api/v1/admin/llm/current');
+      const { data } = await apiClient.get<LlmConfigResponse>(
+        '/api/v1/admin/llm/current',
+      );
       return data;
     },
   });

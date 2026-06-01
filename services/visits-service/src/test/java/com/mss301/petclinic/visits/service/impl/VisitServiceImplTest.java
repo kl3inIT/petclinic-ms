@@ -23,6 +23,8 @@ import com.mss301.petclinic.visits.client.PetSummary;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.VetAvailabilityResponse;
 import com.mss301.petclinic.visits.client.VetSummary;
+import com.mss301.petclinic.visits.client.WorkflowServiceClient;
+import com.mss301.petclinic.visits.config.WorkflowCallbackProperties;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.model.Visit;
 import com.mss301.petclinic.visits.repository.VisitRepository;
@@ -46,8 +48,11 @@ class VisitServiceImplTest {
         remoteClients = mock(RemoteClientsFacade.class);
         @SuppressWarnings("unchecked")
         ObjectProvider<EventPublisher> events = mock(ObjectProvider.class);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<WorkflowServiceClient> workflowClient = mock(ObjectProvider.class);
+        WorkflowCallbackProperties workflowProperties = new WorkflowCallbackProperties("test-secret", "visit-booking");
         NotificationSagaRepository sagaRepository = mock(NotificationSagaRepository.class);
-        service = new VisitServiceImpl(repository, remoteClients, events, sagaRepository);
+        service = new VisitServiceImpl(repository, remoteClients, events, workflowClient, workflowProperties, sagaRepository);
     }
 
     @Test

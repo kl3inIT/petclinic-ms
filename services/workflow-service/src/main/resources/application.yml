@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: workflow-service
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+server:
+  port: 8190                    # 8189=reviews-service. Workflow uses the next free service port.
+
+management:
+  server:
+    port: 9190                  # convention 9xxx — đồng nhất với các service khác.

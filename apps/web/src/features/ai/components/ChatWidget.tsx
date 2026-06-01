@@ -81,10 +81,12 @@ export function ChatWidget() {
     [accessToken, threadId],
   );
 
-  const { messages, sendMessage, status, error, stop, regenerate, setMessages } = useChat({
-    transport,
-    messages: loadPersistedMessages(),
-  });
+  const { messages, sendMessage, status, error, stop, regenerate, setMessages } = useChat(
+    {
+      transport,
+      messages: loadPersistedMessages(),
+    },
+  );
 
   // Persist sau mỗi message change. Cap MAX_PERSISTED tránh localStorage phình to.
   useEffect(() => {
@@ -113,7 +115,7 @@ export function ChatWidget() {
         <Button
           size="icon"
           aria-label="Mở AI assistant"
-          className="fixed bottom-6 right-6 z-40 size-14 rounded-full shadow-lg"
+          className="fixed right-6 bottom-6 z-40 size-14 rounded-full shadow-lg"
           onClick={() => setOpen(true)}
         >
           <Sparkles className="size-6" />
@@ -121,7 +123,7 @@ export function ChatWidget() {
       )}
 
       {open && (
-        <div className="fixed bottom-6 right-6 z-40 flex h-[600px] w-[420px] flex-col rounded-lg border bg-background shadow-2xl">
+        <div className="fixed right-6 bottom-6 z-40 flex h-[600px] w-[420px] flex-col rounded-lg border bg-background shadow-2xl">
           <header className="flex items-center justify-between border-b px-4 py-3">
             <div className="flex items-center gap-2">
               <Bot className="size-5 text-primary" />

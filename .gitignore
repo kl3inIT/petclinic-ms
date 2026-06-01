@@ -75,5 +75,6 @@ playwright-report/
 backups/
 
 ### JVM crash dumps ###
+*.hprof
 hs_err_pid*.log
 replay_pid*.log

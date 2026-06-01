@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.186",
+    "@bpmn-io/properties-panel": "^3.42.0",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-label": "^2.1.1",
@@ -36,6 +37,9 @@
     "@tanstack/react-table": "^8.21.2",
     "ai": "^6.0.184",
     "axios": "^1.7.9",
+    "bpmn-js": "^18.16.1",
+    "bpmn-js-properties-panel": "^5.54.0",
+    "camunda-bpmn-js-behaviors": "^1.15.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -50,6 +54,7 @@
     "streamdown": "^2.5.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "zeebe-bpmn-moddle": "^1.13.0",
     "use-stick-to-bottom": "^1.1.4",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"

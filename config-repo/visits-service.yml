@@ -1,4 +1,30 @@
 # Visits — env-agnostic config.
+petclinic:
+  workflow:
+    # Phải khớp với petclinic.workflow.callback-token bên workflow-service.
+    # Override qua env var PETCLINIC_WORKFLOW_CALLBACK_TOKEN trong prod.
+    callback-token: ${PETCLINIC_WORKFLOW_CALLBACK_TOKEN:petclinic-workflow-secret}
+    # Quy trình Camunda 8 được start tự động khi đặt lịch mới.
+    # Đổi key này khi muốn lịch mới chạy theo bản quy trình khác.
+    visit-booking-process-id: ${PETCLINIC_WORKFLOW_VISIT_BOOKING_PROCESS_ID:visit-booking}
+
+  security:
+    endpoints:
+      # Authenticated user — list + detail + book + cancel. Per-instance ownership
+      # check là @PreAuthorize ở controller, không phải URL pattern.
+      user:
+        - { method: GET,   path: /api/v1/visits/** }
+        - { method: POST,  path: /api/v1/visits }
+        - { method: PATCH, path: /api/v1/visits/*/cancel }
+      # Custom domain role — vet hoặc admin start/complete visit (write clinical data)
+      custom-roles:
+        VET:
+          - { method: PATCH, path: /api/v1/visits/*/start }
+          - { method: PATCH, path: /api/v1/visits/*/complete }
+      # Staff vận hành (admin + cancel cho người khác — fallback support cho USER)
+      staff:
+        - { method: PATCH, path: /api/v1/visits/*/start }       # staff cũng start được
+
 # Datasource creds + URL khác env → visits-service-<profile>.yml.
 
 spring:

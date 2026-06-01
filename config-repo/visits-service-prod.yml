@@ -1,0 +1,5 @@
+petclinic:
+  workflow:
+    # Prod: bắt buộc env var, KHÔNG fallback về dev secret công khai trong repo.
+    # Phải khớp với cùng giá trị bên workflow-service. Thiếu env → fail-fast lúc startup.
+    callback-token: ${PETCLINIC_WORKFLOW_CALLBACK_TOKEN}

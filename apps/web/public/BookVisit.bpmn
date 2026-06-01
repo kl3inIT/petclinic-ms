@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+    xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+    id="Definitions_BookVisit"
+    targetNamespace="http://mss301.petclinic/workflow">
+
+  <bpmn:process id="BookVisit" name="Đặt lịch khám" isExecutable="true">
+
+    <bpmn:startEvent id="Start" name="Yêu cầu đặt lịch">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- Bước 1: kiểm tra bác sĩ qua call-vets-service worker -->
+    <bpmn:serviceTask id="CheckVet" name="Kiểm tra Bác sĩ">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="call-vets-service"/>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Bước 2: bác sĩ xác nhận lịch hẹn (Zeebe user task) -->
+    <bpmn:userTask id="ConfirmByDoctor" name="Xác nhận Bác sĩ">
+      <bpmn:extensionElements>
+        <zeebe:userTask/>
+        <zeebe:ioMapping>
+          <zeebe:output source="=doctorApproved" target="doctorApproved"/>
+          <zeebe:output source="=doctorNotes" target="doctorNotes"/>
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <!-- Bước 3: tạo lịch hẹn — gọi Camunda REST API -->
+    <bpmn:serviceTask id="CreateVisit" name="Tạo lịch hẹn">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="camel-http-call"/>
+        <zeebe:taskHeaders>
+          <zeebe:header key="url" value="http://localhost:8088/v1/topology"/>
+          <zeebe:header key="method" value="GET"/>
+          <zeebe:header key="resultVariable" value="visitConfirmation"/>
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End" name="Lịch đã đặt">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start"           targetRef="CheckVet"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="CheckVet"        targetRef="ConfirmByDoctor"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ConfirmByDoctor" targetRef="CreateVisit"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="CreateVisit"     targetRef="End"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="Diagram_BookVisit">
+    <bpmndi:BPMNPlane id="Plane_BookVisit" bpmnElement="BookVisit">
+
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start">
+        <dc:Bounds x="152" y="122" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="128" y="165" width="84" height="27"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="CheckVet_di" bpmnElement="CheckVet">
+        <dc:Bounds x="260" y="100" width="140" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ConfirmByDoctor_di" bpmnElement="ConfirmByDoctor">
+        <dc:Bounds x="480" y="100" width="140" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="CreateVisit_di" bpmnElement="CreateVisit">
+        <dc:Bounds x="700" y="100" width="140" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="End_di" bpmnElement="End">
+        <dc:Bounds x="922" y="122" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="910" y="165" width="60" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="140"/><di:waypoint x="260" y="140"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="400" y="140"/><di:waypoint x="480" y="140"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="620" y="140"/><di:waypoint x="700" y="140"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="840" y="140"/><di:waypoint x="922" y="140"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
