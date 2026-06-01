@@ -5,9 +5,11 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
+import type { Pageable } from './pageable';
 
-export interface SortObject {
-  empty?: boolean;
-  unsorted?: boolean;
-  sorted?: boolean;
-}
+export type ListDiseasesParams = {
+  q?: string;
+  category?: string;
+  active?: boolean;
+  pageable: Pageable;
+};

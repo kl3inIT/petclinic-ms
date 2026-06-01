@@ -5,9 +5,8 @@
  * Aggregated from: auth, customers, vets, visits
  * OpenAPI spec version: 1.0.0
  */
+import type { CheckoutRequestPaymentMethod } from './checkoutRequestPaymentMethod';
 
-export interface SortObject {
-  empty?: boolean;
-  unsorted?: boolean;
-  sorted?: boolean;
+export interface CheckoutRequest {
+  paymentMethod: CheckoutRequestPaymentMethod;
 }

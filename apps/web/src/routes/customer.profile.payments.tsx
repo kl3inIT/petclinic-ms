@@ -6,6 +6,7 @@ import {
   CreditCard,
   MoreHorizontal,
   Plus,
+  Receipt,
   ShieldCheck,
   Star,
   Trash2,
@@ -43,6 +44,14 @@ import {
   type PaymentMethod,
   usePersistedState,
 } from '@/features/customer-profile/preferences';
+import { type InvoiceResponse, useMyInvoices } from '@/features/billing/api';
+import { formatDateTime, formatVnd } from '@/features/billing/format';
+import {
+  INVOICE_STATUS_CLASS,
+  INVOICE_STATUS_LABEL,
+  ITEM_SOURCE_LABEL,
+  PAYMENT_METHOD_LABEL,
+} from '@/features/billing/labels';
 
 export const Route = createFileRoute('/customer/profile/payments')({
   component: PaymentsPage,
@@ -114,6 +123,8 @@ function PaymentsPage() {
         }
       />
 
+      <MyInvoicesSection />
+
       <ProfileCard className="bg-gradient-to-r from-amber-50 via-white to-rose-50">
         <CardTitleRow
           icon={ShieldCheck}
@@ -165,6 +176,105 @@ function PaymentsPage() {
         }}
       />
     </>
+  );
+}
+
+function MyInvoicesSection() {
+  const { data, isLoading } = useMyInvoices();
+  const invoices = data?.content ?? [];
+  const openInvoice = invoices.find((i) => i.status === 'OPEN');
+  const history = invoices.filter((i) => i.status !== 'OPEN');
+
+  return (
+    <ProfileCard>
+      <CardTitleRow
+        icon={Receipt}
+        title="Hoá đơn của tôi"
+        description="Mọi chi phí khám + điều trị + đồ mua tại cửa hàng được gộp vào một hoá đơn, thanh toán một lần ở quầy."
+      />
+
+      {isLoading ? (
+        <p className="mt-4 text-sm text-slate-500">Đang tải…</p>
+      ) : invoices.length === 0 ? (
+        <div className="mt-6 flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/40 py-10 text-center">
+          <Receipt className="size-10 text-slate-300" />
+          <p className="text-sm font-bold text-slate-700">Chưa có hoá đơn nào</p>
+          <p className="text-xs font-medium text-slate-500">
+            Hoá đơn sẽ xuất hiện sau khi bạn hoàn tất một lần khám.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-5 space-y-4">
+          {openInvoice ? <OpenInvoiceCard invoice={openInvoice} /> : null}
+          {history.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-500 uppercase">Lịch sử</p>
+              {history.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between rounded-xl border border-[#ECECF5] bg-white p-3 text-sm"
+                >
+                  <div>
+                    <span className="font-mono font-semibold">#{inv.id}</span>
+                    <span className="ml-2 text-slate-500">
+                      {formatDateTime(inv.paidAt ?? inv.issuedAt)}
+                    </span>
+                    {inv.paymentMethod ? (
+                      <span className="ml-2 text-xs text-slate-400">
+                        {PAYMENT_METHOD_LABEL[inv.paymentMethod]}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-semibold">
+                      {formatVnd(inv.total)}
+                    </span>
+                    <Badge className={INVOICE_STATUS_CLASS[inv.status ?? 'PAID']}>
+                      {INVOICE_STATUS_LABEL[inv.status ?? 'PAID']}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </ProfileCard>
+  );
+}
+
+function OpenInvoiceCard({ invoice }: { invoice: InvoiceResponse }) {
+  const items = invoice.items ?? [];
+  return (
+    <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/40 p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-black text-slate-900">Hoá đơn đang mở #{invoice.id}</p>
+        <Badge className={INVOICE_STATUS_CLASS.OPEN}>{INVOICE_STATUS_LABEL.OPEN}</Badge>
+      </div>
+      <ul className="mt-3 space-y-1.5">
+        {items.map((it) => (
+          <li key={it.id} className="flex items-center justify-between text-sm">
+            <span className="truncate text-slate-700">
+              <span className="mr-1 text-xs text-slate-400">
+                [{ITEM_SOURCE_LABEL[it.sourceType ?? 'MISC']}]
+              </span>
+              {it.description}
+              {(it.quantity ?? 1) > 1 ? ` ×${it.quantity}` : ''}
+            </span>
+            <span className="font-mono font-medium">{formatVnd(it.lineTotal)}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 flex items-center justify-between border-t border-amber-200 pt-3">
+        <span className="text-sm font-bold">Tổng cộng</span>
+        <span className="font-mono text-base font-black text-slate-900">
+          {formatVnd(invoice.total)}
+        </span>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        Thanh toán tại quầy khi bạn hoàn tất. Nhân viên sẽ chốt hoá đơn này.
+      </p>
+    </div>
   );
 }
 

@@ -9,6 +9,8 @@ import {
   LogOut,
   Sparkles,
   ShieldCheck,
+  Receipt,
+  Pill,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
@@ -36,6 +38,8 @@ interface NavItem {
     | '/admin/vet-reviews'
     | '/admin/visits'
     | '/admin/workflows'
+    | '/admin/invoices'
+    | '/admin/diseases'
     | '/admin/llm-config';
   label: string;
   icon: typeof LayoutDashboard;
@@ -50,6 +54,8 @@ const navItems: NavItem[] = [
   { to: '/admin/owners', label: 'Owners', icon: Users },
   { to: '/admin/pets', label: 'Pets', icon: PawPrint },
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },
+  { to: '/admin/invoices', label: 'Hoá đơn', icon: Receipt },
+  { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill },
   { to: '/admin/vet-reviews', label: 'Duyệt thay đổi', icon: ShieldCheck },
   { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, adminOnly: true },
 ];

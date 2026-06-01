@@ -6,8 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface SortObject {
-  empty?: boolean;
-  unsorted?: boolean;
-  sorted?: boolean;
+export interface DiseaseResponse {
+  id?: number;
+  code?: string;
+  name?: string;
+  category?: string;
+  description?: string;
+  baseCost?: number;
+  active?: boolean;
 }

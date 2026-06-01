@@ -6,8 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface SortObject {
-  empty?: boolean;
-  unsorted?: boolean;
-  sorted?: boolean;
+export interface CreateInvoiceRequest {
+  customerUserId?: string;
+  /**
+   * @minLength 0
+   * @maxLength 150
+   */
+  customerName?: string;
+  notes?: string;
 }
