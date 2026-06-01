@@ -3,6 +3,7 @@ package com.mss301.petclinic.billing.consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +26,12 @@ import com.mss301.petclinic.billing.service.InvoiceService;
  *       phí cùng visitId ngay cả khi eventId khác.</li>
  * </ol>
  * Check + side-effect + ghi processed_events trong cùng {@code @Transactional} → atomic.
+ *
+ * <p>Gated {@code petclinic.events.enabled} — test slice (broker off) không đăng ký
+ * {@code @RabbitListener} → context load không cần khai báo queue.
  */
 @Component
+@ConditionalOnProperty(prefix = "petclinic.events", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class VisitCompletedConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(VisitCompletedConsumer.class);
