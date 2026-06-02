@@ -107,7 +107,7 @@ public class InvoiceController {
     }
 
     @PostMapping("/{id}/checkout")
-    @Operation(summary = "Chốt + thanh toán hoá đơn — STAFF/ADMIN")
+    @Operation(summary = "Chốt + thanh toán hoá đơn TRỰC TIẾP tại quầy — STAFF/ADMIN")
     public InvoiceResponse checkoutInvoice(@PathVariable Long id,
                                            @Valid @RequestBody CheckoutRequest request) {
         return service.checkout(id, request);

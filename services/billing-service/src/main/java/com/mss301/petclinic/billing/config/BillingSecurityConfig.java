@@ -18,8 +18,9 @@ import org.springframework.security.web.SecurityFilterChain;
  *
  * <h4>Hoá đơn</h4>
  * <ul>
- *   <li>List + mở tab + checkout + huỷ + xoá dòng → STAFF/ADMIN (vai trò quầy thu ngân)</li>
- *   <li>Thêm dòng → STAFF/ADMIN/VET (vet thêm điều trị theo bệnh)</li>
+ *   <li>List → STAFF/ADMIN/VET</li>
+ *   <li>Mở tab + thêm dòng + bớt dòng → STAFF/ADMIN/VET (vet lập hoá đơn ngay ở màn khám)</li>
+ *   <li>Checkout + huỷ → STAFF/ADMIN (vai trò quầy thu ngân; vet không thu tiền)</li>
  *   <li>{@code /me} → khách xem hoá đơn của mình; chi tiết {@code /{id}} kiểm ownership ở controller</li>
  * </ul>
  */
@@ -51,16 +52,20 @@ public class BillingSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/diseases/**").authenticated()
 
                         // ── Hoá đơn: ghi ──
+                        // VET lập hoá đơn từ màn khám: mở/đảm bảo tab OPEN, thêm + bớt dòng.
+                        // (createInvoice idempotent theo OPEN-per-customer.) Vet KHÔNG checkout/cancel —
+                        // thanh toán để quầy STAFF/ADMIN. MVP: chưa verify vet sở hữu visit của khách
+                        // ở billing (billing không biết visits) → VET là vai tin cậy thao tác tab OPEN.
                         .requestMatchers(HttpMethod.POST, "/api/v1/invoices/*/items")
                             .hasAnyRole("STAFF", "ADMIN", "VET")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/invoices/*/items/**")
-                            .hasAnyRole("STAFF", "ADMIN")
+                            .hasAnyRole("STAFF", "ADMIN", "VET")
                         .requestMatchers(HttpMethod.POST, "/api/v1/invoices/*/checkout")
                             .hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/invoices/*/cancel")
                             .hasAnyRole("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/invoices")
-                            .hasAnyRole("STAFF", "ADMIN")
+                            .hasAnyRole("STAFF", "ADMIN", "VET")
 
                         // ── Hoá đơn: đọc ──
                         .requestMatchers(HttpMethod.GET, "/api/v1/invoices/me").authenticated()

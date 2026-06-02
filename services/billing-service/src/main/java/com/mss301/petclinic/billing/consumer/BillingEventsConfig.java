@@ -24,4 +24,9 @@ public class BillingEventsConfig {
     Declarables visitCompletedQueue(EventsProperties props) {
         return EventQueues.consumer("billing.visit.completed", "visit.completed", props);
     }
+
+    @Bean
+    Declarables prescriptionIssuedQueue(EventsProperties props) {
+        return EventQueues.consumer("billing.prescription.issued", "prescription.issued", props);
+    }
 }

@@ -7,6 +7,7 @@ dependencies {
     implementation(project(":shared:common-jpa"))
     implementation(project(":shared:common-security"))      // JWT bearer auth
     implementation(project(":shared:common-events"))        // consume visit.completed → tạo hoá đơn
+    implementation(project(":shared:common-clients"))       // gọi products-service (giá + trừ kho hàng bán lẻ)
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.data.jpa)
@@ -15,6 +16,9 @@ dependencies {
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
     implementation(libs.spring.cloud.starter.netflix.eureka.client)
     implementation(libs.spring.cloud.starter.config)
+
+    // Service-to-service: load balancer (lb:// URI) để gọi products-service
+    implementation("org.springframework.cloud:spring-cloud-starter-loadbalancer")
 
     implementation(libs.micrometer.tracing.bridge.otel)
     runtimeOnly(libs.opentelemetry.exporter.otlp)

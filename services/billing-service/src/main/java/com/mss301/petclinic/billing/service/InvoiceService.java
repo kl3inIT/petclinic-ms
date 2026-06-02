@@ -2,6 +2,7 @@ package com.mss301.petclinic.billing.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -38,4 +39,15 @@ public interface InvoiceService {
      */
     InvoiceResponse appendVisitFee(UUID customerUserId, String customerName,
                                    Long visitId, BigDecimal fee, String description);
+
+    /**
+     * Bơm các dòng thuốc kê đơn vào tab OPEN của khách (tạo tab nếu chưa có).
+     * Idempotency theo {@code eventId} do consumer đảm bảo. Dùng bởi consumer
+     * {@code PrescriptionIssuedEvent}.
+     */
+    InvoiceResponse appendMedicationItems(UUID customerUserId, String customerName,
+                                          List<MedicationLine> lines);
+
+    /** Một dòng thuốc tính tiền (snapshot từ event). */
+    record MedicationLine(Long productId, String name, BigDecimal unitPrice, int quantity) {}
 }
