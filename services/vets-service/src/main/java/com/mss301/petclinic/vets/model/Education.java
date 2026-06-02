@@ -1,7 +1,6 @@
 package com.mss301.petclinic.vets.model;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,6 +18,9 @@ import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
  * <p>Khác với Pet (sub-resource của Owner trong customers-service được manage qua aggregate),
  * Education tự manage independent → {@code vet_id} dùng scalar Long với insertable+updatable
  * mặc định (true), KHÔNG cần mirror-FK trick.</p>
+ *
+ * <p>CRUD trần (không review workflow) — đồng nhất nghiệp vụ với reference Champlain vet-service:
+ * vet/staff thêm bằng cấp là hiển thị ngay, không qua duyệt.</p>
  */
 @Entity
 @Table(name = "educations")
@@ -46,19 +48,6 @@ public class Education extends AbstractAuditingEntity {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    /** Trạng thái duyệt: PENDING | APPROVED | REJECTED. Vet submit mới → PENDING. */
-    @Column(name = "status", nullable = false, length = 20)
-    private String status = "PENDING";
-
-    @Column(name = "reviewed_by", length = 50)
-    private String reviewedBy;
-
-    @Column(name = "reviewed_at")
-    private OffsetDateTime reviewedAt;
-
-    @Column(name = "reject_reason", columnDefinition = "TEXT")
-    private String rejectReason;
-
     protected Education() {
         // JPA requires no-arg constructor
     }
@@ -77,10 +66,6 @@ public class Education extends AbstractAuditingEntity {
     public String getFieldOfStudy() { return fieldOfStudy; }
     public LocalDate getStartDate() { return startDate; }
     public LocalDate getEndDate() { return endDate; }
-    public String getStatus() { return status; }
-    public String getReviewedBy() { return reviewedBy; }
-    public OffsetDateTime getReviewedAt() { return reviewedAt; }
-    public String getRejectReason() { return rejectReason; }
 
     public void setVetId(Long vetId) { this.vetId = vetId; }
     public void setSchoolName(String schoolName) { this.schoolName = schoolName; }
@@ -88,19 +73,4 @@ public class Education extends AbstractAuditingEntity {
     public void setFieldOfStudy(String fieldOfStudy) { this.fieldOfStudy = fieldOfStudy; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
-    public void setStatus(String status) { this.status = status; }
-
-    public void approve(String reviewer) {
-        this.status = "APPROVED";
-        this.reviewedBy = reviewer;
-        this.reviewedAt = OffsetDateTime.now();
-        this.rejectReason = null;
-    }
-
-    public void reject(String reviewer, String reason) {
-        this.status = "REJECTED";
-        this.reviewedBy = reviewer;
-        this.reviewedAt = OffsetDateTime.now();
-        this.rejectReason = reason;
-    }
 }

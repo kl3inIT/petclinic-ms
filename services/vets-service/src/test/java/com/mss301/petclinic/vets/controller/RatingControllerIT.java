@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
+import java.time.Year;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -183,6 +185,64 @@ class RatingControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(1))
                 .andExpect(jsonPath("$.average").value(2.0));
+    }
+
+    // ---------- predefinedDescription (Item 1) ----------
+
+    @Test
+    void addVetRating_predefinedDescriptionOnly_derivesDescriptionFromLabel() throws Exception {
+        Long vetId = firstVetId();
+        // Không gửi description → service lấy label tiếng Việt của nhãn GOOD ("Tốt").
+        String body = """
+                { "score": 4, "predefinedDescription": "GOOD" }
+                """;
+        mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .with(staff("alice")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.predefinedDescription").value("GOOD"))
+                .andExpect(jsonPath("$.description").value("Tốt"));
+    }
+
+    @Test
+    void addVetRating_explicitDescriptionWithPredefined_keepsExplicitText() throws Exception {
+        Long vetId = firstVetId();
+        String body = """
+                { "score": 5, "description": "Bác sĩ rất tận tâm", "predefinedDescription": "EXCELLENT" }
+                """;
+        mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .with(staff("bob")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.predefinedDescription").value("EXCELLENT"))
+                .andExpect(jsonPath("$.description").value("Bác sĩ rất tận tâm"));
+    }
+
+    // ---------- filter theo năm (Item 2) ----------
+
+    @Test
+    void listVetRatings_filterByYear() throws Exception {
+        Long vetId = firstVetId();
+        addRating(vetId, 5, "Bob");   // rateDate = now() → năm hiện tại
+        addRating(vetId, 4, "Carol");
+
+        int thisYear = Year.now().getValue();
+
+        // Năm hiện tại → thấy đủ 2 rating
+        mvc.perform(get("/api/v1/vets/{vetId}/ratings", vetId)
+                        .param("year", String.valueOf(thisYear))
+                        .with(staff()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+
+        // Năm trước → không có rating nào
+        mvc.perform(get("/api/v1/vets/{vetId}/ratings", vetId)
+                        .param("year", String.valueOf(thisYear - 1))
+                        .with(staff()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
     }
 
     // ---------- LIST + DELETE ----------

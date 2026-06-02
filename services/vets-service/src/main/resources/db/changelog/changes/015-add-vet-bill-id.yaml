@@ -1,0 +1,24 @@
+databaseChangeLog:
+  # Item 4 — vetBillId: mã liên kết vet ↔ billing-service (port Champlain vet-service).
+  # Nullable (vet chưa có tài khoản billing) nhưng unique nếu có. Postgres cho phép
+  # nhiều NULL trong cột unique → các vet chưa gán không xung đột.
+
+  - changeSet:
+      id: 015-001-add-vet-bill-id-column
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: vets
+            tableName: vets
+            columns:
+              - column: { name: vet_bill_id, type: VARCHAR(36) }
+
+  - changeSet:
+      id: 015-002-add-vet-bill-id-unique
+      author: mss301
+      changes:
+        - addUniqueConstraint:
+            schemaName: vets
+            tableName: vets
+            columnNames: vet_bill_id
+            constraintName: uk_vets_bill_id

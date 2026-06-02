@@ -1,5 +1,6 @@
 package com.mss301.petclinic.vets.service.impl;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -20,9 +21,12 @@ import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
 import com.mss301.petclinic.vets.dto.req.VetRequest;
 import com.mss301.petclinic.vets.dto.res.VetResponse;
 import com.mss301.petclinic.vets.exception.VetNotFoundException;
+import com.mss301.petclinic.vets.model.Badge;
+import com.mss301.petclinic.vets.model.BadgeTitle;
 import com.mss301.petclinic.vets.model.Specialty;
 import com.mss301.petclinic.vets.model.Vet;
 import com.mss301.petclinic.vets.model.VetPhoto;
+import com.mss301.petclinic.vets.repository.BadgeRepository;
 import com.mss301.petclinic.vets.repository.RatingRepository;
 import com.mss301.petclinic.vets.repository.SpecialtyRepository;
 import com.mss301.petclinic.vets.repository.VetPhotoRepository;
@@ -40,14 +44,16 @@ public class VetServiceImpl implements VetService {
     private final SpecialtyRepository specialtyRepository;
     private final RatingRepository ratingRepository;
     private final VetPhotoRepository photoRepository;
+    private final BadgeRepository badgeRepository;
     private final StorageService storage;
     private final StorageProperties props;
 
-    public VetServiceImpl(VetRepository vetRepository, SpecialtyRepository specialtyRepository, RatingRepository ratingRepository, VetPhotoRepository photoRepository, StorageService storage, StorageProperties props) {
+    public VetServiceImpl(VetRepository vetRepository, SpecialtyRepository specialtyRepository, RatingRepository ratingRepository, VetPhotoRepository photoRepository, BadgeRepository badgeRepository, StorageService storage, StorageProperties props) {
         this.vetRepository = vetRepository;
         this.specialtyRepository = specialtyRepository;
         this.ratingRepository = ratingRepository;
         this.photoRepository = photoRepository;
+        this.badgeRepository = badgeRepository;
         this.storage = storage;
         this.props = props;
     }
@@ -102,7 +108,19 @@ public class VetServiceImpl implements VetService {
         if (request.specialtyNames() != null && !request.specialtyNames().isEmpty()) {
             vet.setSpecialties(resolveSpecialties(request.specialtyNames()));
         }
-        return VetResponse.from(saveAndTranslateUniqueViolation(vet), null, null);
+        Vet saved = saveAndTranslateUniqueViolation(vet);
+        // Item 5 (port Champlain assignBadgeAndSaveBadgeAndVet): vet mới tự được cấp badge
+        // khởi đầu ROOKIE — đánh dấu "bác sĩ mới gia nhập". Cùng @Transactional với insert vet.
+        badgeRepository.save(new Badge(saved.getId(), BadgeTitle.ROOKIE, LocalDate.now()));
+        return VetResponse.from(saved, null, null);
+    }
+
+    @Override
+    public VetResponse findByVetBillId(String vetBillId) {
+        Vet vet = vetRepository.findByVetBillId(vetBillId)
+                .orElseThrow(() -> new VetNotFoundException(vetBillId));
+        // Tái dùng logic build response (photo presigned + average rating) của findById.
+        return findById(vet.getId());
     }
 
     @Override
@@ -132,6 +150,10 @@ public class VetServiceImpl implements VetService {
         if (request.hasPhoneNumber()) {
             // empty string = clear phone — cho phép. Validate length đã có ở DTO create (Size 30).
             vet.setPhoneNumber(request.phoneNumber().isBlank() ? null : request.phoneNumber());
+        }
+        if (request.hasVetBillId()) {
+            // empty string = clear (null) — tránh đụng unique constraint. Duplicate → 400 ở save.
+            vet.setVetBillId(request.vetBillId().isBlank() ? null : request.vetBillId());
         }
         if (request.hasActive()) {
             vet.setActive(request.active());
@@ -183,9 +205,10 @@ public class VetServiceImpl implements VetService {
     }
 
     private static final String UK_VETS_EMAIL = "uk_vets_email";
+    private static final String UK_VETS_BILL_ID = "uk_vets_bill_id";
 
     /**
-     * Save và dịch DB unique violation (email trùng) thành 400 BadRequestAlertException
+     * Save và dịch DB unique violation (email / vetBillId trùng) thành 400 BadRequestAlertException
      * thay vì để 500 leak constraint name ra client.
      *
      * <p>M4 fix: ưu tiên typed API ({@code PSQLException.getSQLState() == "23505"} +
@@ -197,25 +220,32 @@ public class VetServiceImpl implements VetService {
         try {
             return vetRepository.saveAndFlush(vet);
         } catch (DataIntegrityViolationException ex) {
-            if (isEmailUniqueViolation(ex)) {
+            if (isUniqueViolation(ex, UK_VETS_EMAIL)) {
                 throw new BadRequestAlertException(
                         "Email already in use: " + vet.getEmail(),
                         ENTITY_NAME,
                         "email-exists"
                 );
             }
+            if (isUniqueViolation(ex, UK_VETS_BILL_ID)) {
+                throw new BadRequestAlertException(
+                        "vetBillId already in use: " + vet.getVetBillId(),
+                        ENTITY_NAME,
+                        "vetBillId-exists"
+                );
+            }
             throw ex;
         }
     }
 
-    private static boolean isEmailUniqueViolation(DataIntegrityViolationException ex) {
+    private static boolean isUniqueViolation(DataIntegrityViolationException ex, String constraintName) {
         Throwable cause = ex.getMostSpecificCause();
         // Tier 1 (preferred): Hibernate's ConstraintViolationException carry constraint
         // name typed-API thay vì parse message text. Available với Hibernate 6+ và
         // KHÔNG kéo Postgres-specific class vào compile classpath (postgresql JDBC
         // là `runtimeOnly` dep — chỉ ở classpath khi container chạy).
         if (cause instanceof org.hibernate.exception.ConstraintViolationException cve
-                && UK_VETS_EMAIL.equals(cve.getConstraintName())) {
+                && constraintName.equals(cve.getConstraintName())) {
             return true;
         }
         // Tier 2: SQLState check — 23505 = unique_violation theo SQL standard.
@@ -225,12 +255,12 @@ public class VetServiceImpl implements VetService {
         if (cause instanceof java.sql.SQLException sqlEx
                 && "23505".equals(sqlEx.getSQLState())) {
             String msg = cause.getMessage();
-            return msg != null && msg.contains(UK_VETS_EMAIL);
+            return msg != null && msg.contains(constraintName);
         }
         // Tier 3 (fallback): pure string match cho non-SQLException (vd lỗi từ
         // Hibernate StaleStateException). Best-effort.
         String msg = cause.getMessage();
-        return msg != null && msg.contains(UK_VETS_EMAIL);
+        return msg != null && msg.contains(constraintName);
     }
 
     /**

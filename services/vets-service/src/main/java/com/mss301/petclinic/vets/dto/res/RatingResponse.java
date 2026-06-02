@@ -2,6 +2,7 @@ package com.mss301.petclinic.vets.dto.res;
 
 import java.time.OffsetDateTime;
 
+import com.mss301.petclinic.vets.model.PredefinedDescription;
 import com.mss301.petclinic.vets.model.Rating;
 
 public record RatingResponse(
@@ -9,6 +10,7 @@ public record RatingResponse(
         Long vetId,
         Integer score,
         String description,
+        PredefinedDescription predefinedDescription,
         String customerName,
         OffsetDateTime rateDate
 ) {
@@ -18,6 +20,7 @@ public record RatingResponse(
                 r.getVetId(),
                 r.getScore(),
                 r.getDescription(),
+                r.getPredefinedDescription(),
                 r.getCustomerName(),
                 r.getRateDate()
         );

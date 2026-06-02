@@ -1,0 +1,33 @@
+databaseChangeLog:
+  # Education quay về CRUD trần — bỏ review workflow (đồng nhất nghiệp vụ Champlain vet-service).
+  # Đảo ngược 013-002 (chỉ phần educations; vet_photo GIỮ NGUYÊN review workflow).
+  # Forward-only: drop constraint + index + 4 cột review.
+
+  - changeSet:
+      id: 014-001-drop-education-status-constraint
+      author: mss301
+      changes:
+        - sql:
+            sql: ALTER TABLE vets.educations DROP CONSTRAINT IF EXISTS ck_educations_status
+
+  - changeSet:
+      id: 014-002-drop-education-status-index
+      author: mss301
+      changes:
+        - dropIndex:
+            schemaName: vets
+            tableName: educations
+            indexName: idx_educations_status
+
+  - changeSet:
+      id: 014-003-drop-education-review-columns
+      author: mss301
+      changes:
+        - dropColumn:
+            schemaName: vets
+            tableName: educations
+            columns:
+              - column: { name: status }
+              - column: { name: reviewed_by }
+              - column: { name: reviewed_at }
+              - column: { name: reject_reason }

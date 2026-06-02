@@ -1,7 +1,6 @@
 package com.mss301.petclinic.vets.service.impl;
 
 import java.time.LocalDate;
-import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -53,10 +52,7 @@ public class EducationServiceImpl implements EducationService {
     public EducationResponse create(Long vetId, EducationRequest request) {
         ensureVetExists(vetId);
         validateDates(request.startDate(), request.endDate());
-        Education entity = request.toEntity(vetId);
-        // Mới tạo → PENDING (default field value đã set, defensive set lại).
-        entity.setStatus("PENDING");
-        Education saved = educationRepository.save(entity);
+        Education saved = educationRepository.save(request.toEntity(vetId));
         return EducationResponse.from(saved);
     }
 
@@ -94,40 +90,7 @@ public class EducationServiceImpl implements EducationService {
         // Validate sau khi merge — tránh case PATCH startDate mới khiến endDate cũ < startDate mới
         validateDates(education.getStartDate(), education.getEndDate());
 
-        // Vet sửa education → reset về PENDING, chờ duyệt lại. Không cho phép edit
-        // ngầm "approved data" mà không qua duyệt.
-        education.setStatus("PENDING");
-
         return EducationResponse.from(educationRepository.save(education));
-    }
-
-    @Override
-    @Transactional
-    public EducationResponse approve(Long vetId, Long educationId, String reviewer) {
-        ensureVetExists(vetId);
-        Education edu = educationRepository
-                .findByIdAndVetId(educationId, vetId)
-                .orElseThrow(() -> new EducationNotFoundException(educationId.toString()));
-        edu.approve(reviewer);
-        return EducationResponse.from(edu);
-    }
-
-    @Override
-    @Transactional
-    public EducationResponse reject(Long vetId, Long educationId, String reviewer, String reason) {
-        ensureVetExists(vetId);
-        Education edu = educationRepository
-                .findByIdAndVetId(educationId, vetId)
-                .orElseThrow(() -> new EducationNotFoundException(educationId.toString()));
-        edu.reject(reviewer, reason);
-        return EducationResponse.from(edu);
-    }
-
-    @Override
-    public List<EducationResponse> listPending() {
-        return educationRepository.findByStatus("PENDING").stream()
-                .map(EducationResponse::from)
-                .toList();
     }
 
     @Override

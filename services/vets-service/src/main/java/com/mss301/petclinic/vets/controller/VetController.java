@@ -56,6 +56,15 @@ public class VetController {
         return service.findById(id);
     }
 
+    @GetMapping("/by-bill/{vetBillId}")
+    @Operation(
+            summary = "Get vet by billing-link id (vetBillId)",
+            description = "Tra cứu ngược vet theo mã liên kết billing. Không vet nào mang mã → 404."
+    )
+    public VetResponse getVetByBillId(@PathVariable String vetBillId) {
+        return service.findByVetBillId(vetBillId);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(

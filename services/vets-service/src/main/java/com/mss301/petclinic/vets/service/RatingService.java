@@ -14,6 +14,13 @@ public interface RatingService {
 
     Page<RatingResponse> findAllByVetId(Long vetId, Pageable pageable);
 
+    /**
+     * Như {@link #findAllByVetId(Long, Pageable)} nhưng lọc theo năm của {@code rateDate}.
+     * {@code year == null} → không lọc (tương đương overload 2 tham số). Port Champlain
+     * {@code GET /{vetId}/ratings/date?year=YYYY}.
+     */
+    Page<RatingResponse> findAllByVetId(Long vetId, Integer year, Pageable pageable);
+
     RatingResponse create(Long vetId, RatingRequest request, String customerName);
 
     void delete(Long vetId, Long ratingId);

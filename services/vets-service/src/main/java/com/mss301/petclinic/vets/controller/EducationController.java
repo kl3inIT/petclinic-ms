@@ -1,7 +1,6 @@
 package com.mss301.petclinic.vets.controller;
 
 import java.net.URI;
-import java.util.Map;
 
 import jakarta.validation.Valid;
 
@@ -9,8 +8,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -105,26 +102,5 @@ public class EducationController {
     @Operation(summary = "Delete education")
     public void deleteVetEducation(@PathVariable Long vetId, @PathVariable Long educationId) {
         service.delete(vetId, educationId);
-    }
-
-    @PostMapping("/{educationId}/approve")
-    @Operation(summary = "Approve education — STAFF/ADMIN only")
-    public EducationResponse approveVetEducation(@PathVariable Long vetId,
-                                                  @PathVariable Long educationId,
-                                                  @AuthenticationPrincipal Jwt jwt) {
-        return service.approve(vetId, educationId, jwt.getClaimAsString("username"));
-    }
-
-    @PostMapping("/{educationId}/reject")
-    @Operation(
-            summary = "Reject education — STAFF/ADMIN only",
-            description = "Body: { reason: '...' }"
-    )
-    public EducationResponse rejectVetEducation(@PathVariable Long vetId,
-                                                 @PathVariable Long educationId,
-                                                 @RequestBody Map<String, String> body,
-                                                 @AuthenticationPrincipal Jwt jwt) {
-        String reason = body == null ? null : body.get("reason");
-        return service.reject(vetId, educationId, jwt.getClaimAsString("username"), reason);
     }
 }

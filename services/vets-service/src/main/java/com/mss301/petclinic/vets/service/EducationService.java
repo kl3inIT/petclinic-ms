@@ -1,7 +1,5 @@
 package com.mss301.petclinic.vets.service;
 
-import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -20,13 +18,4 @@ public interface EducationService {
     EducationResponse update(Long vetId, Long educationId, UpdateEducationRequest request);
 
     void delete(Long vetId, Long educationId);
-
-    /** Staff/admin approve. */
-    EducationResponse approve(Long vetId, Long educationId, String reviewer);
-
-    /** Staff/admin reject với reason. */
-    EducationResponse reject(Long vetId, Long educationId, String reviewer, String reason);
-
-    /** List education PENDING của TẤT CẢ vet — admin review queue. */
-    List<EducationResponse> listPending();
 }

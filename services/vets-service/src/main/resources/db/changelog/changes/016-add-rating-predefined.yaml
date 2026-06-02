@@ -1,0 +1,25 @@
+databaseChangeLog:
+  # Item 1 — nhãn đánh giá nhanh (port Champlain): cột predefined_description nullable.
+  # Lưu tên enum (@Enumerated STRING). CHECK ràng buộc tập giá trị hợp lệ (defense-in-depth).
+
+  - changeSet:
+      id: 016-001-add-rating-predefined-description
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: vets
+            tableName: ratings
+            columns:
+              - column: { name: predefined_description, type: VARCHAR(20) }
+
+  - changeSet:
+      id: 016-002-add-rating-predefined-check
+      author: mss301
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              ALTER TABLE vets.ratings
+              ADD CONSTRAINT ck_ratings_predefined
+              CHECK (predefined_description IS NULL
+                     OR predefined_description IN ('POOR','AVERAGE','GOOD','EXCELLENT'))
