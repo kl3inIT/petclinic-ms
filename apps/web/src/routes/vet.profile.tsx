@@ -6,6 +6,7 @@ import { z } from 'zod';
 import {
   Award,
   CalendarClock,
+  Camera,
   CreditCard,
   Eye,
   FileText,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   Star,
   Stethoscope,
+  Trash2,
   UserCircle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -42,12 +44,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/features/auth/store';
 import {
+  useDeleteMyPhoto,
   useMyBadges,
+  useMyPhoto,
   useMyProfile,
   useMyRatingsSummary,
   useMySchedule,
   useUpdateMyProfile,
+  useUploadMyPhoto,
 } from '@/features/vet-me/api';
+import { MediaUploader } from '@/features/vets/components/MediaUploader';
 import { useListVetEducations } from '@/lib/api/generated/vet-educations/vet-educations';
 import type { EducationResponse } from '@/lib/api/generated/model';
 import { CircleProgress } from '@/features/vet-me/components/charts/CircleProgress';
@@ -179,6 +185,8 @@ function VetProfilePage() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.6fr]">
         <div className="space-y-5">
+          <AvatarSection firstName={profile?.firstName} lastName={profile?.lastName} />
+
           <SectionCard
             icon={IdCard}
             title="Thẻ bác sĩ"
@@ -470,6 +478,116 @@ function VetProfilePage() {
         fullName={fullName}
       />
     </div>
+  );
+}
+
+const PHOTO_STATUS_META: Record<string, { label: string; className: string }> = {
+  PENDING: {
+    label: 'Đang chờ STAFF duyệt',
+    className: 'border-amber-200 bg-amber-50 text-amber-700',
+  },
+  APPROVED: {
+    label: 'Đã duyệt — hiển thị công khai',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  },
+  REJECTED: {
+    label: 'Bị từ chối',
+    className: 'border-rose-200 bg-rose-50 text-rose-700',
+  },
+};
+
+function AvatarSection({
+  firstName,
+  lastName,
+}: {
+  firstName?: string;
+  lastName?: string;
+}) {
+  const photoQuery = useMyPhoto();
+  const uploadMutation = useUploadMyPhoto();
+  const deleteMutation = useDeleteMyPhoto();
+
+  const photo = photoQuery.data;
+  const presignedUrl = photo?.presignedUrl ?? null;
+  const status = photo?.status;
+  const statusMeta = status ? PHOTO_STATUS_META[status] : undefined;
+
+  function handleDelete() {
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => toast.success('Đã xóa ảnh đại diện'),
+      onError: (e) => toast.error(e instanceof Error ? e.message : 'Xóa ảnh thất bại'),
+    });
+  }
+
+  return (
+    <SectionCard
+      icon={Camera}
+      title="Ảnh đại diện"
+      subtitle="Tải lên ảnh chân dung — hiển thị ở hồ sơ công khai sau khi được duyệt"
+    >
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+        <div className="flex flex-col items-center gap-2">
+          {photoQuery.isLoading ? (
+            <Skeleton className="size-24 rounded-full" />
+          ) : presignedUrl ? (
+            <img
+              src={presignedUrl}
+              alt="Ảnh đại diện"
+              className="size-24 rounded-full object-cover ring-2 ring-violet-100"
+            />
+          ) : (
+            <VetAvatar firstName={firstName} lastName={lastName} size="lg" />
+          )}
+          {presignedUrl && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+              disabled={deleteMutation.isPending}
+              onClick={handleDelete}
+            >
+              <Trash2 className="size-3.5" />
+              Xóa ảnh
+            </Button>
+          )}
+        </div>
+
+        <div className="w-full flex-1 space-y-2">
+          <MediaUploader
+            label="Tải / đổi ảnh đại diện"
+            busy={uploadMutation.isPending}
+            onUpload={(file) =>
+              uploadMutation
+                .mutateAsync({ data: { file } })
+                .then(() => toast.success('Đã tải ảnh — chờ STAFF duyệt'))
+                .catch((e: unknown) => {
+                  toast.error(e instanceof Error ? e.message : 'Tải ảnh thất bại');
+                  throw e;
+                })
+            }
+          />
+          {statusMeta && (
+            <div className="space-y-1">
+              <Badge
+                variant="outline"
+                className={cn('rounded-full px-2.5 py-0.5 text-xs', statusMeta.className)}
+              >
+                {statusMeta.label}
+              </Badge>
+              {status === 'REJECTED' && photo?.rejectReason && (
+                <p className="text-xs text-rose-600">Lý do: {photo.rejectReason}</p>
+              )}
+            </div>
+          )}
+          <p className="flex items-start gap-1.5 text-xs text-slate-500">
+            <LockKeyhole className="mt-0.5 size-3.5 shrink-0" />
+            Mỗi lần đổi ảnh sẽ cần STAFF/quản trị viên duyệt lại trước khi hiển thị cho
+            khách hàng.
+          </p>
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 

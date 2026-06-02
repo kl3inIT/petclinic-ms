@@ -3497,6 +3497,70 @@
           }
         }
       }
+    },
+    "/api/v1/vets/me/photo": {
+      "get": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Avatar của vet đang login (metadata + presigned URL)",
+        "description": "Trả 404 nếu vet chưa upload photo. vetId resolve từ JWT claim.",
+        "operationId": "getMyVetPhoto",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Upload/replace avatar của vet đang login (idempotent)",
+        "description": "Multipart field 'file'. Max 10MB. Content-type: image/jpeg|png|webp. Mỗi lần đổi ảnh reset status PENDING — chờ STAFF/ADMIN duyệt mới hiển thị public.",
+        "operationId": "uploadMyVetPhoto",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Xóa avatar của vet đang login",
+        "operationId": "deleteMyVetPhoto",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
     }
   },
   "components": {

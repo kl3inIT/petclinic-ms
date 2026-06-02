@@ -103,6 +103,7 @@ export * from './updateEducationRequest';
 export * from './updateOwnerRequest';
 export * from './updateProductRequest';
 export * from './updateVetRequest';
+export * from './uploadMyVetPhotoBody';
 export * from './uploadVetAlbumPhotoBody';
 export * from './uploadVetAlbumPhotoParams';
 export * from './uploadVetPhotoBody';

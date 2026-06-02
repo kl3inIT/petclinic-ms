@@ -65,6 +65,16 @@ public class VetsSecurityConfig {
                     auth.requestMatchers(HttpMethod.PATCH, "/api/v1/vets/me")
                             .hasAnyRole("VET", "STAFF", "ADMIN");
 
+                    // Phase: vet tự quản lý avatar của mình qua /me/photo (vetId từ JWT, không
+                    // path param). PUT/DELETE phải khai báo TRƯỚC YAML staff rule (PUT /vets/**)
+                    // VÀ trước sub-resource DELETE /vets/*/photo (pattern `*` nuốt cả `me`) để
+                    // first-match-wins, nếu không VET sẽ bị block (rule kia chỉ STAFF/ADMIN).
+                    // GET /me/photo đã được rule GET /me/** ở trên cover.
+                    auth.requestMatchers(HttpMethod.PUT, "/api/v1/vets/me/photo")
+                            .hasAnyRole("VET", "STAFF", "ADMIN");
+                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/me/photo")
+                            .hasAnyRole("VET", "STAFF", "ADMIN");
+
                     // Sub-resource DELETE — STAFF (lifecycle riêng, không hard-delete vet record).
                     // Hardcoded TRƯỚC apply() để win first-match vs YAML admin rule
                     // DELETE /api/v1/vets/** (admin-only).
