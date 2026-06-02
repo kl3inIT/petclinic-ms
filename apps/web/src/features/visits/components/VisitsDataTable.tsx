@@ -5,7 +5,7 @@ import {
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { MoreHorizontal, Play, CheckCircle2, XCircle } from 'lucide-react';
+import { MoreHorizontal, Play, CheckCircle2, XCircle, Pill, Phone } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -27,6 +27,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
 import { VisitResponseStatus } from '@/lib/api/generated/model/visitResponseStatus';
 import { VisitStatusBadge } from './VisitStatusBadge';
+import { avatarColor, initials, petMetaLine } from '../labels';
+import { cn } from '@/lib/utils';
 
 interface Props {
   data: VisitResponse[];
@@ -34,18 +36,24 @@ interface Props {
   onStart: (id: number) => void;
   onComplete: (visit: VisitResponse) => void;
   onCancel: (id: number) => void;
+  onPrescribe: (visit: VisitResponse) => void;
 }
 
-const dateFmt = new Intl.DateTimeFormat('vi-VN', {
-  dateStyle: 'short',
-  timeStyle: 'short',
+const timeFmt = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
+const dayFmt = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: '2-digit',
 });
 
-function fmtDate(iso?: string): string {
-  return iso ? dateFmt.format(new Date(iso)) : '—';
-}
-
-export function VisitsDataTable({ data, isLoading, onStart, onComplete, onCancel }: Props) {
+export function VisitsDataTable({
+  data,
+  isLoading,
+  onStart,
+  onComplete,
+  onCancel,
+  onPrescribe,
+}: Props) {
   const [actionRowId, setActionRowId] = useState<number | null>(null);
 
   const columns = useMemo<ColumnDef<VisitResponse>[]>(
@@ -53,22 +61,72 @@ export function VisitsDataTable({ data, isLoading, onStart, onComplete, onCancel
       {
         accessorKey: 'id',
         header: 'ID',
-        cell: ({ row }) => <span className="font-mono text-xs">#{row.original.id ?? '?'}</span>,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">#{row.original.id ?? '?'}</span>
+        ),
       },
       {
         accessorKey: 'scheduledAt',
         header: 'Thời gian',
-        cell: ({ row }) => fmtDate(row.original.scheduledAt),
+        cell: ({ row }) => {
+          const iso = row.original.scheduledAt;
+          if (!iso) return <span className="text-muted-foreground">—</span>;
+          const d = new Date(iso);
+          return (
+            <div className="flex flex-col leading-tight">
+              <span className="font-medium">{timeFmt.format(d)}</span>
+              <span className="text-xs text-muted-foreground">{dayFmt.format(d)}</span>
+            </div>
+          );
+        },
       },
       {
-        accessorKey: 'petId',
-        header: 'Pet',
-        cell: ({ row }) => `#${row.original.petId ?? '?'}`,
+        accessorKey: 'petName',
+        header: 'Thú cưng',
+        cell: ({ row }) => {
+          const { petName, petId, petBreed, petBirthDate } = row.original;
+          const display = petName ?? `#${petId ?? '?'}`;
+          const meta = petMetaLine(petBreed, petBirthDate);
+          return (
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                  avatarColor(petName),
+                )}
+              >
+                {initials(petName)}
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="font-medium">{display}</span>
+                {meta ? (
+                  <span className="text-xs text-muted-foreground">{meta}</span>
+                ) : null}
+              </div>
+            </div>
+          );
+        },
       },
       {
-        accessorKey: 'vetId',
-        header: 'Vet',
-        cell: ({ row }) => `#${row.original.vetId ?? '?'}`,
+        accessorKey: 'ownerName',
+        header: 'Chủ nuôi',
+        cell: ({ row }) => {
+          const { ownerName, ownerPhone } = row.original;
+          if (!ownerName && !ownerPhone) {
+            return <span className="text-muted-foreground">—</span>;
+          }
+          return (
+            <div className="flex flex-col leading-tight">
+              <span>{ownerName ?? '—'}</span>
+              {ownerPhone ? (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Phone className="size-3" />
+                  {ownerPhone}
+                </span>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'status',
@@ -94,12 +152,18 @@ export function VisitsDataTable({ data, isLoading, onStart, onComplete, onCancel
           if (id === undefined) return null;
           const canStart = v.status === VisitResponseStatus.SCHEDULED;
           const canComplete = v.status === VisitResponseStatus.IN_PROGRESS;
+          const canPrescribe =
+            v.status === VisitResponseStatus.IN_PROGRESS ||
+            v.status === VisitResponseStatus.COMPLETED;
           const canCancel =
             v.status === VisitResponseStatus.SCHEDULED ||
             v.status === VisitResponseStatus.IN_PROGRESS;
           const isOpen = actionRowId === id;
           return (
-            <DropdownMenu open={isOpen} onOpenChange={(o) => setActionRowId(o ? id : null)}>
+            <DropdownMenu
+              open={isOpen}
+              onOpenChange={(o) => setActionRowId(o ? id : null)}
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="size-8">
                   <MoreHorizontal />
@@ -113,7 +177,13 @@ export function VisitsDataTable({ data, isLoading, onStart, onComplete, onCancel
                   <Play className="size-4" /> Bắt đầu khám
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={!canComplete} onSelect={() => onComplete(v)}>
-                  <CheckCircle2 className="size-4" /> Hoàn thành
+                  <CheckCircle2 className="size-4" /> Hoàn thành &amp; lập hoá đơn
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!canPrescribe}
+                  onSelect={() => onPrescribe(v)}
+                >
+                  <Pill className="size-4" /> Kê đơn thuốc
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={!canCancel}
@@ -128,7 +198,7 @@ export function VisitsDataTable({ data, isLoading, onStart, onComplete, onCancel
         },
       },
     ],
-    [actionRowId, onStart, onComplete, onCancel],
+    [actionRowId, onStart, onComplete, onCancel, onPrescribe],
   );
 
   const table = useReactTable({
@@ -145,7 +215,9 @@ export function VisitsDataTable({ data, isLoading, onStart, onComplete, onCancel
             <TableRow key={hg.id}>
               {hg.headers.map((h) => (
                 <TableHead key={h.id}>
-                  {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                  {h.isPlaceholder
+                    ? null
+                    : flexRender(h.column.columnDef.header, h.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -164,7 +236,10 @@ export function VisitsDataTable({ data, isLoading, onStart, onComplete, onCancel
             ))
           ) : table.getRowModel().rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
                 Chưa có lịch khám nào.
               </TableCell>
             </TableRow>

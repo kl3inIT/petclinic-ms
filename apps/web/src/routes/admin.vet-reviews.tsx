@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Check, GraduationCap, Image as ImageIcon, X } from 'lucide-react';
+import { Check, Image as ImageIcon, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,33 +15,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  useListPendingVetPhotos,
-  useListPendingVetEducations,
-} from '@/lib/api/generated/vet-reviews/vet-reviews';
+import { useListPendingVetPhotos } from '@/lib/api/generated/vet-reviews/vet-reviews';
 import {
   useApproveVetPhoto,
   useRejectVetPhoto,
 } from '@/lib/api/generated/vet-photo/vet-photo';
-import {
-  useApproveVetEducation,
-  useRejectVetEducation,
-} from '@/lib/api/generated/vet-educations/vet-educations';
 
 export const Route = createFileRoute('/admin/vet-reviews')({
   component: VetReviewsPage,
 });
 
-type RejectTarget =
-  | { kind: 'photo'; vetId: number }
-  | { kind: 'education'; vetId: number; educationId: number };
-
 function VetReviewsPage() {
   const qc = useQueryClient();
   const photosQuery = useListPendingVetPhotos();
-  const eduQuery = useListPendingVetEducations();
 
-  const [rejectTarget, setRejectTarget] = useState<RejectTarget | null>(null);
+  const [rejectVetId, setRejectVetId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
   const invalidate = () => {
@@ -67,43 +55,21 @@ function VetReviewsPage() {
       onSuccess: () => {
         toast.success('Đã từ chối ảnh');
         invalidate();
-        setRejectTarget(null);
+        setRejectVetId(null);
         setRejectReason('');
       },
       onError: (e: Error) => toast.error(e.message || 'Từ chối ảnh thất bại'),
     },
   });
-  const approveEdu = useApproveVetEducation({
-    mutation: {
-      onSuccess: () => {
-        toast.success('Đã duyệt học vấn');
-        invalidate();
-      },
-      onError: (e: Error) => toast.error(e.message || 'Duyệt thất bại'),
-    },
-  });
-  const rejectEdu = useRejectVetEducation({
-    mutation: {
-      onSuccess: () => {
-        toast.success('Đã từ chối học vấn');
-        invalidate();
-        setRejectTarget(null);
-        setRejectReason('');
-      },
-      onError: (e: Error) => toast.error(e.message || 'Từ chối thất bại'),
-    },
-  });
 
   const photos = photosQuery.data ?? [];
-  const educations = eduQuery.data ?? [];
 
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Duyệt thay đổi</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Yêu cầu cập nhật ảnh đại diện và trình độ học vấn từ bác sĩ — cần duyệt mới hiển
-          thị công khai.
+          Yêu cầu cập nhật ảnh đại diện từ bác sĩ — cần duyệt mới hiển thị công khai.
         </p>
       </div>
 
@@ -165,9 +131,7 @@ function VetReviewsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          p.vetId && setRejectTarget({ kind: 'photo', vetId: p.vetId })
-                        }
+                        onClick={() => p.vetId && setRejectVetId(p.vetId)}
                       >
                         <X className="mr-1 size-3.5" /> Từ chối
                       </Button>
@@ -180,81 +144,12 @@ function VetReviewsPage() {
         </div>
       </section>
 
-      {/* Educations section */}
-      <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <header className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
-          <GraduationCap className="size-4 text-violet-600" />
-          <h2 className="text-base font-semibold text-slate-900">Học vấn chờ duyệt</h2>
-          <span className="ml-auto rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-bold text-violet-700">
-            {educations.length}
-          </span>
-        </header>
-        <div className="p-5">
-          {eduQuery.isLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : educations.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-500">
-              Không có yêu cầu nào.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {educations.map((e) => (
-                <li
-                  key={e.id}
-                  className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900">
-                      {e.degree} — {e.fieldOfStudy ?? 'Chưa rõ chuyên ngành'}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-600">{e.schoolName}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Vet #{e.vetId} • {e.startDate}
-                      {e.endDate ? ` → ${e.endDate}` : ' → đang học'}
-                    </p>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="default"
-                      disabled={approveEdu.isPending}
-                      onClick={() =>
-                        e.id != null &&
-                        e.vetId != null &&
-                        approveEdu.mutate({ vetId: e.vetId, educationId: e.id })
-                      }
-                    >
-                      <Check className="mr-1 size-3.5" /> Duyệt
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        e.id != null &&
-                        e.vetId != null &&
-                        setRejectTarget({
-                          kind: 'education',
-                          vetId: e.vetId,
-                          educationId: e.id,
-                        })
-                      }
-                    >
-                      <X className="mr-1 size-3.5" /> Từ chối
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
-
       {/* Reject reason dialog */}
       <Dialog
-        open={rejectTarget != null}
+        open={rejectVetId != null}
         onOpenChange={(open) => {
           if (!open) {
-            setRejectTarget(null);
+            setRejectVetId(null);
             setRejectReason('');
           }
         }}
@@ -268,7 +163,7 @@ function VetReviewsPage() {
           </DialogHeader>
           <Textarea
             rows={4}
-            placeholder="VD: Ảnh không rõ mặt / bằng cấp không phù hợp chuyên ngành thú y"
+            placeholder="VD: Ảnh không rõ mặt"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
           />
@@ -276,7 +171,7 @@ function VetReviewsPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setRejectTarget(null);
+                setRejectVetId(null);
                 setRejectReason('');
               }}
             >
@@ -284,24 +179,13 @@ function VetReviewsPage() {
             </Button>
             <Button
               variant="destructive"
-              disabled={
-                !rejectReason.trim() || rejectPhoto.isPending || rejectEdu.isPending
-              }
+              disabled={!rejectReason.trim() || rejectPhoto.isPending}
               onClick={() => {
-                if (!rejectTarget) return;
-                const reason = rejectReason.trim();
-                if (rejectTarget.kind === 'photo') {
-                  rejectPhoto.mutate({
-                    vetId: rejectTarget.vetId,
-                    data: { reason },
-                  });
-                } else {
-                  rejectEdu.mutate({
-                    vetId: rejectTarget.vetId,
-                    educationId: rejectTarget.educationId,
-                    data: { reason },
-                  });
-                }
+                if (rejectVetId == null) return;
+                rejectPhoto.mutate({
+                  vetId: rejectVetId,
+                  data: { reason: rejectReason.trim() },
+                });
               }}
             >
               Xác nhận từ chối

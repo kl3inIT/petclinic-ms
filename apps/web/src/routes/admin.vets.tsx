@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronRight as ChevronRightIcon,
+  CreditCard,
   Mail,
   Phone,
   Plus,
@@ -159,6 +160,12 @@ function VetsPage() {
                           {vet.phoneNumber}
                         </p>
                       )}
+                      {vet.vetBillId && (
+                        <p className="flex items-center gap-1.5">
+                          <CreditCard className="size-3.5" />
+                          {vet.vetBillId}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
                       <Badge variant={vet.active ? 'default' : 'outline'}>
@@ -255,6 +262,7 @@ function CreateVetDialog({ open, onOpenChange }: CreateDialogProps) {
       lastName: '',
       email: '',
       phoneNumber: '',
+      vetBillId: '',
       resume: '',
     },
     validators: { onChange: vetSchema },
@@ -265,6 +273,7 @@ function CreateVetDialog({ open, onOpenChange }: CreateDialogProps) {
           lastName: value.lastName,
           email: value.email,
           phoneNumber: value.phoneNumber || undefined,
+          vetBillId: value.vetBillId || undefined,
           resume: value.resume || undefined,
           specialtyNames,
         },
@@ -341,21 +350,39 @@ function CreateVetDialog({ open, onOpenChange }: CreateDialogProps) {
               </div>
             )}
           />
-          <form.Field
-            name="phoneNumber"
-            children={(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>SĐT</Label>
-                <Input
-                  id={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                <FieldError field={field} />
-              </div>
-            )}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <form.Field
+              name="phoneNumber"
+              children={(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>SĐT</Label>
+                  <Input
+                    id={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                  <FieldError field={field} />
+                </div>
+              )}
+            />
+            <form.Field
+              name="vetBillId"
+              children={(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Mã billing</Label>
+                  <Input
+                    id={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="VD: BILL-001"
+                  />
+                  <FieldError field={field} />
+                </div>
+              )}
+            />
+          </div>
           <form.Field
             name="resume"
             children={(field) => (

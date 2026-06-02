@@ -84,6 +84,7 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
       lastName: vet.lastName ?? '',
       email: vet.email ?? '',
       phoneNumber: vet.phoneNumber ?? '',
+      vetBillId: vet.vetBillId ?? '',
       resume: vet.resume ?? '',
     },
     validators: { onChange: vetSchema },
@@ -96,6 +97,7 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
           lastName: value.lastName,
           email: value.email,
           phoneNumber: value.phoneNumber,
+          vetBillId: value.vetBillId,
           resume: value.resume,
           active,
           specialtyNames,
@@ -110,6 +112,7 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
       lastName: vet.lastName ?? '',
       email: vet.email ?? '',
       phoneNumber: vet.phoneNumber ?? '',
+      vetBillId: vet.vetBillId ?? '',
       resume: vet.resume ?? '',
     });
     setActive(vet.active ?? true);
@@ -122,6 +125,7 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
     vet.lastName,
     vet.email,
     vet.phoneNumber,
+    vet.vetBillId,
     vet.resume,
     vet.active,
     vet.specialties,
@@ -195,6 +199,22 @@ export function VetInfoTab({ vet, onDeleted }: Props) {
             children={(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>Số điện thoại</Label>
+                <Input
+                  id={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Để trống để xóa"
+                />
+                <FieldError field={field} />
+              </div>
+            )}
+          />
+          <form.Field
+            name="vetBillId"
+            children={(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Mã liên kết billing</Label>
                 <Input
                   id={field.name}
                   value={field.state.value}

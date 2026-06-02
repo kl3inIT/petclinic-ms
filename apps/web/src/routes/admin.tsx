@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Receipt,
   Pill,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
@@ -40,6 +41,7 @@ interface NavItem {
     | '/admin/workflows'
     | '/admin/invoices'
     | '/admin/diseases'
+    | '/admin/products'
     | '/admin/llm-config';
   label: string;
   icon: typeof LayoutDashboard;
@@ -56,6 +58,7 @@ const navItems: NavItem[] = [
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },
   { to: '/admin/invoices', label: 'Hoá đơn', icon: Receipt },
   { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill, adminOnly: true },
+  { to: '/admin/products', label: 'Danh mục sản phẩm', icon: Package, adminOnly: true },
   { to: '/admin/vet-reviews', label: 'Duyệt thay đổi', icon: ShieldCheck },
   { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, adminOnly: true },
 ];

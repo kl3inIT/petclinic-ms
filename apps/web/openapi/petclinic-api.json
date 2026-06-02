@@ -3,7 +3,7 @@
   "info": {
     "title": "Petclinic MSS301 — Aggregated API",
     "version": "1.0.0",
-    "description": "Aggregated from: auth, customers, vets, visits"
+    "description": "Aggregated from: auth, customers, vets, visits, billing, products"
   },
   "servers": [
     {
@@ -73,6 +73,10 @@
       "description": "Veterinarian management"
     },
     {
+      "name": "Prescriptions",
+      "description": "Bác sĩ kê đơn thuốc cho lần khám + xuất PDF"
+    },
+    {
       "name": "Visits",
       "description": "Visit booking + lifecycle (schedule → in-progress → complete)"
     },
@@ -83,6 +87,10 @@
     {
       "name": "Invoices",
       "description": "Hoá đơn gộp (phí khám + bệnh + đồ shop) + thanh toán quầy"
+    },
+    {
+      "name": "Products",
+      "description": "Catalog thuốc / dịch vụ / vật tư + tồn kho"
     }
   ],
   "paths": {
@@ -1272,7 +1280,7 @@
       "get": {
         "tags": ["Vet Ratings"],
         "summary": "List ratings of a vet (paginated)",
-        "description": "Vet không tồn tại → 404. Use ?page=0&size=20&sort=rateDate,desc.",
+        "description": "Vet không tồn tại → 404. Use ?page=0&size=20&sort=rateDate,desc. Optional ?year=YYYY lọc rating theo năm của rateDate.",
         "operationId": "listVetRatings",
         "parameters": [
           {
@@ -1282,6 +1290,15 @@
             "schema": {
               "type": "integer",
               "format": "int64"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
             }
           },
           {
@@ -1485,98 +1502,6 @@
           },
           "required": true
         },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EducationResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/vets/{vetId}/educations/{educationId}/reject": {
-      "post": {
-        "tags": ["Vet Educations"],
-        "summary": "Reject education — STAFF/ADMIN only",
-        "description": "Body: { reason: '...' }",
-        "operationId": "rejectVetEducation",
-        "parameters": [
-          {
-            "name": "vetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "educationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EducationResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/vets/{vetId}/educations/{educationId}/approve": {
-      "post": {
-        "tags": ["Vet Educations"],
-        "summary": "Approve education — STAFF/ADMIN only",
-        "operationId": "approveVetEducation",
-        "parameters": [
-          {
-            "name": "vetId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "educationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -2173,28 +2098,6 @@
         }
       }
     },
-    "/api/v1/vets/reviews/educations": {
-      "get": {
-        "tags": ["Vet Reviews"],
-        "summary": "List education PENDING của tất cả vet (review queue)",
-        "operationId": "listPendingVetEducations",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/EducationResponse"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/vets/me/work-schedule": {
       "get": {
         "tags": ["Vet Me (self-service)"],
@@ -2287,6 +2190,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PageBadgeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/vets/by-bill/{vetBillId}": {
+      "get": {
+        "tags": ["Vets"],
+        "summary": "Get vet by billing-link id (vetBillId)",
+        "description": "Tra cứu ngược vet theo mã liên kết billing. Không vet nào mang mã → 404.",
+        "operationId": "getVetByBillId",
+        "parameters": [
+          {
+            "name": "vetBillId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetResponse"
                 }
               }
             }
@@ -2513,6 +2446,121 @@
         }
       }
     },
+    "/api/v1/visits/{visitId}/prescription": {
+      "get": {
+        "tags": ["Prescriptions"],
+        "summary": "Xem đơn thuốc của visit (metadata + danh sách thuốc)",
+        "operationId": "getVisitPrescription",
+        "parameters": [
+          {
+            "name": "visitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrescriptionResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Prescriptions"],
+        "summary": "Bác sĩ phụ trách kê đơn thuốc cho visit (sinh PDF)",
+        "operationId": "createPrescription",
+        "parameters": [
+          {
+            "name": "visitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePrescriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrescriptionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/visits/{id}/transition": {
+      "patch": {
+        "tags": ["visit-workflow-callback-controller"],
+        "operationId": "transition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "X-Workflow-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/visits/{id}/start": {
       "patch": {
         "tags": ["Visits"],
@@ -2606,6 +2654,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VisitResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/visits/{visitId}/prescription/pdf": {
+      "get": {
+        "tags": ["Prescriptions"],
+        "summary": "Tải PDF đơn thuốc của visit",
+        "operationId": "downloadVisitPrescriptionPdf",
+        "parameters": [
+          {
+            "name": "visitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "byte"
                 }
               }
             }
@@ -2818,7 +2897,7 @@
     "/api/v1/invoices/{id}/checkout": {
       "post": {
         "tags": ["Invoices"],
-        "summary": "Chốt + thanh toán hoá đơn — STAFF/ADMIN",
+        "summary": "Chốt + thanh toán hoá đơn TRỰC TIẾP tại quầy — STAFF/ADMIN",
         "operationId": "checkoutInvoice",
         "parameters": [
           {
@@ -3154,6 +3233,264 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InvoiceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "List sản phẩm — lọc q (code/name), type, active, lowStock",
+        "operationId": "listProducts",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["MEDICATION", "SERVICE", "SUPPLY", "MERCHANDISE"]
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "lowStock",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageProductResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Products"],
+        "summary": "Tạo sản phẩm mới (ADMIN)",
+        "operationId": "createProduct",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/{id}/restock": {
+      "post": {
+        "tags": ["Products"],
+        "summary": "Nhập thêm tồn kho (ADMIN)",
+        "operationId": "restockProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockAdjustRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/{id}/consume": {
+      "post": {
+        "tags": ["Products"],
+        "summary": "Trừ tồn kho — cấp phát thuốc/vật tư (STAFF/ADMIN/VET, dùng nội bộ khi kê đơn)",
+        "operationId": "consumeProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockAdjustRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/{id}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Chi tiết sản phẩm",
+        "operationId": "getProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Products"],
+        "summary": "Xoá sản phẩm (ADMIN)",
+        "operationId": "deleteProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Products"],
+        "summary": "Cập nhật sản phẩm (ADMIN)",
+        "operationId": "updateProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
                 }
               }
             }
@@ -3524,26 +3861,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
           "size": {
             "type": "integer",
             "format": "int32"
@@ -3553,6 +3870,26 @@
             "items": {
               "$ref": "#/components/schemas/PetResponse"
             }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "empty": {
             "type": "boolean"
@@ -3566,6 +3903,12 @@
             "type": "integer",
             "format": "int64"
           },
+          "paged": {
+            "type": "boolean"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
           "pageNumber": {
             "type": "integer",
             "format": "int32"
@@ -3576,12 +3919,6 @@
           },
           "unpaged": {
             "type": "boolean"
-          },
-          "paged": {
-            "type": "boolean"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
           }
         }
       },
@@ -3627,10 +3964,10 @@
           "empty": {
             "type": "boolean"
           },
-          "unsorted": {
+          "sorted": {
             "type": "boolean"
           },
-          "sorted": {
+          "unsorted": {
             "type": "boolean"
           }
         }
@@ -3646,26 +3983,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
           "size": {
             "type": "integer",
             "format": "int32"
@@ -3675,6 +3992,26 @@
             "items": {
               "$ref": "#/components/schemas/OwnerResponse"
             }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "empty": {
             "type": "boolean"
@@ -3787,6 +4124,11 @@
             "maxLength": 30,
             "minLength": 0
           },
+          "vetBillId": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 0
+          },
           "resume": {
             "type": "string"
           },
@@ -3834,6 +4176,9 @@
           "phoneNumber": {
             "type": "string"
           },
+          "vetBillId": {
+            "type": "string"
+          },
           "active": {
             "type": "boolean"
           },
@@ -3868,6 +4213,10 @@
             "type": "string",
             "maxLength": 2000,
             "minLength": 0
+          },
+          "predefinedDescription": {
+            "type": "string",
+            "enum": ["POOR", "AVERAGE", "GOOD", "EXCELLENT"]
           }
         },
         "required": ["score"]
@@ -3889,6 +4238,10 @@
           },
           "description": {
             "type": "string"
+          },
+          "predefinedDescription": {
+            "type": "string",
+            "enum": ["POOR", "AVERAGE", "GOOD", "EXCELLENT"]
           },
           "customerName": {
             "type": "string"
@@ -3955,19 +4308,6 @@
           "endDate": {
             "type": "string",
             "format": "date"
-          },
-          "status": {
-            "type": "string"
-          },
-          "reviewedBy": {
-            "type": "string"
-          },
-          "reviewedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "rejectReason": {
-            "type": "string"
           }
         }
       },
@@ -4096,6 +4436,9 @@
           "phoneNumber": {
             "type": "string"
           },
+          "vetBillId": {
+            "type": "string"
+          },
           "active": {
             "type": "boolean"
           },
@@ -4122,26 +4465,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
           "size": {
             "type": "integer",
             "format": "int32"
@@ -4151,6 +4474,26 @@
             "items": {
               "$ref": "#/components/schemas/VetResponse"
             }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
           },
           "empty": {
             "type": "boolean"
@@ -4176,26 +4519,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
           "size": {
             "type": "integer",
             "format": "int32"
@@ -4205,6 +4528,26 @@
             "items": {
               "$ref": "#/components/schemas/RatingResponse"
             }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
           },
           "empty": {
             "type": "boolean"
@@ -4242,26 +4585,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
           "size": {
             "type": "integer",
             "format": "int32"
@@ -4271,6 +4594,26 @@
             "items": {
               "$ref": "#/components/schemas/EducationResponse"
             }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
           },
           "empty": {
             "type": "boolean"
@@ -4288,26 +4631,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
           "size": {
             "type": "integer",
             "format": "int32"
@@ -4317,6 +4640,26 @@
             "items": {
               "$ref": "#/components/schemas/BadgeResponse"
             }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
           },
           "empty": {
             "type": "boolean"
@@ -4334,26 +4677,6 @@
             "type": "integer",
             "format": "int64"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
           "size": {
             "type": "integer",
             "format": "int32"
@@ -4363,6 +4686,26 @@
             "items": {
               "$ref": "#/components/schemas/VetAlbumPhotoResponse"
             }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
           },
           "empty": {
             "type": "boolean"
@@ -4426,6 +4769,16 @@
             "type": "integer",
             "format": "int64"
           },
+          "petName": {
+            "type": "string"
+          },
+          "petBreed": {
+            "type": "string"
+          },
+          "petBirthDate": {
+            "type": "string",
+            "format": "date"
+          },
           "vetId": {
             "type": "integer",
             "format": "int64"
@@ -4433,6 +4786,12 @@
           "customerUserId": {
             "type": "string",
             "format": "uuid"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "ownerPhone": {
+            "type": "string"
           },
           "scheduledAt": {
             "type": "string",
@@ -4453,8 +4812,120 @@
           },
           "fee": {
             "type": "number"
+          },
+          "processInstanceKey": {
+            "type": "integer",
+            "format": "int64"
           }
         }
+      },
+      "CreatePrescriptionRequest": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "minItems": 1
+          }
+        },
+        "required": ["items"]
+      },
+      "Item": {
+        "type": "object",
+        "properties": {
+          "medicationName": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "dosage": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "frequency": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "durationDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 0
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": ["medicationName"]
+      },
+      "PrescriptionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "visitId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "issuedByVetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "pdfAvailable": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            }
+          }
+        }
+      },
+      "VisitTransitionRequest": {
+        "type": "object",
+        "properties": {
+          "targetStatus": {
+            "type": "string",
+            "minLength": 1
+          },
+          "diagnosis": {
+            "type": "string"
+          },
+          "treatment": {
+            "type": "string"
+          },
+          "fee": {
+            "type": "number"
+          }
+        },
+        "required": ["targetStatus"]
       },
       "CompleteVisitRequest": {
         "type": "object",
@@ -4472,6 +4943,10 @@
           "fee": {
             "type": "number",
             "minimum": 0
+          },
+          "serviceProductId": {
+            "type": "integer",
+            "format": "int64"
           }
         },
         "required": ["diagnosis"]
@@ -4487,26 +4962,6 @@
             "type": "integer",
             "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "numberOfElements": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "first": {
-            "type": "boolean"
-          },
-          "last": {
-            "type": "boolean"
-          },
-          "number": {
-            "type": "integer",
-            "format": "int32"
-          },
           "size": {
             "type": "integer",
             "format": "int32"
@@ -4516,6 +4971,26 @@
             "items": {
               "$ref": "#/components/schemas/VisitResponse"
             }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
           "empty": {
             "type": "boolean"
@@ -4579,7 +5054,7 @@
           },
           "sourceType": {
             "type": "string",
-            "enum": ["VISIT_FEE", "DISEASE", "PRODUCT", "MISC"]
+            "enum": ["VISIT_FEE", "DISEASE", "MEDICATION", "PRODUCT", "MISC"]
           },
           "sourceRef": {
             "type": "integer",
@@ -4655,7 +5130,7 @@
         "properties": {
           "sourceType": {
             "type": "string",
-            "enum": ["VISIT_FEE", "DISEASE", "PRODUCT", "MISC"]
+            "enum": ["VISIT_FEE", "DISEASE", "MEDICATION", "PRODUCT", "MISC"]
           },
           "sourceRef": {
             "type": "integer",
@@ -4792,9 +5267,6 @@
             "type": "integer",
             "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
           "first": {
             "type": "boolean"
           },
@@ -4807,6 +5279,9 @@
           },
           "sort": {
             "$ref": "#/components/schemas/SortObject"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
           "empty": {
             "type": "boolean"
@@ -4838,8 +5313,193 @@
             "type": "integer",
             "format": "int32"
           },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
           "pageable": {
             "$ref": "#/components/schemas/PageableObject"
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateProductRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 0
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["MEDICATION", "SERVICE", "SUPPLY", "MERCHANDISE"]
+          },
+          "unitPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 0
+          },
+          "stockQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reorderLevel": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": ["code", "name", "type", "unitPrice"]
+      },
+      "ProductResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["MEDICATION", "SERVICE", "SUPPLY", "MERCHANDISE"]
+          },
+          "unitPrice": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "stockQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reorderLevel": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stockTracked": {
+            "type": "boolean"
+          },
+          "stockStatus": {
+            "type": "string",
+            "enum": ["AVAILABLE", "LOW", "OUT"]
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StockAdjustRequest": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": ["quantity"]
+      },
+      "UpdateProductRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 0
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "description": {
+            "type": "string"
+          },
+          "unitPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 0
+          },
+          "stockQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reorderLevel": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PageProductResponse": {
+        "type": "object",
+        "properties": {
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductResponse"
+            }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
           },
           "first": {
             "type": "boolean"
@@ -4853,6 +5513,9 @@
           },
           "sort": {
             "$ref": "#/components/schemas/SortObject"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
           "empty": {
             "type": "boolean"

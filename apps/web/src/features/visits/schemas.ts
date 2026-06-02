@@ -24,11 +24,15 @@ export const bookVisitSchema = z.object({
 
 export type BookVisitInput = z.infer<typeof bookVisitSchema>;
 
-/** Complete Visit — diagnosis @NotBlank bên BE, treatment optional, fee ≥ 0. */
+/**
+ * Complete Visit — diagnosis @NotBlank bên BE, treatment optional, fee ≥ 0.
+ * serviceProductId: chọn dịch vụ khám trong catalog (BE lấy fee từ đơn giá); 0 = nhập tay.
+ */
 export const completeVisitSchema = z.object({
   diagnosis: z.string().min(1, 'Bắt buộc').max(4000),
   treatment: z.string().max(4000),
   fee: z.coerce.number({ message: 'Nhập số' }).nonnegative('Phải ≥ 0'),
+  serviceProductId: z.coerce.number().int().nonnegative(),
 });
 
 export type CompleteVisitInput = z.infer<typeof completeVisitSchema>;

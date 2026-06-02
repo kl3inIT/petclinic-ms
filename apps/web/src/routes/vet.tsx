@@ -2,6 +2,7 @@ import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
 import {
   Award,
   CalendarDays,
+  ClipboardList,
   LayoutDashboard,
   LogOut,
   MessageSquareQuote,
@@ -32,6 +33,7 @@ export const Route = createFileRoute('/vet')({
 interface NavItem {
   to:
     | '/vet'
+    | '/vet/visits'
     | '/vet/profile'
     | '/vet/schedule'
     | '/vet/ratings'
@@ -44,6 +46,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { to: '/vet', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
+  { to: '/vet/visits', label: 'Ca khám', icon: ClipboardList },
   { to: '/vet/profile', label: 'Hồ sơ cá nhân', icon: UserCircle },
   { to: '/vet/schedule', label: 'Lịch trực', icon: CalendarDays },
   { to: '/vet/ratings', label: 'Đánh giá', icon: MessageSquareQuote },

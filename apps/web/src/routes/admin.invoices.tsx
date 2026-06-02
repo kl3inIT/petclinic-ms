@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
-import { Plus, Receipt, Trash2, Wallet } from 'lucide-react';
+import { Plus, Receipt, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -18,26 +18,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { FieldError } from '@/lib/form/FieldError';
 
 import { useGetInvoice } from '@/lib/api/generated/invoices/invoices';
 import {
   type InvoiceResponse,
-  useAddInvoiceItem,
   useCancelInvoice,
   useCheckoutInvoice,
   useCreateInvoice,
-  useDiseases,
   useInvoices,
-  useRemoveInvoiceItem,
 } from '@/features/billing/api';
+import { InvoiceItemsEditor } from '@/features/billing/components/InvoiceItemsEditor';
 import { formatDateTime, formatVnd } from '@/features/billing/format';
-import { miscItemFormSchema } from '@/features/billing/schemas';
 import {
   INVOICE_STATUS_CLASS,
   INVOICE_STATUS_LABEL,
-  ITEM_SOURCE_CLASS,
-  ITEM_SOURCE_LABEL,
   PAYMENT_METHOD_LABEL,
 } from '@/features/billing/labels';
 import type {
@@ -183,66 +177,29 @@ function InvoiceDetailPanel({ invoiceId }: { invoiceId: number }) {
     );
   }
 
-  return <InvoiceDetailContent invoice={invoice} />;
+  return (
+    <InvoiceDetailContent
+      invoice={invoice}
+      onChanged={() => void detailQuery.refetch()}
+    />
+  );
 }
 
-function InvoiceDetailContent({ invoice }: { invoice: InvoiceResponse }) {
+function InvoiceDetailContent({
+  invoice,
+  onChanged,
+}: {
+  invoice: InvoiceResponse;
+  onChanged: () => void;
+}) {
   const isOpen = invoice.status === 'OPEN';
   const invoiceId = invoice.id!;
-  const diseasesQuery = useDiseases({
-    pageable: { page: 0, size: 200, sort: ['name,asc'] },
-  });
-  const diseases = (diseasesQuery.data?.content ?? []).filter((d) => d.active);
+  const items = invoice.items ?? [];
 
-  const addItem = useAddInvoiceItem();
-  const removeItem = useRemoveInvoiceItem();
   const checkout = useCheckoutInvoice();
   const cancel = useCancelInvoice();
-
-  const [diseaseId, setDiseaseId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] =
     useState<CheckoutRequestPaymentMethod>('CASH');
-
-  const miscForm = useForm({
-    defaultValues: { description: '', unitPrice: 0, quantity: 1 },
-    validators: { onChange: miscItemFormSchema },
-    onSubmit: ({ value, formApi }) => {
-      addItem.mutate(
-        {
-          id: invoiceId,
-          data: {
-            sourceType: 'MISC',
-            description: value.description,
-            unitPrice: value.unitPrice,
-            quantity: value.quantity,
-          },
-        },
-        {
-          onSuccess: () => {
-            toast.success('Đã thêm dòng');
-            formApi.reset();
-          },
-          onError: (err) => toast.error((err as Error).message || 'Thêm dòng thất bại'),
-        },
-      );
-    },
-  });
-
-  const addDisease = () => {
-    if (!diseaseId) return;
-    addItem.mutate(
-      { id: invoiceId, data: { sourceType: 'DISEASE', sourceRef: Number(diseaseId) } },
-      {
-        onSuccess: () => {
-          toast.success('Đã thêm điều trị');
-          setDiseaseId('');
-        },
-        onError: (err) => toast.error((err as Error).message || 'Thêm thất bại'),
-      },
-    );
-  };
-
-  const items = invoice.items ?? [];
 
   return (
     <Card>
@@ -270,219 +227,65 @@ function InvoiceDetailContent({ invoice }: { invoice: InvoiceResponse }) {
       </CardHeader>
 
       <CardContent className="space-y-5">
-        {/* Bảng dòng chi phí */}
-        <div className="overflow-hidden rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left">Loại</th>
-                <th className="px-3 py-2 text-left">Nội dung</th>
-                <th className="px-3 py-2 text-right">Đơn giá</th>
-                <th className="px-3 py-2 text-center">SL</th>
-                <th className="px-3 py-2 text-right">Thành tiền</th>
-                {isOpen ? <th className="w-10 px-2 py-2" /> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={isOpen ? 6 : 5}
-                    className="px-3 py-6 text-center text-muted-foreground"
-                  >
-                    Chưa có dòng nào.
-                  </td>
-                </tr>
-              ) : (
-                items.map((it) => (
-                  <tr key={it.id} className="border-t">
-                    <td className="px-3 py-2">
-                      <Badge
-                        variant="secondary"
-                        className={ITEM_SOURCE_CLASS[it.sourceType ?? 'MISC']}
-                      >
-                        {ITEM_SOURCE_LABEL[it.sourceType ?? 'MISC']}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2">{it.description}</td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      {formatVnd(it.unitPrice)}
-                    </td>
-                    <td className="px-3 py-2 text-center">{it.quantity}</td>
-                    <td className="px-3 py-2 text-right font-mono font-semibold">
-                      {formatVnd(it.lineTotal)}
-                    </td>
-                    {isOpen ? (
-                      <td className="px-2 py-2 text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7"
-                          onClick={() =>
-                            removeItem.mutate(
-                              { id: invoiceId, itemId: it.id! },
-                              {
-                                onError: (err) =>
-                                  toast.error((err as Error).message || 'Xoá thất bại'),
-                              },
-                            )
-                          }
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="border-t bg-muted/30">
-                <td colSpan={isOpen ? 4 : 3} className="px-3 py-2 text-right font-medium">
-                  Tổng cộng
-                </td>
-                <td className="px-3 py-2 text-right font-mono text-base font-bold">
-                  {formatVnd(invoice.total)}
-                </td>
-                {isOpen ? <td /> : null}
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <InvoiceItemsEditor invoice={invoice} onChanged={onChanged} />
 
         {isOpen ? (
-          <>
-            {/* Thêm điều trị từ danh mục bệnh */}
-            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
-              <Label className="text-xs font-semibold">Thêm điều trị (theo bệnh)</Label>
-              <div className="flex gap-2">
-                <select
-                  value={diseaseId}
-                  onChange={(e) => setDiseaseId(e.target.value)}
-                  className="h-9 flex-1 rounded-md border bg-white px-2 text-sm"
-                >
-                  <option value="">— Chọn bệnh —</option>
-                  {diseases.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({formatVnd(d.baseCost)})
-                    </option>
-                  ))}
-                </select>
-                <Button onClick={addDisease} disabled={!diseaseId || addItem.isPending}>
-                  Thêm
-                </Button>
-              </div>
+          /* Thanh toán / huỷ — chỉ quầy thu ngân (STAFF/ADMIN) */
+          <div className="flex items-center justify-between gap-3 rounded-lg border-2 border-primary/20 bg-primary/5 p-3">
+            <div className="flex items-center gap-2">
+              <Wallet className="size-5 text-primary" />
+              <select
+                value={paymentMethod}
+                onChange={(e) =>
+                  setPaymentMethod(e.target.value as CheckoutRequestPaymentMethod)
+                }
+                className="h-9 rounded-md border bg-white px-2 text-sm"
+              >
+                <option value="CASH">Tiền mặt</option>
+                <option value="CARD">Thẻ</option>
+                <option value="TRANSFER">Chuyển khoản</option>
+              </select>
             </div>
-
-            {/* Thêm dòng tự do (đồ shop / phụ phí) */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void miscForm.handleSubmit();
-              }}
-              className="space-y-2 rounded-lg border bg-muted/20 p-3"
-            >
-              <Label className="text-xs font-semibold">
-                Thêm dòng khác (đồ shop / phụ phí)
-              </Label>
-              <div className="grid grid-cols-[1fr_120px_70px_auto] gap-2">
-                <miscForm.Field
-                  name="description"
-                  children={(field) => (
-                    <Input
-                      placeholder="Tên sản phẩm / phụ phí"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                  )}
-                />
-                <miscForm.Field
-                  name="unitPrice"
-                  children={(field) => (
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1000"
-                      placeholder="Đơn giá"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(Number(e.target.value))}
-                    />
-                  )}
-                />
-                <miscForm.Field
-                  name="quantity"
-                  children={(field) => (
-                    <Input
-                      type="number"
-                      min="1"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(Number(e.target.value))}
-                    />
-                  )}
-                />
-                <Button type="submit" disabled={addItem.isPending}>
-                  Thêm
-                </Button>
-              </div>
-              <miscForm.Field
-                name="description"
-                children={(field) => <FieldError field={field} />}
-              />
-            </form>
-
-            {/* Thanh toán / huỷ */}
-            <div className="flex items-center justify-between gap-3 rounded-lg border-2 border-primary/20 bg-primary/5 p-3">
-              <div className="flex items-center gap-2">
-                <Wallet className="size-5 text-primary" />
-                <select
-                  value={paymentMethod}
-                  onChange={(e) =>
-                    setPaymentMethod(e.target.value as CheckoutRequestPaymentMethod)
-                  }
-                  className="h-9 rounded-md border bg-white px-2 text-sm"
-                >
-                  <option value="CASH">Tiền mặt</option>
-                  <option value="CARD">Thẻ</option>
-                  <option value="TRANSFER">Chuyển khoản</option>
-                </select>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    cancel.mutate(
-                      { id: invoiceId },
-                      {
-                        onSuccess: () => toast.success('Đã huỷ hoá đơn'),
-                        onError: (err) =>
-                          toast.error((err as Error).message || 'Huỷ thất bại'),
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  cancel.mutate(
+                    { id: invoiceId },
+                    {
+                      onSuccess: () => {
+                        toast.success('Đã huỷ hoá đơn');
+                        onChanged();
                       },
-                    )
-                  }
-                  disabled={cancel.isPending}
-                >
-                  Huỷ hoá đơn
-                </Button>
-                <Button
-                  onClick={() =>
-                    checkout.mutate(
-                      { id: invoiceId, data: { paymentMethod } },
-                      {
-                        onSuccess: () =>
-                          toast.success(`Đã thanh toán ${formatVnd(invoice.total)}`),
-                        onError: (err) =>
-                          toast.error((err as Error).message || 'Thanh toán thất bại'),
+                      onError: (err) =>
+                        toast.error((err as Error).message || 'Huỷ thất bại'),
+                    },
+                  )
+                }
+                disabled={cancel.isPending}
+              >
+                Huỷ hoá đơn
+              </Button>
+              <Button
+                onClick={() =>
+                  checkout.mutate(
+                    { id: invoiceId, data: { paymentMethod } },
+                    {
+                      onSuccess: () => {
+                        toast.success(`Đã thanh toán ${formatVnd(invoice.total)}`);
+                        onChanged();
                       },
-                    )
-                  }
-                  disabled={checkout.isPending || items.length === 0}
-                >
-                  Thanh toán {formatVnd(invoice.total)}
-                </Button>
-              </div>
+                      onError: (err) =>
+                        toast.error((err as Error).message || 'Thanh toán thất bại'),
+                    },
+                  )
+                }
+                disabled={checkout.isPending || items.length === 0}
+              >
+                Thanh toán {formatVnd(invoice.total)}
+              </Button>
             </div>
-          </>
+          </div>
         ) : null}
       </CardContent>
     </Card>

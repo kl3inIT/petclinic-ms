@@ -21,6 +21,7 @@ export const INVOICE_STATUS_CLASS: Record<InvoiceResponseStatus, string> = {
 export const ITEM_SOURCE_LABEL: Record<InvoiceItemResponseSourceType, string> = {
   VISIT_FEE: 'Phí khám',
   DISEASE: 'Điều trị bệnh',
+  MEDICATION: 'Thuốc',
   PRODUCT: 'Sản phẩm',
   MISC: 'Khác',
 };
@@ -28,6 +29,7 @@ export const ITEM_SOURCE_LABEL: Record<InvoiceItemResponseSourceType, string> = 
 export const ITEM_SOURCE_CLASS: Record<InvoiceItemResponseSourceType, string> = {
   VISIT_FEE: 'bg-blue-100 text-blue-700',
   DISEASE: 'bg-violet-100 text-violet-700',
+  MEDICATION: 'bg-teal-100 text-teal-700',
   PRODUCT: 'bg-orange-100 text-orange-700',
   MISC: 'bg-slate-100 text-slate-600',
 };
