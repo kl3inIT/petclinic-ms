@@ -240,6 +240,7 @@ jobs:
           - mcp-server
           - genai-service
           - billing-service
+          - products-service
 
     steps:
       - name: Checkout

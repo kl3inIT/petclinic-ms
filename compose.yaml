@@ -620,6 +620,34 @@ services:
       start_period: 45s
     restart: unless-stopped
 
+  products-service:
+    build: { context: ., dockerfile: services/products-service/Dockerfile }
+    image: petclinic-ms/products-service:latest
+    container_name: petclinic-products-service
+    profiles: ["apps"]
+    ports:
+      - "8192:8192"
+      - "9192:9192"
+    depends_on:
+      postgres: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9192/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
   genai-service:
     build: { context: ., dockerfile: services/genai-service/Dockerfile }
     image: petclinic-ms/genai-service:latest

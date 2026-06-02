@@ -49,6 +49,8 @@ springdoc:
         url: /v3/api-docs/workflow
       - name: billing-service
         url: /v3/api-docs/billing
+      - name: products-service
+        url: /v3/api-docs/products
   api-docs:
     enabled: false                          # gateway tự không có endpoint nghiệp vụ — tắt spec riêng
   show-actuator: false
@@ -122,6 +124,8 @@ resilience4j:
       visitsBulkhead:
         base-config: default
       billingBulkhead:
+        base-config: default
+      productsBulkhead:
         base-config: default
       authBulkhead:
         max-concurrent-calls: 50            # auth login burst lúc peak hour, nới hơn

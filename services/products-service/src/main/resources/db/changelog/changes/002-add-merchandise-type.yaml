@@ -1,0 +1,29 @@
+databaseChangeLog:
+  # Thêm loại MERCHANDISE (hàng bán lẻ tại quầy: đồ chơi, thức ăn, phụ kiện) vào CHECK
+  # constraint + seed vài sản phẩm. Quầy thêm dòng PRODUCT vào hoá đơn → trừ kho khi checkout.
+  - changeSet:
+      id: 002-extend-product-type-merchandise
+      author: mss301
+      changes:
+        - sql:
+            sql: ALTER TABLE products.products DROP CONSTRAINT products_type_check
+            dbms: postgresql
+        - sql:
+            sql: >-
+              ALTER TABLE products.products
+              ADD CONSTRAINT products_type_check
+              CHECK (type IN ('MEDICATION', 'SERVICE', 'SUPPLY', 'MERCHANDISE'))
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              INSERT INTO products.products
+                (code, name, category, description, type, unit_price, unit, stock_quantity, reorder_level, active, version) VALUES
+              ('MCH_TOY_BALL', 'Bóng nhai cho chó', 'Đồ chơi', 'Bóng cao su gặm nhai', 'MERCHANDISE', 65000, 'cái', 120, 15, true, 0),
+              ('MCH_TOY_MOUSE', 'Chuột bông cho mèo', 'Đồ chơi', 'Chuột nhồi bông catnip', 'MERCHANDISE', 45000, 'cái', 150, 15, true, 0),
+              ('MCH_FOOD_DOG', 'Thức ăn hạt cho chó 1kg', 'Thức ăn', 'Hạt dinh dưỡng cho chó trưởng thành', 'MERCHANDISE', 120000, 'túi', 80, 10, true, 0),
+              ('MCH_FOOD_CAT', 'Thức ăn hạt cho mèo 1kg', 'Thức ăn', 'Hạt dinh dưỡng cho mèo', 'MERCHANDISE', 110000, 'túi', 80, 10, true, 0),
+              ('MCH_LEASH', 'Dây dắt chó', 'Phụ kiện', 'Dây dắt nylon bản to', 'MERCHANDISE', 85000, 'cái', 60, 10, true, 0),
+              ('MCH_COLLAR', 'Vòng cổ chống bọ', 'Phụ kiện', 'Vòng cổ tẩm tinh dầu chống ve', 'MERCHANDISE', 95000, 'cái', 70, 10, true, 0),
+              ('MCH_SHAMPOO', 'Sữa tắm thú cưng', 'Chăm sóc', 'Sữa tắm khử mùi, dưỡng lông', 'MERCHANDISE', 75000, 'chai', 90, 12, true, 0)
+            dbms: postgresql

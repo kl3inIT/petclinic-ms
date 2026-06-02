@@ -97,6 +97,19 @@ public class GatewayRoutesConfig {
                 .build();
     }
 
+    /**
+     * Products — catalog thuốc/dịch vụ/vật tư + tồn kho. Consume bởi visits (lb://, không qua gateway).
+     */
+    @Bean
+    public RouterFunction<ServerResponse> productsServiceRoute() {
+        return route("products-service")
+                .route(path("/api/v1/products/**"), http())
+                .filter(lb("products-service"))
+                .filter(bulkhead(bulkheadRegistry, "productsBulkhead"))
+                .filter(circuitBreaker(c -> c.setId("productsCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
     @Bean
     public RouterFunction<ServerResponse> workflowServiceRoute() {
         return route("workflow-service")
@@ -222,6 +235,15 @@ public class GatewayRoutesConfig {
                 .route(path("/v3/api-docs/billing"), http())
                 .before(setPath("/v3/api-docs"))
                 .filter(lb("billing-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsProductsRoute() {
+        return route("api-docs-products")
+                .route(path("/v3/api-docs/products"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("products-service"))
                 .build();
     }
 
