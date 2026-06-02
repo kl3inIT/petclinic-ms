@@ -1,0 +1,38 @@
+databaseChangeLog:
+
+  # Backfill snapshot (tên/giống/ngày sinh thú cưng + tên/SĐT chủ nuôi) cho các visit
+  # seed ở changeset 004 — lúc đó các cột này chưa tồn tại nên = NULL, danh sách hiện "#id".
+  # Giá trị hardcode khớp customers-service seed (pet_id → pet/owner), KHÔNG cross-schema query
+  # để tránh coupling thứ tự migration + tương thích prod (DB tách riêng). Chỉ chạm dòng pet_name
+  # IS NULL → không đè snapshot của booking mới.
+
+  - changeSet:
+      id: 011-backfill-visit-snapshots
+      author: mss301
+      changes:
+        - sql:
+            sql: >-
+              UPDATE visits.visits v SET
+                  pet_name       = d.pet_name,
+                  pet_breed      = d.pet_breed,
+                  pet_birth_date = d.pet_birth_date::date,
+                  owner_name     = d.owner_name,
+                  owner_phone    = d.owner_phone
+              FROM (VALUES
+                  ( 1, 'Milu',     'dog',     '2023-04-15', 'Anh Nguyễn',  '0901111001'),
+                  ( 2, 'Bông',     'cat',     '2022-11-02', 'Anh Nguyễn',  '0901111001'),
+                  ( 3, 'Tom',      'cat',     '2024-01-20', 'Bình Trần',   '0901111002'),
+                  ( 4, 'Lucky',    'dog',     '2021-07-30', 'Chi Lê',      '0901111003'),
+                  ( 5, 'Coco',     'rabbit',  '2023-09-12', 'Chi Lê',      '0901111003'),
+                  ( 6, 'Mochi',    'cat',     '2024-03-05', 'Dương Phạm',  '0901111004'),
+                  ( 7, 'Bruno',    'dog',     '2020-12-18', 'Hà Hoàng',    '0901111005'),
+                  ( 8, 'Ginger',   'cat',     '2023-06-22', 'Hà Hoàng',    '0901111005'),
+                  ( 9, 'Pumpkin',  'hamster', '2024-05-10', 'Khang Vũ',    '0901111006'),
+                  (10, 'Rex',      'dog',     '2022-08-14', 'Linh Đặng',   '0901111007'),
+                  (12, 'Buddy',    'dog',     '2021-10-03', 'Minh Bùi',    '0901111008'),
+                  (14, 'Mango',    'bird',    '2022-04-07', 'Ngọc Đỗ',     '0901111009'),
+                  (15, 'Daisy',    'dog',     '2024-02-19', 'Ngọc Đỗ',     '0901111009'),
+                  (16, 'Simba',    'cat',     '2023-08-25', 'Phong Ngô',   '0901111010'),
+                  (18, 'Nala',     'cat',     '2024-06-14', 'Bình Trần',   '0901111002')
+              ) AS d(pet_id, pet_name, pet_breed, pet_birth_date, owner_name, owner_phone)
+              WHERE v.pet_id = d.pet_id AND v.pet_name IS NULL;

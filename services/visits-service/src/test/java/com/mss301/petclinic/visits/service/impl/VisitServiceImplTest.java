@@ -59,7 +59,7 @@ class VisitServiceImplTest {
     void bookRejectsPetOwnedByAnotherCustomer() {
         Instant scheduledAt = slot("2026-05-25T09:00:00+07:00");
         when(remoteClients.fetchVet(VET_ID)).thenReturn(new VetSummary(VET_ID, "Thanh", "Nguyen"));
-        when(remoteClients.fetchPet(PET_ID)).thenReturn(new PetSummary(PET_ID, "Milo", "cat", 999L));
+        when(remoteClients.fetchPet(PET_ID)).thenReturn(new PetSummary(PET_ID, "Milo", "cat", null, 999L));
 
         assertThatThrownBy(() -> service.book(
                 new BookVisitRequest(PET_ID, VET_ID, scheduledAt, "checkup"), USER_ID, CUSTOMER_ID))
@@ -75,7 +75,7 @@ class VisitServiceImplTest {
     void bookRejectsVetUnavailableSlot() {
         Instant scheduledAt = slot("2026-05-25T09:00:00+07:00");
         when(remoteClients.fetchVet(VET_ID)).thenReturn(new VetSummary(VET_ID, "Thanh", "Nguyen"));
-        when(remoteClients.fetchPet(PET_ID)).thenReturn(new PetSummary(PET_ID, "Milo", "cat", CUSTOMER_ID));
+        when(remoteClients.fetchPet(PET_ID)).thenReturn(new PetSummary(PET_ID, "Milo", "cat", null, CUSTOMER_ID));
         when(remoteClients.checkVetAvailability(VET_ID, "MONDAY", "HOUR_9_10"))
                 .thenReturn(new VetAvailabilityResponse(false));
 
@@ -92,7 +92,7 @@ class VisitServiceImplTest {
     void bookSavesVisitWhenPetOwnerAndVetSlotAreValid() {
         Instant scheduledAt = slot("2026-05-25T09:00:00+07:00");
         when(remoteClients.fetchVet(VET_ID)).thenReturn(new VetSummary(VET_ID, "Thanh", "Nguyen"));
-        when(remoteClients.fetchPet(PET_ID)).thenReturn(new PetSummary(PET_ID, "Milo", "cat", CUSTOMER_ID));
+        when(remoteClients.fetchPet(PET_ID)).thenReturn(new PetSummary(PET_ID, "Milo", "cat", null, CUSTOMER_ID));
         when(remoteClients.checkVetAvailability(VET_ID, "MONDAY", "HOUR_9_10"))
                 .thenReturn(new VetAvailabilityResponse(true));
         when(repository.save(any(Visit.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -111,7 +111,7 @@ class VisitServiceImplTest {
     void bookRejectsNonHourlySlot() {
         Instant scheduledAt = slot("2026-05-25T09:30:00+07:00");
         when(remoteClients.fetchVet(VET_ID)).thenReturn(new VetSummary(VET_ID, "Thanh", "Nguyen"));
-        when(remoteClients.fetchPet(PET_ID)).thenReturn(new PetSummary(PET_ID, "Milo", "cat", CUSTOMER_ID));
+        when(remoteClients.fetchPet(PET_ID)).thenReturn(new PetSummary(PET_ID, "Milo", "cat", null, CUSTOMER_ID));
 
         assertThatThrownBy(() -> service.book(
                 new BookVisitRequest(PET_ID, VET_ID, scheduledAt, "checkup"), USER_ID, CUSTOMER_ID))

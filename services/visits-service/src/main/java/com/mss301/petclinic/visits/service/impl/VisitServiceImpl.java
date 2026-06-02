@@ -1,5 +1,6 @@
 package com.mss301.petclinic.visits.service.impl;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -24,7 +25,9 @@ import org.springframework.web.client.RestClientException;
 
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
+import com.mss301.petclinic.visits.client.OwnerSummary;
 import com.mss301.petclinic.visits.client.PetSummary;
+import com.mss301.petclinic.visits.client.ProductSummary;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.UserSummary;
 import com.mss301.petclinic.visits.client.VetSummary;
@@ -141,7 +144,17 @@ public class VisitServiceImpl implements VisitService {
             throw new SlotTakenException();
         }
 
-        Visit visit = Visit.book(req.petId(), req.vetId(), currentUserId,
+        // Snapshot thông tin liên hệ chủ nuôi (best-effort) — pet name/breed/birthDate đã có từ lookup ở trên.
+        Visit.OwnerSnapshot ownerSnapshot = new Visit.OwnerSnapshot(null, null);
+        try {
+            OwnerSummary owner = remoteClients.fetchOwner(pet.ownerId());
+            ownerSnapshot = new Visit.OwnerSnapshot(owner.fullName(), owner.telephone());
+        } catch (RuntimeException e) {
+            log.warn("Enrich owner info thất bại (ownerId={}): {}", pet.ownerId(), e.toString());
+        }
+
+        Visit.PetSnapshot petSnapshot = new Visit.PetSnapshot(pet.name(), pet.type(), pet.birthDate());
+        Visit visit = Visit.book(req.petId(), petSnapshot, ownerSnapshot, req.vetId(), currentUserId,
                 req.scheduledAt(), req.reason());
 
         Visit saved;
@@ -184,9 +197,31 @@ public class VisitServiceImpl implements VisitService {
     @Transactional
     public VisitResponse complete(Long id, CompleteVisitRequest req) {
         Visit v = loadOrThrow(id);
-        v.complete(req.diagnosis(), req.treatment(), req.fee());
+        v.complete(req.diagnosis(), req.treatment(), resolveFee(req));
         publishCompleted(v);
         return VisitResponse.from(v);
+    }
+
+    /**
+     * Phí khám: ưu tiên dịch vụ trong catalog ({@code serviceProductId}, mục SERVICE) →
+     * fee = đơn giá catalog; nếu không chọn → dùng {@code fee} nhập tay.
+     */
+    private BigDecimal resolveFee(CompleteVisitRequest req) {
+        if (req.serviceProductId() == null) {
+            return req.fee();
+        }
+        ProductSummary product;
+        try {
+            product = remoteClients.fetchProduct(req.serviceProductId());
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new BadRequestAlertException(
+                    "Dịch vụ khám không tồn tại: " + req.serviceProductId(), "Visit", "service-not-found");
+        }
+        if (!"SERVICE".equals(product.type())) {
+            throw new BadRequestAlertException(
+                    "Mục đã chọn không phải dịch vụ khám", "Visit", "not-a-service");
+        }
+        return product.unitPrice();
     }
 
     @Override

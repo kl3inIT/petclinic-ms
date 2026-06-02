@@ -1,0 +1,13 @@
+databaseChangeLog:
+  # Cho phép NHIỀU đơn thuốc / visit (kê nhiều lần trong điều trị).
+  # Bỏ unique constraint uk_prescriptions_visit (tạo ở 007). Giữ index idx_prescriptions_visit
+  # (non-unique) để query theo visit_id vẫn nhanh.
+
+  - changeSet:
+      id: 012-drop-prescription-visit-unique
+      author: mss301
+      changes:
+        - dropUniqueConstraint:
+            schemaName: visits
+            tableName: prescriptions
+            constraintName: uk_prescriptions_visit

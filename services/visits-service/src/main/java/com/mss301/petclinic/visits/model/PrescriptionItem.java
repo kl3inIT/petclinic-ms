@@ -42,17 +42,45 @@ public class PrescriptionItem extends AbstractAuditingEntity {
     @Column(columnDefinition = "TEXT")
     private String instructions;
 
+    /** Tham chiếu catalog products-service — null nếu thuốc free-text ngoài catalog. */
+    @Column(name = "product_id")
+    private Long productId;
+
+    /** Snapshot đơn giá lúc kê (catalog có thể đổi giá sau) — null nếu free-text. */
+    @Column(name = "unit_price", precision = 12, scale = 2)
+    private java.math.BigDecimal unitPrice;
+
+    /** Số lượng cấp phát — null nếu free-text (không tính tiền/trừ kho). */
+    @Column(name = "quantity")
+    private Integer quantity;
+
     protected PrescriptionItem() {
         // JPA
     }
 
+    /** Thuốc free-text ngoài catalog — chỉ ghi lâm sàng, không tính tiền/trừ kho. */
     public PrescriptionItem(String medicationName, String dosage, String frequency,
                             Integer durationDays, String instructions) {
+        this(medicationName, dosage, frequency, durationDays, instructions, null, null, null);
+    }
+
+    /** Thuốc từ catalog — kèm productId + đơn giá snapshot + số lượng (tính tiền + trừ kho). */
+    public PrescriptionItem(String medicationName, String dosage, String frequency,
+                            Integer durationDays, String instructions,
+                            Long productId, java.math.BigDecimal unitPrice, Integer quantity) {
         this.medicationName = medicationName;
         this.dosage = dosage;
         this.frequency = frequency;
         this.durationDays = durationDays;
         this.instructions = instructions;
+        this.productId = productId;
+        this.unitPrice = unitPrice;
+        this.quantity = quantity;
+    }
+
+    /** Dòng có gắn catalog + giá → tính tiền + nên trừ kho. */
+    public boolean isPriced() {
+        return productId != null && unitPrice != null && quantity != null && quantity > 0;
     }
 
     void setPrescription(Prescription prescription) {
@@ -68,4 +96,7 @@ public class PrescriptionItem extends AbstractAuditingEntity {
     public String getFrequency() { return frequency; }
     public Integer getDurationDays() { return durationDays; }
     public String getInstructions() { return instructions; }
+    public Long getProductId() { return productId; }
+    public java.math.BigDecimal getUnitPrice() { return unitPrice; }
+    public Integer getQuantity() { return quantity; }
 }

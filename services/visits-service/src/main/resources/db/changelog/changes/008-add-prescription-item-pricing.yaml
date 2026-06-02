@@ -1,0 +1,27 @@
+databaseChangeLog:
+  # Liên kết dòng thuốc với catalog products-service + snapshot giá/số lượng để tính tiền
+  # và trừ tồn kho. Nullable — thuốc free-text ngoài catalog vẫn hợp lệ (chỉ ghi lâm sàng).
+  - changeSet:
+      id: 008-add-prescription-item-pricing
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: visits
+            tableName: prescription_items
+            columns:
+              - column:
+                  name: product_id
+                  type: BIGINT
+              - column:
+                  name: unit_price
+                  type: NUMERIC(12, 2)
+              - column:
+                  name: quantity
+                  type: INTEGER
+
+        - sql:
+            sql: >-
+              ALTER TABLE visits.prescription_items
+              ADD CONSTRAINT prescription_items_quantity_check
+              CHECK (quantity IS NULL OR quantity > 0)
+            dbms: postgresql

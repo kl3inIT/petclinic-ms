@@ -16,12 +16,20 @@ public record CreatePrescriptionRequest(
         @NotEmpty @Valid List<Item> items
 ) {
 
-    /** Một dòng thuốc trong đơn. */
+    /**
+     * Một dòng thuốc trong đơn.
+     *
+     * <p>Có {@code productId} → thuốc từ catalog products-service: lấy đơn giá + trừ tồn kho +
+     * tính tiền vào hoá đơn (cần {@code quantity}). Không có {@code productId} → thuốc free-text
+     * ngoài catalog (chỉ ghi lâm sàng, không tính tiền).
+     */
     public record Item(
             @NotBlank @Size(max = 200) String medicationName,
             @Size(max = 100) String dosage,
             @Size(max = 100) String frequency,
             @Positive Integer durationDays,
-            @Size(max = 1000) String instructions
+            @Size(max = 1000) String instructions,
+            Long productId,
+            @Positive Integer quantity
     ) {}
 }

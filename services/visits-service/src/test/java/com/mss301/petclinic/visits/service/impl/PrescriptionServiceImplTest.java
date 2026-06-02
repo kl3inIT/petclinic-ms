@@ -19,8 +19,10 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.access.AccessDeniedException;
 
+import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
@@ -44,22 +46,30 @@ class PrescriptionServiceImplTest {
     private StorageService storage;
     private PrescriptionPdfGenerator pdfGenerator;
     private RemoteClientsFacade remoteClients;
+    private ObjectProvider<EventPublisher> events;
     private PrescriptionServiceImpl service;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() {
         visitRepository = mock(VisitRepository.class);
         prescriptionRepository = mock(PrescriptionRepository.class);
         storage = mock(StorageService.class);
         pdfGenerator = mock(PrescriptionPdfGenerator.class);
         remoteClients = mock(RemoteClientsFacade.class);
+        events = mock(ObjectProvider.class);
+        when(events.getIfAvailable()).thenReturn(null);   // broker off — publish no-op
         service = new PrescriptionServiceImpl(
-                visitRepository, prescriptionRepository, storage, pdfGenerator, remoteClients);
+                visitRepository, prescriptionRepository, storage, pdfGenerator, remoteClients, events);
     }
 
     /** Visit ở trạng thái IN_PROGRESS (đủ điều kiện kê đơn), do VET_ID phụ trách. */
     private static Visit clinicalVisit() {
-        Visit v = Visit.book(PET_ID, VET_ID, OWNER_ID, Instant.now().plusSeconds(3600), "checkup");
+        Visit v = Visit.book(
+                PET_ID,
+                new Visit.PetSnapshot("Mun", "Mèo Anh", null),
+                new Visit.OwnerSnapshot("Nguyễn Văn A", "0901234567"),
+                VET_ID, OWNER_ID, Instant.now().plusSeconds(3600), "checkup");
         v.start(); // SCHEDULED → IN_PROGRESS
         return v;
     }
@@ -68,7 +78,7 @@ class PrescriptionServiceImplTest {
         return new CreatePrescriptionRequest(
                 "uống sau ăn",
                 List.of(new CreatePrescriptionRequest.Item(
-                        "Amoxicillin", "250mg", "2 lần/ngày", 7, "sau bữa ăn")));
+                        "Amoxicillin", "250mg", "2 lần/ngày", 7, "sau bữa ăn", null, null)));
     }
 
     @Test
@@ -86,7 +96,11 @@ class PrescriptionServiceImplTest {
     @Test
     void createRejectsWhenVisitNotClinical() {
         // Visit còn SCHEDULED (chưa khám) → không được kê.
-        Visit scheduled = Visit.book(PET_ID, VET_ID, OWNER_ID, Instant.now().plusSeconds(3600), "checkup");
+        Visit scheduled = Visit.book(
+                PET_ID,
+                new Visit.PetSnapshot("Mun", "Mèo Anh", null),
+                new Visit.OwnerSnapshot("Nguyễn Văn A", "0901234567"),
+                VET_ID, OWNER_ID, Instant.now().plusSeconds(3600), "checkup");
         when(visitRepository.findById(VISIT_ID)).thenReturn(Optional.of(scheduled));
 
         assertThatThrownBy(() -> service.create(VISIT_ID, sampleRequest(), VET_ID, false))
@@ -98,22 +112,8 @@ class PrescriptionServiceImplTest {
     }
 
     @Test
-    void createRejectsWhenPrescriptionAlreadyExists() {
-        when(visitRepository.findById(VISIT_ID)).thenReturn(Optional.of(clinicalVisit()));
-        when(prescriptionRepository.existsByVisitId(VISIT_ID)).thenReturn(true);
-
-        assertThatThrownBy(() -> service.create(VISIT_ID, sampleRequest(), VET_ID, false))
-                .isInstanceOf(BadRequestAlertException.class)
-                .extracting("errorKey")
-                .isEqualTo("already-exists");
-
-        verify(storage, never()).upload(anyString(), anyString(), any(), anyLong());
-    }
-
-    @Test
     void createGeneratesPdfAndUploadsWhenVetOwns() {
         when(visitRepository.findById(VISIT_ID)).thenReturn(Optional.of(clinicalVisit()));
-        when(prescriptionRepository.existsByVisitId(VISIT_ID)).thenReturn(false);
         when(prescriptionRepository.save(any(Prescription.class))).thenAnswer(inv -> inv.getArgument(0));
         when(pdfGenerator.render(any(Prescription.class), any())).thenReturn(new byte[]{'%', 'P', 'D', 'F'});
 
@@ -137,7 +137,8 @@ class PrescriptionServiceImplTest {
     void downloadPdfReturnsBytesWhenPresent() {
         Prescription rx = Prescription.issue(VISIT_ID, VET_ID, "notes");
         rx.attachPdf("prescriptions/10/1.pdf", "application/pdf", 4L);
-        when(prescriptionRepository.findByVisitId(VISIT_ID)).thenReturn(Optional.of(rx));
+        when(prescriptionRepository.findFirstByVisitIdOrderByIssuedAtDescIdDesc(VISIT_ID))
+                .thenReturn(Optional.of(rx));
         when(storage.download("prescriptions/10/1.pdf"))
                 .thenReturn(new java.io.ByteArrayInputStream(new byte[]{'%', 'P', 'D', 'F'}));
 

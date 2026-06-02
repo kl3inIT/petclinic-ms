@@ -17,9 +17,9 @@ import jakarta.persistence.Table;
 import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 /**
- * Đơn thuốc do bác sĩ kê cho một lần khám. Quan hệ logic 1–1 với visit
- * ({@code visit_id} UNIQUE) — mỗi visit tối đa 1 đơn. PDF được sinh khi tạo đơn,
- * lưu trên MinIO; {@code objectKey} trỏ tới object đó.
+ * Đơn thuốc do bác sĩ kê cho một lần khám. Một visit có thể có NHIỀU đơn (kê nhiều lần
+ * trong quá trình điều trị) — {@code visit_id} KHÔNG unique. PDF được sinh khi tạo đơn,
+ * lưu trên MinIO; {@code objectKey} trỏ tới object đó (key gồm cả prescriptionId nên không trùng).
  */
 @Entity
 @Table(name = "prescriptions")
@@ -29,7 +29,7 @@ public class Prescription extends AbstractAuditingEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "visit_id", nullable = false, unique = true)
+    @Column(name = "visit_id", nullable = false)
     private Long visitId;
 
     /** vetId (từ JWT claim) của bác sĩ kê đơn — phải là vet phụ trách visit. */

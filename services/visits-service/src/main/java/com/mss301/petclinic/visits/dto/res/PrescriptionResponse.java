@@ -1,5 +1,6 @@
 package com.mss301.petclinic.visits.dto.res;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
@@ -25,11 +26,19 @@ public record PrescriptionResponse(
             String dosage,
             String frequency,
             Integer durationDays,
-            String instructions
+            String instructions,
+            Long productId,
+            BigDecimal unitPrice,
+            Integer quantity,
+            BigDecimal lineTotal
     ) {
         static Item from(PrescriptionItem i) {
+            BigDecimal lineTotal = i.isPriced()
+                    ? i.getUnitPrice().multiply(BigDecimal.valueOf(i.getQuantity()))
+                    : null;
             return new Item(i.getMedicationName(), i.getDosage(), i.getFrequency(),
-                    i.getDurationDays(), i.getInstructions());
+                    i.getDurationDays(), i.getInstructions(),
+                    i.getProductId(), i.getUnitPrice(), i.getQuantity(), lineTotal);
         }
     }
 

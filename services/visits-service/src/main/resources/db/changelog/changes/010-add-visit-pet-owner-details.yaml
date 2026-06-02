@@ -1,0 +1,21 @@
+databaseChangeLog:
+  # Mở rộng snapshot ca khám: giống + ngày sinh thú cưng, SĐT chủ nuôi — để danh sách
+  # ca khám hiển thị đầy đủ ("Poodle • 2 tuổi", SĐT) mà không gọi customers-service từng dòng.
+  # Mirror changeset 009 (denormalized names). Nullable — visit cũ giữ null, FE fallback.
+  - changeSet:
+      id: 010-add-visit-pet-owner-details
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: visits
+            tableName: visits
+            columns:
+              - column:
+                  name: pet_breed
+                  type: VARCHAR(100)
+              - column:
+                  name: pet_birth_date
+                  type: DATE
+              - column:
+                  name: owner_phone
+                  type: VARCHAR(30)

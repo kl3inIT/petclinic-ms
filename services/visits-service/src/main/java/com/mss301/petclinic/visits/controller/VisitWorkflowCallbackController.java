@@ -64,7 +64,7 @@ public class VisitWorkflowCallbackController {
         VisitResponse response = switch (target) {
             case IN_PROGRESS -> visitService.start(id);
             case COMPLETED   -> visitService.complete(id,
-                    new CompleteVisitRequest(req.diagnosis(), req.treatment(), req.fee()));
+                    new CompleteVisitRequest(req.diagnosis(), req.treatment(), req.fee(), null));
             case CANCELLED   -> visitService.cancel(id, null, true);
             default -> throw new IllegalStateException("Unreachable target: " + target);
         };

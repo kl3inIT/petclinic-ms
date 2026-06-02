@@ -2,6 +2,7 @@ package com.mss301.petclinic.visits.model;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -27,6 +28,26 @@ public class Visit extends AbstractAuditingEntity {
 
     @Column(name = "pet_id", nullable = false)
     private Long petId;
+
+    /** Snapshot tên thú cưng lúc đặt lịch — hiển thị danh sách không cần gọi customers-service. */
+    @Column(name = "pet_name", length = 150)
+    private String petName;
+
+    /** Snapshot giống/loài thú cưng lúc đặt lịch (vd "Poodle"). */
+    @Column(name = "pet_breed", length = 100)
+    private String petBreed;
+
+    /** Snapshot ngày sinh thú cưng — FE tính tuổi hiển thị; null khi pet không khai báo. */
+    @Column(name = "pet_birth_date")
+    private LocalDate petBirthDate;
+
+    /** Snapshot tên chủ nuôi lúc đặt lịch (best-effort; null nếu lookup thất bại). */
+    @Column(name = "owner_name", length = 150)
+    private String ownerName;
+
+    /** Snapshot số điện thoại chủ nuôi lúc đặt lịch (best-effort). */
+    @Column(name = "owner_phone", length = 30)
+    private String ownerPhone;
 
     @Column(name = "vet_id", nullable = false)
     private Long vetId;
@@ -64,8 +85,14 @@ public class Visit extends AbstractAuditingEntity {
         // JPA
     }
 
-    private Visit(Long petId, Long vetId, UUID customerUserId, Instant scheduledAt, String reason) {
+    private Visit(Long petId, PetSnapshot pet, OwnerSnapshot owner, Long vetId,
+                  UUID customerUserId, Instant scheduledAt, String reason) {
         this.petId = petId;
+        this.petName = pet.name();
+        this.petBreed = pet.breed();
+        this.petBirthDate = pet.birthDate();
+        this.ownerName = owner.name();
+        this.ownerPhone = owner.phone();
         this.vetId = vetId;
         this.customerUserId = customerUserId;
         this.scheduledAt = scheduledAt;
@@ -73,10 +100,21 @@ public class Visit extends AbstractAuditingEntity {
         this.status = VisitStatus.SCHEDULED;
     }
 
-    /** Factory — chỉ cho phép tạo Visit ở trạng thái SCHEDULED hợp lệ. */
-    public static Visit book(Long petId, Long vetId, UUID customerUserId,
-                             Instant scheduledAt, String reason) {
-        return new Visit(petId, vetId, customerUserId, scheduledAt, reason);
+    /**
+     * Factory — chỉ cho phép tạo Visit ở trạng thái SCHEDULED hợp lệ.
+     * Tên/giống/ngày sinh thú cưng + tên/SĐT chủ nuôi được snapshot tại đây (xem {@link PetSnapshot}/{@link OwnerSnapshot}).
+     */
+    public static Visit book(Long petId, PetSnapshot pet, OwnerSnapshot owner, Long vetId,
+                             UUID customerUserId, Instant scheduledAt, String reason) {
+        return new Visit(petId, pet, owner, vetId, customerUserId, scheduledAt, reason);
+    }
+
+    /** Snapshot thông tin hiển thị của thú cưng lúc đặt lịch (Tolerant Reader từ customers-service). */
+    public record PetSnapshot(String name, String breed, LocalDate birthDate) {
+    }
+
+    /** Snapshot thông tin liên hệ chủ nuôi lúc đặt lịch (best-effort — field có thể null). */
+    public record OwnerSnapshot(String name, String phone) {
     }
 
     public void start() {
@@ -105,6 +143,11 @@ public class Visit extends AbstractAuditingEntity {
 
     public Long getId() { return id; }
     public Long getPetId() { return petId; }
+    public String getPetName() { return petName; }
+    public String getPetBreed() { return petBreed; }
+    public LocalDate getPetBirthDate() { return petBirthDate; }
+    public String getOwnerName() { return ownerName; }
+    public String getOwnerPhone() { return ownerPhone; }
     public Long getVetId() { return vetId; }
     public UUID getCustomerUserId() { return customerUserId; }
     public Instant getScheduledAt() { return scheduledAt; }

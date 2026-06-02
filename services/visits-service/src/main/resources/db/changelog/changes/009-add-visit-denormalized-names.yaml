@@ -1,0 +1,18 @@
+databaseChangeLog:
+  # Snapshot tên thú cưng + chủ nuôi lúc đặt lịch để hiển thị danh sách ca khám mà không
+  # phải gọi customers-service từng dòng (tránh N+1 + tránh vướng quyền đọc PII của VET).
+  # Nullable — visit cũ (đặt trước thay đổi này) sẽ null, FE fallback về "#id".
+  - changeSet:
+      id: 009-add-visit-denormalized-names
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: visits
+            tableName: visits
+            columns:
+              - column:
+                  name: pet_name
+                  type: VARCHAR(150)
+              - column:
+                  name: owner_name
+                  type: VARCHAR(150)

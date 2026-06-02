@@ -16,4 +16,7 @@ public interface CustomersClient {
 
     @GetExchange("/api/v1/pets/{id}")
     PetSummary getPet(@PathVariable Long id);
+
+    @GetExchange("/api/v1/owners/{id}")
+    OwnerSummary getOwner(@PathVariable Long id);
 }
