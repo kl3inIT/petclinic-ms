@@ -84,3 +84,4 @@ tools/
 
 # Word lock files
 ~$*
+.claude/skills/drawio-skill/

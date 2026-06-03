@@ -22,6 +22,11 @@ from diagrams.elastic.elasticsearch import Elasticsearch
 from diagrams.generic.storage import Storage
 from diagrams.onprem.client import Users
 from diagrams.onprem.compute import Server
+from diagrams.custom import Custom
+
+from pathlib import Path
+# graphviz needs ABSOLUTE image paths (relative paths silently render blank on Windows)
+_IC = (Path(__file__).resolve().parent.parent / "icons").as_posix() + "/"
 
 graph_attr = {"fontsize": "26", "fontname": "Arial", "bgcolor": "white",
               "pad": "0.6", "nodesep": "0.45", "ranksep": "1.1", "splines": "spline", "labelloc": "t"}
@@ -39,8 +44,8 @@ with Diagram("PCMS Deployment Architecture (GKE)", filename="docs/diagrams/out/d
     users = Users("Users\n(Owner · Staff · Vet · Admin)")
 
     with Cluster("External", graph_attr={"bgcolor": "#f8f9fa"}):
-        llm = Server("LLM Provider\n(OpenRouter / OpenAI)")
-        smtp = Server("SMTP Server")
+        llm = Custom("LLM Provider\n(OpenRouter / OpenAI)", _IC + "openrouter.png")
+        smtp = Custom("SMTP Server", _IC + "gmail.png")
 
     with Cluster("Google Cloud Project (one VPC)", graph_attr={"bgcolor": "#eef3fb"}):
         lb = LoadBalancing("HTTP(S) LB\n+ GKE Ingress")
@@ -72,8 +77,8 @@ with Diagram("PCMS Deployment Architecture (GKE)", filename="docs/diagrams/out/d
             pg = PostgreSQL("Postgres 18\n+ pgvector")
             mq = RabbitMQ("RabbitMQ")
             redis = Redis("Redis")
-            minio = Storage("MinIO")
-            camunda = Server("Camunda 8")
+            minio = Custom("MinIO", _IC + "minio.png")
+            camunda = Custom("Camunda 8", _IC + "camunda.png")
             es = Elasticsearch("Elasticsearch")
 
         with Cluster("Observability VM (e2-standard-4)", graph_attr={"bgcolor": "#fff0f6"}):

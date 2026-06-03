@@ -17,6 +17,11 @@ from diagrams.onprem.network import Kong, Consul
 from diagrams.onprem.monitoring import Prometheus, Grafana
 from diagrams.onprem.tracing import Jaeger
 from diagrams.onprem.compute import Server
+from diagrams.custom import Custom
+
+from pathlib import Path
+# graphviz needs ABSOLUTE image paths (relative paths silently render blank on Windows)
+_IC = (Path(__file__).resolve().parent.parent / "icons").as_posix() + "/"
 from diagrams.onprem.client import Users
 from diagrams.generic.storage import Storage
 
@@ -70,12 +75,12 @@ with Diagram(
         pg = PostgreSQL("PostgreSQL 18\nschema per service")
         mq = RabbitMQ("RabbitMQ")
         redis = Redis("Redis")
-        minio = Storage("Object Storage\n(MinIO / S3)")
+        minio = Custom("Object Storage\n(MinIO / S3)", _IC + "minio.png")
 
     with Cluster("External Systems", graph_attr={"bgcolor": "#f8f9fa"}):
-        smtp = Server("SMTP Server")
-        llm = Server("LLM Provider\n(OpenAI-compatible)")
-        bank = Server("Bank Transfer\nChannel")
+        smtp = Custom("SMTP Server", _IC + "gmail.png")
+        llm = Custom("LLM Provider\n(OpenRouter / OpenAI)", _IC + "openrouter.png")
+        bank = Custom("Bank Transfer\nChannel", _IC + "bank.png")
         with Cluster("Observability", graph_attr={"bgcolor": "#fff0f6"}):
             prom = Prometheus("Prometheus")
             graf = Grafana("Grafana")
