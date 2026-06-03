@@ -163,7 +163,7 @@ services:
   # Metrics visualization. Provision datasource Prometheus + 1 default dashboard tự load.
   # UI: http://localhost:3000  (admin/admin — đổi pwd lần đầu trừ khi env override)
   grafana:
-    image: grafana/grafana:13.0.1
+    image: grafana/grafana:13.0.2
     container_name: petclinic-grafana
     profiles: ["obs", "all"]
     depends_on:
