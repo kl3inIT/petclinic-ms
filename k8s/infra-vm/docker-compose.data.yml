@@ -1,0 +1,138 @@
+# Data / Infra VM — all stateful backends for the PCMS GKE cluster.
+# Run on a Compute Engine VM in the SAME VPC as the cluster:
+#   docker compose -f docker-compose.data.yml up -d
+# Lock these ports to the VPC/cluster CIDR with a GCP firewall rule (do NOT
+# expose to the public internet). GKE pods reach them via the selector-less
+# Services in k8s/base/external-services.yaml.
+name: petclinic-data
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: petclinic-postgres
+    environment:
+      POSTGRES_DB: petclinic
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale-provider=icu --icu-locale=en"
+    ports: ["5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d petclinic"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: petclinic-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    ports: ["5672:5672", "15672:15672"]
+    volumes: ["rabbitmq_data:/var/lib/rabbitmq"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    container_name: petclinic-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: ["redis_data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: petclinic-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set in .env}
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["minio_data:/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: petclinic-minio-init
+    depends_on:
+      minio: { condition: service_healthy }
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD};
+      mc mb --ignore-existing local/pet-photos;
+      mc mb --ignore-existing local/invoices;
+      mc mb --ignore-existing local/avatars;
+      mc mb --ignore-existing local/loki;
+      mc mb --ignore-existing local/tempo;
+      mc anonymous set download local/pet-photos;
+      mc anonymous set download local/avatars;
+      exit 0;"
+    restart: "no"
+
+  # Dev SMTP sink. In real prod, drop this and point SMTP_HOST at a real relay.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: petclinic-mailpit
+    ports: ["1025:1025", "8025:8025"]
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.9
+    container_name: petclinic-camunda-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports: ["9200:9200"]
+    volumes: ["camunda_elasticsearch_data:/usr/share/elasticsearch/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -E 'green|yellow' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  camunda:
+    image: camunda/camunda:8.9.5
+    container_name: petclinic-camunda
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    ports: ["26500:26500", "8088:8080"]
+    environment:
+      CAMUNDA_MODE: all-in-one
+      CAMUNDA_INSECURE: "true"
+      CAMUNDA_DATA_SECONDARY_STORAGE_TYPE: elasticsearch
+      CAMUNDA_DATA_SECONDARY_STORAGE_ELASTICSEARCH_URL: http://elasticsearch:9200
+      CAMUNDA_SECURITY_AUTHENTICATION_UNPROTECTEDAPI: "true"
+      CAMUNDA_SECURITY_AUTHORIZATIONS_ENABLED: "false"
+    volumes: ["camunda_data:/usr/local/camunda/data"]
+    restart: unless-stopped
+
+volumes:
+  postgres_data: { name: petclinic-postgres-data }
+  rabbitmq_data: { name: petclinic-rabbitmq-data }
+  redis_data: { name: petclinic-redis-data }
+  minio_data: { name: petclinic-minio-data }
+  camunda_data: { name: petclinic-camunda-data }
+  camunda_elasticsearch_data: { name: petclinic-camunda-es-data }

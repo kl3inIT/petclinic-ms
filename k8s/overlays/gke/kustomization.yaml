@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# Point every base image (petclinic-ms/<svc>:latest) at your Artifact Registry.
+# Replace REGION / PROJECT_ID, then build+push with skaffold or:
+#   gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT_ID/petclinic/<svc> .
+images:
+  - { name: petclinic-ms/config-server,     newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/config-server,     newTag: latest }
+  - { name: petclinic-ms/discovery-server,  newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/discovery-server,  newTag: latest }
+  - { name: petclinic-ms/admin-server,      newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/admin-server,      newTag: latest }
+  - { name: petclinic-ms/api-gateway,       newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/api-gateway,       newTag: latest }
+  - { name: petclinic-ms/auth-service,      newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/auth-service,      newTag: latest }
+  - { name: petclinic-ms/customers-service, newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/customers-service, newTag: latest }
+  - { name: petclinic-ms/vets-service,      newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/vets-service,      newTag: latest }
+  - { name: petclinic-ms/visits-service,    newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/visits-service,    newTag: latest }
+  - { name: petclinic-ms/reviews-service,   newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/reviews-service,   newTag: latest }
+  - { name: petclinic-ms/genai-service,     newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/genai-service,     newTag: latest }
+  - { name: petclinic-ms/mcp-server,        newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/mcp-server,        newTag: latest }
+  - { name: petclinic-ms/workflow-service,  newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/workflow-service,  newTag: latest }
+  - { name: petclinic-ms/mailer-service,    newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/mailer-service,    newTag: latest }
+
+# Container-native load balancing: expose api-gateway via a standalone NEG so the
+# GKE Ingress targets pods directly.
+patches:
+  - target: { kind: Service, name: api-gateway }
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          cloud.google.com/neg: '{"ingress": true}'

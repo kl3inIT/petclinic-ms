@@ -1,0 +1,102 @@
+# Selector-less Services + manual Endpoints mapping stable in-cluster DNS names
+# to the off-cluster VMs. Pods talk to `postgres:5432`, `rabbitmq:5672`, etc.,
+# unaware they live on a VM. Replace the example IPs with your VMs' INTERNAL
+# (VPC) IPs — the GKE cluster and the VMs must share the same VPC.
+#
+#   Data/Infra VM  (Postgres, RabbitMQ, Redis, MinIO, SMTP, Camunda) -> 10.10.0.10
+#   Observability VM (Alloy OTLP gateway -> LGTM)                     -> 10.10.0.20
+---
+apiVersion: v1
+kind: Service
+metadata: { name: postgres }
+spec:
+  ports: [{ name: postgres, port: 5432, targetPort: 5432 }]
+---
+apiVersion: v1
+kind: Endpoints
+metadata: { name: postgres }
+subsets:
+  - addresses: [{ ip: "10.10.0.10" }]   # Data VM internal IP
+    ports: [{ name: postgres, port: 5432 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: rabbitmq }
+spec:
+  ports: [{ name: amqp, port: 5672, targetPort: 5672 }]
+---
+apiVersion: v1
+kind: Endpoints
+metadata: { name: rabbitmq }
+subsets:
+  - addresses: [{ ip: "10.10.0.10" }]
+    ports: [{ name: amqp, port: 5672 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: redis }
+spec:
+  ports: [{ name: redis, port: 6379, targetPort: 6379 }]
+---
+apiVersion: v1
+kind: Endpoints
+metadata: { name: redis }
+subsets:
+  - addresses: [{ ip: "10.10.0.10" }]
+    ports: [{ name: redis, port: 6379 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: minio }
+spec:
+  ports: [{ name: s3, port: 9000, targetPort: 9000 }]
+---
+apiVersion: v1
+kind: Endpoints
+metadata: { name: minio }
+subsets:
+  - addresses: [{ ip: "10.10.0.10" }]
+    ports: [{ name: s3, port: 9000 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: smtp }
+spec:
+  ports: [{ name: smtp, port: 1025, targetPort: 1025 }]
+---
+apiVersion: v1
+kind: Endpoints
+metadata: { name: smtp }
+subsets:
+  - addresses: [{ ip: "10.10.0.10" }]
+    ports: [{ name: smtp, port: 1025 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: camunda }
+spec:
+  ports: [{ name: grpc, port: 26500, targetPort: 26500 }]
+---
+apiVersion: v1
+kind: Endpoints
+metadata: { name: camunda }
+subsets:
+  - addresses: [{ ip: "10.10.0.10" }]
+    ports: [{ name: grpc, port: 26500 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: otel-collector }
+spec:
+  ports:
+    - { name: otlp-http, port: 4318, targetPort: 4318 }
+    - { name: otlp-grpc, port: 4317, targetPort: 4317 }
+---
+apiVersion: v1
+kind: Endpoints
+metadata: { name: otel-collector }
+subsets:
+  - addresses: [{ ip: "10.10.0.20" }]   # Observability VM internal IP
+    ports:
+      - { name: otlp-http, port: 4318 }
+      - { name: otlp-grpc, port: 4317 }

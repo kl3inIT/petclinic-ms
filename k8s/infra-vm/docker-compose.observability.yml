@@ -1,0 +1,98 @@
+# Observability VM — self-hosted LGTM, isolated from the GKE cluster it watches.
+#   docker compose -f docker-compose.observability.yml up -d
+# Open Grafana at http://<OBS_VM_IP>:3000 (or behind a reverse proxy / Ingress).
+#
+# Data flow:
+#   GKE Alloy DaemonSet --remote_write--> prometheus  (metrics)
+#   GKE Alloy DaemonSet --loki push------> loki        (logs)
+#   PCMS services --------OTLP-----------> alloy:4318 -> tempo (traces)
+#
+# Config files live under ./observability/<tool>/. You can reuse the proven
+# configs from ../../.. (zero-mail/docker/observability) as a starting point;
+# the only PCMS-specific change is enabling Prometheus remote-write receive.
+name: petclinic-obs
+
+services:
+  grafana:
+    image: grafana/grafana:13.0.1
+    container_name: petclinic-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports: ["3000:3000"]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    container_name: petclinic-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-remote-write-receiver"   # accept remote_write from in-cluster Alloy
+    ports: ["9090:9090"]
+    volumes:
+      - prometheus_data:/prometheus
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.7.2
+    container_name: petclinic-loki
+    command: ["-config.file=/etc/loki/loki.yml"]
+    ports: ["3100:3100"]
+    volumes:
+      - loki_data:/loki
+      - ./observability/loki/loki.yml:/etc/loki/loki.yml:ro
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.10.5
+    container_name: petclinic-tempo
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    ports: ["3200:3200"]
+    volumes:
+      - tempo_data:/var/tempo
+      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+    restart: unless-stopped
+
+  # OTLP gateway: services send traces here (:4318/:4317) -> forwards to Tempo.
+  alloy:
+    image: grafana/alloy:v1.16.1
+    container_name: petclinic-alloy-gw
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
+    ports: ["4317:4317", "4318:4318", "12345:12345"]
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    restart: unless-stopped
+
+  # Infra exporters for the Data VM backends (optional).
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: petclinic-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:${POSTGRES_PASSWORD:?}@10.10.0.10:5432/petclinic?sslmode=disable"
+    ports: ["9187:9187"]
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: petclinic-redis-exporter
+    environment:
+      REDIS_ADDR: redis://10.10.0.10:6379
+    ports: ["9121:9121"]
+    restart: unless-stopped
+
+volumes:
+  grafana_data: { name: petclinic-grafana-data }
+  prometheus_data: { name: petclinic-prometheus-data }
+  loki_data: { name: petclinic-loki-data }
+  tempo_data: { name: petclinic-tempo-data }

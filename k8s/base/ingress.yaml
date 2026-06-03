@@ -1,0 +1,32 @@
+# Public entry: GKE Ingress (Google Cloud HTTP(S) Load Balancer) -> api-gateway.
+# Frontend SPA is served separately from Cloud Storage + Cloud CDN (not here).
+#
+# Notes:
+#  * Container-native LB: api-gateway Service is annotated for NEG so the LB
+#    targets pods directly (see overlays/gke patch).
+#  * TLS: attach a ManagedCertificate (managed-cert.yaml) once you have a host,
+#    or use http only for the demo. `sslip.io` gives a free hostname from the IP.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: petclinic
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    # networking.gke.io/managed-certificates: "petclinic-cert"
+spec:
+  rules:
+    # Replace <LB_IP> after the LB is provisioned, e.g. gateway.34-120-0-1.sslip.io
+    - host: "gateway.<LB_IP>.sslip.io"
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api-gateway
+                port: { number: 8180 }
+  # Fallback default backend so the LB has a target before DNS is set:
+  defaultBackend:
+    service:
+      name: api-gateway
+      port: { number: 8180 }

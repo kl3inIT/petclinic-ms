@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: petclinic
+
+commonLabels:
+  app.kubernetes.io/part-of: petclinic
+
+resources:
+  # cluster scaffolding
+  - namespace.yaml
+  - common-config.yaml
+  - secrets.example.yaml          # swap for secrets.yaml (gitignored) with real values
+  - external-services.yaml        # DNS -> off-cluster VMs
+  - alloy-agent.yaml              # metrics + logs collector -> Obs VM
+  - ingress.yaml
+  # platform tier
+  - config-server.yaml
+  - discovery-server.yaml
+  - admin-server.yaml
+  # application tier
+  - api-gateway.yaml
+  - auth-service.yaml
+  - customers-service.yaml
+  - vets-service.yaml
+  - visits-service.yaml
+  - reviews-service.yaml
+  - genai-service.yaml
+  - mcp-server.yaml
+  - workflow-service.yaml
+  - mailer-service.yaml

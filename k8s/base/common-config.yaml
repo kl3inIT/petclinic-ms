@@ -1,0 +1,17 @@
+# Shared env for every Spring service. Per-service `env:` entries override these.
+# Hostnames (postgres/rabbitmq/redis/minio/otel-collector) resolve via the
+# selector-less Services in external-services.yaml -> off-cluster VMs.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: petclinic-common
+data:
+  SPRING_PROFILES_ACTIVE: "gke"
+  SPRING_DOCKER_COMPOSE_ENABLED: "false"
+  CONFIG_SERVER_URL: "http://config-server:8888"
+  EUREKA_URL: "http://discovery-server:8761/eureka/"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/petclinic"
+  SPRING_RABBITMQ_HOST: "rabbitmq"
+  SPRING_DATA_REDIS_HOST: "redis"
+  OTLP_ENDPOINT: "http://otel-collector:4318/v1/traces"
+  JWKS_URI: "http://auth-service:8183/.well-known/jwks.json"
