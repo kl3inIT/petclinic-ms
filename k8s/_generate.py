@@ -118,9 +118,18 @@ spec:
         prometheus.io/port: "{mgmt}"
         prometheus.io/path: /actuator/prometheus
     spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile: {{ type: RuntimeDefault }}
       containers:
         - name: {name}
           image: petclinic-ms/{name}:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {{ drop: ["ALL"] }}
           ports:
             - {{ name: http, containerPort: {app} }}
             - {{ name: mgmt, containerPort: {mgmt} }}
@@ -158,9 +167,18 @@ spec:
     metadata:
       labels: {{ app: {name} }}
     spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile: {{ type: RuntimeDefault }}
       containers:
         - name: {name}
           image: petclinic-ms/{name}:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {{ drop: ["ALL"] }}
           ports:
             - {{ name: http, containerPort: {app} }}
           env:

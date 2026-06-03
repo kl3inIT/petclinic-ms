@@ -15,9 +15,18 @@ spec:
         prometheus.io/port: "9190"
         prometheus.io/path: /actuator/prometheus
     spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
       containers:
         - name: workflow-service
           image: petclinic-ms/workflow-service:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
           ports:
             - { name: http, containerPort: 8190 }
             - { name: mgmt, containerPort: 9190 }
