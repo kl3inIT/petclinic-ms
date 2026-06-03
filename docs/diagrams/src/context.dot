@@ -1,0 +1,50 @@
+digraph context {
+  graph [splines=true, overlap=false, outputorder=edgesfirst,
+         bgcolor="white", dpi=160];
+  node  [fontname="Arial Bold", fontsize=15, fixedsize=true,
+         width=2.2, height=0.85];
+  edge  [fontname="Arial", fontsize=12, fontcolor="#2b2b2b",
+         color="#5a5a5a", penwidth=1.5, arrowsize=0.85];
+
+  pcms [pos="0,0!", shape=circle, fixedsize=true, width=2.2,
+        style="filled,bold", fillcolor="#a5d8ff", color="#1971c2",
+        penwidth=4, fontsize=19, fontname="Arial Bold", fontcolor="#0b3d66",
+        label="Pet Care\nManagement\nSystem\n(PCMS)"];
+
+  node [shape=box, style="rounded,filled", fillcolor="#ffe8cc",
+        color="#e8820c", penwidth=2.4, fontcolor="#8a4b00"];
+
+  guest [pos="-620,640!", label="Guest\n(Anonymous)"];
+  owner [pos="0,640!", label="Pet Owner"];
+  staff [pos="620,640!", label="Receptionist\n(Staff)"];
+  vet [pos="-1060,200!", label="Veterinarian"];
+  inv [pos="-1060,-200!", label="Inventory Manager"];
+  admin [pos="-380,-640!", label="System Admin"];
+  llm [pos="1060,380!", label="LLM Provider"];
+  pay [pos="1060,0!", label="Bank Transfer\nChannel"];
+  smtp [pos="1060,-380!", label="SMTP Server"];
+  obj [pos="380,-640!", label="Object Storage"];
+
+  // labels sit near the ENTITY end of each spoke (tail/head label)
+  // so they fan out around the perimeter instead of piling at center
+  guest -> pcms [taillabel="browse vets / info", labeldistance=4.0, labelangle=34];
+  pcms -> guest [headlabel="vet directory", labeldistance=8.0, labelangle=-34];
+  owner -> pcms [taillabel="book visit · manage pets", labeldistance=4.0, labelangle=34];
+  pcms -> owner [headlabel="visits · invoices · AI", labeldistance=8.0, labelangle=-34];
+  staff -> pcms [taillabel="records · visits · billing", labeldistance=4.0, labelangle=34];
+  pcms -> staff [headlabel="schedule · invoices", labeldistance=8.0, labelangle=-34];
+  vet -> pcms [taillabel="examine · prescribe · charge", labeldistance=4.0, labelangle=34];
+  pcms -> vet [headlabel="assigned visits · slots", labeldistance=8.0, labelangle=-34];
+  inv -> pcms [taillabel="products · medicines · stock", labeldistance=4.0, labelangle=34];
+  pcms -> inv [headlabel="catalog · stock levels", labeldistance=8.0, labelangle=-34];
+  admin -> pcms [taillabel="users · AI · mail", labeldistance=4.0, labelangle=34];
+  pcms -> admin [headlabel="metrics · config", labeldistance=8.0, labelangle=-34];
+  llm -> pcms [taillabel="completion · embed", labeldistance=4.0, labelangle=34];
+  pcms -> llm [headlabel="prompt + context", labeldistance=8.0, labelangle=-34];
+  pay -> pcms [taillabel="transfer confirmation", labeldistance=4.0, labelangle=34];
+  pcms -> pay [headlabel="payment reference", labeldistance=8.0, labelangle=-34];
+  smtp -> pcms [taillabel="delivery status", labeldistance=4.0, labelangle=34];
+  pcms -> smtp [headlabel="email message", labeldistance=8.0, labelangle=-34];
+  obj -> pcms [taillabel="stored URL", labeldistance=4.0, labelangle=34];
+  pcms -> obj [headlabel="upload media / PDF", labeldistance=8.0, labelangle=-34];
+}
