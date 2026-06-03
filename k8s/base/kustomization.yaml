@@ -28,4 +28,7 @@ resources:
   - genai-service.yaml
   - mcp-server.yaml
   - workflow-service.yaml
+  - products-service.yaml
+  - billing-service.yaml
   - mailer-service.yaml
+  - files-service.yaml

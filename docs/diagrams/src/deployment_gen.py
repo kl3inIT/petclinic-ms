@@ -62,6 +62,8 @@ with Diagram("PCMS Deployment Architecture (GKE)", filename="docs/diagrams/out/d
                 genai = Spring("genai")
                 mcp = Spring("mcp-server")
                 workflow = Spring("workflow")
+                products = Spring("products")
+                billing = Spring("billing")
                 mailer = Go("mailer")
                 files = Go("files-service")
             alloy = Prometheus("Alloy\n(DaemonSet)")
@@ -88,6 +90,8 @@ with Diagram("PCMS Deployment Architecture (GKE)", filename="docs/diagrams/out/d
     # ---- persistence (representative; all services use the Data VM) ----
     auth >> Edge(label="JDBC · AMQP · cache · S3\n(all services)", color=GRAY) >> pg
     visits >> Edge(color=GRAY) >> mq
+    billing >> Edge(color=GRAY) >> pg
+    products >> Edge(color=GRAY) >> pg
     files >> Edge(label="media · PDF", color=GRAY) >> minio
     workflow >> Edge(label="gRPC", color=GRAY) >> camunda
     camunda >> Edge(color=DASH, style="dashed") >> es

@@ -20,7 +20,10 @@ images:
   - { name: petclinic-ms/genai-service,     newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/genai-service,     newTag: latest }
   - { name: petclinic-ms/mcp-server,        newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/mcp-server,        newTag: latest }
   - { name: petclinic-ms/workflow-service,  newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/workflow-service,  newTag: latest }
+  - { name: petclinic-ms/products-service,  newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/products-service,  newTag: latest }
+  - { name: petclinic-ms/billing-service,   newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/billing-service,   newTag: latest }
   - { name: petclinic-ms/mailer-service,    newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/mailer-service,    newTag: latest }
+  - { name: petclinic-ms/files-service,     newName: REGION-docker.pkg.dev/PROJECT_ID/petclinic/files-service,     newTag: latest }
 
 # Container-native load balancing: expose api-gateway via a standalone NEG so the
 # GKE Ingress targets pods directly.
