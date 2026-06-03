@@ -33,7 +33,7 @@ junit              = "6.1.0"
 awsSdk             = "2.30.21"
 
 # BPM / integration (workflow-service)
-camunda            = "8.9.5"
+camunda            = "8.9.6"
 camel              = "4.14.4"            # Spring Boot 4 compatible từ 4.14.x
 
 [libraries]
