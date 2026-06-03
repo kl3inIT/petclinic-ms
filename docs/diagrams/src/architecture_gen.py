@@ -48,7 +48,7 @@ with Diagram(
         eureka = Consul("discovery-server\n(Eureka)")
         config = Spring("config-server")
         admin = Spring("admin-server")
-        files = Spring("files-service")
+        files = Go("files-service")
 
     with Cluster("Business Services", graph_attr={"bgcolor": "#fff4e6"}):
         auth = Spring("auth-service")
