@@ -1,0 +1,44 @@
+# PCMS Tempo (Observability VM). Receives OTLP from the Alloy gateway and stores
+# trace blocks. `backend: local` for the demo; switch to s3 -> Data-VM MinIO for
+# the "MinIO double-duty" design (see commented block).
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc: { endpoint: 0.0.0.0:4317 }
+        http: { endpoint: 0.0.0.0:4318 }
+
+ingester:
+  lifecycler:
+    ring:
+      kvstore: { store: inmemory }
+      replication_factor: 1
+
+compactor:
+  compaction:
+    block_retention: 168h        # 7d
+    compacted_block_retention: 1h
+
+storage:
+  trace:
+    backend: local
+    wal: { path: /var/tempo/wal }
+    local: { path: /var/tempo/blocks }
+    # --- MinIO (S3) backend on the Data VM (optional) ---
+    # backend: s3
+    # s3:
+    #   endpoint: 10.10.0.10:9000
+    #   bucket: tempo
+    #   access_key: minioadmin
+    #   secret_key: ${MINIO_ROOT_PASSWORD}
+    #   insecure: true
+    #   forcepathstyle: true
+
+usage_report:
+  reporting_enabled: false

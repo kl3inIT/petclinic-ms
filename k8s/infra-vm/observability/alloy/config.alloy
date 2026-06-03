@@ -1,0 +1,26 @@
+// PCMS Alloy GATEWAY (Observability VM).
+// Single OTLP endpoint that the GKE services send traces to
+// (Service `otel-collector` -> this VM :4318/:4317). Batches and forwards to
+// Tempo. Metrics + logs do NOT pass through here — the in-cluster Alloy
+// DaemonSet remote-writes metrics to Prometheus and pushes logs to Loki.
+
+otelcol.receiver.otlp "in" {
+  grpc { endpoint = "0.0.0.0:4317" }
+  http { endpoint = "0.0.0.0:4318" }
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "petclinic-tempo:4317"
+    tls { insecure = true }
+  }
+}

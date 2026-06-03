@@ -34,9 +34,30 @@ data:
       role = "pod"
     }
 
-    // keep only pods that opted in via prometheus.io/scrape: "true"
-    discovery.relabel "annotated" {
+    // promote app/namespace/pod to real labels (dashboards template on `application`)
+    discovery.relabel "pods" {
       targets = discovery.kubernetes.pods.targets
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "application"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "app"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+    }
+
+    // metrics: keep only pods with prometheus.io/scrape=true
+    discovery.relabel "scrape_targets" {
+      targets = discovery.relabel.pods.output
       rule {
         source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_scrape"]
         regex         = "true"
@@ -48,21 +69,20 @@ data:
       }
     }
 
-    // ---- metrics ----
     prometheus.scrape "apps" {
-      targets    = discovery.relabel.annotated.output
-      forward_to = [prometheus.remote_write.obs.receiver]
+      targets      = discovery.relabel.scrape_targets.output
+      forward_to   = [prometheus.remote_write.obs.receiver]
       metrics_path = "/actuator/prometheus"
     }
     prometheus.remote_write "obs" {
       endpoint {
-        url = "http://10.10.0.20:9090/api/v1/write"   // Prometheus (remote-write receiver) on Obs VM
+        url = "http://10.10.0.20:9090/api/v1/write"   // Prometheus remote-write receiver on Obs VM
       }
     }
 
-    // ---- logs ----
+    // logs: every pod, labeled by app/namespace/pod
     loki.source.kubernetes "pods" {
-      targets    = discovery.kubernetes.pods.targets
+      targets    = discovery.relabel.pods.output
       forward_to = [loki.write.obs.receiver]
     }
     loki.write "obs" {
