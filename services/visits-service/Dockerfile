@@ -33,6 +33,7 @@ COPY shared/common-jpa/src shared/common-jpa/src
 COPY shared/common-security/src shared/common-security/src
 COPY shared/common-clients/src shared/common-clients/src
 COPY shared/common-events/src shared/common-events/src
+COPY shared/common-storage/src shared/common-storage/src
 # Service src
 COPY services/visits-service/src services/visits-service/src
 
