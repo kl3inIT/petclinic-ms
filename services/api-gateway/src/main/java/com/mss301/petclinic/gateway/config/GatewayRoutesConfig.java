@@ -55,7 +55,9 @@ public class GatewayRoutesConfig {
     @Bean
     public RouterFunction<ServerResponse> customersServiceRoute() {
         return route("customers-service")
-                .route(path("/api/v1/owners/**").or(path("/api/v1/pets/**")), http())
+                .route(path("/api/v1/owners/**")
+                        .or(path("/api/v1/pets/**"))
+                        .or(path("/api/v1/pet-types/**")), http())
                 .filter(lb("customers-service"))
                 .filter(bulkhead(bulkheadRegistry, "customersBulkhead"))
                 .filter(circuitBreaker(c -> c.setId("customersCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
@@ -79,6 +81,32 @@ public class GatewayRoutesConfig {
                 .filter(lb("visits-service"))
                 .filter(bulkhead(bulkheadRegistry, "visitsBulkhead"))
                 .filter(circuitBreaker(c -> c.setId("visitsCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
+    /**
+     * Billing — hoá đơn gộp + danh mục bệnh. Consume visit.completed (async, không qua gateway).
+     */
+    @Bean
+    public RouterFunction<ServerResponse> billingServiceRoute() {
+        return route("billing-service")
+                .route(path("/api/v1/invoices/**").or(path("/api/v1/diseases/**")), http())
+                .filter(lb("billing-service"))
+                .filter(bulkhead(bulkheadRegistry, "billingBulkhead"))
+                .filter(circuitBreaker(c -> c.setId("billingCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
+    /**
+     * Products — catalog thuốc/dịch vụ/vật tư + tồn kho. Consume bởi visits (lb://, không qua gateway).
+     */
+    @Bean
+    public RouterFunction<ServerResponse> productsServiceRoute() {
+        return route("products-service")
+                .route(path("/api/v1/products/**"), http())
+                .filter(lb("products-service"))
+                .filter(bulkhead(bulkheadRegistry, "productsBulkhead"))
+                .filter(circuitBreaker(c -> c.setId("productsCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
                 .build();
     }
 
@@ -198,6 +226,24 @@ public class GatewayRoutesConfig {
                 .route(path("/v3/api-docs/workflow"), http())
                 .before(setPath("/v3/api-docs"))
                 .filter(lb("workflow-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsBillingRoute() {
+        return route("api-docs-billing")
+                .route(path("/v3/api-docs/billing"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("billing-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsProductsRoute() {
+        return route("api-docs-products")
+                .route(path("/v3/api-docs/products"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("products-service"))
                 .build();
     }
 

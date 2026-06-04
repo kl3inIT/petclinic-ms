@@ -1,13 +1,17 @@
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
+  getGetMyVetPhotoQueryKey,
   getGetMyVetProfileQueryKey,
+  useDeleteMyVetPhoto,
   useGetMyRatingsSummary,
+  useGetMyVetPhoto,
   useGetMyVetProfile,
   useListMyBadges,
   useListMyRatings,
   useListMyWorkSchedule,
   useUpdateMyVetProfile as useGeneratedUpdateMyVetProfile,
+  useUploadMyVetPhoto,
 } from '@/lib/api/generated/vet-me-self-service/vet-me-self-service';
 import type {
   BadgeResponse,
@@ -70,6 +74,44 @@ export function useUpdateMyProfile() {
         : {}),
       onSuccess: (data) => {
         qc.setQueryData(getGetMyVetProfileQueryKey(), data);
+        void qc.invalidateQueries({ queryKey: getGetMyVetProfileQueryKey() });
+      },
+    },
+  });
+}
+
+/**
+ * Avatar của vet đang login. BE trả 404 khi chưa upload → retry:false để khỏi noisy.
+ * Demo mode: tắt query (không có MinIO thật).
+ */
+export function useMyPhoto() {
+  const demo = isDemoMode();
+  return useGetMyVetPhoto({
+    query: {
+      enabled: !demo,
+      retry: false,
+    },
+  });
+}
+
+export function useUploadMyPhoto() {
+  const qc = useQueryClient();
+  return useUploadMyVetPhoto({
+    mutation: {
+      onSuccess: () => {
+        void qc.invalidateQueries({ queryKey: getGetMyVetPhotoQueryKey() });
+        void qc.invalidateQueries({ queryKey: getGetMyVetProfileQueryKey() });
+      },
+    },
+  });
+}
+
+export function useDeleteMyPhoto() {
+  const qc = useQueryClient();
+  return useDeleteMyVetPhoto({
+    mutation: {
+      onSuccess: () => {
+        void qc.invalidateQueries({ queryKey: getGetMyVetPhotoQueryKey() });
         void qc.invalidateQueries({ queryKey: getGetMyVetProfileQueryKey() });
       },
     },

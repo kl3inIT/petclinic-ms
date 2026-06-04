@@ -39,7 +39,6 @@ import { MiniBar } from '@/features/vet-me/components/charts/MiniBar';
 import { Sparkline } from '@/features/vet-me/components/charts/Sparkline';
 import { StarRating } from '@/features/vet-me/components/StarRating';
 import { VetAvatar } from '@/features/vet-me/components/VetAvatar';
-import { enableDemoMode } from '@/features/vet-me/mock';
 import { bucketRatingsByWeek } from '@/features/vet-me/stats';
 import { JS_DAY_TO_WORKDAY, WORKDAY_LABEL, WORKHOUR_ORDER } from '@/features/vets/labels';
 import type {
@@ -68,9 +67,7 @@ function VetDashboard() {
 
   const weekBuckets = useMemo(() => bucketRatingsByWeek(ratings, 8), [ratings]);
 
-  if (profileQuery.isError) {
-    return <ProfileUnlinkedCard username={username} error={profileQuery.error} />;
-  }
+  const profileLoading = profileQuery.isLoading || profileQuery.isError;
 
   const profile = profileQuery.data;
   const summary = summaryQuery.data;
@@ -90,7 +87,7 @@ function VetDashboard() {
   return (
     <div className="space-y-6">
       <HeroStrip
-        loading={profileQuery.isLoading}
+        loading={profileLoading}
         greeting={greeting}
         displayName={displayName}
         profile={profile}
@@ -796,54 +793,6 @@ function SectionCard({
           {action}
         </div>
         {children}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ProfileUnlinkedCard({ username, error }: { username: string; error: unknown }) {
-  const status = (error as { response?: { status?: number } })?.response?.status;
-  if (status === 400) {
-    return (
-      <Card className="border-destructive/40 bg-white shadow-sm">
-        <CardContent className="space-y-4 p-6 text-sm">
-          <div className="flex items-start gap-3 text-destructive">
-            <UserCircle className="mt-0.5 size-5" />
-            <div>
-              <p className="font-semibold">Tài khoản chưa liên kết với bác sĩ</p>
-              <p className="mt-1 text-destructive/80">
-                Tài khoản <strong>{username}</strong> chưa được admin liên kết với hồ sơ
-                bác sĩ. Sau khi liên kết xong, đăng xuất và đăng nhập lại.
-              </p>
-            </div>
-          </div>
-          <div className="rounded-lg border border-violet-200 bg-gradient-to-br from-violet-50 to-rose-50 p-4">
-            <div className="mb-2 flex items-center gap-2 font-medium text-violet-900">
-              <Sparkles className="size-4" />
-              Xem trước giao diện bằng dữ liệu mẫu
-            </div>
-            <p className="mb-3 text-xs text-violet-700">
-              Chế độ demo hiển thị hồ sơ, lịch trực, đánh giá và huy hiệu mẫu. Không thay
-              đổi dữ liệu backend.
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-violet-300 bg-white text-violet-700 hover:bg-violet-100"
-              onClick={() => enableDemoMode()}
-            >
-              <Sparkles className="size-3.5" />
-              Bật chế độ demo
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  return (
-    <Card>
-      <CardContent className="py-6 text-destructive">
-        Lỗi tải hồ sơ: {error instanceof Error ? error.message : 'unknown'}
       </CardContent>
     </Card>
   );

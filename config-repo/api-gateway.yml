@@ -47,6 +47,10 @@ springdoc:
         url: /v3/api-docs/visits
       - name: workflow-service
         url: /v3/api-docs/workflow
+      - name: billing-service
+        url: /v3/api-docs/billing
+      - name: products-service
+        url: /v3/api-docs/products
   api-docs:
     enabled: false                          # gateway tự không có endpoint nghiệp vụ — tắt spec riêng
   show-actuator: false
@@ -69,6 +73,8 @@ resilience4j:
         base-config: default
       visitsCircuitBreaker:
         base-config: default
+      billingCircuitBreaker:
+        base-config: default
       authCircuitBreaker:
         base-config: default
       # Genai: LLM streaming có thể chạy 30-120s. Threshold nới lỏng — chỉ trip khi
@@ -88,6 +94,8 @@ resilience4j:
       vetsCircuitBreaker:
         base-config: default
       visitsCircuitBreaker:
+        base-config: default
+      billingCircuitBreaker:
         base-config: default
       authCircuitBreaker:
         base-config: default
@@ -114,6 +122,10 @@ resilience4j:
       vetsBulkhead:
         base-config: default
       visitsBulkhead:
+        base-config: default
+      billingBulkhead:
+        base-config: default
+      productsBulkhead:
         base-config: default
       authBulkhead:
         max-concurrent-calls: 50            # auth login burst lúc peak hour, nới hơn

@@ -22,6 +22,7 @@ public record UpdateVetRequest(
         String lastName,
         String email,
         String phoneNumber,
+        String vetBillId,
         Boolean active,
         String resume,
         Set<String> specialtyNames
@@ -30,6 +31,7 @@ public record UpdateVetRequest(
     public boolean hasLastName()    { return lastName    != null; }
     public boolean hasEmail()       { return email       != null; }
     public boolean hasPhoneNumber() { return phoneNumber != null; }
+    public boolean hasVetBillId()   { return vetBillId   != null; }
     public boolean hasActive()      { return active      != null; }
     public boolean hasResume()      { return resume      != null; }
     public boolean hasSpecialties() { return specialtyNames != null; }

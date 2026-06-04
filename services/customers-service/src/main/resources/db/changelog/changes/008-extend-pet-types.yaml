@@ -1,0 +1,22 @@
+databaseChangeLog:
+
+  # Mở rộng catalog pet_types — thêm các loài thường gặp tại phòng khám VN
+  # mà seed lần đầu (006-002) còn thiếu: rùa, chuột lang, chồn, sóc, vẹt, rắn.
+  # Idempotent qua ON CONFLICT (code) DO NOTHING — không ghi đè display_order
+  # nếu admin đã sửa.
+
+  - changeSet:
+      id: 008-001-extend-pet-types
+      author: mss301
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              INSERT INTO customers.pet_types (code, name, display_order) VALUES
+                ('turtle',     'Rùa',          75),
+                ('guinea_pig', 'Chuột lang',   55),
+                ('ferret',     'Chồn',         80),
+                ('squirrel',   'Sóc',          82),
+                ('parrot',     'Vẹt',          45),
+                ('snake',      'Rắn',          85)
+              ON CONFLICT (code) DO NOTHING

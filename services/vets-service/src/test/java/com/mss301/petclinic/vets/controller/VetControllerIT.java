@@ -140,6 +140,81 @@ class VetControllerIT {
                 .andExpect(jsonPath("$.active").value(true));
     }
 
+    // ---------- vetBillId (Item 4) ----------
+
+    @Test
+    void createVet_withVetBillId_returnsItAndReverseLookupWorks() throws Exception {
+        String body =
+                """
+                {
+                  "firstName": "Bill",
+                  "lastName": "Linked",
+                  "email": "bill.linked@petclinic.local",
+                  "vetBillId": "BILL-XYZ-001"
+                }
+                """;
+        String resp = mvc.perform(post("/api/v1/vets")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .with(staff()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.vetBillId").value("BILL-XYZ-001"))
+                .andReturn().getResponse().getContentAsString();
+        Long id = om.readTree(resp).path("id").asLong();
+
+        // Tra cứu ngược theo vetBillId
+        mvc.perform(get("/api/v1/vets/by-bill/{billId}", "BILL-XYZ-001").with(staff()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.vetBillId").value("BILL-XYZ-001"));
+    }
+
+    @Test
+    void getVetByBillId_notFound_returns404() throws Exception {
+        mvc.perform(get("/api/v1/vets/by-bill/{billId}", "NO-SUCH-BILL").with(staff()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createVet_duplicateVetBillId_returns400() throws Exception {
+        String first =
+                """
+                { "firstName": "A", "lastName": "One", "email": "a.one@petclinic.local", "vetBillId": "DUP-001" }
+                """;
+        mvc.perform(post("/api/v1/vets")
+                        .contentType(MediaType.APPLICATION_JSON).content(first).with(staff()))
+                .andExpect(status().isCreated());
+
+        String second =
+                """
+                { "firstName": "B", "lastName": "Two", "email": "b.two@petclinic.local", "vetBillId": "DUP-001" }
+                """;
+        mvc.perform(post("/api/v1/vets")
+                        .contentType(MediaType.APPLICATION_JSON).content(second).with(staff()))
+                .andExpect(status().isBadRequest())
+                .andExpect(header().string("X-PetClinic-Alert", "error.vetBillId-exists"));
+    }
+
+    // ---------- Auto-badge khi tạo vet (Item 5) ----------
+
+    @Test
+    void createVet_autoAssignsRookieBadge() throws Exception {
+        String body =
+                """
+                { "firstName": "New", "lastName": "Doctor", "email": "new.doctor@petclinic.local" }
+                """;
+        String resp = mvc.perform(post("/api/v1/vets")
+                        .contentType(MediaType.APPLICATION_JSON).content(body).with(staff()))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Long id = om.readTree(resp).path("id").asLong();
+
+        mvc.perform(get("/api/v1/vets/{vetId}/badges", id).with(staff()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("ROOKIE"));
+    }
+
     // ---------- PATCH partial ----------
 
     @Test

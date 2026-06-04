@@ -1,11 +1,17 @@
 package com.mss301.petclinic.vets.controller;
 
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -64,4 +70,27 @@ public class VetPhotoController {
     public void deleteVetPhoto(@PathVariable Long vetId) {
         service.deletePhoto(vetId);
     }
+
+    @PostMapping("/approve")
+    @Operation(
+            summary = "Approve vet photo — STAFF/ADMIN only",
+            description = "Đổi status PENDING/REJECTED → APPROVED. Photo hiển thị public."
+    )
+    public VetPhotoResponse approveVetPhoto(@PathVariable Long vetId,
+                                             @AuthenticationPrincipal Jwt jwt) {
+        return service.approvePhoto(vetId, jwt.getClaimAsString("username"));
+    }
+
+    @PostMapping("/reject")
+    @Operation(
+            summary = "Reject vet photo — STAFF/ADMIN only",
+            description = "Body: { reason: '...' }. Đổi status → REJECTED. Photo ẩn khỏi public."
+    )
+    public VetPhotoResponse rejectVetPhoto(@PathVariable Long vetId,
+                                            @RequestBody Map<String, String> body,
+                                            @AuthenticationPrincipal Jwt jwt) {
+        String reason = body == null ? null : body.get("reason");
+        return service.rejectPhoto(vetId, jwt.getClaimAsString("username"), reason);
+    }
+
 }

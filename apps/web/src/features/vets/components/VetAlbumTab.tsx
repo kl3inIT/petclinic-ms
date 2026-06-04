@@ -110,7 +110,7 @@ export function VetAlbumTab({ vetId }: Props) {
         <h3 className="text-sm font-semibold">Ảnh đại diện</h3>
         <div className="flex flex-col gap-4 sm:flex-row">
           <div className="flex items-center justify-center sm:w-48">
-            {photoQuery.isLoading ? (
+            {photoQuery.isLoading || photoQuery.isError ? (
               <Skeleton className="h-40 w-40 rounded-full" />
             ) : photo?.presignedUrl ? (
               <div className="relative">
@@ -153,7 +153,7 @@ export function VetAlbumTab({ vetId }: Props) {
           }
         />
 
-        {albumQuery.isLoading ? (
+        {albumQuery.isLoading || albumQuery.isError ? (
           <Skeleton className="h-40 w-full" />
         ) : (albumQuery.data?.content ?? []).length === 0 ? (
           <Card>

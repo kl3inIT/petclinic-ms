@@ -9,14 +9,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.mss301.petclinic.vets.config.StorageProperties;
+import com.mss301.petclinic.common.storage.StorageProperties;
+import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.vets.dto.res.VetAlbumPhotoResponse;
 import com.mss301.petclinic.vets.exception.VetAlbumPhotoNotFoundException;
 import com.mss301.petclinic.vets.exception.VetNotFoundException;
 import com.mss301.petclinic.vets.model.VetAlbumPhoto;
 import com.mss301.petclinic.vets.repository.VetAlbumPhotoRepository;
 import com.mss301.petclinic.vets.repository.VetRepository;
-import com.mss301.petclinic.vets.service.StorageService;
 import com.mss301.petclinic.vets.service.VetAlbumService;
 
 @Service

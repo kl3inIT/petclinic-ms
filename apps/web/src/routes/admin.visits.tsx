@@ -23,10 +23,8 @@ import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
 import { VisitsDataTable } from '@/features/visits/components/VisitsDataTable';
 import { BookVisitDialog } from '@/features/visits/components/BookVisitDialog';
 import { CompleteVisitDialog } from '@/features/visits/components/CompleteVisitDialog';
-import {
-  SearchVisitsStatus,
-  type SearchVisitsParams,
-} from '@/lib/api/generated/model';
+import { PrescriptionDialog } from '@/features/visits/components/PrescriptionDialog';
+import { SearchVisitsStatus, type SearchVisitsParams } from '@/lib/api/generated/model';
 
 export const Route = createFileRoute('/admin/visits')({
   component: VisitsPage,
@@ -39,6 +37,7 @@ function VisitsPage() {
   const [statusFilter, setStatusFilter] = useState<SearchVisitsStatus | typeof ALL>(ALL);
   const [bookOpen, setBookOpen] = useState(false);
   const [completingVisit, setCompletingVisit] = useState<VisitResponse | null>(null);
+  const [prescribingVisit, setPrescribingVisit] = useState<VisitResponse | null>(null);
 
   const params: SearchVisitsParams = {
     pageable: { page: 0, size: 50, sort: ['scheduledAt,desc'] },
@@ -122,10 +121,12 @@ function VisitsPage() {
             onStart={(id) => startMutation.mutate({ id })}
             onComplete={(v) => setCompletingVisit(v)}
             onCancel={(id) => cancelMutation.mutate({ id })}
+            onPrescribe={(v) => setPrescribingVisit(v)}
           />
           {listQuery.data ? (
             <p className="mt-3 text-xs text-muted-foreground">
-              Hiển thị {listQuery.data.content?.length ?? 0} / {listQuery.data.totalElements ?? 0} kết quả
+              Hiển thị {listQuery.data.content?.length ?? 0} /{' '}
+              {listQuery.data.totalElements ?? 0} kết quả
             </p>
           ) : null}
         </CardContent>
@@ -135,6 +136,10 @@ function VisitsPage() {
       <CompleteVisitDialog
         visit={completingVisit}
         onOpenChange={(o) => !o && setCompletingVisit(null)}
+      />
+      <PrescriptionDialog
+        visit={prescribingVisit}
+        onOpenChange={(o) => !o && setPrescribingVisit(null)}
       />
     </div>
   );

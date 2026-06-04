@@ -1,6 +1,7 @@
 package com.mss301.petclinic.vets.service.impl;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +50,20 @@ public class RatingServiceImpl implements RatingService {
 
     @Override
     public Page<RatingResponse> findAllByVetId(Long vetId, Pageable pageable) {
+        return findAllByVetId(vetId, null, pageable);
+    }
+
+    @Override
+    public Page<RatingResponse> findAllByVetId(Long vetId, Integer year, Pageable pageable) {
         ensureVetExists(vetId);
-        return ratingRepository.findByVetId(vetId, pageable).map(RatingResponse::from);
+        if (year == null) {
+            return ratingRepository.findByVetId(vetId, pageable).map(RatingResponse::from);
+        }
+        // [start, end) của năm theo UTC — đủ cho mục đích báo cáo của 1 phòng khám.
+        OffsetDateTime start = OffsetDateTime.of(year, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        OffsetDateTime end = start.plusYears(1);
+        return ratingRepository.findByVetIdAndRateDateRange(vetId, start, end, pageable)
+                .map(RatingResponse::from);
     }
 
     @Override
@@ -64,7 +77,8 @@ public class RatingServiceImpl implements RatingService {
         Rating entity = existing
                 .map(e -> {
                     e.setScore(request.score());
-                    e.setDescription(request.description());
+                    e.setPredefinedDescription(request.predefinedDescription());
+                    e.setDescription(request.resolveDescription());
                     e.setRateDate(OffsetDateTime.now());
                     return e;
                 })

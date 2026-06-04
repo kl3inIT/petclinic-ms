@@ -36,7 +36,7 @@ import { cn } from '@/lib/utils';
 import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 import { useListVetWorkSchedule } from '@/lib/api/generated/vet-work-schedule/vet-work-schedule';
 
-import { useBookVisit } from '@/lib/api/generated/visits/visits';
+import { useBookVisit, useGetSlotAvailability } from '@/lib/api/generated/visits/visits';
 import { useListVets } from '@/lib/api/generated/vets/vets';
 import { bookVisitSchema } from '@/features/visits/schemas';
 import {
@@ -117,96 +117,69 @@ function getPetBreed(pet: { name?: string; type?: string }) {
   return 'Khác';
 }
 
-// Preset details for high-fidelity doctor cards mapping directly to screenshot
-function getVetDisplayData(v: { id?: number }, index: number) {
-  const photos = [
-    'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=300&h=350', // Male doctor
-    'https://images.unsplash.com/photo-1594824813573-246434e3b96f?auto=format&fit=crop&q=80&w=300&h=350', // Female doctor
-    'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=300&h=350', // Male doctor 2
-    'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=350', // Female doctor 2
-    'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=300&h=350', // Male doctor 3
-    'https://images.unsplash.com/photo-1591604466107-ec97de577aff?auto=format&fit=crop&q=80&w=300&h=350', // Female doctor 3
-  ];
+// Specialty name translations DB EN → VN. Specialty không match → giữ nguyên (best-effort).
+const SPECIALTY_VN: Record<string, string> = {
+  radiology: 'Chẩn đoán hình ảnh',
+  surgery: 'Ngoại khoa',
+  'internal medicine': 'Nội khoa',
+  dentistry: 'Nha khoa',
+  dermatology: 'Da liễu',
+  cardiology: 'Tim mạch',
+  oncology: 'Ung bướu',
+  neurology: 'Thần kinh',
+};
 
-  const vnNames = [
-    {
-      name: 'BS. Thanh Nguyễn',
-      spec: 'Ngoại khoa thú y',
-      rating: 4.9,
-      reviews: 124,
-      exp: '7 năm kinh nghiệm',
-      tags: ['Ngoại khoa', 'Phẫu thuật'],
-    },
-    {
-      name: 'BS. Hương Trần',
-      spec: 'Nội khoa',
-      rating: 4.8,
-      reviews: 98,
-      exp: '6 năm kinh nghiệm',
-      tags: ['Nội khoa'],
-    },
-    {
-      name: 'BS. Quản Lê',
-      spec: 'Chẩn đoán hình ảnh',
-      rating: 4.7,
-      reviews: 76,
-      exp: '5 năm kinh nghiệm',
-      tags: ['Chẩn đoán hình ảnh'],
-    },
-    {
-      name: 'BS. Mai Phạm',
-      spec: 'Ngoại khoa',
-      rating: 4.8,
-      reviews: 88,
-      exp: '5 năm kinh nghiệm',
-      tags: ['Ngoại khoa'],
-    },
-    {
-      name: 'BS. Hùng Vũ',
-      spec: 'Nha khoa thú y',
-      rating: 4.9,
-      reviews: 112,
-      exp: '6 năm kinh nghiệm',
-      tags: ['Nha khoa', 'Nội khoa'],
-    },
-    {
-      name: 'BS. Minh Anh',
-      spec: 'Da liễu thú y',
-      rating: 4.8,
-      reviews: 64,
-      exp: '4 năm kinh nghiệm',
-      tags: ['Da liễu'],
-    },
-  ];
+// Vet không có photoUrl thật → để trống (render block xám với icon nhỏ thay vì ảnh stock).
 
-  const preset = vnNames[index % vnNames.length]!;
+function vnSpecialty(name?: string): string {
+  if (!name) return '';
+  return SPECIALTY_VN[name.toLowerCase()] ?? name;
+}
+
+/**
+ * Map VetResponse từ BE → display props cho card UI. Tất cả field dẫn xuất từ
+ * dữ liệu thật (firstName/lastName/specialties/photoUrl/averageRating). Photo
+ * fallback theo vetId nếu BE chưa upload (deterministic — vet 1 luôn 1 ảnh).
+ */
+function getVetDisplayData(v: {
+  id?: number;
+  firstName?: string;
+  lastName?: string;
+  specialties?: Array<{ name?: string }>;
+  photoUrl?: string;
+  averageRating?: number;
+}) {
+  const fullName = `${v.firstName ?? ''} ${v.lastName ?? ''}`.trim() || 'Bác sĩ thú y';
+  const specs = (v.specialties ?? []).map((s) => vnSpecialty(s.name)).filter(Boolean);
 
   return {
     id: v.id,
-    name: preset.name,
-    photoUrl: photos[index % photos.length]!,
-    specialty: preset.spec,
-    rating: preset.rating,
-    reviews: preset.reviews,
-    experience: preset.exp,
-    tags: preset.tags,
+    name: `BS. ${fullName}`,
+    photoUrl: v.photoUrl && v.photoUrl.length > 0 ? v.photoUrl : null,
+    specialty: specs[0] ?? 'Đa khoa',
+    rating: v.averageRating ?? 0,
+    tags: specs.length > 0 ? specs : ['Đa khoa'],
   };
 }
 
-function getSlotStatus(slot: string) {
-  switch (slot) {
-    case 'HOUR_13_14':
-    case 'HOUR_17_18':
-    case 'HOUR_19_20':
-      return { status: 'FEW', text: 'Còn 1 slot', colorClass: 'text-[#F59E0B]' };
-    case 'HOUR_15_16':
-    case 'HOUR_16_17':
-      return { status: 'FEW', text: 'Còn 2 slot', colorClass: 'text-[#F59E0B]' };
-    case 'HOUR_14_15':
-      return { status: 'FEW', text: 'Còn 3 slot', colorClass: 'text-[#F59E0B]' };
-    default:
-      return { status: 'MANY', text: 'Còn nhiều slot', colorClass: 'text-[#22C55E]' };
+/**
+ * Hiển thị trạng thái slot dựa trên `remaining` thực từ BE.
+ * Capacity hiện = 2 (xem VisitServiceImpl.SLOT_CAPACITY).
+ * - remaining 0 → "Đã đầy" (disabled, xám)
+ * - remaining 1 → "Còn 1 slot" (amber, sắp đầy)
+ * - remaining ≥ 2 → "Còn 2 slot" (green, trống)
+ */
+function getSlotStatusFromRemaining(remaining: number | undefined) {
+  if (remaining === undefined) {
+    return { text: '...', colorClass: 'text-[#667085]', full: false };
   }
+  if (remaining <= 0) {
+    return { text: 'Đã đầy', colorClass: 'text-[#667085]', full: true };
+  }
+  if (remaining === 1) {
+    return { text: 'Còn 1 slot', colorClass: 'text-[#F59E0B]', full: false };
+  }
+  return { text: `Còn ${remaining} slot`, colorClass: 'text-[#22C55E]', full: false };
 }
 
 function BookVisitPage() {
@@ -226,16 +199,21 @@ function BookVisitPage() {
 
   const [petPage, setPetPage] = useState(0);
   const ownerQuery = useGetMyOwnerProfile();
+  const ownerLoading = ownerQuery.isLoading || ownerQuery.isError;
 
   const [vetPage, setVetPage] = useState(0);
+  const VET_PAGE_SIZE = 4;
   const vetsQuery = useListVets({
-    pageable: { page: vetPage, size: 6, sort: ['lastName,asc'] },
+    pageable: { page: vetPage, size: VET_PAGE_SIZE, sort: ['lastName,asc'] },
   });
+  const vetsLoading = vetsQuery.isLoading || vetsQuery.isError;
 
   const bookMutation = useBookVisit({
     mutation: {
       onSuccess: () => {
         toast.success('Đặt lịch khám thành công!');
+        // Invalidate cả search visits LẪN availability — slot vừa book sẽ thấy
+        // remaining giảm khi user quay lại đặt tiếp.
         void qc.invalidateQueries({
           predicate: (q) => {
             const first = q.queryKey[0];
@@ -282,11 +260,10 @@ function BookVisitPage() {
     [vets, values.vetId],
   );
 
-  const selectedVet = useMemo(() => {
-    if (!selectedVetRaw) return null;
-    const originalIndex = vets.findIndex((v) => v.id === selectedVetRaw.id);
-    return getVetDisplayData(selectedVetRaw, originalIndex >= 0 ? originalIndex : 0);
-  }, [selectedVetRaw, vets]);
+  const selectedVet = useMemo(
+    () => (selectedVetRaw ? getVetDisplayData(selectedVetRaw) : null),
+    [selectedVetRaw],
+  );
 
   useEffect(() => {
     const requestedPetId = search.petId;
@@ -304,6 +281,29 @@ function BookVisitPage() {
   const vetScheduleQuery = useListVetWorkSchedule(values.vetId, {
     query: { enabled: values.vetId > 0 },
   });
+
+  // Availability thật theo (vet, ngày): trả {capacity, slots: [{workHour, taken, remaining}]}.
+  // BE enforce SLOT_CAPACITY=2; check ở VisitServiceImpl.book() trước save.
+  const availabilityQuery = useGetSlotAvailability(
+    { vetId: values.vetId, date: selectedDate },
+    { query: { enabled: values.vetId > 0 && !!selectedDate } },
+  );
+  const slotLoading =
+    vetScheduleQuery.isLoading ||
+    vetScheduleQuery.isError ||
+    availabilityQuery.isLoading ||
+    availabilityQuery.isError;
+
+  // Map workHour → remaining để O(1) lookup khi render slot grid.
+  const remainingBySlot = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of availabilityQuery.data?.slots ?? []) {
+      if (s.workHour && typeof s.remaining === 'number') {
+        map.set(s.workHour, s.remaining);
+      }
+    }
+    return map;
+  }, [availabilityQuery.data]);
 
   const selectedWorkday = useMemo(() => {
     if (!selectedDate) return null;
@@ -601,7 +601,7 @@ function BookVisitPage() {
                   name="petId"
                   children={(field) => (
                     <div className="space-y-8">
-                      {ownerQuery.isLoading ? (
+                      {ownerLoading ? (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                           {Array.from({ length: 4 }).map((_, i) => (
                             <Skeleton
@@ -814,7 +814,7 @@ function BookVisitPage() {
                           </p>
                         </div>
 
-                        {vetsQuery.isLoading ? (
+                        {vetsLoading ? (
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {Array.from({ length: 2 }).map((_, i) => (
                               <Skeleton
@@ -826,9 +826,9 @@ function BookVisitPage() {
                         ) : (
                           /* Grid STRICTLY 2 columns for large components & avoid text wrapping issues */
                           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                            {vets.map((v, index) => {
+                            {vets.map((v) => {
                               const isSelected = field.state.value === v.id;
-                              const vetData = getVetDisplayData(v, index);
+                              const vetData = getVetDisplayData(v);
 
                               return (
                                 <button
@@ -852,13 +852,17 @@ function BookVisitPage() {
                                     </div>
                                   )}
 
-                                  {/* Doctor Image - LARGE */}
-                                  <div className="relative h-[104px] w-[76px] shrink-0 overflow-hidden rounded-2xl border border-[#ECECF5] shadow-sm">
-                                    <img
-                                      src={vetData.photoUrl}
-                                      alt={vetData.name}
-                                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                    />
+                                  {/* Doctor Image - LARGE; trống nếu BE chưa có photoUrl */}
+                                  <div className="relative flex h-[104px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#ECECF5] bg-slate-50 shadow-sm">
+                                    {vetData.photoUrl ? (
+                                      <img
+                                        src={vetData.photoUrl}
+                                        alt=""
+                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                      />
+                                    ) : (
+                                      <Stethoscope className="size-7 text-slate-300" />
+                                    )}
                                   </div>
 
                                   {/* Doctor Details */}
@@ -874,15 +878,19 @@ function BookVisitPage() {
                                       <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[12px]">
                                         <Star className="size-4 fill-[#F59E0B] text-[#F59E0B]" />
                                         <span className="font-extrabold text-[#171725]">
-                                          {vetData.rating.toFixed(1)}
+                                          {vetData.rating > 0
+                                            ? vetData.rating.toFixed(1)
+                                            : '—'}
                                         </span>
                                         <span className="font-semibold whitespace-nowrap text-[#667085]">
-                                          ({vetData.reviews} đánh giá)
+                                          {vetData.rating > 0
+                                            ? 'đánh giá'
+                                            : 'chưa có đánh giá'}
                                         </span>
                                       </div>
 
-                                      <p className="mt-1 text-[11px] font-bold text-[#667085]/60">
-                                        {vetData.experience}
+                                      <p className="mt-1 font-mono text-[10.5px] font-bold tracking-wider text-[#667085]/60">
+                                        {v.cardCode ?? `ID #${v.id}`}
                                       </p>
                                     </div>
 
@@ -903,30 +911,52 @@ function BookVisitPage() {
                           </div>
                         )}
 
-                        {/* Doctor Pagination */}
+                        {/* Doctor Pagination — numeric pager */}
                         {(vetsQuery.data?.totalPages ?? 0) > 1 && (
-                          <div className="flex items-center justify-center gap-3 pt-2">
+                          <div className="flex flex-wrap items-center justify-center gap-2 border-t border-[#ECECF5] pt-5">
                             <Button
+                              type="button"
                               variant="outline"
                               size="icon"
-                              className="size-9 rounded-full border-[#ECECF5] text-[#171725] shadow-sm"
+                              className="size-9 rounded-full border-[#ECECF5] text-[#171725] shadow-sm transition-all hover:border-[#7C6CF5]/30"
                               disabled={vetPage === 0}
                               onClick={() => setVetPage((p) => Math.max(0, p - 1))}
                             >
                               <ChevronLeft className="size-4.5 stroke-[2.5px]" />
                             </Button>
-                            <span className="text-[13px] font-bold text-[#667085]">
-                              Trang {vetPage + 1} / {vetsQuery.data?.totalPages}
-                            </span>
+                            {Array.from(
+                              { length: vetsQuery.data?.totalPages ?? 0 },
+                              (_, i) => (
+                                <Button
+                                  key={i}
+                                  type="button"
+                                  variant={i === vetPage ? 'default' : 'outline'}
+                                  size="icon"
+                                  className={cn(
+                                    'size-9 rounded-full font-extrabold shadow-sm transition-all',
+                                    i === vetPage
+                                      ? 'bg-gradient-to-r from-[#7C6CF5] to-[#A99CFF] text-white shadow-[0_4px_12px_rgba(124,108,245,0.25)] hover:opacity-95'
+                                      : 'border-[#ECECF5] text-[#171725] hover:border-[#7C6CF5]/30',
+                                  )}
+                                  onClick={() => setVetPage(i)}
+                                >
+                                  {i + 1}
+                                </Button>
+                              ),
+                            )}
                             <Button
+                              type="button"
                               variant="outline"
                               size="icon"
-                              className="size-9 rounded-full border-[#ECECF5] text-[#171725] shadow-sm"
+                              className="size-9 rounded-full border-[#ECECF5] text-[#171725] shadow-sm transition-all hover:border-[#7C6CF5]/30"
                               disabled={vetPage >= (vetsQuery.data?.totalPages ?? 1) - 1}
                               onClick={() => setVetPage((p) => p + 1)}
                             >
                               <ChevronRight className="size-4.5 stroke-[2.5px]" />
                             </Button>
+                            <span className="ml-2 text-[12px] font-bold text-[#667085]">
+                              Tổng {vetsQuery.data?.totalElements ?? 0} bác sĩ
+                            </span>
                           </div>
                         )}
 
@@ -1034,7 +1064,7 @@ function BookVisitPage() {
                                 <Stethoscope className="size-11 text-slate-300" />
                                 <span>Vui lòng chọn bác sĩ phụ trách trước</span>
                               </div>
-                            ) : vetScheduleQuery.isLoading ? (
+                            ) : slotLoading ? (
                               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 {Array.from({ length: 6 }).map((_, i) => (
                                   <Skeleton key={i} className="h-[68px] rounded-[18px]" />
@@ -1053,9 +1083,13 @@ function BookVisitPage() {
                                     new Date().toISOString().slice(0, 10);
                                   const isPast = isToday && hour <= new Date().getHours();
 
-                                  const slotInfo = getSlotStatus(slot);
                                   const isInSchedule = availableSlotKeys.has(slot);
-                                  const isDisabled = isPast || !isInSchedule;
+                                  const remaining = remainingBySlot.get(slot);
+                                  const slotInfo = getSlotStatusFromRemaining(remaining);
+                                  // Chỉ hiển thị "Còn X slot" / "Đã đầy" nếu vet làm việc khung này
+                                  // (work-schedule template), chưa thì "Không có lịch".
+                                  const isDisabled =
+                                    isPast || !isInSchedule || slotInfo.full;
                                   const slotText = isInSchedule
                                     ? slotInfo.text
                                     : 'Không có lịch';
@@ -1332,12 +1366,16 @@ function BookVisitPage() {
                         </h4>
                         {selectedVet ? (
                           <div className="flex items-center gap-3.5 rounded-2xl border border-[#ECECF5] bg-white p-3 shadow-sm">
-                            <div className="size-11 shrink-0 overflow-hidden rounded-xl border border-[#ECECF5]">
-                              <img
-                                src={selectedVet.photoUrl}
-                                alt={selectedVet.name}
-                                className="h-full w-full object-cover"
-                              />
+                            <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#ECECF5] bg-slate-50">
+                              {selectedVet.photoUrl ? (
+                                <img
+                                  src={selectedVet.photoUrl}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <Stethoscope className="size-5 text-slate-300" />
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-[13.5px] font-extrabold text-[#171725]">
@@ -1349,8 +1387,9 @@ function BookVisitPage() {
                               <div className="mt-0.5 flex items-center gap-1">
                                 <Star className="size-3 fill-[#F59E0B] text-[#F59E0B]" />
                                 <span className="text-[11.5px] font-black text-[#171725]">
-                                  {selectedVet.rating.toFixed(1)} ({selectedVet.reviews}{' '}
-                                  đánh giá)
+                                  {selectedVet.rating > 0
+                                    ? `${selectedVet.rating.toFixed(1)} đánh giá`
+                                    : 'Chưa có đánh giá'}
                                 </span>
                               </div>
                             </div>

@@ -1,0 +1,26 @@
+# Test overrides — Postgres thật qua Testcontainers @ServiceConnection.
+
+spring:
+  profiles:
+    active: test
+
+  docker:
+    compose:
+      enabled: false
+
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+
+  liquibase:
+    enabled: true                           # validate migration là phần của test
+
+# JWT decoder property — PetClinicSecurityAutoConfiguration require non-blank.
+petclinic:
+  auth:
+    jwt:
+      jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
+      issuer: petclinic-test
+      audience: petclinic-test

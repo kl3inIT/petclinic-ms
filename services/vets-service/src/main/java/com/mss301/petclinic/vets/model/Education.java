@@ -18,6 +18,9 @@ import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
  * <p>Khác với Pet (sub-resource của Owner trong customers-service được manage qua aggregate),
  * Education tự manage independent → {@code vet_id} dùng scalar Long với insertable+updatable
  * mặc định (true), KHÔNG cần mirror-FK trick.</p>
+ *
+ * <p>CRUD trần (không review workflow) — đồng nhất nghiệp vụ với reference Champlain vet-service:
+ * vet/staff thêm bằng cấp là hiển thị ngay, không qua duyệt.</p>
  */
 @Entity
 @Table(name = "educations")

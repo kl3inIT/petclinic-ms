@@ -34,18 +34,26 @@ public class RemoteClientsFacade {
     private final CustomersClient customersClient;
     private final VetsClient vetsClient;
     private final UsersClient usersClient;
+    private final ProductsClient productsClient;
 
     public RemoteClientsFacade(CustomersClient customersClient,
                                VetsClient vetsClient,
-                               UsersClient usersClient) {
+                               UsersClient usersClient,
+                               ProductsClient productsClient) {
         this.customersClient = customersClient;
         this.vetsClient = vetsClient;
         this.usersClient = usersClient;
+        this.productsClient = productsClient;
     }
 
     @CircuitBreaker(name = "customers-service", fallbackMethod = "fetchPetFallback")
     public PetSummary fetchPet(Long petId) {
         return customersClient.getPet(petId);
+    }
+
+    @CircuitBreaker(name = "customers-service", fallbackMethod = "fetchOwnerFallback")
+    public OwnerSummary fetchOwner(Long ownerId) {
+        return customersClient.getOwner(ownerId);
     }
 
     @CircuitBreaker(name = "vets-service", fallbackMethod = "fetchVetFallback")
@@ -63,9 +71,25 @@ public class RemoteClientsFacade {
         return usersClient.getUser(userId);
     }
 
+    @CircuitBreaker(name = "products-service", fallbackMethod = "fetchProductFallback")
+    public ProductSummary fetchProduct(Long productId) {
+        return productsClient.getProduct(productId);
+    }
+
+    @CircuitBreaker(name = "products-service", fallbackMethod = "consumeProductFallback")
+    public ProductSummary consumeProduct(Long productId, int quantity) {
+        return productsClient.consume(productId, new ProductsClient.StockAdjust(quantity));
+    }
+
     @SuppressWarnings("unused") // referenced by @CircuitBreaker fallbackMethod
     private PetSummary fetchPetFallback(Long petId, Throwable t) {
         log.warn("customers-service circuit OPEN/down (petId={}): {}", petId, t.toString());
+        throw new ExternalServiceUnavailableException("customers-service", t);
+    }
+
+    @SuppressWarnings("unused")
+    private OwnerSummary fetchOwnerFallback(Long ownerId, Throwable t) {
+        log.warn("customers-service circuit OPEN/down (ownerId={}): {}", ownerId, t.toString());
         throw new ExternalServiceUnavailableException("customers-service", t);
     }
 
@@ -87,5 +111,18 @@ public class RemoteClientsFacade {
     private UserSummary fetchUserFallback(UUID userId, Throwable t) {
         log.warn("auth-service circuit OPEN/down (userId={}): {}", userId, t.toString());
         throw new ExternalServiceUnavailableException("auth-service", t);
+    }
+
+    @SuppressWarnings("unused")
+    private ProductSummary fetchProductFallback(Long productId, Throwable t) {
+        log.warn("products-service circuit OPEN/down (productId={}): {}", productId, t.toString());
+        throw new ExternalServiceUnavailableException("products-service", t);
+    }
+
+    @SuppressWarnings("unused")
+    private ProductSummary consumeProductFallback(Long productId, int quantity, Throwable t) {
+        log.warn("products-service circuit OPEN/down (consume productId={}, qty={}): {}",
+                productId, quantity, t.toString());
+        throw new ExternalServiceUnavailableException("products-service", t);
     }
 }

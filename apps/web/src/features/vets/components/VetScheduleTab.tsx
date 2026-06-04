@@ -107,7 +107,8 @@ export function VetScheduleTab({ vetId }: Props) {
     return false;
   }, [selected, initialSet]);
 
-  if (listQuery.isLoading) return <Skeleton className="h-72 w-full" />;
+  if (listQuery.isLoading || listQuery.isError)
+    return <Skeleton className="h-72 w-full" />;
 
   return (
     <div className="space-y-4">

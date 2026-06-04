@@ -119,6 +119,7 @@ function CustomerPetsPage() {
   const ownerQuery = useGetMyOwnerProfile();
   const removePet = useRemoveMyPet();
   const petTypesQuery = usePetTypes();
+  const ownerLoading = ownerQuery.isLoading || ownerQuery.isError;
   const petTypeLabel = useMemo(() => {
     const byId = new Map((petTypesQuery.data ?? []).map((pt) => [pt.id, pt.name]));
     return (id?: number | null) =>
@@ -219,7 +220,7 @@ function CustomerPetsPage() {
             </p>
           </div>
 
-          {ownerQuery.isLoading ? (
+          {ownerLoading ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-[180px] w-full rounded-2xl" />

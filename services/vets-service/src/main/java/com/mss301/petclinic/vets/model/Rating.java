@@ -4,6 +4,8 @@ import java.time.OffsetDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -36,6 +38,11 @@ public class Rating extends AbstractAuditingEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /** Nhãn đánh giá nhanh (nullable) — customer chọn thay vì gõ description tự do. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "predefined_description", length = 20)
+    private PredefinedDescription predefinedDescription;
+
     @Column(name = "customer_name", nullable = false, length = 100)
     private String customerName;
 
@@ -64,12 +71,14 @@ public class Rating extends AbstractAuditingEntity {
     public Long getVetId() { return vetId; }
     public Integer getScore() { return score; }
     public String getDescription() { return description; }
+    public PredefinedDescription getPredefinedDescription() { return predefinedDescription; }
     public String getCustomerName() { return customerName; }
     public OffsetDateTime getRateDate() { return rateDate; }
 
     public void setVetId(Long vetId) { this.vetId = vetId; }
     public void setScore(Integer score) { this.score = score; }
     public void setDescription(String description) { this.description = description; }
+    public void setPredefinedDescription(PredefinedDescription predefinedDescription) { this.predefinedDescription = predefinedDescription; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
     public void setRateDate(OffsetDateTime rateDate) { this.rateDate = rateDate; }
 }

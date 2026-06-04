@@ -1,0 +1,18 @@
+databaseChangeLog:
+  # Thêm nguồn MEDICATION (thuốc kê đơn từ catalog products-service) vào CHECK constraint
+  # của invoice_items.source_type. PrescriptionIssuedConsumer bơm dòng MEDICATION vào hoá đơn.
+  - changeSet:
+      id: 002-extend-invoice-item-source-medication
+      author: mss301
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE billing.invoice_items
+              DROP CONSTRAINT invoice_items_source_type_check
+            dbms: postgresql
+        - sql:
+            sql: >-
+              ALTER TABLE billing.invoice_items
+              ADD CONSTRAINT invoice_items_source_type_check
+              CHECK (source_type IN ('VISIT_FEE', 'DISEASE', 'MEDICATION', 'PRODUCT', 'MISC'))
+            dbms: postgresql

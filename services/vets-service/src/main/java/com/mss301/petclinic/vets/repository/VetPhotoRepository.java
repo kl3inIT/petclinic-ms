@@ -17,4 +17,7 @@ public interface VetPhotoRepository extends JpaRepository<VetPhoto, Long> {
      */
     @Query("SELECT p.objectKey FROM VetPhoto p")
     List<String> findAllObjectKeys();
+
+    /** Tìm photo theo status (PENDING/APPROVED/REJECTED) — admin review queue. */
+    List<VetPhoto> findByStatus(String status);
 }

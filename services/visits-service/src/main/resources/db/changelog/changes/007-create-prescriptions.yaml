@@ -1,0 +1,131 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-create-table-prescriptions
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: visits
+            tableName: prescriptions
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              # 1 đơn / visit — UNIQUE. KHÔNG FK sang bảng visits ở changeset này để giữ
+              # linh hoạt (cùng schema nhưng tránh coupling cứng); ràng buộc 1-1 đủ qua UNIQUE.
+              - column:
+                  name: visit_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_prescriptions_visit
+              - column:
+                  name: issued_by_vet_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notes
+                  type: TEXT
+              - column:
+                  name: object_key
+                  type: VARCHAR(255)
+              - column:
+                  name: content_type
+                  type: VARCHAR(50)
+              - column:
+                  name: size_bytes
+                  type: BIGINT
+              - column:
+                  name: issued_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              # Audit columns (from AbstractAuditingEntity)
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+
+  - changeSet:
+      id: 007-create-table-prescription-items
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: visits
+            tableName: prescription_items
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: prescription_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_prescription_items_prescription
+                    references: visits.prescriptions(id)
+                    deleteCascade: true
+              - column:
+                  name: medication_name
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: dosage
+                  type: VARCHAR(100)
+              - column:
+                  name: frequency
+                  type: VARCHAR(100)
+              - column:
+                  name: duration_days
+                  type: INTEGER
+              - column:
+                  name: instructions
+                  type: TEXT
+              # Audit columns (from AbstractAuditingEntity)
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+
+  - changeSet:
+      id: 007-add-prescription-indexes
+      author: mss301
+      changes:
+        - createIndex:
+            schemaName: visits
+            tableName: prescriptions
+            indexName: idx_prescriptions_visit
+            columns:
+              - column:
+                  name: visit_id
+        - createIndex:
+            schemaName: visits
+            tableName: prescription_items
+            indexName: idx_prescription_items_prescription
+            columns:
+              - column:
+                  name: prescription_id

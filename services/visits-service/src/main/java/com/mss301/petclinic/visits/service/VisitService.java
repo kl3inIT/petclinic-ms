@@ -1,6 +1,7 @@
 package com.mss301.petclinic.visits.service;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
+import com.mss301.petclinic.visits.dto.res.SlotAvailabilityResponse;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
 import com.mss301.petclinic.visits.model.VisitStatus;
 
@@ -37,4 +39,11 @@ public interface VisitService {
      * </ul>
      */
     VisitResponse cancel(Long id, UUID currentUserId, boolean privileged);
+
+    /**
+     * Trả về số ca đã book cho từng work-hour của vet vào 1 ngày local time
+     * (Asia/Ho_Chi_Minh). FE dùng để hiển thị "Còn X slot" / "Đã đầy" trên
+     * booking calendar.
+     */
+    SlotAvailabilityResponse getAvailability(Long vetId, LocalDate date);
 }

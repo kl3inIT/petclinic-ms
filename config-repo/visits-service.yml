@@ -21,9 +21,21 @@ petclinic:
         VET:
           - { method: PATCH, path: /api/v1/visits/*/start }
           - { method: PATCH, path: /api/v1/visits/*/complete }
+          # Kê đơn thuốc — chỉ VET (+ADMIN). GET/GET pdf reach hardcode trong VisitsSecurityConfig.
+          - { method: POST,  path: /api/v1/visits/*/prescription }
       # Staff vận hành (admin + cancel cho người khác — fallback support cho USER)
       staff:
         - { method: PATCH, path: /api/v1/visits/*/start }       # staff cũng start được
+
+  # Đơn thuốc — lưu PDF lên MinIO/S3 (shared/common-storage), bucket `prescriptions`.
+  storage:
+    minio:
+      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}
+      bucket: ${MINIO_BUCKET:prescriptions}
+      presigned-ttl: PT1H
+      max-file-size-bytes: 10485760  # 10 MB
 
 # Datasource creds + URL khác env → visits-service-<profile>.yml.
 
@@ -77,6 +89,8 @@ resilience4j:
         base-config: default
       auth-service:
         base-config: default
+      products-service:
+        base-config: default
 
   # Cap call duration — không cho block lâu hơn 3s (default 30s là quá thương downstream).
   # Vượt → TimeoutException → recorded failure → đẩy CB về OPEN nhanh.
@@ -88,10 +102,5 @@ resilience4j:
         timeout-duration: 3s
       auth-service:
         timeout-duration: 3s
-
-# RBAC — Least Privilege (slide MSS301 #70). Hybrid pattern:
-#   1) URL coarse-grained — declarative ở YAML này (apply qua EndpointSecurityCustomizer)
-#   2) Per-instance fine-grained — @PreAuthorize ở Controller (vd "USER chỉ cancel visit của mình")
-#
-# VET là domain-specific role (clinical user) → custom-roles bucket. ADMIN tự động cover
-# qua hierarchy implicit trong customizer.
+      products-service:
+        timeout-duration: 3s

@@ -63,6 +63,9 @@ function CustomerDashboard() {
   const upcoming = upcomingQuery.data?.content ?? [];
   const recent = recentQuery.data?.content ?? [];
   const pets = ownerQuery.data?.pets ?? [];
+  const upcomingLoading = upcomingQuery.isLoading || upcomingQuery.isError;
+  const recentLoading = recentQuery.isLoading || recentQuery.isError;
+  const ownerLoading = ownerQuery.isLoading || ownerQuery.isError;
 
   const petNameById = new Map(pets.map((pet) => [pet.id, pet.name ?? `Pet #${pet.id}`]));
   const firstUpcoming = upcoming[0];
@@ -101,7 +104,7 @@ function CustomerDashboard() {
           subLabel="Cuộc hẹn"
           action="Xem chi tiết"
           to="/customer/visits"
-          loading={upcomingQuery.isLoading}
+          loading={upcomingLoading}
           className="from-blue-500 to-indigo-500"
         />
         <StatCard
@@ -111,7 +114,7 @@ function CustomerDashboard() {
           subLabel="Lượt khám"
           action="Xem lịch sử"
           to="/customer/visits"
-          loading={recentQuery.isLoading}
+          loading={recentLoading}
           className="from-emerald-500 to-teal-500"
         />
         <StatCard
@@ -121,7 +124,7 @@ function CustomerDashboard() {
           subLabel="Bé cưng"
           action="Quản lý thú cưng"
           to="/customer/pets"
-          loading={ownerQuery.isLoading}
+          loading={ownerLoading}
           className="from-violet-500 to-fuchsia-500"
         />
       </section>
@@ -132,7 +135,7 @@ function CustomerDashboard() {
           title="Lịch khám sắp tới"
           actionTo="/customer/visits"
         >
-          {upcomingQuery.isLoading ? (
+          {upcomingLoading ? (
             <ListSkeleton />
           ) : firstUpcoming ? (
             <>
@@ -162,7 +165,7 @@ function CustomerDashboard() {
           title="Hoạt động gần đây"
           actionTo="/customer/visits"
         >
-          {recentQuery.isLoading ? (
+          {recentLoading ? (
             <ListSkeleton />
           ) : recent.length > 0 ? (
             <>

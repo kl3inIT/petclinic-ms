@@ -16,6 +16,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import {
@@ -31,13 +38,19 @@ interface Props {
   vetId: number;
 }
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i);
+const ALL_YEARS = 'all';
+
 export function VetRatingsTab({ vetId }: Props) {
   const qc = useQueryClient();
   const [page, setPage] = useState(0);
+  const [year, setYear] = useState<number | undefined>(undefined);
   const [deleting, setDeleting] = useState<RatingResponse | null>(null);
 
   const summaryQuery = useGetVetRatingsSummary(vetId);
   const listQuery = useListVetRatings(vetId, {
+    ...(year != null ? { year } : {}),
     pageable: { page, size: 10, sort: ['rateDate,desc'] },
   });
 
@@ -60,7 +73,7 @@ export function VetRatingsTab({ vetId }: Props) {
           <CardTitle className="text-base">Tổng quan</CardTitle>
         </CardHeader>
         <CardContent>
-          {summaryQuery.isLoading ? (
+          {summaryQuery.isLoading || summaryQuery.isError ? (
             <Skeleton className="h-16 w-full" />
           ) : (
             <div className="grid grid-cols-3 gap-4 text-sm">
@@ -90,12 +103,37 @@ export function VetRatingsTab({ vetId }: Props) {
         </CardContent>
       </Card>
 
-      {listQuery.isLoading ? (
+      <div className="flex items-center justify-end gap-2">
+        <span className="text-sm text-muted-foreground">Lọc theo năm</span>
+        <Select
+          value={year != null ? String(year) : ALL_YEARS}
+          onValueChange={(v) => {
+            setYear(v === ALL_YEARS ? undefined : Number(v));
+            setPage(0);
+          }}
+        >
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_YEARS}>Tất cả</SelectItem>
+            {YEAR_OPTIONS.map((y) => (
+              <SelectItem key={y} value={String(y)}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {listQuery.isLoading || listQuery.isError ? (
         <Skeleton className="h-32 w-full" />
       ) : (listQuery.data?.content ?? []).length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            Chưa có đánh giá nào
+            {year != null
+              ? `Không có đánh giá nào trong năm ${year}`
+              : 'Chưa có đánh giá nào'}
           </CardContent>
         </Card>
       ) : (

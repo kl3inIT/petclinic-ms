@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronRight as ChevronRightIcon,
+  CreditCard,
   Mail,
   Phone,
   Plus,
@@ -60,7 +61,8 @@ function VetsPage() {
     ...(activeFilter !== 'all' ? { active: activeFilter === 'active' } : {}),
   };
 
-  const { data, isLoading, isError, error } = useListVets(params);
+  const { data, isLoading, isError } = useListVets(params);
+  const showLoadingSkeleton = isLoading || isError;
 
   return (
     <div className="space-y-6">
@@ -116,16 +118,8 @@ function VetsPage() {
         </CardHeader>
       </Card>
 
-      {isError && (
-        <Card>
-          <CardContent className="py-6 text-destructive">
-            Lỗi tải danh sách: {error instanceof Error ? error.message : 'unknown'}
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {isLoading
+        {showLoadingSkeleton
           ? Array.from({ length: 6 }).map((_, i) => (
               <Card key={i}>
                 <CardHeader>
@@ -166,6 +160,12 @@ function VetsPage() {
                           {vet.phoneNumber}
                         </p>
                       )}
+                      {vet.vetBillId && (
+                        <p className="flex items-center gap-1.5">
+                          <CreditCard className="size-3.5" />
+                          {vet.vetBillId}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
                       <Badge variant={vet.active ? 'default' : 'outline'}>
@@ -189,7 +189,7 @@ function VetsPage() {
             ))}
       </div>
 
-      {!isLoading && data?.content?.length === 0 && (
+      {!showLoadingSkeleton && data?.content?.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             Không tìm thấy bác sĩ nào.
@@ -262,6 +262,7 @@ function CreateVetDialog({ open, onOpenChange }: CreateDialogProps) {
       lastName: '',
       email: '',
       phoneNumber: '',
+      vetBillId: '',
       resume: '',
     },
     validators: { onChange: vetSchema },
@@ -272,6 +273,7 @@ function CreateVetDialog({ open, onOpenChange }: CreateDialogProps) {
           lastName: value.lastName,
           email: value.email,
           phoneNumber: value.phoneNumber || undefined,
+          vetBillId: value.vetBillId || undefined,
           resume: value.resume || undefined,
           specialtyNames,
         },
@@ -348,21 +350,39 @@ function CreateVetDialog({ open, onOpenChange }: CreateDialogProps) {
               </div>
             )}
           />
-          <form.Field
-            name="phoneNumber"
-            children={(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>SĐT</Label>
-                <Input
-                  id={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                <FieldError field={field} />
-              </div>
-            )}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <form.Field
+              name="phoneNumber"
+              children={(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>SĐT</Label>
+                  <Input
+                    id={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                  <FieldError field={field} />
+                </div>
+              )}
+            />
+            <form.Field
+              name="vetBillId"
+              children={(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Mã billing</Label>
+                  <Input
+                    id={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="VD: BILL-001"
+                  />
+                  <FieldError field={field} />
+                </div>
+              )}
+            />
+          </div>
           <form.Field
             name="resume"
             children={(field) => (

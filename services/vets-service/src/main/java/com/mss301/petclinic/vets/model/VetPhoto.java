@@ -36,6 +36,20 @@ public class VetPhoto extends AbstractAuditingEntity {
     @Column(name = "uploaded_at", nullable = false)
     private OffsetDateTime uploadedAt;
 
+    /** Trạng thái duyệt: PENDING | APPROVED | REJECTED. Vet upload mới → PENDING.
+     *  Staff/Admin approve → APPROVED, customer mới thấy. CHECK constraint ở DB. */
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "PENDING";
+
+    @Column(name = "reviewed_by", length = 50)
+    private String reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private OffsetDateTime reviewedAt;
+
+    @Column(name = "reject_reason", columnDefinition = "TEXT")
+    private String rejectReason;
+
     protected VetPhoto() {
         // JPA requires no-arg constructor
     }
@@ -59,10 +73,34 @@ public class VetPhoto extends AbstractAuditingEntity {
     public String getContentType() { return contentType; }
     public Long getSizeBytes() { return sizeBytes; }
     public OffsetDateTime getUploadedAt() { return uploadedAt; }
+    public String getStatus() { return status; }
+    public String getReviewedBy() { return reviewedBy; }
+    public OffsetDateTime getReviewedAt() { return reviewedAt; }
+    public String getRejectReason() { return rejectReason; }
 
     public void setVetId(Long vetId) { this.vetId = vetId; }
     public void setObjectKey(String objectKey) { this.objectKey = objectKey; }
     public void setContentType(String contentType) { this.contentType = contentType; }
     public void setSizeBytes(Long sizeBytes) { this.sizeBytes = sizeBytes; }
     public void setUploadedAt(OffsetDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+    public void setStatus(String status) { this.status = status; }
+    public void setReviewedBy(String reviewedBy) { this.reviewedBy = reviewedBy; }
+    public void setReviewedAt(OffsetDateTime reviewedAt) { this.reviewedAt = reviewedAt; }
+    public void setRejectReason(String rejectReason) { this.rejectReason = rejectReason; }
+
+    /** Mark APPROVED. Reset reject_reason. */
+    public void approve(String reviewer) {
+        this.status = "APPROVED";
+        this.reviewedBy = reviewer;
+        this.reviewedAt = OffsetDateTime.now();
+        this.rejectReason = null;
+    }
+
+    /** Mark REJECTED với lý do. */
+    public void reject(String reviewer, String reason) {
+        this.status = "REJECTED";
+        this.reviewedBy = reviewer;
+        this.reviewedAt = OffsetDateTime.now();
+        this.rejectReason = reason;
+    }
 }

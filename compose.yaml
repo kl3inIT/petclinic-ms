@@ -204,6 +204,7 @@ services:
       mc mb --ignore-existing local/pet-photos;
       mc mb --ignore-existing local/invoices;
       mc mb --ignore-existing local/avatars;
+      mc mb --ignore-existing local/prescriptions;
       mc anonymous set download local/pet-photos;
       mc anonymous set download local/avatars;
       exit 0;
@@ -384,6 +385,7 @@ services:
       - "9181:9181"
     depends_on:
       postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
       config-server: { condition: service_healthy }
       discovery-server: { condition: service_healthy }
     environment:
@@ -392,6 +394,7 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
@@ -445,6 +448,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      minio: { condition: service_healthy }
       config-server: { condition: service_healthy }
       discovery-server: { condition: service_healthy }
       customers-service: { condition: service_healthy }
@@ -456,6 +460,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
+      MINIO_ENDPOINT: http://minio:9000
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
@@ -579,6 +584,64 @@ services:
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9189/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  billing-service:
+    build: { context: ., dockerfile: services/billing-service/Dockerfile }
+    image: petclinic-ms/billing-service:latest
+    container_name: petclinic-billing-service
+    profiles: ["apps"]
+    ports:
+      - "8191:8191"
+      - "9191:9191"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      SPRING_RABBITMQ_HOST: rabbitmq
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9191/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 45s
+    restart: unless-stopped
+
+  products-service:
+    build: { context: ., dockerfile: services/products-service/Dockerfile }
+    image: petclinic-ms/products-service:latest
+    container_name: petclinic-products-service
+    profiles: ["apps"]
+    ports:
+      - "8192:8192"
+      - "9192:9192"
+    depends_on:
+      postgres: { condition: service_healthy }
+      config-server: { condition: service_healthy }
+      discovery-server: { condition: service_healthy }
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
+      OTLP_ENDPOINT: http://zipkin:9411/v1/traces
+      JWKS_URI: http://auth-service:8183/.well-known/jwks.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9192/actuator/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15

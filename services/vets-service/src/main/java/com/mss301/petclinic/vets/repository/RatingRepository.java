@@ -1,5 +1,6 @@
 package com.mss301.petclinic.vets.repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,17 @@ import com.mss301.petclinic.vets.model.Rating;
 public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     Page<Rating> findByVetId(Long vetId, Pageable pageable);
+
+    /**
+     * Lọc rating của 1 vet theo khoảng {@code [start, end)} của rateDate — dùng cho filter
+     * theo năm. Half-open interval (>= start AND < end) tránh double-count ở mốc cuối năm
+     * và tận dụng được index trên rate_date.
+     */
+    @Query("SELECT r FROM Rating r WHERE r.vetId = :vetId AND r.rateDate >= :start AND r.rateDate < :end")
+    Page<Rating> findByVetIdAndRateDateRange(@Param("vetId") Long vetId,
+                                             @Param("start") OffsetDateTime start,
+                                             @Param("end") OffsetDateTime end,
+                                             Pageable pageable);
 
     Optional<Rating> findByIdAndVetId(Long id, Long vetId);
 

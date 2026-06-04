@@ -2,6 +2,7 @@ package com.mss301.petclinic.visits.dto.res;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import com.mss301.petclinic.visits.model.Visit;
@@ -10,8 +11,13 @@ import com.mss301.petclinic.visits.model.VisitStatus;
 public record VisitResponse(
         Long id,
         Long petId,
+        String petName,
+        String petBreed,
+        LocalDate petBirthDate,
         Long vetId,
         UUID customerUserId,
+        String ownerName,
+        String ownerPhone,
         Instant scheduledAt,
         VisitStatus status,
         String reason,
@@ -24,8 +30,13 @@ public record VisitResponse(
         return new VisitResponse(
                 v.getId(),
                 v.getPetId(),
+                v.getPetName(),
+                v.getPetBreed(),
+                v.getPetBirthDate(),
                 v.getVetId(),
                 v.getCustomerUserId(),
+                v.getOwnerName(),
+                v.getOwnerPhone(),
                 v.getScheduledAt(),
                 v.getStatus(),
                 v.getReason(),

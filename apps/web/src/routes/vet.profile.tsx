@@ -6,11 +6,12 @@ import { z } from 'zod';
 import {
   Award,
   CalendarClock,
+  Camera,
   CreditCard,
   Eye,
   FileText,
+  GraduationCap,
   IdCard,
-  Info,
   LockKeyhole,
   Mail,
   MessageSquareQuote,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   Star,
   Stethoscope,
+  Trash2,
   UserCircle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -42,12 +44,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/features/auth/store';
 import {
+  useDeleteMyPhoto,
   useMyBadges,
+  useMyPhoto,
   useMyProfile,
   useMyRatingsSummary,
   useMySchedule,
   useUpdateMyProfile,
+  useUploadMyPhoto,
 } from '@/features/vet-me/api';
+import { MediaUploader } from '@/features/vets/components/MediaUploader';
+import { useListVetEducations } from '@/lib/api/generated/vet-educations/vet-educations';
+import type { EducationResponse } from '@/lib/api/generated/model';
 import { CircleProgress } from '@/features/vet-me/components/charts/CircleProgress';
 import { StarRating } from '@/features/vet-me/components/StarRating';
 import { VetAvatar } from '@/features/vet-me/components/VetAvatar';
@@ -131,6 +139,7 @@ function VetProfilePage() {
   });
 
   const hydrated = profileQuery.data != null;
+  const profileLoading = profileQuery.isLoading || profileQuery.isError;
 
   const profile = profileQuery.data;
   const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
@@ -161,28 +170,10 @@ function VetProfilePage() {
     }
   }
 
-  if (profileQuery.isError) {
-    return (
-      <Card className="border-destructive/30 bg-white shadow-sm">
-        <CardContent className="flex items-start gap-3 p-6 text-sm text-destructive">
-          <Info className="mt-0.5 size-5 shrink-0" />
-          <div>
-            <p className="font-semibold">Không tải được hồ sơ bác sĩ.</p>
-            <p className="mt-1 text-destructive/80">
-              {profileQuery.error instanceof Error
-                ? profileQuery.error.message
-                : 'Vui lòng thử lại sau.'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6 pb-24">
       <CoverHero
-        loading={profileQuery.isLoading}
+        loading={profileLoading}
         profile={profile}
         username={username}
         fullName={fullName}
@@ -194,6 +185,8 @@ function VetProfilePage() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.6fr]">
         <div className="space-y-5">
+          <AvatarSection firstName={profile?.firstName} lastName={profile?.lastName} />
+
           <SectionCard
             icon={IdCard}
             title="Thẻ bác sĩ"
@@ -210,14 +203,14 @@ function VetProfilePage() {
                     : 'bg-white text-violet-700 hover:bg-violet-50',
                 )}
                 onClick={() => setIdCardOpen((v) => !v)}
-                disabled={profileQuery.isLoading || !profile}
+                disabled={profileLoading || !profile}
               >
                 <CreditCard className="size-3.5" />
                 {idCardOpen ? 'Ẩn thẻ' : 'Xem thẻ'}
               </Button>
             }
           >
-            {profileQuery.isLoading ? (
+            {profileLoading ? (
               <IdSkeleton />
             ) : (
               <dl className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
@@ -226,6 +219,7 @@ function VetProfilePage() {
                   value={profile?.id ? `#${profile.id}` : '—'}
                   mono
                 />
+                <DefRow label="Mã thẻ" value={profile?.cardCode ?? '—'} mono />
                 <DefRow label="Tên đăng nhập" value={username} mono />
                 <DefRow
                   label="Trạng thái"
@@ -249,7 +243,7 @@ function VetProfilePage() {
             title="Chuyên khoa"
             subtitle="Lĩnh vực điều trị bạn được cấp"
           >
-            {profileQuery.isLoading ? (
+            {profileLoading ? (
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <Skeleton key={i} className="h-7 w-20 rounded-full" />
@@ -465,6 +459,8 @@ function VetProfilePage() {
         </div>
       </div>
 
+      <EducationSection vetId={profile?.id} />
+
       {hydrated && (
         <StickyActionBar
           dirty={isDirty}
@@ -482,6 +478,116 @@ function VetProfilePage() {
         fullName={fullName}
       />
     </div>
+  );
+}
+
+const PHOTO_STATUS_META: Record<string, { label: string; className: string }> = {
+  PENDING: {
+    label: 'Đang chờ STAFF duyệt',
+    className: 'border-amber-200 bg-amber-50 text-amber-700',
+  },
+  APPROVED: {
+    label: 'Đã duyệt — hiển thị công khai',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  },
+  REJECTED: {
+    label: 'Bị từ chối',
+    className: 'border-rose-200 bg-rose-50 text-rose-700',
+  },
+};
+
+function AvatarSection({
+  firstName,
+  lastName,
+}: {
+  firstName?: string;
+  lastName?: string;
+}) {
+  const photoQuery = useMyPhoto();
+  const uploadMutation = useUploadMyPhoto();
+  const deleteMutation = useDeleteMyPhoto();
+
+  const photo = photoQuery.data;
+  const presignedUrl = photo?.presignedUrl ?? null;
+  const status = photo?.status;
+  const statusMeta = status ? PHOTO_STATUS_META[status] : undefined;
+
+  function handleDelete() {
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => toast.success('Đã xóa ảnh đại diện'),
+      onError: (e) => toast.error(e instanceof Error ? e.message : 'Xóa ảnh thất bại'),
+    });
+  }
+
+  return (
+    <SectionCard
+      icon={Camera}
+      title="Ảnh đại diện"
+      subtitle="Tải lên ảnh chân dung — hiển thị ở hồ sơ công khai sau khi được duyệt"
+    >
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+        <div className="flex flex-col items-center gap-2">
+          {photoQuery.isLoading ? (
+            <Skeleton className="size-24 rounded-full" />
+          ) : presignedUrl ? (
+            <img
+              src={presignedUrl}
+              alt="Ảnh đại diện"
+              className="size-24 rounded-full object-cover ring-2 ring-violet-100"
+            />
+          ) : (
+            <VetAvatar firstName={firstName} lastName={lastName} size="lg" />
+          )}
+          {presignedUrl && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+              disabled={deleteMutation.isPending}
+              onClick={handleDelete}
+            >
+              <Trash2 className="size-3.5" />
+              Xóa ảnh
+            </Button>
+          )}
+        </div>
+
+        <div className="w-full flex-1 space-y-2">
+          <MediaUploader
+            label="Tải / đổi ảnh đại diện"
+            busy={uploadMutation.isPending}
+            onUpload={(file) =>
+              uploadMutation
+                .mutateAsync({ data: { file } })
+                .then(() => toast.success('Đã tải ảnh — chờ STAFF duyệt'))
+                .catch((e: unknown) => {
+                  toast.error(e instanceof Error ? e.message : 'Tải ảnh thất bại');
+                  throw e;
+                })
+            }
+          />
+          {statusMeta && (
+            <div className="space-y-1">
+              <Badge
+                variant="outline"
+                className={cn('rounded-full px-2.5 py-0.5 text-xs', statusMeta.className)}
+              >
+                {statusMeta.label}
+              </Badge>
+              {status === 'REJECTED' && photo?.rejectReason && (
+                <p className="text-xs text-rose-600">Lý do: {photo.rejectReason}</p>
+              )}
+            </div>
+          )}
+          <p className="flex items-start gap-1.5 text-xs text-slate-500">
+            <LockKeyhole className="mt-0.5 size-3.5 shrink-0" />
+            Mỗi lần đổi ảnh sẽ cần STAFF/quản trị viên duyệt lại trước khi hiển thị cho
+            khách hàng.
+          </p>
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -915,6 +1021,100 @@ function StatTile({
   );
 }
 
+function EducationSection({ vetId }: { vetId: number | undefined }) {
+  const { data, isLoading, isError } = useListVetEducations(
+    vetId ?? 0,
+    { pageable: { page: 0, size: 50, sort: ['startDate,desc'] } },
+    { query: { enabled: vetId != null } },
+  );
+
+  const items: EducationResponse[] = data?.content ?? [];
+
+  return (
+    <SectionCard
+      icon={GraduationCap}
+      title="Học vấn & bằng cấp"
+      subtitle="Trình độ học vấn hiển thị ở trang chi tiết bác sĩ"
+      action={
+        <Badge
+          variant="outline"
+          className="rounded-full border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-amber-700 uppercase"
+        >
+          Chỉnh sửa qua admin
+        </Badge>
+      }
+    >
+      {vetId == null || isLoading || isError ? (
+        <div className="space-y-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-4 py-8 text-center">
+          <GraduationCap className="mx-auto size-8 text-slate-300" />
+          <p className="mt-2 text-sm font-medium text-slate-600">
+            Chưa có bằng cấp nào được ghi nhận
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Liên hệ quản trị viên / staff để bổ sung trường, ngành, bằng cấp vào hồ sơ.
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((edu) => (
+            <EducationRow key={edu.id} edu={edu} />
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 flex items-start gap-2 text-xs text-slate-500">
+        <LockKeyhole className="mt-0.5 size-3.5 shrink-0" />
+        <span>
+          Bằng cấp do quản trị viên / staff xác minh và cập nhật.{' '}
+          <span className="font-semibold text-slate-600">
+            Tính năng tự cập nhật học vấn sắp ra mắt
+          </span>{' '}
+          (chờ endpoint{' '}
+          <code className="rounded bg-slate-100 px-1">vet-me/educations</code> từ
+          backend).
+        </span>
+      </p>
+    </SectionCard>
+  );
+}
+
+function EducationRow({ edu }: { edu: EducationResponse }) {
+  const start = formatYearMonth(edu.startDate);
+  const end = formatYearMonth(edu.endDate) ?? 'Hiện tại';
+  const range = start ? `${start} – ${end}` : end;
+  return (
+    <li className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3 transition-colors hover:border-violet-200 hover:bg-violet-50/30">
+      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
+        <GraduationCap className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-slate-950">
+          {edu.degree || 'Bằng cấp'}
+          {edu.fieldOfStudy && (
+            <span className="font-medium text-slate-600"> · {edu.fieldOfStudy}</span>
+          )}
+        </p>
+        <p className="mt-0.5 truncate text-xs text-slate-600">{edu.schoolName ?? '—'}</p>
+        <p className="mt-1 text-[11px] font-medium tracking-wide text-slate-500">
+          {range}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+function formatYearMonth(iso?: string): string | undefined {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
 function FormSkeleton() {
   return (
     <div className="space-y-6">
@@ -956,8 +1156,14 @@ function VetIdCardDialog({
   fullName,
 }: VetIdCardDialogProps) {
   const issuedYear = new Date().getFullYear();
-  const idPadded = profile?.id != null ? String(profile.id).padStart(4, '0') : '----';
-  const cardCode = `PC-VET-${idPadded}`;
+  // cardCode do BE sinh tự động qua Postgres GENERATED column (xem changeset
+  // 012-add-vet-card-code.yaml + Vet.cardCode @Generated). Format `PC-VET-{LPAD(id,4)}`.
+  // Fallback chỉ chạy khi profile chưa load.
+  const cardCode =
+    profile?.cardCode ??
+    (profile?.id != null
+      ? `PC-VET-${String(profile.id).padStart(4, '0')}`
+      : 'PC-VET-----');
   const specialtyNames = (profile?.specialties ?? [])
     .map((s) => s.name)
     .filter(Boolean) as string[];

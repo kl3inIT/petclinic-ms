@@ -5,7 +5,6 @@ import {
   AtSign,
   CalendarCheck,
   Copy,
-  Info,
   Lock,
   Mail,
   PawPrint,
@@ -87,13 +86,7 @@ function CustomerProfilePage() {
     );
   };
 
-  // Owner record có thể chưa tồn tại nếu auth-service chưa link customerId.
-  // Khi đó ownerQuery error 400 (missing-customer-id) hoặc 404 (not found).
-  const ownerLinkError =
-    ownerQuery.isError &&
-    [400, 404].includes(
-      (ownerQuery.error as { response?: { status?: number } })?.response?.status ?? -1,
-    );
+  const ownerProfileLoading = ownerQuery.isLoading || ownerQuery.isError;
 
   return (
     <>
@@ -101,16 +94,6 @@ function CustomerProfilePage() {
         title="Hồ sơ của tôi"
         subtitle="Quản lý thông tin tài khoản, liên hệ và bảo mật."
       />
-
-      {ownerLinkError ? (
-        <ProfileCard>
-          <CardTitleRow
-            icon={Info}
-            title="Tài khoản chưa liên kết hồ sơ khách hàng"
-            description="Vui lòng liên hệ lễ tân để được tạo hồ sơ Owner — chỉ admin/staff có thể link."
-          />
-        </ProfileCard>
-      ) : null}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Account & Owner column */}
@@ -177,7 +160,7 @@ function CustomerProfilePage() {
               description="Thông tin này hiển thị cho bác sĩ + lễ tân khi bạn đặt lịch khám."
             />
 
-            {ownerQuery.isLoading ? (
+            {ownerProfileLoading ? (
               <div className="mt-6 space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Skeleton key={i} className="h-10 w-full rounded-xl" />
@@ -229,7 +212,7 @@ function CustomerProfilePage() {
                   <Button
                     type="submit"
                     className="h-10 rounded-xl bg-[#7C6CF5] font-black hover:bg-[#6D5CE8]"
-                    disabled={!dirty || ownerQuery.isLoading || updateOwner.isPending}
+                    disabled={!dirty || ownerProfileLoading || updateOwner.isPending}
                   >
                     {updateOwner.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
                   </Button>

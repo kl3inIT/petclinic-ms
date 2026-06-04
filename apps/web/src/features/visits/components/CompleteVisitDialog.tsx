@@ -19,6 +19,8 @@ import { FieldError } from '@/lib/form/FieldError';
 
 import { useCompleteVisit } from '@/lib/api/generated/visits/visits';
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
+import { useProducts } from '@/features/products/api';
+import { formatVnd } from '@/features/billing/format';
 import { completeVisitSchema } from '../schemas';
 
 interface Props {
@@ -29,6 +31,14 @@ interface Props {
 export function CompleteVisitDialog({ visit, onOpenChange }: Props) {
   const qc = useQueryClient();
   const open = visit !== null;
+
+  // Dịch vụ khám trong catalog (type=SERVICE) — vet chọn để fee tự lấy theo đơn giá.
+  const servicesQuery = useProducts({
+    type: 'SERVICE',
+    active: true,
+    pageable: { page: 0, size: 50, sort: ['name,asc'] },
+  });
+  const services = servicesQuery.data?.content ?? [];
 
   const completeMutation = useCompleteVisit({
     mutation: {
@@ -48,29 +58,32 @@ export function CompleteVisitDialog({ visit, onOpenChange }: Props) {
       diagnosis: '',
       treatment: '',
       fee: 0,
+      serviceProductId: 0,
     },
     validators: { onChange: completeVisitSchema },
     onSubmit: ({ value }) => {
       if (visitId === undefined) return;
+      const hasService = value.serviceProductId > 0;
       completeMutation.mutate({
         id: visitId,
         data: {
           diagnosis: value.diagnosis,
           treatment: value.treatment || undefined,
-          fee: value.fee,
+          // Có chọn dịch vụ → BE lấy fee từ catalog (bỏ qua fee tay); ngược lại gửi fee tay.
+          fee: hasService ? undefined : value.fee,
+          serviceProductId: hasService ? value.serviceProductId : undefined,
         },
       });
     },
   });
 
-  // Prefill khi dialog mở với visit hiện tại — reset thay vì set từng field tránh
-  // "uncontrolled → controlled" warning lúc visit chuyển từ null sang object.
   useEffect(() => {
     if (visit) {
       form.reset({
         diagnosis: visit.diagnosis ?? '',
         treatment: visit.treatment ?? '',
         fee: visit.fee ?? 0,
+        serviceProductId: 0,
       });
     }
   }, [visit, form]);
@@ -132,21 +145,60 @@ export function CompleteVisitDialog({ visit, onOpenChange }: Props) {
           />
 
           <form.Field
-            name="fee"
+            name="serviceProductId"
             children={(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Chi phí (VND)</Label>
-                <Input
+                <Label htmlFor={field.name}>Dịch vụ khám (catalog)</Label>
+                <select
                   id={field.name}
-                  type="number"
-                  min={0}
-                  step="1000"
-                  value={field.state.value ?? 0}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.valueAsNumber)}
-                />
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                  value={field.state.value}
+                  onChange={(e) => {
+                    const id = Number(e.target.value);
+                    field.handleChange(id);
+                    const svc = services.find((s) => s.id === id);
+                    if (svc?.unitPrice != null) form.setFieldValue('fee', svc.unitPrice);
+                  }}
+                >
+                  <option value={0}>— Nhập phí tay —</option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({formatVnd(s.unitPrice)})
+                    </option>
+                  ))}
+                </select>
                 <FieldError field={field} />
               </div>
+            )}
+          />
+
+          <form.Subscribe
+            selector={(s) => s.values.serviceProductId}
+            children={(serviceProductId) => (
+              <form.Field
+                name="fee"
+                children={(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor={field.name}>Chi phí khám (VND)</Label>
+                    <Input
+                      id={field.name}
+                      type="number"
+                      min={0}
+                      step="1000"
+                      readOnly={serviceProductId > 0}
+                      value={field.state.value ?? 0}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+                    />
+                    {serviceProductId > 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Phí lấy theo đơn giá dịch vụ trong catalog.
+                      </p>
+                    ) : null}
+                    <FieldError field={field} />
+                  </div>
+                )}
+              />
             )}
           />
         </form>

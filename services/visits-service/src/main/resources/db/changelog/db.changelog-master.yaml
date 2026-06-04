@@ -9,3 +9,15 @@ databaseChangeLog:
       file: db/changelog/changes/005-notification-saga.yaml
   - include:
       file: db/changelog/changes/006-relax-vet-slot-unique.yaml
+  - include:
+      file: db/changelog/changes/007-create-prescriptions.yaml
+  - include:
+      file: db/changelog/changes/008-add-prescription-item-pricing.yaml
+  - include:
+      file: db/changelog/changes/009-add-visit-denormalized-names.yaml
+  - include:
+      file: db/changelog/changes/010-add-visit-pet-owner-details.yaml
+  - include:
+      file: db/changelog/changes/011-backfill-visit-snapshots.yaml
+  - include:
+      file: db/changelog/changes/012-relax-prescription-unique.yaml

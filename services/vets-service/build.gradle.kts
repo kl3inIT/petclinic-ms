@@ -7,6 +7,7 @@ dependencies {
     implementation(project(":shared:common-jpa"))
     implementation(project(":shared:common-security"))      // Iter 2
     implementation(project(":shared:common-events"))        // Phase G — publish vet.rating.added
+    implementation(project(":shared:common-storage"))       // MinIO storage (tách từ vets, dùng chung với visits)
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.validation)
@@ -15,9 +16,6 @@ dependencies {
     implementation(libs.spring.cloud.starter.netflix.eureka.client)
     implementation(libs.spring.cloud.starter.config)
     implementation(libs.micrometer.tracing.bridge.otel)
-    // Phase E2 — S3-compatible storage (MinIO local dev, AWS S3 prod). aws-sdk-s3
-    // kéo theo `s3-presigner` cùng SDK, không cần khai báo riêng.
-    implementation(libs.aws.sdk.s3)
     runtimeOnly(libs.opentelemetry.exporter.otlp)
     runtimeOnly(libs.postgresql)
 

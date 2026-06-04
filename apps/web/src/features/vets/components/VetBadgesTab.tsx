@@ -115,7 +115,7 @@ export function VetBadgesTab({ vetId }: Props) {
         </Button>
       </div>
 
-      {listQuery.isLoading ? (
+      {listQuery.isLoading || listQuery.isError ? (
         <Skeleton className="h-32 w-full" />
       ) : (listQuery.data?.content ?? []).length === 0 ? (
         <Card>

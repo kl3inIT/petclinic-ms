@@ -1,0 +1,332 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-schema-billing
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS billing
+            dbms: postgresql
+
+  # ─── Danh mục bệnh + chi phí (bảng tra cứu) ───────────────────────────────
+  - changeSet:
+      id: 002-create-table-diseases
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: billing
+            tableName: diseases
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              # Business key — vd PARVO, FLEA, VACC_RABIES. Vet/FE tra cứu theo code.
+              - column:
+                  name: code
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_diseases_code
+              - column:
+                  name: name
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: VARCHAR(80)
+              - column:
+                  name: description
+                  type: TEXT
+              # Chi phí điều trị mặc định — dùng làm đơn giá khi vet thêm dòng DISEASE vào hoá đơn.
+              - column:
+                  name: base_cost
+                  type: NUMERIC(12, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  # ─── Hoá đơn gộp (tab mở của một khách) ───────────────────────────────────
+  - changeSet:
+      id: 003-create-table-invoices
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: billing
+            tableName: invoices
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              # Chủ hoá đơn = JWT sub UUID. Null cho khách vãng lai mua đồ shop không login.
+              - column:
+                  name: customer_user_id
+                  type: UUID
+              # Snapshot tên khách (denorm từ event/POS) — hiển thị không cần gọi customers-service.
+              - column:
+                  name: customer_name
+                  type: VARCHAR(150)
+              # State machine: OPEN → PAID | CANCELLED.
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: VARCHAR(3)
+                  defaultValue: VND
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subtotal
+                  type: NUMERIC(12, 2)
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total
+                  type: NUMERIC(12, 2)
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notes
+                  type: TEXT
+              - column:
+                  name: issued_at
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: paid_at
+                  type: TIMESTAMP WITH TIME ZONE
+              # CASH / CARD / TRANSFER — set lúc checkout.
+              - column:
+                  name: payment_method
+                  type: VARCHAR(20)
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  # ─── Dòng chi phí (source-agnostic: phí khám / bệnh / sản phẩm shop / tự do) ──
+  - changeSet:
+      id: 004-create-table-invoice-items
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: billing
+            tableName: invoice_items
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: invoice_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_invoice_items_invoice
+                    referencedTableSchemaName: billing
+                    referencedTableName: invoices
+                    referencedColumnNames: id
+                    deleteCascade: true
+              # VISIT_FEE / DISEASE / PRODUCT / MISC
+              - column:
+                  name: source_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              # visitId / diseaseId / productId — nullable (MISC tự do không tham chiếu).
+              - column:
+                  name: source_ref
+                  type: BIGINT
+              - column:
+                  name: description
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unit_price
+                  type: NUMERIC(12, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity
+                  type: INTEGER
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: line_total
+                  type: NUMERIC(12, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+
+  # ─── Idempotency cho consumer event ───────────────────────────────────────
+  - changeSet:
+      id: 005-create-table-processed-events
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: billing
+            tableName: processed_events
+            columns:
+              - column:
+                  name: event_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+  # ─── Constraints + indexes ────────────────────────────────────────────────
+  - changeSet:
+      id: 006-add-constraints-and-indexes
+      author: mss301
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE billing.invoices
+              ADD CONSTRAINT invoices_status_check
+              CHECK (status IN ('OPEN', 'PAID', 'CANCELLED'))
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              ALTER TABLE billing.invoices
+              ADD CONSTRAINT invoices_payment_method_check
+              CHECK (payment_method IS NULL OR payment_method IN ('CASH', 'CARD', 'TRANSFER'))
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              ALTER TABLE billing.invoice_items
+              ADD CONSTRAINT invoice_items_source_type_check
+              CHECK (source_type IN ('VISIT_FEE', 'DISEASE', 'PRODUCT', 'MISC'))
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              ALTER TABLE billing.invoice_items
+              ADD CONSTRAINT invoice_items_quantity_check
+              CHECK (quantity > 0)
+            dbms: postgresql
+
+        # Bất biến: tối đa 1 hoá đơn OPEN / khách. Charge mới append vào tab đang mở.
+        # Partial index — chỉ áp lên status=OPEN có customer_user_id (vãng lai null bỏ qua).
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX uk_invoices_open_per_customer
+              ON billing.invoices (customer_user_id)
+              WHERE status = 'OPEN' AND customer_user_id IS NOT NULL
+            dbms: postgresql
+
+        # Chống bơm trùng phí khám khi broker redeliver VisitCompletedEvent.
+        - sql:
+            sql: >-
+              CREATE UNIQUE INDEX uk_invoice_items_visit_fee
+              ON billing.invoice_items (invoice_id, source_ref)
+              WHERE source_type = 'VISIT_FEE'
+            dbms: postgresql
+
+        # "Hoá đơn của tôi" + lọc theo status (quầy thu ngân).
+        - createIndex:
+            schemaName: billing
+            tableName: invoices
+            indexName: idx_invoices_customer
+            columns:
+              - column:
+                  name: customer_user_id
+              - column:
+                  name: status
+
+        - createIndex:
+            schemaName: billing
+            tableName: invoice_items
+            indexName: idx_invoice_items_invoice
+            columns:
+              - column:
+                  name: invoice_id
+
+  # ─── Seed danh mục bệnh thú y phổ biến + chi phí (VND) ─────────────────────
+  - changeSet:
+      id: 007-seed-diseases
+      author: mss301
+      changes:
+        - sql:
+            sql: >-
+              INSERT INTO billing.diseases (code, name, category, description, base_cost, active, version) VALUES
+              ('VACC_RABIES', 'Tiêm phòng dại', 'Phòng ngừa', 'Vắc-xin phòng bệnh dại', 150000, true, 0),
+              ('VACC_5IN1', 'Tiêm phòng 5 bệnh', 'Phòng ngừa', 'Vắc-xin tổng hợp 5 bệnh ở chó', 250000, true, 0),
+              ('PARVO', 'Bệnh Parvo', 'Truyền nhiễm', 'Viêm ruột xuất huyết do Parvovirus', 800000, true, 0),
+              ('CARE', 'Bệnh Care (Sài sốt)', 'Truyền nhiễm', 'Bệnh do Canine distemper virus', 900000, true, 0),
+              ('FLEA_TICK', 'Trị ve, bọ chét', 'Ký sinh trùng', 'Điều trị ngoại ký sinh', 120000, true, 0),
+              ('DEWORM', 'Tẩy giun sán', 'Ký sinh trùng', 'Tẩy nội ký sinh đường ruột', 80000, true, 0),
+              ('SKIN_DERMA', 'Viêm da', 'Da liễu', 'Viêm da, nấm, ghẻ', 200000, true, 0),
+              ('GI_UPSET', 'Rối loạn tiêu hoá', 'Tiêu hoá', 'Tiêu chảy, nôn ói', 180000, true, 0),
+              ('NEUTER', 'Triệt sản', 'Phẫu thuật', 'Phẫu thuật triệt sản', 1200000, true, 0),
+              ('DENTAL', 'Cạo vôi răng', 'Răng miệng', 'Vệ sinh, cạo vôi răng', 300000, true, 0),
+              ('GEN_CHECKUP', 'Khám tổng quát', 'Khám', 'Khám sức khoẻ tổng quát', 100000, true, 0)
+            dbms: postgresql

@@ -1,7 +1,4 @@
-import axios, {
-  type AxiosError,
-  type InternalAxiosRequestConfig,
-} from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/features/auth/store';
 
 /**
@@ -63,9 +60,37 @@ async function performRefresh(): Promise<string> {
   return data.accessToken;
 }
 
+/**
+ * Bóc message thân thiện từ body RFC 9457 ProblemDetail của BE
+ * ({@code detail} / {@code fieldErrors[]} / {@code title}) và gán vào
+ * {@code error.message} để mọi {@code onError: (err) => toast(err.message)}
+ * hiện đúng thông điệp BE thay vì "Request failed with status code 400".
+ */
+function applyProblemDetailMessage(error: AxiosError): void {
+  const data = error.response?.data as
+    | {
+        detail?: string;
+        title?: string;
+        message?: string;
+        fieldErrors?: Array<{ field?: string; message?: string }>;
+      }
+    | undefined;
+  if (!data) return;
+  const fromFields = data.fieldErrors?.length
+    ? data.fieldErrors
+        .map((f) => [f.field, f.message].filter(Boolean).join(': '))
+        .filter(Boolean)
+        .join('; ')
+    : undefined;
+  const friendly = data.detail || fromFields || data.title || data.message;
+  if (friendly) error.message = friendly;
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+    applyProblemDetailMessage(error);
+
     const original = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;

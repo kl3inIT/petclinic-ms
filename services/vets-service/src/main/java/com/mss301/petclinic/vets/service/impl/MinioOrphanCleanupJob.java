@@ -10,11 +10,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.mss301.petclinic.common.storage.StorageObject;
+import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.vets.config.StorageCleanupProperties;
 import com.mss301.petclinic.vets.repository.VetAlbumPhotoRepository;
 import com.mss301.petclinic.vets.repository.VetPhotoRepository;
-import com.mss301.petclinic.vets.service.StorageObject;
-import com.mss301.petclinic.vets.service.StorageService;
 
 /**
  * Scheduled job rà MinIO ↔ DB, xoá object mồ côi (S3 có, DB không reference).

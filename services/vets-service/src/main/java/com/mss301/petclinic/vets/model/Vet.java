@@ -15,6 +15,9 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.Generated;
+import org.hibernate.generator.EventType;
+
 import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 @Entity
@@ -37,12 +40,30 @@ public class Vet extends AbstractAuditingEntity {
     @Column(name = "phone_number")
     private String phoneNumber;
 
+    /**
+     * Mã liên kết tới hệ thống billing (billing-service). Tham chiếu mềm dạng string —
+     * vet không bắt buộc có (nullable), nhưng nếu có phải unique (1 vet ↔ 1 tài khoản billing).
+     * Cổng tra cứu ngược: GET /api/v1/vets/by-bill/{vetBillId}. Port từ Champlain vet-service.
+     */
+    @Column(name = "vet_bill_id", unique = true, length = 36)
+    private String vetBillId;
+
     // Soft-deactivate: vet nghỉ việc set false, KHÔNG xoá vì còn lịch sử visit tham chiếu.
     @Column(nullable = false)
     private boolean active = true;
 
     @Column(columnDefinition = "TEXT")
     private String resume;
+
+    /**
+     * Mã thẻ bác sĩ — Postgres tự sinh từ id (xem changeset 012). Format
+     * {@code PC-VET-{LPAD(id, 4, '0')}}. App KHÔNG write column này:
+     * {@code insertable=false, updatable=false} + {@link Generated} để Hibernate
+     * refresh value sau INSERT/UPDATE.
+     */
+    @Generated(event = {EventType.INSERT, EventType.UPDATE})
+    @Column(name = "card_code", insertable = false, updatable = false, length = 20)
+    private String cardCode;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
@@ -67,14 +88,17 @@ public class Vet extends AbstractAuditingEntity {
     public String getLastName() { return lastName; }
     public String getEmail() { return email; }
     public String getPhoneNumber() { return phoneNumber; }
+    public String getVetBillId() { return vetBillId; }
     public boolean isActive() { return active; }
     public String getResume() { return resume; }
+    public String getCardCode() { return cardCode; }
     public Set<Specialty> getSpecialties() { return specialties; }
 
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
     public void setEmail(String email) { this.email = email; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public void setVetBillId(String vetBillId) { this.vetBillId = vetBillId; }
     public void setActive(boolean active) { this.active = active; }
     public void setResume(String resume) { this.resume = resume; }
     public void setSpecialties(Set<Specialty> specialties) { this.specialties = specialties; }

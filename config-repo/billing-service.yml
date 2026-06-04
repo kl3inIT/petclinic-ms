@@ -1,0 +1,15 @@
+# Billing — env-agnostic config.
+# Datasource creds + URL khác env → billing-service-<profile>.yml.
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate                  # Liquibase quản lý schema
+    properties:
+      hibernate:
+        default_schema: billing
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml

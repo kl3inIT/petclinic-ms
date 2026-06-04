@@ -19,6 +19,8 @@ export const vetSchema = z.object({
   lastName: z.string().min(1, 'Bắt buộc').max(255, 'Tối đa 255 ký tự'),
   email: z.string().min(1, 'Bắt buộc').email('Email không hợp lệ').max(255),
   phoneNumber: z.string().max(30, 'Tối đa 30 ký tự'),
+  // Mã liên kết billing — optional, unique nếu có (BE trả 400 error.vetBillId-exists khi trùng)
+  vetBillId: z.string().max(36, 'Tối đa 36 ký tự'),
   resume: z.string().max(10_000, 'Tối đa 10000 ký tự'),
 });
 export type VetInput = z.infer<typeof vetSchema>;

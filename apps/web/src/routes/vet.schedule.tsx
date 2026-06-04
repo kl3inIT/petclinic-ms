@@ -1098,15 +1098,11 @@ function SlotDetailDialog({
         </DialogHeader>
 
         <div className="space-y-2 pt-2">
-          {visitsQuery.isLoading ? (
+          {visitsQuery.isLoading || visitsQuery.isError ? (
             <>
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-20 w-full" />
             </>
-          ) : visitsQuery.isError ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              Không tải được danh sách ca khám. Vui lòng thử lại.
-            </div>
           ) : visits.length === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/40 py-8 text-center">
               <Coffee className="size-10 text-slate-300" />

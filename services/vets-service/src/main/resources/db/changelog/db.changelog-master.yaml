@@ -21,3 +21,13 @@ databaseChangeLog:
       file: db/changelog/changes/010-rating-unique-customer.yaml
   - include:
       file: db/changelog/changes/011-seed-work-schedule.yaml
+  - include:
+      file: db/changelog/changes/012-add-vet-card-code.yaml
+  - include:
+      file: db/changelog/changes/013-add-pending-review-status.yaml
+  - include:
+      file: db/changelog/changes/014-drop-education-review.yaml
+  - include:
+      file: db/changelog/changes/015-add-vet-bill-id.yaml
+  - include:
+      file: db/changelog/changes/016-add-rating-predefined.yaml

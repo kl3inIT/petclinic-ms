@@ -59,4 +59,15 @@ public class ClientsConfig {
                 .build()
                 .createClient(WorkflowServiceClient.class);
     }
+
+    @Bean
+    public ProductsClient productsClient(@LoadBalanced RestClient.Builder lbBuilder) {
+        RestClient client = lbBuilder.clone()
+                .baseUrl("http://products-service")
+                .build();
+        return HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(client))
+                .build()
+                .createClient(ProductsClient.class);
+    }
 }

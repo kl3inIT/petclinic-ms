@@ -1,10 +1,14 @@
 package com.mss301.petclinic.visits.service.impl;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -21,7 +25,9 @@ import org.springframework.web.client.RestClientException;
 
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
+import com.mss301.petclinic.visits.client.OwnerSummary;
 import com.mss301.petclinic.visits.client.PetSummary;
+import com.mss301.petclinic.visits.client.ProductSummary;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.UserSummary;
 import com.mss301.petclinic.visits.client.VetSummary;
@@ -31,6 +37,7 @@ import com.mss301.petclinic.visits.client.WorkflowStartResponse;
 import com.mss301.petclinic.visits.config.WorkflowCallbackProperties;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
+import com.mss301.petclinic.visits.dto.res.SlotAvailabilityResponse;
 import com.mss301.petclinic.visits.dto.res.VisitResponse;
 import com.mss301.petclinic.visits.events.VisitCompletedEvent;
 import com.mss301.petclinic.visits.events.VisitScheduledEvent;
@@ -51,11 +58,14 @@ public class VisitServiceImpl implements VisitService {
     private static final Logger log = LoggerFactory.getLogger(VisitServiceImpl.class);
     private static final ZoneId CLINIC_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
-    /** Capacity rule: tối đa số ca/khung/vet (xem changeset 006-relax-vet-slot-unique). */
-    private static final int MAX_VISITS_PER_SLOT = 2;
-    /** "Active" = chiếm chỗ trong khung. CANCELLED không tính. */
-    private static final Set<VisitStatus> SLOT_OCCUPYING_STATUSES =
-            Set.of(VisitStatus.SCHEDULED, VisitStatus.IN_PROGRESS, VisitStatus.COMPLETED);
+    /**
+     * Số ca khám active tối đa cho 1 vet trong 1 khung giờ. CANCELLED/COMPLETED
+     * không tính. DB UNIQUE (vet_id, scheduled_at) đã được drop ở Liquibase 006
+     * — capacity enforce ở app level. Race condition: 2 request đồng thời có thể
+     * cùng pass check (cả 2 thấy count=1) → vượt capacity. Chấp nhận risk dev/demo;
+     * production cần advisory lock hoặc serializable isolation + retry.
+     */
+    public static final int SLOT_CAPACITY = 2;
 
     private final VisitRepository repository;
     /** Cross-service calls qua bean tách riêng — bean boundary cần thiết để Spring AOP
@@ -125,17 +135,26 @@ public class VisitServiceImpl implements VisitService {
                     "vet-unavailable");
         }
 
-        // Capacity rule: tối đa MAX_VISITS_PER_SLOT ca/khung/vet. Constraint UNIQUE đã
-        // drop ở changeset 006 (DB không express được "max 2 per group") → check app level.
+        // Enforce SLOT_CAPACITY app-level (DB UNIQUE đã drop ở Liquibase 006).
         // ⚠️ TOCTOU: hai booking song song có thể cùng vượt qua check này. Acceptable cho
         // learning project; production cần pg advisory lock hoặc SERIALIZABLE isolation.
-        long occupied = repository.countByVetIdAndScheduledAtAndStatusIn(
-                req.vetId(), req.scheduledAt(), SLOT_OCCUPYING_STATUSES);
-        if (occupied >= MAX_VISITS_PER_SLOT) {
+        long activeCount = repository.countActiveByVetIdAndScheduledAt(
+                req.vetId(), req.scheduledAt());
+        if (activeCount >= SLOT_CAPACITY) {
             throw new SlotTakenException();
         }
 
-        Visit visit = Visit.book(req.petId(), req.vetId(), currentUserId,
+        // Snapshot thông tin liên hệ chủ nuôi (best-effort) — pet name/breed/birthDate đã có từ lookup ở trên.
+        Visit.OwnerSnapshot ownerSnapshot = new Visit.OwnerSnapshot(null, null);
+        try {
+            OwnerSummary owner = remoteClients.fetchOwner(pet.ownerId());
+            ownerSnapshot = new Visit.OwnerSnapshot(owner.fullName(), owner.telephone());
+        } catch (RuntimeException e) {
+            log.warn("Enrich owner info thất bại (ownerId={}): {}", pet.ownerId(), e.toString());
+        }
+
+        Visit.PetSnapshot petSnapshot = new Visit.PetSnapshot(pet.name(), pet.type(), pet.birthDate());
+        Visit visit = Visit.book(req.petId(), petSnapshot, ownerSnapshot, req.vetId(), currentUserId,
                 req.scheduledAt(), req.reason());
 
         Visit saved;
@@ -178,9 +197,31 @@ public class VisitServiceImpl implements VisitService {
     @Transactional
     public VisitResponse complete(Long id, CompleteVisitRequest req) {
         Visit v = loadOrThrow(id);
-        v.complete(req.diagnosis(), req.treatment(), req.fee());
+        v.complete(req.diagnosis(), req.treatment(), resolveFee(req));
         publishCompleted(v);
         return VisitResponse.from(v);
+    }
+
+    /**
+     * Phí khám: ưu tiên dịch vụ trong catalog ({@code serviceProductId}, mục SERVICE) →
+     * fee = đơn giá catalog; nếu không chọn → dùng {@code fee} nhập tay.
+     */
+    private BigDecimal resolveFee(CompleteVisitRequest req) {
+        if (req.serviceProductId() == null) {
+            return req.fee();
+        }
+        ProductSummary product;
+        try {
+            product = remoteClients.fetchProduct(req.serviceProductId());
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new BadRequestAlertException(
+                    "Dịch vụ khám không tồn tại: " + req.serviceProductId(), "Visit", "service-not-found");
+        }
+        if (!"SERVICE".equals(product.type())) {
+            throw new BadRequestAlertException(
+                    "Mục đã chọn không phải dịch vụ khám", "Visit", "not-a-service");
+        }
+        return product.unitPrice();
     }
 
     @Override
@@ -193,6 +234,33 @@ public class VisitServiceImpl implements VisitService {
         }
         v.cancel();
         return VisitResponse.from(v);
+    }
+
+    @Override
+    public SlotAvailabilityResponse getAvailability(Long vetId, LocalDate date) {
+        // Range [00:00, 24:00) ngày local CLINIC_ZONE.
+        Instant from = date.atStartOfDay(CLINIC_ZONE).toInstant();
+        Instant to = date.plusDays(1).atStartOfDay(CLINIC_ZONE).toInstant();
+
+        List<Visit> active = repository.findActiveByVetIdAndScheduledAtRange(vetId, from, to);
+
+        // Đếm theo work-hour (giờ local). Visit ở các phút != 0 cũng quy về đầu giờ
+        // — toBookableSlot() đã enforce phút=0, nhưng defensive vẫn floor.
+        Map<Integer, Integer> takenByHour = new HashMap<>();
+        for (Visit v : active) {
+            int hour = v.getScheduledAt().atZone(CLINIC_ZONE).getHour();
+            takenByHour.merge(hour, 1, Integer::sum);
+        }
+
+        // Trả về 12 work-hour cố định 8h-20h (kể cả slot 0 taken để FE map dễ).
+        List<SlotAvailabilityResponse.SlotInfo> slots = new ArrayList<>();
+        for (int h = 8; h <= 19; h++) {
+            int taken = takenByHour.getOrDefault(h, 0);
+            int remaining = Math.max(0, SLOT_CAPACITY - taken);
+            slots.add(new SlotAvailabilityResponse.SlotInfo(
+                    "HOUR_" + h + "_" + (h + 1), taken, remaining));
+        }
+        return new SlotAvailabilityResponse(SLOT_CAPACITY, slots);
     }
 
     private Visit loadOrThrow(Long id) {

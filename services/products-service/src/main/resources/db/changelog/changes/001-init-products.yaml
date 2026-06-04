@@ -1,0 +1,165 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-schema-products
+      author: mss301
+      changes:
+        - sql:
+            sql: CREATE SCHEMA IF NOT EXISTS products
+            dbms: postgresql
+
+  # ─── Catalog: thuốc / dịch vụ khám / vật tư ───────────────────────────────
+  - changeSet:
+      id: 002-create-table-products
+      author: mss301
+      changes:
+        - createTable:
+            schemaName: products
+            tableName: products
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              # Business key — vd MED_AMOX, SVC_GEN. Vet/FE tra cứu theo code.
+              - column:
+                  name: code
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_products_code
+              - column:
+                  name: name
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: VARCHAR(80)
+              - column:
+                  name: description
+                  type: TEXT
+              # MEDICATION / SERVICE / SUPPLY
+              - column:
+                  name: type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unit_price
+                  type: NUMERIC(12, 2)
+                  constraints:
+                    nullable: false
+              # Đơn vị tính hiển thị — "viên", "hộp", "lần"…
+              - column:
+                  name: unit
+                  type: VARCHAR(30)
+              # Tồn kho — NULL cho SERVICE (không quản lý tồn).
+              - column:
+                  name: stock_quantity
+                  type: INTEGER
+              - column:
+                  name: reorder_level
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  # ─── Constraints + indexes ────────────────────────────────────────────────
+  - changeSet:
+      id: 003-add-constraints-and-indexes
+      author: mss301
+      changes:
+        - sql:
+            sql: >-
+              ALTER TABLE products.products
+              ADD CONSTRAINT products_type_check
+              CHECK (type IN ('MEDICATION', 'SERVICE', 'SUPPLY'))
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              ALTER TABLE products.products
+              ADD CONSTRAINT products_unit_price_check
+              CHECK (unit_price >= 0)
+            dbms: postgresql
+
+        - sql:
+            sql: >-
+              ALTER TABLE products.products
+              ADD CONSTRAINT products_stock_quantity_check
+              CHECK (stock_quantity IS NULL OR stock_quantity >= 0)
+            dbms: postgresql
+
+        - createIndex:
+            schemaName: products
+            tableName: products
+            indexName: idx_products_type_active
+            columns:
+              - column:
+                  name: type
+              - column:
+                  name: active
+
+  # ─── Seed catalog mẫu (VND) ───────────────────────────────────────────────
+  - changeSet:
+      id: 004-seed-products
+      author: mss301
+      changes:
+        # Thuốc (MEDICATION) — có tồn kho.
+        - sql:
+            sql: >-
+              INSERT INTO products.products
+                (code, name, category, description, type, unit_price, unit, stock_quantity, reorder_level, active, version) VALUES
+              ('MED_AMOX', 'Amoxicillin 500mg', 'Kháng sinh', 'Kháng sinh phổ rộng', 'MEDICATION', 5000, 'viên', 500, 50, true, 0),
+              ('MED_META', 'Metronidazole 250mg', 'Kháng sinh', 'Điều trị nhiễm khuẩn kỵ khí', 'MEDICATION', 4000, 'viên', 400, 40, true, 0),
+              ('MED_VITB', 'Vitamin B-complex', 'Bổ sung', 'Bổ sung vitamin nhóm B', 'MEDICATION', 15000, 'ống', 200, 20, true, 0),
+              ('MED_PARA', 'Thuốc giảm đau thú y', 'Giảm đau', 'Giảm đau, hạ sốt', 'MEDICATION', 3000, 'viên', 300, 30, true, 0),
+              ('MED_DEWORM', 'Thuốc tẩy giun', 'Ký sinh trùng', 'Tẩy nội ký sinh đường ruột', 'MEDICATION', 12000, 'viên', 250, 25, true, 0),
+              ('MED_FLEA', 'Nhỏ gáy trị ve bọ chét', 'Ký sinh trùng', 'Điều trị ngoại ký sinh', 'MEDICATION', 90000, 'tuýp', 80, 10, true, 0)
+            dbms: postgresql
+
+        # Dịch vụ khám (SERVICE) — KHÔNG tồn kho (stock_quantity NULL).
+        - sql:
+            sql: >-
+              INSERT INTO products.products
+                (code, name, category, description, type, unit_price, unit, stock_quantity, reorder_level, active, version) VALUES
+              ('SVC_GEN', 'Khám tổng quát', 'Dịch vụ khám', 'Khám sức khoẻ tổng quát', 'SERVICE', 100000, 'lần', NULL, 0, true, 0),
+              ('SVC_SPEC', 'Khám chuyên khoa', 'Dịch vụ khám', 'Khám chuyên sâu theo chuyên khoa', 'SERVICE', 200000, 'lần', NULL, 0, true, 0),
+              ('SVC_EMER', 'Khám cấp cứu', 'Dịch vụ khám', 'Khám cấp cứu ngoài giờ', 'SERVICE', 350000, 'lần', NULL, 0, true, 0)
+            dbms: postgresql
+
+        # Vật tư tiêu hao (SUPPLY) — có tồn kho.
+        - sql:
+            sql: >-
+              INSERT INTO products.products
+                (code, name, category, description, type, unit_price, unit, stock_quantity, reorder_level, active, version) VALUES
+              ('SUP_BANDAGE', 'Băng gạc y tế', 'Vật tư', 'Băng gạc vô trùng', 'SUPPLY', 25000, 'cuộn', 150, 20, true, 0),
+              ('SUP_SYRINGE', 'Ống tiêm', 'Vật tư', 'Ống tiêm dùng một lần', 'SUPPLY', 2000, 'cái', 1000, 100, true, 0)
+            dbms: postgresql

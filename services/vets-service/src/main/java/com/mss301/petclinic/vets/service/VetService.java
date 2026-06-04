@@ -13,6 +13,9 @@ public interface VetService {
 
     VetResponse findById(Long id);
 
+    /** Tra cứu vet theo mã liên kết billing — 404 nếu không có vet nào mang mã này. */
+    VetResponse findByVetBillId(String vetBillId);
+
     VetResponse create(VetRequest request);
 
     VetResponse update(Long id, UpdateVetRequest request);

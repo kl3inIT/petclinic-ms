@@ -7,10 +7,12 @@ import com.mss301.petclinic.vets.model.Vet;
 
 public record VetResponse(
         Long id,
+        String cardCode,
         String firstName,
         String lastName,
         String email,
         String phoneNumber,
+        String vetBillId,
         boolean active,
         String resume,
         List<SpecialtyResponse> specialties,
@@ -25,10 +27,12 @@ public record VetResponse(
                 .toList();
         return new VetResponse(
                 vet.getId(),
+                vet.getCardCode(),
                 vet.getFirstName(),
                 vet.getLastName(),
                 vet.getEmail(),
                 vet.getPhoneNumber(),
+                vet.getVetBillId(),
                 vet.isActive(),
                 vet.getResume(),
                 specs,

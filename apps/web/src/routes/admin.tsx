@@ -8,6 +8,10 @@ import {
   Workflow,
   LogOut,
   Sparkles,
+  ShieldCheck,
+  Receipt,
+  Pill,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
@@ -19,8 +23,9 @@ import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: ({ location }) => {
-    // /admin/** chỉ cho ADMIN role (mặc dù requireAnyRole đã có ADMIN bypass).
-    requireAnyRole({ redirectFrom: location.href, allowedRoles: ['ADMIN'] });
+    // /admin/** cho ADMIN + STAFF (STAFF có quyền duyệt thay đổi vet).
+    // Trang nào chỉ ADMIN (vd /admin/llm-config) tự render conditionally qua isAdmin.
+    requireAnyRole({ redirectFrom: location.href, allowedRoles: ['ADMIN', 'STAFF'] });
   },
   component: AdminLayout,
 });
@@ -31,8 +36,12 @@ interface NavItem {
     | '/admin/owners'
     | '/admin/pets'
     | '/admin/vets'
+    | '/admin/vet-reviews'
     | '/admin/visits'
     | '/admin/workflows'
+    | '/admin/invoices'
+    | '/admin/diseases'
+    | '/admin/products'
     | '/admin/llm-config';
   label: string;
   icon: typeof LayoutDashboard;
@@ -43,10 +52,14 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/admin/visits', label: 'Visits', icon: CalendarCheck },
-  { to: '/admin/workflows', label: 'Workflows', icon: Workflow },
+  { to: '/admin/workflows', label: 'Workflows', icon: Workflow, adminOnly: true },
   { to: '/admin/owners', label: 'Owners', icon: Users },
   { to: '/admin/pets', label: 'Pets', icon: PawPrint },
   { to: '/admin/vets', label: 'Vets', icon: Stethoscope },
+  { to: '/admin/invoices', label: 'Hoá đơn', icon: Receipt },
+  { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill, adminOnly: true },
+  { to: '/admin/products', label: 'Danh mục sản phẩm', icon: Package, adminOnly: true },
+  { to: '/admin/vet-reviews', label: 'Duyệt thay đổi', icon: ShieldCheck },
   { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, adminOnly: true },
 ];
 

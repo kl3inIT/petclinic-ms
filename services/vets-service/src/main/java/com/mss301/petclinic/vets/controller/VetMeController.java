@@ -8,23 +8,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
 import com.mss301.petclinic.vets.dto.res.BadgeResponse;
 import com.mss301.petclinic.vets.dto.res.RatingResponse;
 import com.mss301.petclinic.vets.dto.res.RatingSummaryResponse;
+import com.mss301.petclinic.vets.dto.res.VetPhotoResponse;
 import com.mss301.petclinic.vets.dto.res.VetResponse;
 import com.mss301.petclinic.vets.dto.res.WorkScheduleSlotResponse;
 import com.mss301.petclinic.vets.service.BadgeService;
 import com.mss301.petclinic.vets.service.RatingService;
+import com.mss301.petclinic.vets.service.VetPhotoService;
 import com.mss301.petclinic.vets.service.VetService;
 import com.mss301.petclinic.vets.service.WorkScheduleService;
 
@@ -52,13 +61,16 @@ public class VetMeController {
     private final WorkScheduleService workScheduleService;
     private final RatingService ratingService;
     private final BadgeService badgeService;
+    private final VetPhotoService vetPhotoService;
 
     public VetMeController(VetService vetService, WorkScheduleService workScheduleService,
-                           RatingService ratingService, BadgeService badgeService) {
+                           RatingService ratingService, BadgeService badgeService,
+                           VetPhotoService vetPhotoService) {
         this.vetService = vetService;
         this.workScheduleService = workScheduleService;
         this.ratingService = ratingService;
         this.badgeService = badgeService;
+        this.vetPhotoService = vetPhotoService;
     }
 
     /** Đọc vetId từ JWT, throw 400 nếu user chưa link với vet entity. */
@@ -101,6 +113,35 @@ public class VetMeController {
             @RequestBody @Valid UpdateVetRequest request
     ) {
         return vetService.update(resolveVetId(jwt), request);
+    }
+
+    @GetMapping("/photo")
+    @Operation(
+            summary = "Avatar của vet đang login (metadata + presigned URL)",
+            description = "Trả 404 nếu vet chưa upload photo. vetId resolve từ JWT claim."
+    )
+    public VetPhotoResponse getMyVetPhoto(@AuthenticationPrincipal Jwt jwt) {
+        return vetPhotoService.getPhoto(resolveVetId(jwt));
+    }
+
+    @PutMapping(value = "/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+            summary = "Upload/replace avatar của vet đang login (idempotent)",
+            description = "Multipart field 'file'. Max 10MB. Content-type: image/jpeg|png|webp. " +
+                          "Mỗi lần đổi ảnh reset status PENDING — chờ STAFF/ADMIN duyệt mới hiển thị public."
+    )
+    public VetPhotoResponse uploadMyVetPhoto(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return vetPhotoService.uploadPhoto(resolveVetId(jwt), file);
+    }
+
+    @DeleteMapping("/photo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Xóa avatar của vet đang login")
+    public void deleteMyVetPhoto(@AuthenticationPrincipal Jwt jwt) {
+        vetPhotoService.deletePhoto(resolveVetId(jwt));
     }
 
     @GetMapping("/work-schedule")
