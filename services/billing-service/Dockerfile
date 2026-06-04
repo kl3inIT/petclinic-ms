@@ -32,6 +32,7 @@ COPY shared/common-web/src shared/common-web/src
 COPY shared/common-jpa/src shared/common-jpa/src
 COPY shared/common-security/src shared/common-security/src
 COPY shared/common-events/src shared/common-events/src
+COPY shared/common-clients/src shared/common-clients/src
 # Service src
 COPY services/billing-service/src services/billing-service/src
 
