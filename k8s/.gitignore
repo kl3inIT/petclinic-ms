@@ -1,0 +1,5 @@
+# real secrets / env — never commit
+base/secrets.yaml
+**/secret*.yaml
+!base/secrets.example.yaml
+infra-vm/.env

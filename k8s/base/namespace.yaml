@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: petclinic
+  labels:
+    name: petclinic
+    # Pod Security Admission (golden path = restricted on prod namespaces).
+    # warn+audit restricted now; flip enforce baseline -> restricted once the
+    # service images are confirmed to run as non-root (uid 1000).
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

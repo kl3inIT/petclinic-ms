@@ -1,0 +1,123 @@
+# In-cluster Grafana Alloy agent (DaemonSet). Collects metrics (scrapes pods
+# with prometheus.io/scrape) and pod logs, then ships them to the LGTM stack on
+# the Observability VM. Traces are sent by the services DIRECTLY to the
+# `otel-collector` Service (-> Obs VM), so Alloy here handles metrics + logs only.
+#
+# Replace 10.10.0.20 with the Observability VM internal IP.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: alloy }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: { name: petclinic-alloy }
+rules:
+  - apiGroups: [""]
+    resources: [nodes, nodes/proxy, nodes/metrics, services, endpoints, pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: { name: petclinic-alloy }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: petclinic-alloy }
+subjects:
+  - { kind: ServiceAccount, name: alloy, namespace: petclinic }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: alloy-config }
+data:
+  config.alloy: |
+    // ---- service discovery ----
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    // promote app/namespace/pod to real labels (dashboards template on `application`)
+    discovery.relabel "pods" {
+      targets = discovery.kubernetes.pods.targets
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "application"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "app"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+    }
+
+    // metrics: keep only pods with prometheus.io/scrape=true
+    discovery.relabel "scrape_targets" {
+      targets = discovery.relabel.pods.output
+      rule {
+        source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_scrape"]
+        regex         = "true"
+        action        = "keep"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_annotation_prometheus_io_port"]
+        target_label  = "__meta_kubernetes_pod_container_port_number"
+      }
+    }
+
+    prometheus.scrape "apps" {
+      targets      = discovery.relabel.scrape_targets.output
+      forward_to   = [prometheus.remote_write.obs.receiver]
+      metrics_path = "/actuator/prometheus"
+    }
+    prometheus.remote_write "obs" {
+      endpoint {
+        url = "http://10.10.0.20:9090/api/v1/write"   // Prometheus remote-write receiver on Obs VM
+      }
+    }
+
+    // logs: every pod, labeled by app/namespace/pod
+    loki.source.kubernetes "pods" {
+      targets    = discovery.relabel.pods.output
+      forward_to = [loki.write.obs.receiver]
+    }
+    loki.write "obs" {
+      endpoint {
+        url = "http://10.10.0.20:3100/loki/api/v1/push"  // Loki on Obs VM
+      }
+    }
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: alloy
+  labels: { app: alloy }
+spec:
+  selector: { matchLabels: { app: alloy } }
+  template:
+    metadata:
+      labels: { app: alloy }
+    spec:
+      serviceAccountName: alloy
+      containers:
+        - name: alloy
+          image: grafana/alloy:latest
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --server.http.listen-addr=0.0.0.0:12345
+          ports:
+            - { name: http, containerPort: 12345 }
+          volumeMounts:
+            - { name: config, mountPath: /etc/alloy }
+            - { name: varlog, mountPath: /var/log, readOnly: true }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+      volumes:
+        - { name: config, configMap: { name: alloy-config } }
+        - { name: varlog, hostPath: { path: /var/log } }

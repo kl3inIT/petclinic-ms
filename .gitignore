@@ -81,3 +81,10 @@ backups/
 *.hprof
 hs_err_pid*.log
 replay_pid*.log
+
+# downloaded diagram binaries (d2, plantuml)
+tools/
+
+# Word lock files
+~$*
+.claude/skills/drawio-skill/
