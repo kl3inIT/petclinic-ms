@@ -19,9 +19,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/features/auth/store';
+import { MediaUploader } from '@/features/vets/components/MediaUploader';
 import {
+  useDeleteMyOwnerAvatar,
   useGetMyOwnerProfile,
   useUpdateMyOwnerProfile,
+  useUploadMyOwnerAvatar,
 } from '@/lib/api/generated/owners/owners';
 
 import {
@@ -41,6 +44,29 @@ function CustomerProfilePage() {
 
   const ownerQuery = useGetMyOwnerProfile();
   const updateOwner = useUpdateMyOwnerProfile();
+  const avatarUrl = ownerQuery.data?.avatarUrl;
+
+  const invalidateOwner = () => ownerQuery.refetch();
+
+  const uploadAvatar = useUploadMyOwnerAvatar({
+    mutation: {
+      onSuccess: () => {
+        toast.success('Đã cập nhật ảnh đại diện');
+        void invalidateOwner();
+      },
+      onError: (err: Error) => toast.error(err.message || 'Tải ảnh thất bại'),
+    },
+  });
+
+  const deleteAvatar = useDeleteMyOwnerAvatar({
+    mutation: {
+      onSuccess: () => {
+        toast.success('Đã xoá ảnh đại diện');
+        void invalidateOwner();
+      },
+      onError: (err: Error) => toast.error(err.message || 'Xoá ảnh thất bại'),
+    },
+  });
   const [ownerForm, setOwnerForm] = useState({
     firstName: '',
     lastName: '',
@@ -107,8 +133,16 @@ function CustomerProfilePage() {
             />
 
             <div className="mt-6 flex items-center gap-5">
-              <div className="relative flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-white via-[#F2EFFF] to-[#DDD7FF] text-[#7C6CF5] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_34px_rgba(124,108,245,0.18)] ring-8 ring-[#F5F2FF]">
-                <UserCircle2 className="size-14" />
+              <div className="relative flex size-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-white via-[#F2EFFF] to-[#DDD7FF] text-[#7C6CF5] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_34px_rgba(124,108,245,0.18)] ring-8 ring-[#F5F2FF]">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Ảnh đại diện"
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <UserCircle2 className="size-14" />
+                )}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-[17px] font-black text-slate-950">
@@ -128,6 +162,31 @@ function CustomerProfilePage() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div className="mt-5 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px] font-black text-slate-500">
+                  Ảnh đại diện
+                </Label>
+                {avatarUrl ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={deleteAvatar.isPending}
+                    onClick={() => deleteAvatar.mutate()}
+                    className="rounded-lg border-[#E1DAFF] text-xs font-black text-[#6D5CE8]"
+                  >
+                    Xoá ảnh
+                  </Button>
+                ) : null}
+              </div>
+              <MediaUploader
+                label="Kéo thả ảnh hoặc bấm để chọn"
+                busy={uploadAvatar.isPending}
+                onUpload={(file) => uploadAvatar.mutateAsync({ data: { file } })}
+              />
             </div>
 
             <div className="mt-6 divide-y divide-[#F0F0F7] border-t border-[#ECECF5]">

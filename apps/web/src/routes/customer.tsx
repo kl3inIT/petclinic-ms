@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/features/auth/store';
 import { requireAnyRole } from '@/features/auth/guards';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
+import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
+import { avatarColor, initials } from '@/features/visits/labels';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/customer')({
@@ -48,6 +50,9 @@ const navItems: NavItem[] = [
 
 function CustomerLayout() {
   const clear = useAuthStore((s) => s.clear);
+  const username = useAuthStore((s) => s.user?.username);
+  const ownerQuery = useGetMyOwnerProfile();
+  const avatarUrl = ownerQuery.data?.avatarUrl;
   const logoutMutation = useLogout({
     mutation: {
       onSettled: () => {
@@ -109,13 +114,20 @@ function CustomerLayout() {
             <Link
               to="/customer/profile"
               title="Hồ sơ của tôi"
-              className="hidden size-10 shrink-0 overflow-hidden rounded-full border border-slate-100 bg-white shadow-sm transition hover:border-violet-100 hover:ring-2 hover:ring-violet-100 md:inline-flex"
+              className={cn(
+                'hidden size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-100 text-sm font-bold shadow-sm transition hover:ring-2 hover:ring-violet-100 md:inline-flex',
+                avatarUrl ? 'bg-white' : avatarColor(username),
+              )}
             >
-              <img
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&q=80&auto=format&fit=crop"
-                alt="Avatar"
-                className="size-full object-cover"
-              />
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Ảnh đại diện"
+                  className="size-full object-cover"
+                />
+              ) : (
+                initials(username)
+              )}
             </Link>
 
             <Button

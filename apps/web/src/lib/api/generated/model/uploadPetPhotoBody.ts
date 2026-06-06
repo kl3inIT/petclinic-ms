@@ -6,14 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface PetDto {
-  id?: number;
-  name?: string;
-  birthDate?: string;
-  type?: string;
-  petTypeId?: number;
-  isActive?: boolean;
-  weight?: number;
-  photoId?: string;
-  photoUrl?: string;
-}
+export type UploadPetPhotoBody = {
+  file: Blob;
+};

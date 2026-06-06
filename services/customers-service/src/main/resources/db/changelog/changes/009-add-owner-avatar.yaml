@@ -1,0 +1,17 @@
+databaseChangeLog:
+
+  # Owner avatar — chỉ lưu MinIO object key (binary ở bucket pet-photos, key owners/<id>).
+  # Nullable: chủ nuôi chưa upload avatar = NULL. Pet ảnh tái dùng cột photo_id sẵn có
+  # (không cần changeset mới cho pet).
+
+  - changeSet:
+      id: 009-001-add-owner-avatar-object-key
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: customers
+            tableName: owners
+            columns:
+              - column:
+                  name: avatar_object_key
+                  type: VARCHAR(255)

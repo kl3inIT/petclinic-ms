@@ -15,11 +15,30 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     # tracking ở `public` schema — xem CLAUDE.md (chicken-and-egg pattern)
 
+  # Upload ảnh pet + owner avatar. Spring mặc định max-file-size 1MB → cản ảnh 10MB.
+  # Theo decision project: 10MB/file (+overhead form → 11MB request). Mirror vets-service.
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
+# S3-compatible storage (MinIO ở compose profile `storage`). 1 bucket cho service này:
+# `pet-photos` chứa cả ảnh pet (key pets/<id>) lẫn owner avatar (key owners/<id>),
+# phân biệt bằng prefix. Override -prod cho AWS S3 thật.
+#
 # RBAC — Least Privilege (slide MSS301 #70). Áp bởi EndpointSecurityCustomizer.
 # Customers data nhạy cảm (PII) → siết hơn vets:
 #   - Mọi USER xem được pet (FE owner page hiển thị pet của mình)
 #   - List owners + create/delete owner → STAFF/ADMIN (không cho self-signup tạo owner record)
 petclinic:
+  storage:
+    minio:
+      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}
+      bucket: ${MINIO_BUCKET:pet-photos}
+      presigned-ttl: PT1H
+      max-file-size-bytes: 10485760  # 10 MB
   security:
     endpoints:
       # Authenticated USER xem được catalog pet + pet types (cho dropdown FE)
@@ -28,9 +47,11 @@ petclinic:
         - { method: GET, path: /api/v1/pet-types/** }
         - { method: GET, path: /api/v1/owners/me }
         - { method: PATCH, path: /api/v1/owners/me }
+        - { method: PUT, path: /api/v1/owners/me/avatar }      # upload avatar chủ nuôi
+        - { method: DELETE, path: /api/v1/owners/me/avatar }   # xoá avatar chủ nuôi
         - { method: POST, path: /api/v1/owners/me/pets }
-        - { method: PUT, path: /api/v1/owners/me/pets/** }
-        - { method: DELETE, path: /api/v1/owners/me/pets/** }
+        - { method: PUT, path: /api/v1/owners/me/pets/** }     # gồm /owners/me/pets/{id}/photo
+        - { method: DELETE, path: /api/v1/owners/me/pets/** }  # gồm /owners/me/pets/{id}/photo
         - { method: GET, path: /api/v1/owners/* }     # USER pass filter chain; @PreAuthorize trên controller siết per-instance ownership (chỉ xem record của mình)
       # Staff vận hành owner records — tạo, list, xem detail
       staff:

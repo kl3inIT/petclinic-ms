@@ -1,5 +1,8 @@
 package com.mss301.petclinic.customers.repository;
 
+import java.util.Objects;
+import java.util.stream.Stream;
+
 import org.springframework.data.jpa.domain.Specification;
 
 import com.mss301.petclinic.customers.model.Pet;
@@ -14,10 +17,13 @@ public final class PetSpecifications {
     private PetSpecifications() {}
 
     public static Specification<Pet> withFilters(Long ownerId, Long petTypeId, Boolean isActive) {
+        // Lọc null trước khi gộp: Spring Data (Boot 4) không còn cho null trong
+        // allOf/and ("Other specification must not be null"). allOf(emptyList) =
+        // unrestricted (match-all) khi không có filter nào.
         return Specification.allOf(
-                ownerIdEq(ownerId),
-                petTypeIdEq(petTypeId),
-                isActiveEq(isActive));
+                Stream.of(ownerIdEq(ownerId), petTypeIdEq(petTypeId), isActiveEq(isActive))
+                        .filter(Objects::nonNull)
+                        .toList());
     }
 
     public static Specification<Pet> ownerIdEq(Long ownerId) {

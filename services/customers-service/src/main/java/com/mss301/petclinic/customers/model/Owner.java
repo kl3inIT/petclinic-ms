@@ -43,6 +43,11 @@ public class Owner extends AbstractAuditingEntity {
     private String city;
     private String telephone;
 
+    /** MinIO object key của avatar chủ nuôi (key {@code owners/<id>}). Null = chưa upload.
+     *  Binary nằm ở MinIO; entity chỉ giữ key. Presigned URL sinh ở service layer. */
+    @Column(name = "avatar_object_key", length = 255)
+    private String avatarObjectKey;
+
     // Unidirectional one-to-many — Pet không có back-reference Owner để JSON serialize đơn giản.
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "owner_id")
@@ -67,6 +72,7 @@ public class Owner extends AbstractAuditingEntity {
     public String getAddress() { return address; }
     public String getCity() { return city; }
     public String getTelephone() { return telephone; }
+    public String getAvatarObjectKey() { return avatarObjectKey; }
     public List<Pet> getPets() { return pets; }
 
     public void setFirstName(String firstName) { this.firstName = firstName; }
@@ -74,6 +80,7 @@ public class Owner extends AbstractAuditingEntity {
     public void setAddress(String address) { this.address = address; }
     public void setCity(String city) { this.city = city; }
     public void setTelephone(String telephone) { this.telephone = telephone; }
+    public void setAvatarObjectKey(String avatarObjectKey) { this.avatarObjectKey = avatarObjectKey; }
 
     public void addPet(Pet pet) { this.pets.add(pet); }
     public void removePet(Pet pet) { this.pets.remove(pet); }

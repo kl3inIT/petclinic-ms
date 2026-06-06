@@ -28,6 +28,67 @@ export function formatPetBreed(breed?: string | null): string | null {
   return PET_SPECIES_LABEL[breed.toLowerCase()] ?? breed;
 }
 
+/** Map loại pet (text từ Pet.type) → emoji hiển thị. Fallback dấu chân chung. */
+export function petEmoji(type?: string | null): string {
+  const t = (type ?? '').toLowerCase();
+  if (t.includes('dog') || t.includes('chó')) return '🐶';
+  if (t.includes('cat') || t.includes('mèo')) return '🐱';
+  if (t.includes('rabbit') || t.includes('thỏ')) return '🐰';
+  if (t.includes('bird') || t.includes('chim')) return '🐦';
+  if (t.includes('parrot') || t.includes('vẹt')) return '🦜';
+  if (t.includes('hamster') || t.includes('guinea') || t.includes('chuột lang'))
+    return '🐹';
+  if (t.includes('fish') || t.includes('cá')) return '🐠';
+  if (
+    t.includes('reptile') ||
+    t.includes('bò sát') ||
+    t.includes('snake') ||
+    t.includes('rắn')
+  )
+    return '🐍';
+  if (t.includes('turtle') || t.includes('rùa')) return '🐢';
+  if (t.includes('ferret') || t.includes('chồn')) return '🦨';
+  if (t.includes('squirrel') || t.includes('sóc')) return '🐿️';
+  return '🐾';
+}
+
+/** Nhãn loài thú cưng tiếng Việt từ Pet.type free-text. Fallback giữ nguyên giá trị gốc. */
+export function petTypeLabel(type?: string | null): string {
+  const t = (type ?? '').toLowerCase();
+  if (t.includes('dog') || t.includes('chó')) return 'Chó';
+  if (t.includes('cat') || t.includes('mèo')) return 'Mèo';
+  if (t.includes('rabbit') || t.includes('thỏ')) return 'Thỏ';
+  if (t.includes('bird') || t.includes('chim')) return 'Chim';
+  if (t.includes('parrot') || t.includes('vẹt')) return 'Vẹt';
+  if (t.includes('hamster')) return 'Hamster';
+  if (t.includes('guinea') || t.includes('chuột lang')) return 'Chuột lang';
+  if (t.includes('fish') || t.includes('cá')) return 'Cá';
+  if (t.includes('reptile') || t.includes('bò sát')) return 'Bò sát';
+  if (t.includes('turtle') || t.includes('rùa')) return 'Rùa';
+  if (t.includes('snake') || t.includes('rắn')) return 'Rắn';
+  if (t.includes('ferret') || t.includes('chồn')) return 'Chồn';
+  if (t.includes('squirrel') || t.includes('sóc')) return 'Sóc';
+  return type || 'Thú cưng';
+}
+
+/** Chuyên khoa bác sĩ (BE lưu free-text tiếng Anh) → nhãn tiếng Việt. Fallback giữ nguyên (best-effort). */
+const SPECIALTY_VN: Record<string, string> = {
+  radiology: 'Chẩn đoán hình ảnh',
+  surgery: 'Ngoại khoa',
+  'internal medicine': 'Nội khoa',
+  dentistry: 'Nha khoa',
+  dermatology: 'Da liễu',
+  cardiology: 'Tim mạch',
+  oncology: 'Ung bướu',
+  neurology: 'Thần kinh',
+};
+
+/** Dịch tên chuyên khoa sang tiếng Việt; không khớp → giữ nguyên. */
+export function vnSpecialty(name?: string | null): string {
+  if (!name) return '';
+  return SPECIALTY_VN[name.toLowerCase()] ?? name;
+}
+
 /**
  * Tính nhãn tuổi từ ngày sinh ISO ("2023-04-15"). ≥12 tháng → "N tuổi", <12 tháng → "N tháng".
  * Trả null khi không có/không hợp lệ.

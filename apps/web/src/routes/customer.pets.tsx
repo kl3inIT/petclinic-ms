@@ -1,125 +1,57 @@
-import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import {
-  CalendarCheck,
-  Info,
-  PawPrint,
-  Search,
   ArrowLeft,
-  ShieldCheck,
-  Plus,
+  CalendarCheck,
+  PawPrint,
   Pencil,
+  Plus,
+  Search,
   Trash2,
-  ImagePlus,
-  X,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  useAddMyPet,
-  useGetMyOwnerProfile,
-  useRemoveMyPet,
-  useUpdateMyPet,
-} from '@/lib/api/generated/owners/owners';
+import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 import type { PetDto } from '@/lib/api/generated/model/petDto';
-import type { PetRequest } from '@/lib/api/generated/model/petRequest';
-import { PetTypeSelect } from '@/features/pet-types/PetTypeSelect';
 import { usePetTypes } from '@/features/pet-types/api';
+import { petEmoji } from '@/features/visits/labels';
+import { MyPetFormDialog } from '@/features/pets/components/MyPetFormDialog';
+import { MyPetDeleteDialog } from '@/features/pets/components/MyPetDeleteDialog';
 
 export const Route = createFileRoute('/customer/pets')({
   component: CustomerPetsPage,
 });
 
-function getPreviewablePhotoUrl(photoId?: string | null) {
-  const value = photoId?.trim();
-  if (!value) return null;
-  return /^(https?:|blob:|data:image\/)/i.test(value) ? value : null;
-}
-
-// Helper to get high-quality pet photos for maximum aesthetic impact
-function getPetPhoto(pet: {
-  name?: string;
-  type?: string;
-  id?: number;
-  photoId?: string | null;
-}) {
-  const previewablePhoto = getPreviewablePhotoUrl(pet.photoId);
-  if (previewablePhoto) return previewablePhoto;
-
-  const name = (pet.name ?? '').toLowerCase();
-  const type = (pet.type ?? '').toLowerCase();
-
-  if (name.includes('milu') || (type.includes('chó') && pet.id === 1)) {
-    return 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=300&h=300';
+/** Tuổi dẫn xuất từ birthDate thật. < 1 năm → theo tháng. */
+function petAge(birthDate?: string): string | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  if (Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let years = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth() - birth.getMonth();
+  if (now.getDate() < birth.getDate()) months -= 1;
+  if (months < 0) {
+    years -= 1;
+    months += 12;
   }
-  if (name.includes('bông') || pet.id === 2) {
-    return 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-  if (name.includes('tom') || pet.id === 3) {
-    return 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-  if (name.includes('lucky') || pet.id === 4) {
-    return 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-  if (name.includes('coco') || type.includes('thỏ') || pet.id === 5) {
-    return 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-  if (name.includes('mochi') || pet.id === 6) {
-    return 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-  if (name.includes('bruno') || pet.id === 7) {
-    return 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-  if (name.includes('ginger') || pet.id === 8) {
-    return 'https://images.unsplash.com/photo-1519052537078-e6302a4968d4?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-
-  // Default fallbacks
-  if (type.includes('chó') || type.includes('dog')) {
-    return 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-  if (type.includes('mèo') || type.includes('cat')) {
-    return 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=300&h=300';
-  }
-  return 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?auto=format&fit=crop&q=80&w=300&h=300';
-}
-
-function getPetBreed(pet: { name?: string; type?: string }) {
-  const name = (pet.name ?? '').toLowerCase();
-  const type = (pet.type ?? '').toLowerCase();
-  if (name.includes('milu')) return 'Golden Retriever';
-  if (name.includes('bông')) return 'Anh lông ngắn';
-  if (name.includes('tom')) return 'Poodle';
-  if (name.includes('lucky')) return 'Ba Tư';
-  if (name.includes('coco')) return 'Netherland Dwarf';
-  if (name.includes('mochi')) return 'Munchkin';
-  if (name.includes('bruno')) return 'Pug';
-  if (name.includes('ginger')) return 'Mèo ta';
-
-  if (type.includes('chó')) return 'Phối giống';
-  if (type.includes('mèo')) return 'Mèo Anh';
-  return 'Khác';
+  if (years < 1) return months <= 0 ? '< 1 tháng' : `${months} tháng`;
+  return `${years} tuổi`;
 }
 
 function CustomerPetsPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [formOpen, setFormOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<PetDto | null>(null);
-  const [petDialogOpen, setPetDialogOpen] = useState(false);
+  const [deletingPet, setDeletingPet] = useState<PetDto | null>(null);
+
   const ownerQuery = useGetMyOwnerProfile();
-  const removePet = useRemoveMyPet();
-  const petTypesQuery = usePetTypes();
   const ownerLoading = ownerQuery.isLoading || ownerQuery.isError;
+  const petTypesQuery = usePetTypes();
+
   const petTypeLabel = useMemo(() => {
     const byId = new Map((petTypesQuery.data ?? []).map((pt) => [pt.id, pt.name]));
     return (id?: number | null) =>
@@ -145,466 +77,180 @@ function CustomerPetsPage() {
     );
   }, [petTypeLabel, pets, searchTerm]);
 
+  const openCreate = () => {
+    setEditingPet(null);
+    setFormOpen(true);
+  };
+  const openEdit = (pet: PetDto) => {
+    setEditingPet(pet);
+    setFormOpen(true);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50/50 py-8 font-sans text-slate-800 antialiased">
-      <div className="mx-auto max-w-[1000px] space-y-8 px-4">
-        {/* Header */}
-        <div className="relative flex items-center justify-between border-b border-slate-100 pb-5">
+    <div className="mx-auto max-w-4xl">
+      {/* Header */}
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
           <Button
             asChild
             variant="ghost"
-            className="-ml-2 gap-2 rounded-xl font-semibold text-slate-500 transition-colors hover:text-slate-900"
+            size="sm"
+            className="mb-2 -ml-2 h-8 gap-1.5 text-muted-foreground"
           >
             <Link to="/customer">
               <ArrowLeft className="size-4" /> Quay lại
             </Link>
           </Button>
-
-          <div className="absolute left-1/2 -translate-x-1/2 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-[0_4px_12px_rgba(79,70,229,0.3)]">
-                <PawPrint className="size-5 fill-white" />
-              </span>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                Thú cưng của tôi
-              </h1>
-            </div>
-            <p className="mt-1.5 text-[12px] font-bold tracking-wide text-slate-400 uppercase">
-              Quản lý hồ sơ các bé — phục vụ đặt lịch khám nhanh chóng.
-            </p>
-          </div>
-
-          <Button
-            className="gap-1.5 rounded-full bg-indigo-600 font-bold text-white shadow-sm transition-all hover:bg-indigo-700"
-            onClick={() => {
-              setEditingPet(null);
-              setPetDialogOpen(true);
-            }}
-          >
-            <Plus className="size-4" /> Thêm thú cưng
-          </Button>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Thú cưng của tôi
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Quản lý hồ sơ các bé để đặt lịch khám nhanh hơn.
+          </p>
         </div>
+        <Button className="gap-1.5" onClick={openCreate}>
+          <Plus className="size-4" /> Thêm thú cưng
+        </Button>
+      </div>
 
-        {/* Info Card - Beautiful Gradient border and soft background */}
-        <div className="flex items-start gap-4 rounded-[24px] border border-indigo-100 bg-indigo-50/40 p-5 shadow-sm">
-          <div className="mt-0.5 shrink-0 rounded-lg border border-indigo-100 bg-white p-1 text-indigo-500 shadow-sm">
-            <Info className="size-5" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-indigo-950">Thông tin hồ sơ thú cưng</p>
-            <p className="text-[13px] leading-relaxed font-semibold text-indigo-900/80">
-              Hồ sơ thú cưng được đồng bộ trực tiếp từ cơ sở dữ liệu phòng khám khi bạn
-              đến thăm khám lần đầu. Để cập nhật thông tin hoặc tạo hồ sơ cho bé mới, vui
-              lòng liên hệ quầy lễ tân hoặc hotline{' '}
-              <span className="font-extrabold text-indigo-700">1900 8268</span>.
-            </p>
-          </div>
+      {/* Toolbar */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Tìm theo tên, loài, giống…"
+            className="h-10 pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
+        <p className="text-sm text-muted-foreground">
+          {ownerLoading ? '…' : `${pets.length} thú cưng`}
+        </p>
+      </div>
 
-        {/* Pet List Section */}
-        <div className="space-y-6 rounded-[32px] border border-slate-100 bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.02)] sm:p-8">
-          <div className="flex flex-col items-center justify-between gap-4 border-b border-slate-100 pb-6 sm:flex-row">
-            <div className="relative w-full sm:max-w-md">
-              <Search className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Tìm kiếm thú cưng..."
-                className="h-11 rounded-xl border-slate-200 bg-slate-50/50 pl-10 font-medium focus-visible:bg-white focus-visible:ring-indigo-600"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <p className="text-sm font-bold tracking-wide text-slate-500 uppercase">
-              Tổng cộng:{' '}
-              <span className="font-extrabold text-indigo-600">{pets.length}</span> bé thú
-              cưng
-            </p>
-          </div>
-
-          {ownerLoading ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-[180px] w-full rounded-2xl" />
-              ))}
-            </div>
-          ) : filteredPets.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-[24px] border-2 border-dashed border-slate-200 bg-slate-50/50 py-16 text-center">
-              <PawPrint className="size-16 text-slate-300" />
-              <div>
-                <p className="text-lg font-bold text-slate-700">Chưa có hồ sơ thú cưng</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Liên hệ phòng khám để được cập nhật và tạo hồ sơ cho bé.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {filteredPets.map((p, idx) => {
-                const displayBreed = p.type?.trim() || getPetBreed(p);
-                const displayPhoto = getPetPhoto(p);
-                const age = p.birthDate
-                  ? `${new Date().getFullYear() - parseInt(p.birthDate.substring(0, 4))} tuổi`
-                  : 'N/A';
-                const gender = (p.id ?? idx) % 2 === 0 ? 'Cái' : 'Đực';
-
-                return (
-                  <div
-                    key={p.id}
-                    className="group relative flex gap-4.5 rounded-[24px] border border-slate-100 bg-white p-5 text-left transition-all duration-300 hover:border-indigo-200 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)]"
-                  >
-                    {/* Pet Photo Box */}
-                    <div className="relative size-28 shrink-0 overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
-                      <img
-                        src={displayPhoto}
-                        alt={p.name}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-
-                    {/* Info and Actions */}
-                    <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-                      <div>
-                        <div className="flex items-start justify-between">
-                          <h4 className="truncate pr-2 text-lg leading-snug font-extrabold text-slate-800">
-                            {p.name ?? '—'}
-                          </h4>
-                          <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-400">
-                            #{p.id}
-                          </span>
-                        </div>
-
-                        <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-bold text-slate-500">
-                          <PawPrint className="size-3.5 text-slate-400" />
-                          {petTypeLabel(p.petTypeId)} • {displayBreed}
-                        </p>
-
-                        <p className="mt-1 text-[12px] font-bold text-slate-500">
-                          {age} • {gender}
-                        </p>
-
-                        <p className="mt-1 text-[12px] font-bold text-slate-500">
-                          Giống: {displayBreed} • Cân nặng:{' '}
-                          {p.weight != null ? `${p.weight} kg` : 'N/A'}
-                        </p>
-
-                        <div className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-100/30 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-black text-emerald-600">
-                          <ShieldCheck className="size-3.5 fill-emerald-100 text-emerald-600" />{' '}
-                          Đã tiêm vaccine
-                        </div>
-                      </div>
-
-                      {/* Booking Action button */}
-                      <div className="mt-4 grid grid-cols-[1fr_auto_auto] gap-2 border-t border-dashed border-slate-100 pt-4">
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="sm"
-                          className="h-9.5 gap-1.5 rounded-xl bg-indigo-50/50 font-bold text-indigo-600 shadow-sm transition-all hover:bg-indigo-600 hover:text-white"
-                        >
-                          <Link to="/customer/book" search={{ petId: p.id }}>
-                            <CalendarCheck className="size-4" /> Đặt lịch khám
-                          </Link>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="size-9.5 rounded-xl border-slate-200 text-slate-600"
-                          onClick={() => {
-                            setEditingPet(p);
-                            setPetDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="size-9.5 rounded-xl border-rose-100 text-rose-600 hover:bg-rose-50"
-                          disabled={removePet.isPending}
-                          onClick={() => {
-                            if (!p.id) return;
-                            if (!window.confirm(`Xóa hồ sơ ${p.name ?? `#${p.id}`}?`))
-                              return;
-                            removePet.mutate(
-                              { petId: p.id },
-                              {
-                                onSuccess: () => toast.success('Đã xóa hồ sơ thú cưng'),
-                                onError: (err) =>
-                                  toast.error(
-                                    (err as Error).message || 'Xóa thú cưng thất bại',
-                                  ),
-                              },
-                            );
-                          }}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+      {/* List */}
+      {ownerLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[132px] rounded-xl" />
+          ))}
+        </div>
+      ) : filteredPets.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/30 px-6 py-16 text-center">
+          <PawPrint className="size-10 text-muted-foreground/40" />
+          <p className="text-sm font-medium text-muted-foreground">
+            {searchTerm ? 'Không tìm thấy thú cưng phù hợp' : 'Chưa có hồ sơ thú cưng'}
+          </p>
+          {!searchTerm && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-1 gap-1.5"
+              onClick={openCreate}
+            >
+              <Plus className="size-4" /> Thêm bé đầu tiên
+            </Button>
           )}
         </div>
-      </div>
-      <PetEditorDialog
-        open={petDialogOpen}
-        pet={editingPet}
-        onOpenChange={setPetDialogOpen}
-      />
-    </div>
-  );
-}
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {filteredPets.map((p) => {
+            const age = petAge(p.birthDate);
+            const meta = [petTypeLabel(p.petTypeId), p.type?.trim() || null]
+              .filter(Boolean)
+              .join(' • ');
+            const subMeta = [age, p.weight != null ? `${p.weight} kg` : null]
+              .filter(Boolean)
+              .join(' • ');
 
-function PetEditorDialog({
-  open,
-  pet,
-  onOpenChange,
-}: {
-  open: boolean;
-  pet: PetDto | null;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const addPet = useAddMyPet();
-  const updatePet = useUpdateMyPet();
-  const [form, setForm] = useState<PetRequest>({
-    name: '',
-    birthDate: '',
-    type: '',
-    petTypeId: undefined,
-    isActive: true,
-    weight: undefined,
-    photoId: '',
-  });
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
-  const [selectedPhotoName, setSelectedPhotoName] = useState('');
-
-  useEffect(() => {
-    if (!open) return;
-    setForm({
-      name: pet?.name ?? '',
-      birthDate: pet?.birthDate ?? '',
-      type: pet?.type ?? '',
-      petTypeId: pet?.petTypeId ?? undefined,
-      isActive: pet?.isActive ?? true,
-      weight: pet?.weight,
-      photoId: pet?.photoId ?? '',
-    });
-    setPhotoPreviewUrl(getPreviewablePhotoUrl(pet?.photoId));
-    setSelectedPhotoName(pet?.photoId ?? '');
-  }, [open, pet]);
-
-  useEffect(() => {
-    return () => {
-      if (photoPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(photoPreviewUrl);
-    };
-  }, [photoPreviewUrl]);
-
-  const handlePhotoFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Vui lòng chọn file ảnh');
-      event.target.value = '';
-      return;
-    }
-
-    const nextPreviewUrl = URL.createObjectURL(file);
-    setPhotoPreviewUrl(nextPreviewUrl);
-    setSelectedPhotoName(file.name);
-    setForm((prev) => ({ ...prev, photoId: file.name }));
-  };
-
-  const pending = addPet.isPending || updatePet.isPending;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{pet ? 'Sửa hồ sơ thú cưng' : 'Thêm thú cưng'}</DialogTitle>
-        </DialogHeader>
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const payload = {
-              name: form.name.trim(),
-              birthDate: form.birthDate || undefined,
-              type: form.type.trim(),
-              petTypeId: form.petTypeId ?? undefined,
-              isActive: form.isActive ?? true,
-              weight: form.weight,
-              photoId: form.photoId?.trim() || undefined,
-            };
-            if (!payload.name || !payload.petTypeId || !payload.type) {
-              toast.error('Vui lòng nhập tên, loài pet và giống');
-              return;
-            }
-            if (pet?.id) {
-              updatePet.mutate(
-                { petId: pet.id, data: payload },
-                {
-                  onSuccess: () => {
-                    toast.success('Đã cập nhật hồ sơ thú cưng');
-                    onOpenChange(false);
-                  },
-                  onError: (err) =>
-                    toast.error((err as Error).message || 'Cập nhật thú cưng thất bại'),
-                },
-              );
-            } else {
-              addPet.mutate(
-                { data: payload },
-                {
-                  onSuccess: () => {
-                    toast.success('Đã thêm thú cưng');
-                    onOpenChange(false);
-                  },
-                  onError: (err) =>
-                    toast.error((err as Error).message || 'Thêm thú cưng thất bại'),
-                },
-              );
-            }
-          }}
-        >
-          <div className="space-y-2">
-            <Label htmlFor="pet-name">Tên</Label>
-            <Input
-              id="pet-name"
-              value={form.name}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, name: event.target.value }))
-              }
-              placeholder="Milu"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pet-type-id">Loài pet</Label>
-            <PetTypeSelect
-              id="pet-type-id"
-              value={form.petTypeId}
-              onChange={(v) => setForm((prev) => ({ ...prev, petTypeId: v }))}
-              placeholder="Chọn chó, mèo, thỏ..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pet-type">Giống</Label>
-            <Input
-              id="pet-type"
-              value={form.type}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, type: event.target.value }))
-              }
-              placeholder="Golden Retriever, Mèo Anh lông ngắn..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pet-birth-date">Ngày sinh</Label>
-            <Input
-              id="pet-birth-date"
-              type="date"
-              value={form.birthDate ?? ''}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, birthDate: event.target.value }))
-              }
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="pet-weight">Weight (kg)</Label>
-              <Input
-                id="pet-weight"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.weight ?? ''}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    weight:
-                      event.target.value === '' ? undefined : Number(event.target.value),
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pet-active">Active</Label>
-              <select
-                id="pet-active"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={form.isActive === false ? 'false' : 'true'}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    isActive: event.target.value === 'true',
-                  }))
-                }
+            return (
+              <div
+                key={p.id}
+                className="flex flex-col rounded-xl border bg-card p-4 shadow-sm transition-colors hover:border-primary/40"
               >
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pet-photo">Ảnh thú cưng</Label>
-            <div className="grid gap-3 sm:grid-cols-[132px_1fr]">
-              <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-200 bg-slate-50">
-                {photoPreviewUrl ? (
-                  <img
-                    src={photoPreviewUrl}
-                    alt={form.name || 'Ảnh thú cưng'}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-slate-400">
-                    <ImagePlus className="size-8" />
-                    <span className="text-xs font-semibold">Chưa có ảnh</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col justify-center gap-3">
-                <Input
-                  id="pet-photo"
-                  type="file"
-                  accept="image/*"
-                  className="cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-indigo-700"
-                  onChange={handlePhotoFileChange}
-                />
-                <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
-                  <span className="truncate">
-                    {selectedPhotoName || 'Chọn ảnh để xem preview trước khi lưu'}
+                <div className="flex gap-3.5">
+                  <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-accent text-2xl text-accent-foreground">
+                    {p.photoUrl ? (
+                      <img
+                        src={p.photoUrl}
+                        alt={p.name ?? 'Thú cưng'}
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      petEmoji(p.type)
+                    )}
                   </span>
-                  {(photoPreviewUrl || selectedPhotoName) && (
-                    <button
-                      type="button"
-                      className="shrink-0 rounded-md p-1 text-slate-500 hover:bg-white hover:text-rose-600"
-                      onClick={() => {
-                        setPhotoPreviewUrl(null);
-                        setSelectedPhotoName('');
-                        setForm((prev) => ({ ...prev, photoId: '' }));
-                      }}
-                      aria-label="Xóa ảnh đã chọn"
-                    >
-                      <X className="size-4" />
-                    </button>
-                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="truncate text-base font-semibold text-foreground">
+                        {p.name ?? '—'}
+                      </h3>
+                      <Badge
+                        variant={p.isActive ? 'secondary' : 'outline'}
+                        className={
+                          p.isActive
+                            ? 'bg-success/10 text-success'
+                            : 'text-muted-foreground'
+                        }
+                      >
+                        {p.isActive ? 'Đang nuôi' : 'Tạm ngừng'}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 truncate text-sm text-muted-foreground">{meta}</p>
+                    {subMeta && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {subMeta}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center gap-2 border-t pt-3">
+                  <Button asChild variant="outline" size="sm" className="flex-1 gap-1.5">
+                    <Link to="/customer/book" search={{ petId: p.id }}>
+                      <CalendarCheck className="size-4" /> Đặt lịch
+                    </Link>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground"
+                    aria-label="Sửa"
+                    onClick={() => openEdit(p)}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="Xóa"
+                    onClick={() => setDeletingPet(p)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
               </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Hủy
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Đang lưu...' : 'Lưu'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            );
+          })}
+        </div>
+      )}
+
+      <MyPetFormDialog
+        open={formOpen}
+        pet={editingPet}
+        onOpenChange={(o) => {
+          setFormOpen(o);
+          if (!o) setEditingPet(null);
+        }}
+      />
+      <MyPetDeleteDialog
+        pet={deletingPet}
+        onOpenChange={(o) => !o && setDeletingPet(null)}
+      />
+    </div>
   );
 }

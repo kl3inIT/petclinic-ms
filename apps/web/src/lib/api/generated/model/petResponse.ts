@@ -15,5 +15,6 @@ export interface PetResponse {
   isActive?: boolean;
   weight?: number;
   photoId?: string;
+  photoUrl?: string;
   ownerId?: number;
 }

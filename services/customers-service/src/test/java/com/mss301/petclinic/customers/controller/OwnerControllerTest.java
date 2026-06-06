@@ -57,7 +57,7 @@ class OwnerControllerTest {
     @Test
     @DisplayName("GET /api/v1/owners — authenticated user → returns paged owners")
     void listOwners_authenticated_returnsPage() throws Exception {
-        var owner = new OwnerResponse(1L, "Anh", "Nguyễn", "12 Lê Lợi", "Hồ Chí Minh", "0901111001", List.of());
+        var owner = new OwnerResponse(1L, "Anh", "Nguyễn", "12 Lê Lợi", "Hồ Chí Minh", "0901111001", null, List.of());
         given(service.findAll(any(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of(owner)));
 

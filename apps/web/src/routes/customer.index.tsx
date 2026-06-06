@@ -19,6 +19,10 @@ import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 import type { VisitResponse } from '@/lib/api/generated/model';
 import { SearchVisitsStatus } from '@/lib/api/generated/model';
 import { useSearchVisits } from '@/lib/api/generated/visits/visits';
+import { useVetMap, type VetInfo } from '@/features/vets/useVetMap';
+import { VetAvatar } from '@/features/vet-me/components/VetAvatar';
+import { VisitStatusBadge } from '@/features/visits/components/VisitStatusBadge';
+import { petEmoji } from '@/features/visits/labels';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/customer/')({
@@ -42,14 +46,9 @@ const timeFmt = new Intl.DateTimeFormat('vi-VN', {
   minute: '2-digit',
 });
 
-const petPhotos = [
-  'https://images.unsplash.com/photo-1558788353-f76d92427f16?w=160&q=80&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=160&q=80&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=160&q=80&auto=format&fit=crop',
-];
-
 function CustomerDashboard() {
   const user = useAuthStore((s) => s.user);
+  const { vetMap } = useVetMap();
 
   const upcomingQuery = useSearchVisits({
     pageable: { page: 0, size: 5, sort: ['scheduledAt,asc'] },
@@ -68,6 +67,7 @@ function CustomerDashboard() {
   const ownerLoading = ownerQuery.isLoading || ownerQuery.isError;
 
   const petNameById = new Map(pets.map((pet) => [pet.id, pet.name ?? `Pet #${pet.id}`]));
+  const petPhotoById = new Map(pets.map((pet) => [pet.id, pet.photoUrl ?? null]));
   const firstUpcoming = upcoming[0];
 
   return (
@@ -139,7 +139,12 @@ function CustomerDashboard() {
             <ListSkeleton />
           ) : firstUpcoming ? (
             <>
-              <VisitPreview visit={firstUpcoming} petNameById={petNameById} />
+              <VisitPreview
+                visit={firstUpcoming}
+                petNameById={petNameById}
+                petPhotoById={petPhotoById}
+                vetMap={vetMap}
+              />
               <Link
                 to="/customer/book"
                 className="flex items-center gap-4 rounded-2xl border border-dashed border-violet-300 bg-violet-50/40 p-4 text-violet-700 transition hover:bg-violet-50"
@@ -169,14 +174,17 @@ function CustomerDashboard() {
             <ListSkeleton />
           ) : recent.length > 0 ? (
             <>
-              <VisitMini visit={recent[0]!} petNameById={petNameById} />
+              <VisitMini
+                visit={recent[0]!}
+                petNameById={petNameById}
+                petPhotoById={petPhotoById}
+              />
               <div className="divide-y divide-slate-100">
                 {recent.slice(0, 3).map((visit, index) => (
                   <ActivityItem
                     key={visit.id ?? index}
                     visit={visit}
                     petName={petNameById.get(visit.petId) ?? `Pet #${visit.petId ?? '-'}`}
-                    index={index}
                   />
                 ))}
               </div>
@@ -220,11 +228,7 @@ function CustomerDashboard() {
             </Button>
           </div>
         </div>
-        <img
-          src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=520&q=80&auto=format&fit=crop"
-          alt=""
-          className="pointer-events-none absolute right-14 bottom-0 hidden h-32 w-72 rounded-t-[36px] object-cover object-top opacity-80 mix-blend-multiply lg:block"
-        />
+        <PawPrint className="pointer-events-none absolute right-12 bottom-2 hidden size-40 text-violet-300/40 lg:block" />
       </section>
     </div>
   );
@@ -315,13 +319,21 @@ function DashboardPanel({
 function VisitPreview({
   visit,
   petNameById,
+  petPhotoById,
+  vetMap,
 }: {
   visit: VisitResponse;
   petNameById: Map<number | undefined, string>;
+  petPhotoById: Map<number | undefined, string | null>;
+  vetMap: Map<number, VetInfo>;
 }) {
   const date = visit.scheduledAt ? new Date(visit.scheduledAt) : undefined;
   const parts = getDateParts(date);
   const petName = petNameById.get(visit.petId) ?? `Pet #${visit.petId ?? '-'}`;
+  const petPhoto = petPhotoById.get(visit.petId) ?? null;
+  const vet = visit.vetId !== undefined ? vetMap.get(visit.vetId) : undefined;
+  const doctorName =
+    visit.vetId !== undefined ? (vet?.fullName ?? `BS #${visit.vetId}`) : null;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -336,11 +348,13 @@ function VisitPreview({
             <p className="text-lg font-black text-slate-950">
               {date ? timeFmt.format(date) : '--:--'}
             </p>
-            <img
-              src={petPhotos[0]}
-              alt=""
-              className="size-12 rounded-full border-2 border-white object-cover shadow-md"
-            />
+            <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white bg-gradient-to-br from-amber-100 to-orange-200 text-2xl shadow-md">
+              {petPhoto ? (
+                <img src={petPhoto} alt={petName} className="size-full object-cover" />
+              ) : (
+                petEmoji(visit.petBreed)
+              )}
+            </span>
             <div>
               <p className="font-black text-slate-950">{petName}</p>
               <p className="text-xs font-semibold text-slate-500">
@@ -348,24 +362,26 @@ function VisitPreview({
               </p>
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-4">
-            <img
-              src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=120&q=80&auto=format&fit=crop"
-              alt=""
-              className="size-10 rounded-full object-cover"
-            />
-            <div>
-              <p className="text-sm font-bold text-slate-800">BS. Mai Phạm</p>
-              <p className="text-xs font-medium text-slate-500">
-                {visit.reason || 'Khám tổng quát'}
-              </p>
+          {doctorName ? (
+            <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-4">
+              <VetAvatar
+                firstName={vet?.firstName}
+                lastName={vet?.lastName}
+                photoUrl={vet?.photoUrl}
+                size="md"
+                className="size-10 text-sm"
+              />
+              <div>
+                <p className="text-sm font-bold text-slate-800">{doctorName}</p>
+                <p className="text-xs font-medium text-slate-500">
+                  {visit.reason || vet?.specialty || 'Khám thú cưng'}
+                </p>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
         <div className="flex flex-col items-start gap-4 sm:items-end">
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
-            Đã đặt
-          </span>
+          {visit.status ? <VisitStatusBadge status={visit.status} /> : null}
           <Button
             asChild
             variant="ghost"
@@ -383,13 +399,16 @@ function VisitPreview({
 function VisitMini({
   visit,
   petNameById,
+  petPhotoById,
 }: {
   visit: VisitResponse;
   petNameById: Map<number | undefined, string>;
+  petPhotoById: Map<number | undefined, string | null>;
 }) {
   const date = visit.scheduledAt ? new Date(visit.scheduledAt) : undefined;
   const parts = getDateParts(date);
   const petName = petNameById.get(visit.petId) ?? `Pet #${visit.petId ?? '-'}`;
+  const petPhoto = petPhotoById.get(visit.petId) ?? null;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
@@ -408,43 +427,52 @@ function VisitMini({
               {date ? dateShortFmt.format(date) : '-'}
             </p>
           </div>
-          <img
-            src={petPhotos[1]}
-            alt=""
-            className="size-12 rounded-full border-2 border-white object-cover shadow-sm"
-          />
+          <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white bg-gradient-to-br from-amber-100 to-orange-200 text-2xl shadow-sm">
+            {petPhoto ? (
+              <img src={petPhoto} alt={petName} className="size-full object-cover" />
+            ) : (
+              petEmoji(visit.petBreed)
+            )}
+          </span>
           <div className="min-w-0">
             <p className="truncate font-black text-slate-950">{petName}</p>
             <p className="truncate text-xs font-medium text-slate-500">
-              {visit.reason || 'Khám tổng quát'}
+              {visit.reason || 'Khám thú cưng'}
             </p>
           </div>
         </div>
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
-          Đã đặt
-        </span>
+        {visit.status ? <VisitStatusBadge status={visit.status} /> : null}
       </div>
     </div>
   );
 }
 
-function ActivityItem({
-  visit,
-  petName,
-  index,
-}: {
-  visit: VisitResponse;
-  petName: string;
-  index: number;
-}) {
+const ACTIVITY_META: Record<
+  SearchVisitsStatus,
+  { label: string; icon: typeof CalendarCheck; color: string }
+> = {
+  SCHEDULED: {
+    label: 'Đặt lịch khám',
+    icon: CalendarCheck,
+    color: 'text-blue-600 bg-blue-50',
+  },
+  IN_PROGRESS: {
+    label: 'Đang khám',
+    icon: FilePenLine,
+    color: 'text-violet-600 bg-violet-50',
+  },
+  COMPLETED: {
+    label: 'Hoàn thành khám',
+    icon: CheckCircle2,
+    color: 'text-emerald-600 bg-emerald-50',
+  },
+  CANCELLED: { label: 'Đã huỷ lịch', icon: Clock3, color: 'text-slate-500 bg-slate-100' },
+};
+
+function ActivityItem({ visit, petName }: { visit: VisitResponse; petName: string }) {
   const date = visit.scheduledAt ? new Date(visit.scheduledAt) : undefined;
-  const Icon = index === 1 ? FilePenLine : index === 2 ? CalendarCheck : CheckCircle2;
-  const color =
-    index === 1
-      ? 'text-violet-600 bg-violet-50'
-      : index === 2
-        ? 'text-blue-600 bg-blue-50'
-        : 'text-emerald-600 bg-emerald-50';
+  const meta = ACTIVITY_META[visit.status ?? SearchVisitsStatus.SCHEDULED];
+  const Icon = meta.icon;
 
   return (
     <div className="flex items-center justify-between gap-4 py-3">
@@ -452,15 +480,13 @@ function ActivityItem({
         <span
           className={cn(
             'flex size-8 shrink-0 items-center justify-center rounded-full',
-            color,
+            meta.color,
           )}
         >
           <Icon className="size-4" />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-slate-800">
-            {index === 1 ? 'Cập nhật hồ sơ thú cưng' : 'Đặt lịch thành công'}
-          </p>
+          <p className="truncate text-sm font-bold text-slate-800">{meta.label}</p>
           <p className="truncate text-xs font-medium text-slate-500">
             {petName}
             {visit.reason ? ` - ${visit.reason}` : ''}

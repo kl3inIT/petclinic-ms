@@ -30,6 +30,8 @@ import type {
   PageOwnerResponse,
   PetRequest,
   UpdateOwnerRequest,
+  UploadMyOwnerAvatarBody,
+  UploadMyPetPhotoBody,
 } from '.././model';
 
 import { apiMutator } from '../../mutator';
@@ -1461,6 +1463,322 @@ export const useUpdateMyOwnerProfile = <TError = ErrorType<unknown>, TContext = 
   TContext
 > => {
   const mutationOptions = getUpdateMyOwnerProfileMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Multipart field 'file'. Max 10MB, image/jpeg|png|webp.
+ * @summary Upload/replace avatar của current customer
+ */
+export const uploadMyOwnerAvatar = (
+  uploadMyOwnerAvatarBody: BodyType<UploadMyOwnerAvatarBody>,
+) => {
+  const formData = new FormData();
+  formData.append(`file`, uploadMyOwnerAvatarBody.file);
+
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/me/avatar`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data: formData,
+  });
+};
+
+export const getUploadMyOwnerAvatarMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadMyOwnerAvatar>>,
+    TError,
+    { data: BodyType<UploadMyOwnerAvatarBody> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadMyOwnerAvatar>>,
+  TError,
+  { data: BodyType<UploadMyOwnerAvatarBody> },
+  TContext
+> => {
+  const mutationKey = ['uploadMyOwnerAvatar'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadMyOwnerAvatar>>,
+    { data: BodyType<UploadMyOwnerAvatarBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadMyOwnerAvatar(data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadMyOwnerAvatarMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadMyOwnerAvatar>>
+>;
+export type UploadMyOwnerAvatarMutationBody = BodyType<UploadMyOwnerAvatarBody>;
+export type UploadMyOwnerAvatarMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Upload/replace avatar của current customer
+ */
+export const useUploadMyOwnerAvatar = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadMyOwnerAvatar>>,
+      TError,
+      { data: BodyType<UploadMyOwnerAvatarBody> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadMyOwnerAvatar>>,
+  TError,
+  { data: BodyType<UploadMyOwnerAvatarBody> },
+  TContext
+> => {
+  const mutationOptions = getUploadMyOwnerAvatarMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Xoá avatar của current customer
+ */
+export const deleteMyOwnerAvatar = () => {
+  return apiMutator<OwnerResponse>({ url: `/api/v1/owners/me/avatar`, method: 'DELETE' });
+};
+
+export const getDeleteMyOwnerAvatarMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMyOwnerAvatar>>,
+    TError,
+    void,
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteMyOwnerAvatar>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ['deleteMyOwnerAvatar'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteMyOwnerAvatar>>,
+    void
+  > = () => {
+    return deleteMyOwnerAvatar();
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteMyOwnerAvatarMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteMyOwnerAvatar>>
+>;
+
+export type DeleteMyOwnerAvatarMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Xoá avatar của current customer
+ */
+export const useDeleteMyOwnerAvatar = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteMyOwnerAvatar>>,
+      TError,
+      void,
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteMyOwnerAvatar>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationOptions = getDeleteMyOwnerAvatarMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Multipart field 'file'. Max 10MB, image/jpeg|png|webp.
+ * @summary Upload/replace ảnh pet của current customer
+ */
+export const uploadMyPetPhoto = (
+  petId: number,
+  uploadMyPetPhotoBody: BodyType<UploadMyPetPhotoBody>,
+) => {
+  const formData = new FormData();
+  formData.append(`file`, uploadMyPetPhotoBody.file);
+
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/me/pets/${petId}/photo`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data: formData,
+  });
+};
+
+export const getUploadMyPetPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadMyPetPhoto>>,
+    TError,
+    { petId: number; data: BodyType<UploadMyPetPhotoBody> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadMyPetPhoto>>,
+  TError,
+  { petId: number; data: BodyType<UploadMyPetPhotoBody> },
+  TContext
+> => {
+  const mutationKey = ['uploadMyPetPhoto'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadMyPetPhoto>>,
+    { petId: number; data: BodyType<UploadMyPetPhotoBody> }
+  > = (props) => {
+    const { petId, data } = props ?? {};
+
+    return uploadMyPetPhoto(petId, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadMyPetPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadMyPetPhoto>>
+>;
+export type UploadMyPetPhotoMutationBody = BodyType<UploadMyPetPhotoBody>;
+export type UploadMyPetPhotoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Upload/replace ảnh pet của current customer
+ */
+export const useUploadMyPetPhoto = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadMyPetPhoto>>,
+      TError,
+      { petId: number; data: BodyType<UploadMyPetPhotoBody> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadMyPetPhoto>>,
+  TError,
+  { petId: number; data: BodyType<UploadMyPetPhotoBody> },
+  TContext
+> => {
+  const mutationOptions = getUploadMyPetPhotoMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Xoá ảnh pet của current customer
+ */
+export const deleteMyPetPhoto = (petId: number) => {
+  return apiMutator<OwnerResponse>({
+    url: `/api/v1/owners/me/pets/${petId}/photo`,
+    method: 'DELETE',
+  });
+};
+
+export const getDeleteMyPetPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMyPetPhoto>>,
+    TError,
+    { petId: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteMyPetPhoto>>,
+  TError,
+  { petId: number },
+  TContext
+> => {
+  const mutationKey = ['deleteMyPetPhoto'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteMyPetPhoto>>,
+    { petId: number }
+  > = (props) => {
+    const { petId } = props ?? {};
+
+    return deleteMyPetPhoto(petId);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteMyPetPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteMyPetPhoto>>
+>;
+
+export type DeleteMyPetPhotoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Xoá ảnh pet của current customer
+ */
+export const useDeleteMyPetPhoto = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteMyPetPhoto>>,
+      TError,
+      { petId: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteMyPetPhoto>>,
+  TError,
+  { petId: number },
+  TContext
+> => {
+  const mutationOptions = getDeleteMyPetPhotoMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

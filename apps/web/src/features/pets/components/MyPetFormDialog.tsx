@@ -18,8 +18,12 @@ import { PetTypeSelect } from '@/features/pet-types/PetTypeSelect';
 import { usePetTypes } from '@/features/pet-types/api';
 import { MediaUploader } from '@/features/vets/components/MediaUploader';
 
-import { useAddPet, useUpdatePet } from '@/lib/api/generated/owners/owners';
-import { useDeletePetPhoto, useUploadPetPhoto } from '@/lib/api/generated/pets/pets';
+import {
+  useAddMyPet,
+  useDeleteMyPetPhoto,
+  useUpdateMyPet,
+  useUploadMyPetPhoto,
+} from '@/lib/api/generated/owners/owners';
 import type { PetDto } from '@/lib/api/generated/model/petDto';
 
 import { petFormSchema } from '../schemas';
@@ -27,13 +31,16 @@ import { petFormSchema } from '../schemas';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Owner ID — required cho cả add và edit (Pet thuộc Owner aggregate) */
-  ownerId: number;
-  /** null = chế độ tạo mới; Pet object = chế độ sửa */
+  /** null = tạo mới; PetDto = sửa. */
   pet?: PetDto | null;
 }
 
-export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
+/**
+ * Dialog thêm/sửa thú cưng cho CHỦ NUÔI (self-service qua `/api/v1/owners/me/pets`).
+ * vetId/ownerId resolve từ JWT ở BE — FE không cần truyền ownerId.
+ * Khác bản admin `PetFormDialog` (cần ownerId, dùng hook `/owners/{id}/pets`).
+ */
+export function MyPetFormDialog({ open, onOpenChange, pet }: Props) {
   const qc = useQueryClient();
   const isEdit = !!pet?.id;
   const petTypesQuery = usePetTypes();
@@ -49,7 +56,7 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
       },
     });
 
-  const addMutation = useAddPet({
+  const addMutation = useAddMyPet({
     mutation: {
       onSuccess: () => {
         toast.success('Đã thêm thú cưng');
@@ -61,7 +68,7 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
     },
   });
 
-  const updateMutation = useUpdatePet({
+  const updateMutation = useUpdateMyPet({
     mutation: {
       onSuccess: () => {
         toast.success('Đã cập nhật thú cưng');
@@ -81,6 +88,8 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
       petTypeId: pet?.petTypeId ?? null,
       isActive: pet?.isActive ?? true,
       weight: pet?.weight ?? null,
+      // photoId không phơi ra cho chủ nuôi (chưa có endpoint upload ảnh pet) —
+      // giữ giá trị cũ, gửi nguyên si để không mất dữ liệu khi sửa.
       photoId: pet?.photoId ?? '',
     },
     validators: { onChange: petFormSchema },
@@ -95,14 +104,14 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
         photoId: value.photoId || undefined,
       };
       if (isEdit && pet?.id != null) {
-        updateMutation.mutate({ id: ownerId, petId: pet.id, data });
+        updateMutation.mutate({ petId: pet.id, data });
       } else {
-        addMutation.mutate({ id: ownerId, data });
+        addMutation.mutate({ data });
       }
     },
   });
 
-  const uploadPhoto = useUploadPetPhoto({
+  const uploadPhoto = useUploadMyPetPhoto({
     mutation: {
       onSuccess: () => {
         toast.success('Đã cập nhật ảnh thú cưng');
@@ -112,7 +121,7 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
     },
   });
 
-  const deletePhoto = useDeletePetPhoto({
+  const deletePhoto = useDeleteMyPetPhoto({
     mutation: {
       onSuccess: () => {
         toast.success('Đã xoá ảnh thú cưng');
@@ -134,69 +143,50 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {isEdit ? `Sửa thú cưng #${pet?.id}` : 'Thêm thú cưng'}
-          </DialogTitle>
+          <DialogTitle>{isEdit ? 'Sửa hồ sơ thú cưng' : 'Thêm thú cưng'}</DialogTitle>
           <DialogDescription>
-            Tên và loại bắt buộc; chọn catalog "Loại pet" để chuẩn hóa hiển thị.
+            Tên và giống bắt buộc. Chọn "Loài" từ danh mục để hệ thống hiển thị chuẩn.
           </DialogDescription>
         </DialogHeader>
 
         <form
-          id="pet-form"
+          id="my-pet-form"
           onSubmit={(e) => {
             e.preventDefault();
             void form.handleSubmit();
           }}
           className="space-y-4"
         >
-          <div className="grid grid-cols-2 gap-3">
-            <form.Field
-              name="name"
-              children={(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>Tên *</Label>
-                  <Input
-                    id={field.name}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  <FieldError field={field} />
-                </div>
-              )}
-            />
-            <form.Field
-              name="type"
-              children={(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>Loài (free-text) *</Label>
-                  <Input
-                    id={field.name}
-                    placeholder="dog, cat, …"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                  <FieldError field={field} />
-                </div>
-              )}
-            />
-          </div>
+          <form.Field
+            name="name"
+            children={(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Tên *</Label>
+                <Input
+                  id={field.name}
+                  placeholder="VD: Milu"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                <FieldError field={field} />
+              </div>
+            )}
+          />
 
           <form.Field
             name="petTypeId"
             children={(field) => (
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Loại pet (catalog)</Label>
+                <Label htmlFor={field.name}>Loài</Label>
                 <PetTypeSelect
                   id={field.name}
                   value={field.state.value ?? undefined}
+                  placeholder="Chọn chó, mèo, thỏ…"
                   onChange={(v) => {
                     field.handleChange(v ?? null);
-                    // Auto-fill `type` free-text từ catalog code khi user chọn —
-                    // chỉ ghi đè khi field "type" đang trống hoặc khớp code cũ
-                    // (để tránh đè user input đã sửa thủ công).
+                    // Auto-fill "giống" từ code danh mục khi đang trống hoặc khớp code cũ
+                    // (không đè input user đã sửa tay).
                     const code = petTypesQuery.data?.find((pt) => pt.id === v)?.code;
                     if (code) {
                       const currentType = form.getFieldValue('type');
@@ -208,6 +198,23 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
                       }
                     }
                   }}
+                />
+                <FieldError field={field} />
+              </div>
+            )}
+          />
+
+          <form.Field
+            name="type"
+            children={(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Giống *</Label>
+                <Input
+                  id={field.name}
+                  placeholder="VD: Golden Retriever, Mèo Anh lông ngắn…"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
                 />
                 <FieldError field={field} />
               </div>
@@ -241,6 +248,7 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
                     type="number"
                     step="0.1"
                     min="0"
+                    placeholder="VD: 4.5"
                     value={field.state.value ?? ''}
                     onBlur={field.handleBlur}
                     onChange={(e) => {
@@ -253,6 +261,24 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
               )}
             />
           </div>
+
+          <form.Field
+            name="isActive"
+            children={(field) => (
+              <label className="flex items-center gap-2.5 rounded-lg border bg-muted/30 px-3 py-2.5 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-primary"
+                  checked={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.checked)}
+                />
+                <span className="font-medium text-foreground">Đang nuôi</span>
+                <span className="text-muted-foreground">
+                  — hiển thị khi đặt lịch khám
+                </span>
+              </label>
+            )}
+          />
 
           {isEdit && pet?.id != null ? (
             <div className="space-y-2">
@@ -269,7 +295,7 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
                     variant="outline"
                     size="sm"
                     disabled={deletePhoto.isPending}
-                    onClick={() => deletePhoto.mutate({ id: pet.id! })}
+                    onClick={() => deletePhoto.mutate({ petId: pet.id! })}
                   >
                     Xoá ảnh
                   </Button>
@@ -279,36 +305,30 @@ export function PetFormDialog({ open, onOpenChange, ownerId, pet }: Props) {
                 label="Kéo thả ảnh hoặc bấm để chọn"
                 busy={uploadPhoto.isPending}
                 onUpload={(file) =>
-                  uploadPhoto.mutateAsync({ id: pet.id!, data: { file } })
+                  uploadPhoto.mutateAsync({ petId: pet.id!, data: { file } })
                 }
               />
             </div>
-          ) : null}
+          ) : (
+            <p className="rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              Lưu thú cưng trước, rồi mở lại để thêm ảnh.
+            </p>
+          )}
 
-          <form.Field
-            name="isActive"
-            children={(field) => (
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="size-4"
-                  checked={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.checked)}
-                />
-                Đang hoạt động
-              </label>
-            )}
-          />
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={pending}
+            >
+              Hủy
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? 'Đang lưu…' : 'Lưu'}
+            </Button>
+          </DialogFooter>
         </form>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Hủy
-          </Button>
-          <Button type="submit" form="pet-form" disabled={pending}>
-            {pending ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : 'Tạo'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

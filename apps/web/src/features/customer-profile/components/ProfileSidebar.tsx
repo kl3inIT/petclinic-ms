@@ -5,6 +5,7 @@ import {
   CreditCard,
   Globe2,
   Headphones,
+  PawPrint,
   ShieldCheck,
   UserCircle2,
   type LucideIcon,
@@ -35,19 +36,11 @@ const menuItems: MenuItem[] = [
   { to: '/customer/profile/help', icon: CircleHelp, label: 'Trung tâm trợ giúp' },
 ];
 
-const petHero =
-  'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=520&q=80&auto=format&fit=crop';
-
 export function ProfileSidebar() {
   return (
     <aside className="self-start rounded-[22px] border border-[#ECECF5] bg-white/95 p-3 shadow-[0_22px_60px_rgba(30,30,70,0.08)] backdrop-blur lg:sticky lg:top-24">
-      <div className="relative mb-3 aspect-[4/3] overflow-hidden rounded-[18px] bg-[#7C6CF5] shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
-        <img
-          src={petHero}
-          alt=""
-          className="size-full object-cover object-center opacity-90 mix-blend-screen"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#7C6CF5]/35 via-transparent to-[#A997FF]/45" />
+      <div className="relative mb-3 grid aspect-[4/3] place-items-center overflow-hidden rounded-[18px] bg-gradient-to-br from-[#7C6CF5] via-[#8E7DF7] to-[#A997FF] shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
+        <PawPrint className="size-20 text-white/85" />
       </div>
 
       <nav className="space-y-1">

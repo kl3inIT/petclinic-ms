@@ -2,6 +2,7 @@ package com.mss301.petclinic.customers.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.mss301.petclinic.customers.dto.req.OwnerRequest;
 import com.mss301.petclinic.customers.dto.req.PetRequest;
@@ -25,4 +26,16 @@ public interface OwnerService {
     void removePet(Long ownerId, Long petId);
 
     void deleteById(Long id);
+
+    /** Upload/overwrite ảnh 1 pet thuộc owner. Trả owner đã enrich presigned URL. */
+    OwnerResponse uploadPetPhoto(Long ownerId, Long petId, MultipartFile file);
+
+    /** Xoá ảnh pet (MinIO trước, set photoId=null sau). */
+    OwnerResponse deletePetPhoto(Long ownerId, Long petId);
+
+    /** Upload/overwrite avatar chủ nuôi. */
+    OwnerResponse uploadOwnerAvatar(Long ownerId, MultipartFile file);
+
+    /** Xoá avatar chủ nuôi. */
+    OwnerResponse deleteOwnerAvatar(Long ownerId);
 }
