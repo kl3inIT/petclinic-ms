@@ -14,5 +14,6 @@ export interface OwnerResponse {
   address?: string;
   city?: string;
   telephone?: string;
+  avatarUrl?: string;
   pets?: PetDto[];
 }

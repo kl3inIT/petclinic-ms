@@ -1,5 +1,7 @@
 package com.mss301.petclinic.customers.service.impl;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -11,9 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.mss301.petclinic.common.events.DomainEvent;
 import com.mss301.petclinic.common.events.EventPublisher;
+import com.mss301.petclinic.common.storage.StorageProperties;
+import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.customers.dto.req.OwnerRequest;
 import com.mss301.petclinic.customers.dto.req.PetRequest;
 import com.mss301.petclinic.customers.dto.req.UpdateOwnerRequest;
@@ -26,6 +31,7 @@ import com.mss301.petclinic.customers.events.PetRemovedEvent;
 import com.mss301.petclinic.customers.events.PetUpdatedEvent;
 import com.mss301.petclinic.customers.exception.OwnerNotFoundException;
 import com.mss301.petclinic.customers.exception.PetNotFoundException;
+import com.mss301.petclinic.customers.model.Owner;
 import com.mss301.petclinic.customers.model.Pet;
 import com.mss301.petclinic.customers.repository.OwnerRepository;
 import com.mss301.petclinic.customers.service.OwnerService;
@@ -36,9 +42,13 @@ import com.mss301.petclinic.customers.service.PetTypeService;
 public class OwnerServiceImpl implements OwnerService {
 
     private static final Logger log = LoggerFactory.getLogger(OwnerServiceImpl.class);
+    private static final String PET_PHOTO_ENTITY = "pet-photo";
+    private static final String OWNER_AVATAR_ENTITY = "owner-avatar";
 
     private final OwnerRepository repository;
     private final PetTypeService petTypeService;
+    private final StorageService storage;
+    private final StorageProperties storageProps;
     /**
      * {@code ObjectProvider} cho phép service hoạt động khi
      * {@code petclinic.events.enabled=false} (test profile) — broker không cần.
@@ -47,10 +57,26 @@ public class OwnerServiceImpl implements OwnerService {
 
     public OwnerServiceImpl(OwnerRepository repository,
                             PetTypeService petTypeService,
+                            StorageService storage,
+                            StorageProperties storageProps,
                             ObjectProvider<EventPublisher> eventPublisherProvider) {
         this.repository = repository;
         this.petTypeService = petTypeService;
+        this.storage = storage;
+        this.storageProps = storageProps;
         this.eventPublisherProvider = eventPublisherProvider;
+    }
+
+    /** key MinIO → presigned URL string; null/blank key → null (chưa có ảnh). */
+    private String presign(String key) {
+        if (key == null || key.isBlank()) {
+            return null;
+        }
+        return storage.presignedGet(key, storageProps.presignedTtl()).toString();
+    }
+
+    private OwnerResponse toResponse(Owner owner) {
+        return OwnerResponse.from(owner, this::presign);
     }
 
     @Override
@@ -58,13 +84,13 @@ public class OwnerServiceImpl implements OwnerService {
         var page = (lastName == null || lastName.isBlank())
                 ? repository.findAll(pageable)
                 : repository.findByLastNameContainingIgnoreCase(lastName, pageable);
-        return page.map(OwnerResponse::from);
+        return page.map(this::toResponse);
     }
 
     @Override
     public OwnerResponse findById(Long id) {
         return repository.findById(id)
-                .map(OwnerResponse::from)
+                .map(this::toResponse)
                 .orElseThrow(() -> new OwnerNotFoundException(id.toString()));
     }
 
@@ -75,7 +101,7 @@ public class OwnerServiceImpl implements OwnerService {
         publishAfterCommit(OwnerCreatedEvent.of(
                 saved.getId(), saved.getFirstName(), saved.getLastName(),
                 saved.getCity(), saved.getTelephone()));
-        return OwnerResponse.from(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -102,7 +128,7 @@ public class OwnerServiceImpl implements OwnerService {
         publishAfterCommit(OwnerUpdatedEvent.of(
                 owner.getId(), owner.getFirstName(), owner.getLastName(),
                 owner.getCity(), owner.getTelephone()));
-        return OwnerResponse.from(owner);
+        return toResponse(owner);
     }
 
     @Override
@@ -116,7 +142,7 @@ public class OwnerServiceImpl implements OwnerService {
         var saved = repository.saveAndFlush(owner);
         publishAfterCommit(PetAddedEvent.of(
                 pet.getId(), saved.getId(), pet.getName(), pet.getType(), pet.getPetTypeId()));
-        return OwnerResponse.from(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -140,7 +166,7 @@ public class OwnerServiceImpl implements OwnerService {
         publishAfterCommit(PetUpdatedEvent.of(
                 pet.getId(), owner.getId(), pet.getName(), pet.getType(),
                 pet.getPetTypeId(), pet.getIsActive()));
-        return OwnerResponse.from(owner);
+        return toResponse(owner);
     }
 
     @Override
@@ -165,6 +191,76 @@ public class OwnerServiceImpl implements OwnerService {
         List<Long> petIds = owner.getPets().stream().map(Pet::getId).toList();
         repository.delete(owner);
         publishAfterCommit(OwnerDeletedEvent.of(id, petIds));
+    }
+
+    @Override
+    @Transactional
+    public OwnerResponse uploadPetPhoto(Long ownerId, Long petId, MultipartFile file) {
+        var owner = repository.findById(ownerId)
+                .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
+        var pet = owner.getPets().stream()
+                .filter(candidate -> petId.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(() -> new PetNotFoundException(petId.toString()));
+        MediaValidator.validate(file, PET_PHOTO_ENTITY, storageProps.maxFileSizeBytes());
+
+        // Key cố định theo petId → re-upload overwrite object cũ (idempotent). Ghi MinIO
+        // trước, set photoId sau. Nếu MinIO ghi xong mà DB fail → @Transactional rollback
+        // photoId (DB) nhưng object MinIO mới đã đè; re-upload sẽ retry idempotent.
+        String key = "pets/" + petId;
+        uploadToStorage(key, file, PET_PHOTO_ENTITY);
+        pet.setPhotoId(key);
+        return toResponse(owner);
+    }
+
+    @Override
+    @Transactional
+    public OwnerResponse deletePetPhoto(Long ownerId, Long petId) {
+        var owner = repository.findById(ownerId)
+                .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
+        var pet = owner.getPets().stream()
+                .filter(candidate -> petId.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(() -> new PetNotFoundException(petId.toString()));
+        if (pet.getPhotoId() != null) {
+            // Xoá MinIO trước, clear DB sau — fail MinIO → giữ photoId, retry được.
+            storage.delete(pet.getPhotoId());
+            pet.setPhotoId(null);
+        }
+        return toResponse(owner);
+    }
+
+    @Override
+    @Transactional
+    public OwnerResponse uploadOwnerAvatar(Long ownerId, MultipartFile file) {
+        var owner = repository.findById(ownerId)
+                .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
+        MediaValidator.validate(file, OWNER_AVATAR_ENTITY, storageProps.maxFileSizeBytes());
+
+        String key = "owners/" + ownerId;
+        uploadToStorage(key, file, OWNER_AVATAR_ENTITY);
+        owner.setAvatarObjectKey(key);
+        return toResponse(owner);
+    }
+
+    @Override
+    @Transactional
+    public OwnerResponse deleteOwnerAvatar(Long ownerId) {
+        var owner = repository.findById(ownerId)
+                .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
+        if (owner.getAvatarObjectKey() != null) {
+            storage.delete(owner.getAvatarObjectKey());
+            owner.setAvatarObjectKey(null);
+        }
+        return toResponse(owner);
+    }
+
+    private void uploadToStorage(String key, MultipartFile file, String entityName) {
+        try {
+            storage.upload(key, file.getContentType(), file.getInputStream(), file.getSize());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to read uploaded file for " + entityName + " " + key, e);
+        }
     }
 
     /**

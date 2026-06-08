@@ -36,7 +36,7 @@ class PetControllerTest {
     @Test
     @DisplayName("GET /api/v1/pets → returns page")
     void listPets_returnsPage() throws Exception {
-        var pet = new PetResponse(1L, "Milu", null, "dog", 1L, true, null, null, 10L);
+        var pet = new PetResponse(1L, "Milu", null, "dog", 1L, true, null, null, null, 10L);
         given(service.findAll(any(), any(), any(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of(pet)));
 

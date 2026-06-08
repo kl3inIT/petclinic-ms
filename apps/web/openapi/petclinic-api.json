@@ -913,6 +913,176 @@
         }
       }
     },
+    "/api/v1/owners/me/avatar": {
+      "put": {
+        "tags": ["Owners"],
+        "summary": "Upload/replace avatar của current customer",
+        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp.",
+        "operationId": "uploadMyOwnerAvatar",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OwnerResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Owners"],
+        "summary": "Xoá avatar của current customer",
+        "operationId": "deleteMyOwnerAvatar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OwnerResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/owners/me/pets/{petId}/photo": {
+      "put": {
+        "tags": ["Owners"],
+        "summary": "Upload/replace ảnh pet của current customer",
+        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp.",
+        "operationId": "uploadMyPetPhoto",
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OwnerResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Owners"],
+        "summary": "Xoá ảnh pet của current customer",
+        "operationId": "deleteMyPetPhoto",
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OwnerResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pets/{id}/photo": {
+      "put": {
+        "tags": ["Pets"],
+        "summary": "Admin upload/replace ảnh pet bất kỳ",
+        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp.",
+        "operationId": "uploadPetPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PetResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Pets"],
+        "summary": "Admin xoá ảnh pet bất kỳ",
+        "operationId": "deletePetPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PetResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pets": {
       "get": {
         "tags": ["Pets"],
@@ -3810,6 +3980,9 @@
           "telephone": {
             "type": "string"
           },
+          "avatarUrl": {
+            "type": "string"
+          },
           "pets": {
             "type": "array",
             "items": {
@@ -3846,6 +4019,9 @@
             "type": "number"
           },
           "photoId": {
+            "type": "string"
+          },
+          "photoUrl": {
             "type": "string"
           }
         }
@@ -4014,6 +4190,9 @@
             "type": "number"
           },
           "photoId": {
+            "type": "string"
+          },
+          "photoUrl": {
             "type": "string"
           },
           "ownerId": {

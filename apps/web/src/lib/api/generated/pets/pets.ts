@@ -5,26 +5,192 @@
  * Aggregated from: auth, customers, vets, visits, billing, products
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
   UseSuspenseQueryResult,
 } from '@tanstack/react-query';
 
-import type { ListPetsParams, PagePetResponse, PetResponse } from '.././model';
+import type {
+  ListPetsParams,
+  PagePetResponse,
+  PetResponse,
+  UploadPetPhotoBody,
+} from '.././model';
 
 import { apiMutator } from '../../mutator';
-import type { ErrorType } from '../../mutator';
+import type { ErrorType, BodyType } from '../../mutator';
 
+/**
+ * Multipart field 'file'. Max 10MB, image/jpeg|png|webp.
+ * @summary Admin upload/replace ảnh pet bất kỳ
+ */
+export const uploadPetPhoto = (
+  id: number,
+  uploadPetPhotoBody: BodyType<UploadPetPhotoBody>,
+) => {
+  const formData = new FormData();
+  formData.append(`file`, uploadPetPhotoBody.file);
+
+  return apiMutator<PetResponse>({
+    url: `/api/v1/pets/${id}/photo`,
+    method: 'PUT',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data: formData,
+  });
+};
+
+export const getUploadPetPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadPetPhoto>>,
+    TError,
+    { id: number; data: BodyType<UploadPetPhotoBody> },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadPetPhoto>>,
+  TError,
+  { id: number; data: BodyType<UploadPetPhotoBody> },
+  TContext
+> => {
+  const mutationKey = ['uploadPetPhoto'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadPetPhoto>>,
+    { id: number; data: BodyType<UploadPetPhotoBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return uploadPetPhoto(id, data);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadPetPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadPetPhoto>>
+>;
+export type UploadPetPhotoMutationBody = BodyType<UploadPetPhotoBody>;
+export type UploadPetPhotoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Admin upload/replace ảnh pet bất kỳ
+ */
+export const useUploadPetPhoto = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadPetPhoto>>,
+      TError,
+      { id: number; data: BodyType<UploadPetPhotoBody> },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadPetPhoto>>,
+  TError,
+  { id: number; data: BodyType<UploadPetPhotoBody> },
+  TContext
+> => {
+  const mutationOptions = getUploadPetPhotoMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * @summary Admin xoá ảnh pet bất kỳ
+ */
+export const deletePetPhoto = (id: number) => {
+  return apiMutator<PetResponse>({ url: `/api/v1/pets/${id}/photo`, method: 'DELETE' });
+};
+
+export const getDeletePetPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePetPhoto>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePetPhoto>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ['deletePetPhoto'];
+  const { mutation: mutationOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey } };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deletePetPhoto>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deletePetPhoto(id);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeletePetPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deletePetPhoto>>
+>;
+
+export type DeletePetPhotoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Admin xoá ảnh pet bất kỳ
+ */
+export const useDeletePetPhoto = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deletePetPhoto>>,
+      TError,
+      { id: number },
+      TContext
+    >;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deletePetPhoto>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationOptions = getDeletePetPhotoMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
 /**
  * Filter optional: ownerId, petTypeId, isActive. Pageable nhận page/size/sort theo convention orval.
  * @summary List pets (paginated, optional filters)

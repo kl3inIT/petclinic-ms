@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.customers.dto.req.OwnerRequest;
@@ -140,6 +142,39 @@ public class OwnerController {
     @Operation(summary = "Remove current customer's pet")
     public void removeMyPet(@AuthenticationPrincipal Jwt jwt, @PathVariable Long petId) {
         service.removePet(resolveCustomerId(jwt), petId);
+    }
+
+    @PutMapping(path = "/me/pets/{petId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload/replace ảnh pet của current customer",
+            description = "Multipart field 'file'. Max 10MB, image/jpeg|png|webp. Idempotent overwrite.")
+    public OwnerResponse uploadMyPetPhoto(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long petId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return service.uploadPetPhoto(resolveCustomerId(jwt), petId, file);
+    }
+
+    @DeleteMapping("/me/pets/{petId}/photo")
+    @Operation(summary = "Xoá ảnh pet của current customer")
+    public OwnerResponse deleteMyPetPhoto(@AuthenticationPrincipal Jwt jwt, @PathVariable Long petId) {
+        return service.deletePetPhoto(resolveCustomerId(jwt), petId);
+    }
+
+    @PutMapping(path = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload/replace avatar của current customer",
+            description = "Multipart field 'file'. Max 10MB, image/jpeg|png|webp. Idempotent overwrite.")
+    public OwnerResponse uploadMyOwnerAvatar(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return service.uploadOwnerAvatar(resolveCustomerId(jwt), file);
+    }
+
+    @DeleteMapping("/me/avatar")
+    @Operation(summary = "Xoá avatar của current customer")
+    public OwnerResponse deleteMyOwnerAvatar(@AuthenticationPrincipal Jwt jwt) {
+        return service.deleteOwnerAvatar(resolveCustomerId(jwt));
     }
 
     @DeleteMapping("/{id}")
