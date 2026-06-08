@@ -45,8 +45,8 @@ function LanguagePage() {
                   }}
                   className={`flex w-full items-center justify-between gap-3 rounded-xl border p-4 text-left transition ${
                     selected
-                      ? 'border-[#7C6CF5] bg-[#F4F1FF] shadow-[0_8px_22px_rgba(124,108,245,0.10)]'
-                      : 'border-[#ECECF5] bg-white hover:border-[#DED6FF] hover:bg-[#FBFAFF]'
+                      ? 'border-primary bg-accent shadow-sm'
+                      : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -54,16 +54,16 @@ function LanguagePage() {
                       {l.flag}
                     </span>
                     <span>
-                      <p className="text-sm font-black text-slate-900">{l.label}</p>
-                      <p className="mt-0.5 font-mono text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                      <p className="text-sm font-black text-foreground">{l.label}</p>
+                      <p className="mt-0.5 font-mono text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                         {l.code}
                       </p>
                     </span>
                   </div>
                   {selected ? (
-                    <CheckCircle2 className="size-5 text-[#7C6CF5]" />
+                    <CheckCircle2 className="size-5 text-primary" />
                   ) : (
-                    <span className="size-5 rounded-full border-2 border-slate-200" />
+                    <span className="size-5 rounded-full border-2 border-border" />
                   )}
                 </button>
               </li>
@@ -72,11 +72,11 @@ function LanguagePage() {
         </ul>
       </ProfileCard>
 
-      <ProfileCard className="bg-gradient-to-br from-amber-50 to-white">
-        <p className="text-sm font-medium text-slate-700">
-          <span className="font-black">Lưu ý:</span> bản preview hiện chỉ persist locale
-          code. i18n đầy đủ (vi-VN + en-US) sẽ ra mắt cùng phase{' '}
-          <code className="rounded bg-amber-100 px-1 font-mono text-xs text-amber-900">
+      <ProfileCard className="border-warning/30 bg-warning/5">
+        <p className="text-sm font-medium text-muted-foreground">
+          <span className="font-black text-foreground">Lưu ý:</span> bản preview hiện chỉ
+          persist locale code. i18n đầy đủ (vi-VN + en-US) sẽ ra mắt cùng phase{' '}
+          <code className="rounded bg-muted px-1 font-mono text-xs text-foreground">
             i18next + locale negotiation
           </code>{' '}
           — giao diện chính vẫn hiển thị Tiếng Việt.

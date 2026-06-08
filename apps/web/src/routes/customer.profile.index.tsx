@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import {
   AtSign,
   CalendarCheck,
+  Camera,
   Copy,
   Lock,
   Mail,
+  MapPin,
   PawPrint,
   Phone,
   ShieldCheck,
+  Trash2,
   UserCircle2,
 } from 'lucide-react';
 
@@ -18,8 +21,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/features/auth/store';
-import { MediaUploader } from '@/features/vets/components/MediaUploader';
 import {
   useDeleteMyOwnerAvatar,
   useGetMyOwnerProfile,
@@ -32,10 +35,33 @@ import {
   ProfileCard,
   ProfilePageHeader,
 } from '@/features/customer-profile/components/ProfilePageHeader';
+import {
+  AvatarCropField,
+  type AvatarCropHandle,
+} from '@/features/customer-profile/components/AvatarCropField';
 
 export const Route = createFileRoute('/customer/profile/')({
   component: CustomerProfilePage,
 });
+
+/* ─────────────────────────── helpers ─────────────────────────── */
+
+const MAX_BYTES = 10 * 1024 * 1024;
+const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
+
+function validateFile(file: File): boolean {
+  if (!ACCEPTED.includes(file.type)) {
+    toast.error('Chỉ chấp nhận JPEG / PNG / WebP');
+    return false;
+  }
+  if (file.size > MAX_BYTES) {
+    toast.error('File vượt quá 10MB');
+    return false;
+  }
+  return true;
+}
+
+/* ─────────────────────────── page ────────────────────────────── */
 
 function CustomerProfilePage() {
   const user = useAuthStore((s) => s.user);
@@ -44,29 +70,31 @@ function CustomerProfilePage() {
 
   const ownerQuery = useGetMyOwnerProfile();
   const updateOwner = useUpdateMyOwnerProfile();
-  const avatarUrl = ownerQuery.data?.avatarUrl;
+  const uploadAvatar = useUploadMyOwnerAvatar();
+  const deleteAvatar = useDeleteMyOwnerAvatar();
 
   const invalidateOwner = () => ownerQuery.refetch();
+  const serverAvatarUrl = ownerQuery.data?.avatarUrl;
 
-  const uploadAvatar = useUploadMyOwnerAvatar({
-    mutation: {
-      onSuccess: () => {
-        toast.success('Đã cập nhật ảnh đại diện');
-        void invalidateOwner();
-      },
-      onError: (err: Error) => toast.error(err.message || 'Tải ảnh thất bại'),
-    },
-  });
+  /* ── avatar (deferred, edited inline) ── */
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cropRef = useRef<AvatarCropHandle>(null);
+  /** Picked file being cropped inline. Null = show the current/server avatar. */
+  const [cropSource, setCropSource] = useState<File | null>(null);
 
-  const deleteAvatar = useDeleteMyOwnerAvatar({
-    mutation: {
-      onSuccess: () => {
-        toast.success('Đã xoá ảnh đại diện');
-        void invalidateOwner();
-      },
-      onError: (err: Error) => toast.error(err.message || 'Xoá ảnh thất bại'),
-    },
-  });
+  /** A picked file opens the inline crop editor inside the form. */
+  function handleFilePicked(file: File) {
+    if (!validateFile(file)) return;
+    setCropSource(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function clearPendingAvatar() {
+    setCropSource(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  /* ── contact form ── */
   const [ownerForm, setOwnerForm] = useState({
     firstName: '',
     lastName: '',
@@ -74,7 +102,9 @@ function CustomerProfilePage() {
     city: '',
     telephone: '',
   });
-  const [dirty, setDirty] = useState(false);
+  const [fieldDirty, setFieldDirty] = useState(false);
+  /** True when either a field has changed OR a new avatar is queued */
+  const dirty = fieldDirty || !!cropSource;
 
   useEffect(() => {
     const owner = ownerQuery.data;
@@ -86,33 +116,49 @@ function CustomerProfilePage() {
       city: owner.city ?? '',
       telephone: owner.telephone ?? '',
     });
-    setDirty(false);
+    setFieldDirty(false);
   }, [ownerQuery.data]);
 
   const setField = (k: keyof typeof ownerForm) => (v: string) => {
     setOwnerForm((p) => ({ ...p, [k]: v }));
-    setDirty(true);
+    setFieldDirty(true);
   };
 
-  const onSubmit = (event: React.FormEvent) => {
+  /* ── submit: upload avatar (if pending) + update profile ── */
+  const isSaving =
+    updateOwner.isPending || uploadAvatar.isPending || deleteAvatar.isPending;
+
+  const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!ownerForm.firstName.trim() || !ownerForm.lastName.trim()) {
       toast.error('Họ và tên không được trống');
       return;
     }
-    updateOwner.mutate(
-      { data: ownerForm },
-      {
-        onSuccess: () => {
-          toast.success('Đã cập nhật hồ sơ');
-          setDirty(false);
-        },
-        onError: (err) => toast.error((err as Error).message || 'Cập nhật thất bại'),
-      },
-    );
-  };
 
-  const ownerProfileLoading = ownerQuery.isLoading || ownerQuery.isError;
+    try {
+      // render the inline crop to a File at save time, then upload in parallel
+      const avatarFile = cropSource ? await cropRef.current?.getCroppedFile() : null;
+      await Promise.all([
+        updateOwner.mutateAsync({ data: ownerForm }),
+        avatarFile
+          ? uploadAvatar.mutateAsync({ data: { file: avatarFile } })
+          : Promise.resolve(),
+      ]);
+
+      toast.success('Đã lưu hồ sơ');
+      setFieldDirty(false);
+      setCropSource(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      void invalidateOwner();
+    } catch (err) {
+      toast.error((err as Error).message || 'Lưu thất bại');
+    }
+  };
+  const ownerName = ownerQuery.data
+    ? `${ownerQuery.data.firstName ?? ''} ${ownerQuery.data.lastName ?? ''}`.trim()
+    : username;
+
+  const profileLoading = ownerQuery.isLoading;
 
   return (
     <>
@@ -122,9 +168,9 @@ function CustomerProfilePage() {
       />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        {/* Account & Owner column */}
+        {/* Left column */}
         <div className="space-y-6">
-          {/* Read-only account info — username + id + email tạm khoá */}
+          {/* ── Read-only account info ── */}
           <ProfileCard>
             <CardTitleRow
               icon={UserCircle2}
@@ -132,64 +178,7 @@ function CustomerProfilePage() {
               description="Một số mục dưới đây thuộc về tài khoản đăng nhập, không sửa trực tiếp."
             />
 
-            <div className="mt-6 flex items-center gap-5">
-              <div className="relative flex size-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-white via-[#F2EFFF] to-[#DDD7FF] text-[#7C6CF5] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_34px_rgba(124,108,245,0.18)] ring-8 ring-[#F5F2FF]">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="Ảnh đại diện"
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <UserCircle2 className="size-14" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[17px] font-black text-slate-950">
-                  {ownerQuery.data
-                    ? `${ownerQuery.data.firstName ?? ''} ${ownerQuery.data.lastName ?? ''}`.trim()
-                    : username}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {(user?.roles?.length ? user.roles : ['USER']).map((role) => (
-                    <Badge
-                      key={role}
-                      variant="secondary"
-                      className="gap-1 rounded-md border border-[#E7E1FF] bg-[#F4F1FF] px-2 text-[10px] font-black text-[#6C5CEB]"
-                    >
-                      <ShieldCheck className="size-3" /> {role}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-[11px] font-black text-slate-500">
-                  Ảnh đại diện
-                </Label>
-                {avatarUrl ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    disabled={deleteAvatar.isPending}
-                    onClick={() => deleteAvatar.mutate()}
-                    className="rounded-lg border-[#E1DAFF] text-xs font-black text-[#6D5CE8]"
-                  >
-                    Xoá ảnh
-                  </Button>
-                ) : null}
-              </div>
-              <MediaUploader
-                label="Kéo thả ảnh hoặc bấm để chọn"
-                busy={uploadAvatar.isPending}
-                onUpload={(file) => uploadAvatar.mutateAsync({ data: { file } })}
-              />
-            </div>
-
-            <div className="mt-6 divide-y divide-[#F0F0F7] border-t border-[#ECECF5]">
+            <div className="mt-6 divide-y divide-border border-t border-border">
               <AccountRow
                 icon={Mail}
                 label="Email"
@@ -211,22 +200,187 @@ function CustomerProfilePage() {
             </div>
           </ProfileCard>
 
-          {/* Editable owner profile — PATCH /owners/me */}
+          {/* ── Editable profile: avatar + contact fields ── */}
           <ProfileCard>
             <CardTitleRow
               icon={AtSign}
-              title="Thông tin liên hệ"
-              description="Thông tin này hiển thị cho bác sĩ + lễ tân khi bạn đặt lịch khám."
+              title="Cập nhật hồ sơ"
+              description="Ảnh đại diện và thông tin liên hệ — bấm Lưu để xác nhận tất cả thay đổi."
             />
 
-            {ownerProfileLoading ? (
-              <div className="mt-6 space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
+            {profileLoading ? (
+              <div className="mt-6 space-y-4">
+                {/* avatar skeleton */}
+                <div className="flex items-center gap-4">
+                  <Skeleton className="size-20 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32 rounded" />
+                    <Skeleton className="h-3 w-24 rounded" />
+                  </div>
+                </div>
+                {Array.from({ length: 4 }).map((_, i) => (
                   <Skeleton key={i} className="h-10 w-full rounded-xl" />
                 ))}
               </div>
             ) : (
-              <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+              <form className="mt-6 space-y-5" onSubmit={onSubmit}>
+                {/* ── Avatar: inline crop editor when picking, else current avatar ── */}
+                {cropSource ? (
+                  <div className="flex flex-col gap-5 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-start">
+                    {/* Inline crop / preview — adjust right inside the form */}
+                    <AvatarCropField ref={cropRef} file={cropSource} />
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-black text-foreground">
+                        {ownerName}
+                      </p>
+                      <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-bold text-warning">
+                        <span className="size-1.5 rounded-full bg-warning" />
+                        Ảnh mới — bấm “Lưu thay đổi” để cập nhật
+                      </span>
+
+                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                        Kéo ảnh để di chuyển, dùng thanh trượt hoặc lăn chuột để phóng to.
+                        Phần bên trong vòng tròn sẽ là ảnh đại diện của bạn.
+                      </p>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-xs font-bold"
+                        >
+                          <Camera className="size-3.5" />
+                          Đổi ảnh khác
+                        </Button>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="ghost"
+                          onClick={clearPendingAvatar}
+                          className="text-xs font-bold text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="size-3.5" />
+                          Huỷ chọn
+                        </Button>
+                      </div>
+
+                      <p className="mt-2 text-[10px] text-muted-foreground">
+                        JPEG / PNG / WebP, tối đa 10&nbsp;MB
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-5 rounded-xl border border-border bg-muted/30 p-4">
+                    {/* Current avatar circle */}
+                    <div className="relative shrink-0">
+                      <div className="relative flex size-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-card via-accent to-primary/20 text-primary shadow-sm ring-4 ring-background">
+                        {serverAvatarUrl ? (
+                          <img
+                            src={serverAvatarUrl}
+                            alt="Ảnh đại diện"
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <UserCircle2 className="size-14" />
+                        )}
+                      </div>
+
+                      {/* Camera button overlay */}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-md transition hover:bg-primary/90"
+                      >
+                        <Camera className="size-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Info + actions */}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-black text-foreground">
+                        {ownerName}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {(user?.roles?.length ? user.roles : ['USER']).map((role) => (
+                          <Badge
+                            key={role}
+                            variant="secondary"
+                            className="gap-1 rounded-md border border-primary/20 bg-primary/10 px-2 text-[10px] font-black text-primary"
+                          >
+                            <ShieldCheck className="size-3" /> {role}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-xs font-bold"
+                        >
+                          <Camera className="size-3.5" />
+                          Đổi ảnh
+                        </Button>
+
+                        {serverAvatarUrl && (
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="ghost"
+                            disabled={deleteAvatar.isPending}
+                            onClick={() =>
+                              deleteAvatar.mutate(undefined, {
+                                onSuccess: () => {
+                                  toast.success('Đã xoá ảnh đại diện');
+                                  void invalidateOwner();
+                                },
+                                onError: (err) =>
+                                  toast.error(
+                                    (err as Error).message || 'Xoá ảnh thất bại',
+                                  ),
+                              })
+                            }
+                            className="text-xs font-bold text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="size-3.5" />
+                            Xoá ảnh
+                          </Button>
+                        )}
+                      </div>
+
+                      <p className="mt-1.5 text-[10px] text-muted-foreground">
+                        JPEG / PNG / WebP, tối đa 10&nbsp;MB
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hidden file input (shared) */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED.join(',')}
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFilePicked(file);
+                  }}
+                />
+
+                {/* Section label */}
+                <div className="flex items-center gap-3 pt-1">
+                  <span className="text-[11px] font-black tracking-wider text-muted-foreground uppercase">
+                    Thông tin liên hệ
+                  </span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
+                {/* ── Contact fields ── */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <FormField
                     id="profile-first-name"
@@ -255,6 +409,8 @@ function CustomerProfilePage() {
                     label="Thành phố"
                     value={ownerForm.city}
                     onChange={setField('city')}
+                    placeholder="Hồ Chí Minh"
+                    leadingIcon={MapPin}
                   />
                 </div>
                 <FormField
@@ -262,18 +418,29 @@ function CustomerProfilePage() {
                   label="Địa chỉ"
                   value={ownerForm.address}
                   onChange={setField('address')}
+                  placeholder="Số nhà, đường, phường/xã"
+                  leadingIcon={MapPin}
                 />
 
-                <div className="flex items-center justify-between gap-3 pt-2">
-                  <span className="text-xs font-medium text-slate-500">
-                    {dirty ? 'Có thay đổi chưa lưu' : 'Đồng bộ với hệ thống'}
-                  </span>
+                {/* ── Footer ── */}
+                <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+                  {dirty ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
+                      <span className="size-1.5 rounded-full bg-warning" />
+                      Có thay đổi chưa lưu
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
+                      <span className="size-1.5 rounded-full bg-success" />
+                      Đồng bộ với hệ thống
+                    </span>
+                  )}
                   <Button
                     type="submit"
-                    className="h-10 rounded-xl bg-[#7C6CF5] font-black hover:bg-[#6D5CE8]"
-                    disabled={!dirty || ownerProfileLoading || updateOwner.isPending}
+                    className="h-10 rounded-xl font-black"
+                    disabled={!dirty || isSaving}
                   >
-                    {updateOwner.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+                    {isSaving ? 'Đang lưu…' : 'Lưu thay đổi'}
                   </Button>
                 </div>
               </form>
@@ -281,7 +448,7 @@ function CustomerProfilePage() {
           </ProfileCard>
         </div>
 
-        {/* Right column — security tips + quick links */}
+        {/* Right column — security + quick links */}
         <div className="space-y-6">
           <ProfileCard>
             <CardTitleRow
@@ -289,7 +456,7 @@ function CustomerProfilePage() {
               title="Bảo vệ tài khoản"
               description="Thực hiện các bước sau để giữ thông tin an toàn."
             />
-            <ul className="mt-5 space-y-3 text-sm font-medium text-slate-600">
+            <ul className="mt-5 space-y-3 text-sm font-medium text-muted-foreground">
               <SecurityTip
                 title="Đổi mật khẩu định kỳ"
                 description="Khuyến nghị 90 ngày/lần — nhất là sau khi đăng nhập trên máy lạ."
@@ -305,7 +472,7 @@ function CustomerProfilePage() {
             </ul>
           </ProfileCard>
 
-          <ProfileCard className="bg-gradient-to-br from-[#F6F2FF] via-[#FAF8FF] to-white">
+          <ProfileCard className="bg-gradient-to-br from-accent via-accent/40 to-card">
             <CardTitleRow
               icon={PawPrint}
               title="Liên kết nhanh"
@@ -322,6 +489,8 @@ function CustomerProfilePage() {
     </>
   );
 }
+
+/* ─────────────────────── sub-components ──────────────────────── */
 
 function FormField({
   id,
@@ -340,21 +509,19 @@ function FormField({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-[11px] font-black text-slate-500">
+      <Label htmlFor={id} className="text-[11px] font-black text-muted-foreground">
         {label}
       </Label>
       <div className="relative">
         {LeadingIcon ? (
-          <LeadingIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+          <LeadingIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         ) : null}
         <Input
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={`h-10 rounded-lg border-[#ECECF5] bg-white text-sm font-semibold ${
-            LeadingIcon ? 'pl-9' : ''
-          }`}
+          className={cn('h-10 text-sm font-semibold', LeadingIcon && 'pl-9')}
         />
       </div>
     </div>
@@ -379,14 +546,15 @@ function AccountRow({
   onAction?: () => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-xl py-3.5 transition-colors hover:bg-[#FBFAFF] sm:grid-cols-[24px_1fr_auto] sm:items-center sm:px-2">
-      <Icon className="hidden size-4 text-slate-500 sm:block" />
+    <div className="grid gap-3 rounded-xl py-3.5 transition-colors hover:bg-muted/50 sm:grid-cols-[24px_1fr_auto] sm:items-center sm:px-2">
+      <Icon className="hidden size-4 text-muted-foreground sm:block" />
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold text-slate-500">{label}</p>
+        <p className="text-[11px] font-semibold text-muted-foreground">{label}</p>
         <p
-          className={`mt-1 text-sm font-semibold break-words text-slate-900 ${
-            mono ? 'font-mono text-xs' : ''
-          }`}
+          className={cn(
+            'mt-1 text-sm font-semibold break-words text-foreground',
+            mono && 'font-mono text-xs',
+          )}
         >
           {value}
         </p>
@@ -394,7 +562,7 @@ function AccountRow({
       {lockedTooltip ? (
         <span
           title={lockedTooltip}
-          className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50/70 px-2 py-1 text-xs font-bold text-amber-700"
+          className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-2 py-1 text-xs font-bold text-warning"
         >
           <Lock className="size-3.5" /> Sẽ có sau
         </span>
@@ -403,7 +571,7 @@ function AccountRow({
           variant="outline"
           size="xs"
           onClick={onAction}
-          className="w-fit rounded-lg border-[#E1DAFF] bg-white text-xs font-black text-[#6D5CE8] shadow-sm hover:bg-[#F6F3FF]"
+          className="w-fit text-xs font-black"
         >
           {action === 'Sao chép' ? <Copy className="size-3" /> : null}
           {action}
@@ -425,17 +593,14 @@ function SecurityTip({
   ctaTo: '/customer/profile/security';
 }) {
   return (
-    <li className="flex items-start justify-between gap-3 rounded-xl border border-[#ECECF5] bg-[#FBFAFF] p-3">
+    <li className="flex items-start justify-between gap-3 rounded-xl border border-border bg-muted/40 p-3">
       <div className="min-w-0">
-        <p className="text-sm font-black text-slate-900">{title}</p>
-        <p className="mt-1 text-xs leading-5 font-medium text-slate-500">{description}</p>
+        <p className="text-sm font-black text-foreground">{title}</p>
+        <p className="mt-1 text-xs leading-5 font-medium text-muted-foreground">
+          {description}
+        </p>
       </div>
-      <Button
-        asChild
-        size="xs"
-        variant="outline"
-        className="shrink-0 rounded-lg border-[#E1DAFF] bg-white text-xs font-black text-[#6D5CE8]"
-      >
+      <Button asChild size="xs" variant="outline" className="shrink-0 text-xs font-black">
         <Link to={ctaTo}>{cta}</Link>
       </Button>
     </li>
@@ -452,10 +617,10 @@ function QuickLink({
   return (
     <Link
       to={to}
-      className="flex h-11 items-center justify-between rounded-xl border border-[#ECECF5] bg-white px-3 text-sm font-bold text-slate-700 transition hover:border-[#DED6FF] hover:bg-[#F7F4FF] hover:text-[#6D5CE8]"
+      className="flex h-11 items-center justify-between rounded-xl border border-border bg-card px-3 text-sm font-bold text-foreground transition hover:border-primary/40 hover:bg-accent hover:text-accent-foreground"
     >
       <span>{label}</span>
-      <span aria-hidden className="text-[#7C6CF5]">
+      <span aria-hidden className="text-primary">
         →
       </span>
     </Link>

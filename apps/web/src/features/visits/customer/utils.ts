@@ -87,3 +87,17 @@ export function timelineDot(status: VisitResponseStatus): string {
 
 /** Thông tin bác sĩ hiển thị — định nghĩa tại nguồn dùng chung. */
 export type { VetInfo } from '@/features/vets/useVetMap';
+
+/**
+ * Kiểm tra xem lịch hẹn có nằm trong khoảng 12 tiếng kể từ hiện tại không.
+ * Nếu `scheduledAt` còn < 12h → không cho phép huỷ hoặc đổi lịch.
+ */
+export function isWithin12Hours(visit: { scheduledAt?: string }): boolean {
+  if (!visit.scheduledAt) return false;
+  const diff = new Date(visit.scheduledAt).getTime() - Date.now();
+  return diff >= 0 && diff < 12 * 60 * 60 * 1000;
+}
+
+/** Thông báo hiển thị khi lịch nằm trong vùng 12h không thể huỷ/đổi. */
+export const WITHIN_12H_MESSAGE =
+  'Lịch khám trong vòng 12 tiếng tới không thể huỷ hoặc đổi. Bạn có thể đặt lịch mới riêng.';

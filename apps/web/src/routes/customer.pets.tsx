@@ -240,6 +240,9 @@ function CustomerPetsPage() {
       )}
 
       <MyPetFormDialog
+        // key remount form khi đổi pet đang edit — TanStack Form chỉ áp defaultValues lúc
+        // mount, không có key thì mở Edit thấy form rỗng (không load data cũ). Khớp PetFormDialog.
+        key={editingPet?.id ?? 'new-pet'}
         open={formOpen}
         pet={editingPet}
         onOpenChange={(o) => {

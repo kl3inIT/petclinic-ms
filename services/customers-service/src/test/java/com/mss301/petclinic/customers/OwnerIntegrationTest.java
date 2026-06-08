@@ -141,6 +141,27 @@ class OwnerIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
+    @DisplayName("POST /api/v1/owners/me/pets — thêm pet persist kèm owner_id (regression NOT NULL)")
+    void addMyPet_persistsWithOwnerId() throws Exception {
+        // Regression: Owner.@OneToMany.@JoinColumn thiếu nullable=false → Hibernate insert
+        // pet với owner_id=NULL rồi mới UPDATE → vi phạm NOT NULL (pets.owner_id) → 500.
+        // Có nullable=false, owner_id nằm trong INSERT đầu tiên → 201.
+        String body = """
+                {"name":"Kiki","type":"cat","petTypeId":1,"isActive":true}
+                """;
+
+        mockMvc.perform(post("/api/v1/owners/me/pets")
+                        .with(jwt().jwt(userJwtWithCustomerId(1L))
+                                .authorities(JwtTestSupport.userAuthorities()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.pets[?(@.name == 'Kiki')]").exists());
+    }
+
+    @Test
     @DisplayName("PATCH /api/v1/owners/me — update partial qua customerId claim")
     void updateMyOwnerProfile_updates() throws Exception {
         String body = """

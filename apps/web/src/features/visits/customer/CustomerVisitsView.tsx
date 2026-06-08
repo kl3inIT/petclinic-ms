@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,15 @@ export function CustomerVisitsView() {
   const [rateTarget, setRateTarget] = useState<VisitResponse | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
+  /**
+   * Map petId → photoUrl từ ownerPets để truyền xuống từng row.
+   * Ảnh được serve qua MinIO (URL từ BE), null = dùng emoji fallback.
+   */
+  const petPhotoMap = useMemo(
+    () => new Map(vm.ownerPets.map((p) => [p.id ?? -1, p.photoUrl ?? null])),
+    [vm.ownerPets],
+  );
+
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <CustomerVisitHero focusPet={vm.focusPet} />
@@ -70,6 +79,9 @@ export function CustomerVisitsView() {
                 key={visit.id ?? index}
                 visit={visit}
                 vetMap={vm.vetMap}
+                petPhotoUrl={
+                  visit.petId !== undefined ? petPhotoMap.get(visit.petId) : null
+                }
                 onDetail={() => setDetailTarget(visit)}
                 onReschedule={() => setRescheduleTarget(visit)}
                 onCancel={() => setCancelTarget(visit)}

@@ -45,11 +45,7 @@ function NotificationsPage() {
         title="Thông báo"
         subtitle="Chọn kênh và loại thông báo bạn muốn nhận."
         actions={
-          <Button
-            variant="outline"
-            onClick={reset}
-            className="rounded-xl border-[#E4DEFF] font-black text-[#6D5CE8]"
-          >
+          <Button variant="outline" onClick={reset} className="font-black">
             <RotateCcw /> Mặc định
           </Button>
         }
@@ -57,7 +53,7 @@ function NotificationsPage() {
 
       <ProfileCard>
         <CardTitleRow icon={Mail} title="Email" description="Gửi đến hộp thư đăng ký." />
-        <div className="mt-5 divide-y divide-[#F0F0F7]">
+        <div className="mt-5 divide-y divide-border">
           <ToggleRow
             label="Nhắc lịch khám"
             description="Gửi 24h và 2h trước lịch khám đã đặt."
@@ -85,7 +81,7 @@ function NotificationsPage() {
           title="SMS"
           description="Tin nhắn ngắn đến số điện thoại đã đăng ký."
         />
-        <div className="mt-5 divide-y divide-[#F0F0F7]">
+        <div className="mt-5 divide-y divide-border">
           <ToggleRow
             label="Nhắc lịch khám"
             description="Tin nhắn ngắn 30 phút trước giờ khám."
@@ -118,12 +114,15 @@ function NotificationsPage() {
         </div>
       </ProfileCard>
 
-      <ProfileCard className="bg-gradient-to-r from-violet-50 to-white">
-        <div className="flex items-center gap-3 text-sm font-medium text-slate-600">
-          <Bell className="size-4 text-[#7C6CF5]" />
+      <ProfileCard className="border-primary/20 bg-accent/40">
+        <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+          <Bell className="size-4 shrink-0 text-primary" />
           Lưu ý: tuỳ chọn hiện lưu local trên trình duyệt. Sync đa thiết bị sẽ bật khi BE
           expose endpoint{' '}
-          <code className="rounded bg-violet-100 px-1">/users/me/preferences</code>.
+          <code className="rounded bg-muted px-1 text-foreground">
+            /users/me/preferences
+          </code>
+          .
         </div>
       </ProfileCard>
     </>
@@ -146,8 +145,10 @@ function ToggleRow({
   return (
     <div className="flex items-center justify-between gap-4 py-4">
       <div className="min-w-0">
-        <p className="text-sm font-black text-slate-900">{label}</p>
-        <p className="mt-1 text-xs leading-5 font-medium text-slate-500">{description}</p>
+        <p className="text-sm font-black text-foreground">{label}</p>
+        <p className="mt-1 text-xs leading-5 font-medium text-muted-foreground">
+          {description}
+        </p>
       </div>
       <button
         type="button"
@@ -156,11 +157,11 @@ function ToggleRow({
         disabled={disabled}
         onClick={onChange}
         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60 ${
-          checked ? 'bg-[#7C6CF5]' : 'bg-slate-200'
+          checked ? 'bg-primary' : 'bg-muted'
         }`}
       >
         <span
-          className={`inline-block size-5 transform rounded-full bg-white shadow transition ${
+          className={`inline-block size-5 transform rounded-full bg-background shadow transition ${
             checked ? 'translate-x-5' : 'translate-x-0.5'
           }`}
         />

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm, useStore } from '@tanstack/react-form';
 import { toast } from 'sonner';
@@ -24,7 +24,11 @@ import {
   Star,
   Stethoscope,
   Trash2,
+  Upload,
   UserCircle,
+  X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -53,7 +57,6 @@ import {
   useUpdateMyProfile,
   useUploadMyPhoto,
 } from '@/features/vet-me/api';
-import { MediaUploader } from '@/features/vets/components/MediaUploader';
 import { useListVetEducations } from '@/lib/api/generated/vet-educations/vet-educations';
 import type { EducationResponse } from '@/lib/api/generated/model';
 import { CircleProgress } from '@/features/vet-me/components/charts/CircleProgress';
@@ -83,10 +86,17 @@ function VetProfilePage() {
   const username = useAuthStore((s) => s.user?.username) ?? '—';
   const profileQuery = useMyProfile();
   const updateMutation = useUpdateMyProfile();
+  const uploadMutation = useUploadMyPhoto();
+  const deleteMutation = useDeleteMyPhoto();
   const ratingsSummaryQuery = useMyRatingsSummary();
   const badgesQuery = useMyBadges(0, 1);
   const scheduleQuery = useMySchedule();
+  const photoQuery = useMyPhoto();
   const [idCardOpen, setIdCardOpen] = useState(false);
+
+  // Deferred avatar state — not uploaded until Save is clicked
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
+  const [pendingAvatarPreview, setPendingAvatarPreview] = useState<string | null>(null);
 
   const formDefaults = useMemo(
     () => ({
@@ -102,7 +112,7 @@ function VetProfilePage() {
   const form = useForm({
     defaultValues: formDefaults,
     validators: { onChange: profileFormSchema },
-    onSubmit: ({ value }) => {
+    onSubmit: async ({ value }) => {
       const orig = {
         firstName: profile?.firstName ?? '',
         lastName: profile?.lastName ?? '',
@@ -122,19 +132,42 @@ function VetProfilePage() {
       if (v.phoneNumber !== orig.phoneNumber) data.phoneNumber = v.phoneNumber;
       if (v.resume !== orig.resume) data.resume = v.resume;
 
-      if (Object.keys(data).length === 0) {
+      const profileChanged = Object.keys(data).length > 0;
+      const avatarChanged = pendingAvatarFile != null;
+
+      if (!profileChanged && !avatarChanged) {
         toast.info('Không có thay đổi nào để lưu');
         return;
       }
 
-      updateMutation.mutate(
-        { data },
-        {
-          onSuccess: () => toast.success('Đã cập nhật hồ sơ'),
-          onError: (err) =>
-            toast.error(err instanceof Error ? err.message : 'Cập nhật thất bại'),
-        },
-      );
+      const tasks: Promise<unknown>[] = [];
+
+      if (profileChanged) {
+        tasks.push(
+          updateMutation.mutateAsync({ data }).catch((err: unknown) => {
+            toast.error(err instanceof Error ? err.message : 'Cập nhật hồ sơ thất bại');
+            throw err;
+          }),
+        );
+      }
+
+      if (avatarChanged && pendingAvatarFile) {
+        tasks.push(
+          uploadMutation
+            .mutateAsync({ data: { file: pendingAvatarFile } })
+            .then(() => {
+              setPendingAvatarFile(null);
+              setPendingAvatarPreview(null);
+            })
+            .catch((err: unknown) => {
+              toast.error(err instanceof Error ? err.message : 'Tải ảnh thất bại');
+              throw err;
+            }),
+        );
+      }
+
+      await Promise.all(tasks);
+      toast.success('Đã lưu hồ sơ thành công');
     },
   });
 
@@ -142,6 +175,7 @@ function VetProfilePage() {
   const profileLoading = profileQuery.isLoading || profileQuery.isError;
 
   const profile = profileQuery.data;
+  const currentPhotoUrl = photoQuery.data?.presignedUrl ?? profile?.photoUrl ?? null;
   const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
   const scheduleCount = scheduleQuery.data?.length ?? 0;
   const badgeCount = badgesQuery.data?.totalElements ?? 0;
@@ -151,12 +185,13 @@ function VetProfilePage() {
   const isDirty = useMemo(() => {
     if (!profile || !hydrated) return false;
     return (
+      pendingAvatarFile != null ||
       formValues.firstName.trim() !== (profile.firstName ?? '') ||
       formValues.lastName.trim() !== (profile.lastName ?? '') ||
       formValues.phoneNumber.trim() !== (profile.phoneNumber ?? '') ||
       formValues.resume.trim() !== (profile.resume ?? '')
     );
-  }, [profile, hydrated, formValues]);
+  }, [profile, hydrated, formValues, pendingAvatarFile]);
 
   function resetForm() {
     if (profile) {
@@ -168,7 +203,26 @@ function VetProfilePage() {
         resume: profile.resume ?? '',
       });
     }
+    setPendingAvatarFile(null);
+    setPendingAvatarPreview(null);
   }
+
+  function handleDeleteAvatar() {
+    // If there's a pending (unsaved) avatar, just clear the pending state
+    if (pendingAvatarFile) {
+      setPendingAvatarFile(null);
+      setPendingAvatarPreview(null);
+      return;
+    }
+    // Otherwise delete the saved avatar from server
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => toast.success('Đã xóa ảnh đại diện'),
+      onError: (e) => toast.error(e instanceof Error ? e.message : 'Xóa ảnh thất bại'),
+    });
+  }
+
+  const isSaving =
+    updateMutation.isPending || uploadMutation.isPending || deleteMutation.isPending;
 
   return (
     <div className="space-y-6 pb-24">
@@ -185,8 +239,6 @@ function VetProfilePage() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.6fr]">
         <div className="space-y-5">
-          <AvatarSection firstName={profile?.firstName} lastName={profile?.lastName} />
-
           <SectionCard
             icon={IdCard}
             title="Thẻ bác sĩ"
@@ -315,7 +367,7 @@ function VetProfilePage() {
             <PublicPreviewCard
               firstName={formValues.firstName}
               lastName={formValues.lastName}
-              photoUrl={profile?.photoUrl ?? null}
+              photoUrl={pendingAvatarPreview ?? currentPhotoUrl}
               specialties={profile?.specialties ?? []}
               ratingAvg={ratingAvg}
               ratingCount={ratingCount}
@@ -340,6 +392,20 @@ function VetProfilePage() {
                 }}
                 className="space-y-6"
               >
+                {/* ── Avatar ── */}
+                <AvatarFieldGroup
+                  firstName={profile?.firstName}
+                  lastName={profile?.lastName}
+                  currentPhotoUrl={currentPhotoUrl}
+                  pendingPreview={pendingAvatarPreview}
+                  isDeleting={deleteMutation.isPending}
+                  onCropped={(file, previewUrl) => {
+                    setPendingAvatarFile(file);
+                    setPendingAvatarPreview(previewUrl);
+                  }}
+                  onDelete={handleDeleteAvatar}
+                />
+
                 <FieldGroup title="Họ và tên" icon={UserCircle}>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <form.Field
@@ -464,7 +530,7 @@ function VetProfilePage() {
       {hydrated && (
         <StickyActionBar
           dirty={isDirty}
-          saving={updateMutation.isPending}
+          saving={isSaving}
           onReset={resetForm}
           onSave={() => void form.handleSubmit()}
         />
@@ -481,113 +547,403 @@ function VetProfilePage() {
   );
 }
 
-const PHOTO_STATUS_META: Record<string, { label: string; className: string }> = {
-  PENDING: {
-    label: 'Đang chờ STAFF duyệt',
-    className: 'border-amber-200 bg-amber-50 text-amber-700',
-  },
-  APPROVED: {
-    label: 'Đã duyệt — hiển thị công khai',
-    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  },
-  REJECTED: {
-    label: 'Bị từ chối',
-    className: 'border-rose-200 bg-rose-50 text-rose-700',
-  },
-};
+// ─── Avatar field group (inline inside the edit form) ────────────────────────
 
-function AvatarSection({
+const AVATAR_ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
+const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
+
+function AvatarFieldGroup({
   firstName,
   lastName,
+  currentPhotoUrl,
+  pendingPreview,
+  isDeleting,
+  onCropped,
+  onDelete,
 }: {
   firstName?: string;
   lastName?: string;
+  currentPhotoUrl: string | null;
+  pendingPreview: string | null;
+  isDeleting: boolean;
+  onCropped: (file: File, previewUrl: string) => void;
+  onDelete: () => void;
 }) {
-  const photoQuery = useMyPhoto();
-  const uploadMutation = useUploadMyPhoto();
-  const deleteMutation = useDeleteMyPhoto();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
-  const photo = photoQuery.data;
-  const presignedUrl = photo?.presignedUrl ?? null;
-  const status = photo?.status;
-  const statusMeta = status ? PHOTO_STATUS_META[status] : undefined;
+  const displayUrl = pendingPreview ?? currentPhotoUrl;
+  const hasPending = pendingPreview != null;
 
-  function handleDelete() {
-    deleteMutation.mutate(undefined, {
-      onSuccess: () => toast.success('Đã xóa ảnh đại diện'),
-      onError: (e) => toast.error(e instanceof Error ? e.message : 'Xóa ảnh thất bại'),
-    });
+  function pickFile(file: File) {
+    if (!AVATAR_ACCEPTED.includes(file.type)) {
+      toast.error('Chỉ chấp nhận JPEG / PNG / WebP');
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast.error('File vượt quá 10 MB');
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setCropSrc(url);
   }
 
   return (
-    <SectionCard
-      icon={Camera}
-      title="Ảnh đại diện"
-      subtitle="Tải lên ảnh chân dung — hiển thị ở hồ sơ công khai sau khi được duyệt"
-    >
+    <div className="space-y-3 rounded-lg border border-slate-100 bg-slate-50/40 p-4">
+      <div className="flex items-center gap-2 text-xs font-bold tracking-wide text-slate-600 uppercase">
+        <Camera className="size-3.5 text-violet-600" />
+        Ảnh đại diện
+      </div>
+      <p className="-mt-1 text-xs text-slate-500">
+        Tải lên ảnh chân dung — hiển thị ở hồ sơ công khai
+      </p>
+
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-        <div className="flex flex-col items-center gap-2">
-          {photoQuery.isLoading ? (
-            <Skeleton className="size-24 rounded-full" />
-          ) : presignedUrl ? (
+        {/* Current / preview avatar */}
+        <div className="relative flex-shrink-0">
+          {displayUrl ? (
             <img
-              src={presignedUrl}
+              src={displayUrl}
               alt="Ảnh đại diện"
-              className="size-24 rounded-full object-cover ring-2 ring-violet-100"
+              className="size-24 rounded-full object-cover ring-2 ring-violet-200"
             />
           ) : (
             <VetAvatar firstName={firstName} lastName={lastName} size="lg" />
           )}
-          {presignedUrl && (
+          {hasPending && (
+            <span
+              className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-white bg-amber-400 shadow"
+              title="Chưa lưu"
+            >
+              <Save className="size-2.5 text-white" />
+            </span>
+          )}
+        </div>
+
+        {/* Drop zone + buttons */}
+        <div className="w-full flex-1 space-y-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept={AVATAR_ACCEPTED.join(',')}
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) pickFile(f);
+              e.target.value = '';
+            }}
+          />
+          <div
+            className={cn(
+              'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-5 text-center text-sm transition-colors',
+              dragOver
+                ? 'border-violet-400 bg-violet-50'
+                : 'border-slate-200 hover:border-violet-300 hover:bg-violet-50/40',
+            )}
+            onClick={() => inputRef.current?.click()}
+            onKeyDown={(e) => e.key === 'Enter' && inputRef.current?.click()}
+            tabIndex={0}
+            role="button"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f) pickFile(f);
+            }}
+          >
+            <Upload className="size-5 text-violet-400" />
+            <span className="font-medium text-slate-700">
+              Kéo thả hoặc bấm để chọn ảnh
+            </span>
+            <span className="text-xs text-slate-400">
+              JPEG / PNG / WebP, tối đa 10 MB
+            </span>
+          </div>
+
+          {displayUrl && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-              disabled={deleteMutation.isPending}
-              onClick={handleDelete}
+              className="w-full text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+              disabled={isDeleting}
+              onClick={onDelete}
             >
               <Trash2 className="size-3.5" />
-              Xóa ảnh
+              {hasPending ? 'Huỷ ảnh đã chọn' : 'Xóa ảnh hiện tại'}
             </Button>
           )}
         </div>
-
-        <div className="w-full flex-1 space-y-2">
-          <MediaUploader
-            label="Tải / đổi ảnh đại diện"
-            busy={uploadMutation.isPending}
-            onUpload={(file) =>
-              uploadMutation
-                .mutateAsync({ data: { file } })
-                .then(() => toast.success('Đã tải ảnh — chờ STAFF duyệt'))
-                .catch((e: unknown) => {
-                  toast.error(e instanceof Error ? e.message : 'Tải ảnh thất bại');
-                  throw e;
-                })
-            }
-          />
-          {statusMeta && (
-            <div className="space-y-1">
-              <Badge
-                variant="outline"
-                className={cn('rounded-full px-2.5 py-0.5 text-xs', statusMeta.className)}
-              >
-                {statusMeta.label}
-              </Badge>
-              {status === 'REJECTED' && photo?.rejectReason && (
-                <p className="text-xs text-rose-600">Lý do: {photo.rejectReason}</p>
-              )}
-            </div>
-          )}
-          <p className="flex items-start gap-1.5 text-xs text-slate-500">
-            <LockKeyhole className="mt-0.5 size-3.5 shrink-0" />
-            Mỗi lần đổi ảnh sẽ cần STAFF/quản trị viên duyệt lại trước khi hiển thị cho
-            khách hàng.
-          </p>
-        </div>
       </div>
-    </SectionCard>
+
+      {/* Crop dialog */}
+      {cropSrc && (
+        <AvatarCropDialog
+          src={cropSrc}
+          onConfirm={(croppedFile, previewUrl) => {
+            onCropped(croppedFile, previewUrl);
+            setCropSrc(null);
+          }}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Canvas crop dialog ───────────────────────────────────────────────────────
+
+function AvatarCropDialog({
+  src,
+  onConfirm,
+  onCancel,
+}: {
+  src: string;
+  onConfirm: (file: File, previewUrl: string) => void;
+  onCancel: () => void;
+}) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Crop circle params — all in image-coordinate space
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef({ mx: 0, my: 0, ox: 0, oy: 0 });
+
+  const CIRCLE_PX = 240; // canvas output size
+
+  function handleConfirm() {
+    const img = imgRef.current;
+    if (!img) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = CIRCLE_PX;
+    canvas.height = CIRCLE_PX;
+    const ctx = canvas.getContext('2d')!;
+
+    // Clip to circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(CIRCLE_PX / 2, CIRCLE_PX / 2, CIRCLE_PX / 2, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Natural dimensions
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+    const shortest = Math.min(nw, nh);
+    // Base: fit shortest side to CIRCLE_PX
+    const baseScale = CIRCLE_PX / shortest;
+    const finalScale = baseScale * scale;
+
+    const drawW = nw * finalScale;
+    const drawH = nh * finalScale;
+    // Center offset
+    const cx = (CIRCLE_PX - drawW) / 2 + offset.x * finalScale;
+    const cy = (CIRCLE_PX - drawH) / 2 + offset.y * finalScale;
+
+    ctx.drawImage(img, cx, cy, drawW, drawH);
+    ctx.restore();
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+        const preview = URL.createObjectURL(blob);
+        onConfirm(file, preview);
+      },
+      'image/jpeg',
+      0.92,
+    );
+  }
+
+  function onMouseDown(e: React.MouseEvent) {
+    setDragging(true);
+    dragStart.current = { mx: e.clientX, my: e.clientY, ox: offset.x, oy: offset.y };
+  }
+  function onMouseMove(e: React.MouseEvent) {
+    if (!dragging) return;
+    const dx = e.clientX - dragStart.current.mx;
+    const dy = e.clientY - dragStart.current.my;
+    setOffset({
+      x: dragStart.current.ox + dx / scale,
+      y: dragStart.current.oy + dy / scale,
+    });
+  }
+  function onMouseUp() {
+    setDragging(false);
+  }
+
+  // Touch support
+  const touchStart = useRef({ tx: 0, ty: 0, ox: 0, oy: 0 });
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStart.current = { tx: t.clientX, ty: t.clientY, ox: offset.x, oy: offset.y };
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    e.preventDefault();
+    const t = e.touches[0];
+    const dx = t.clientX - touchStart.current.tx;
+    const dy = t.clientY - touchStart.current.ty;
+    setOffset({
+      x: touchStart.current.ox + dx / scale,
+      y: touchStart.current.oy + dy / scale,
+    });
+  }
+
+  // Preview canvas
+  const drawPreview = useCallback(() => {
+    const img = imgRef.current;
+    const canvas = canvasRef.current;
+    if (!img || !canvas || !img.complete) return;
+    const size = canvas.width;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, size, size);
+
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+    const shortest = Math.min(nw, nh);
+    const baseScale = size / shortest;
+    const finalScale = baseScale * scale;
+    const drawW = nw * finalScale;
+    const drawH = nh * finalScale;
+    const cx = (size - drawW) / 2 + offset.x * finalScale;
+    const cy = (size - drawH) / 2 + offset.y * finalScale;
+
+    // Darken overlay
+    ctx.fillStyle = 'rgba(15,23,42,0.55)';
+    ctx.fillRect(0, 0, size, size);
+
+    // Clear circle area
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Draw image underneath overlay
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.drawImage(img, cx, cy, drawW, drawH);
+    ctx.restore();
+
+    // Border circle
+    ctx.save();
+    ctx.strokeStyle = 'rgba(139,92,246,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2 - 1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }, [scale, offset]);
+
+  // Redraw whenever scale/offset change (fires after every render that changes them)
+  useEffect(() => {
+    drawPreview();
+  }, [drawPreview]);
+
+  return (
+    <Dialog open onOpenChange={onCancel}>
+      <DialogContent className="max-w-sm overflow-hidden p-0">
+        <DialogHeader className="px-5 pt-5">
+          <DialogTitle className="flex items-center gap-2">
+            <Camera className="size-4 text-violet-600" />
+            Cắt ảnh đại diện
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Kéo để chỉnh vị trí • Dùng thanh trượt để thu/phóng
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col items-center gap-4 px-5 pb-5">
+          {/* Crop area */}
+          <div
+            ref={containerRef}
+            className={cn(
+              'relative overflow-hidden rounded-xl select-none',
+              dragging ? 'cursor-grabbing' : 'cursor-grab',
+            )}
+            style={{ width: 280, height: 280 }}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onMouseUp}
+          >
+            {/* Hidden natural img for pixel source */}
+            <img
+              ref={imgRef}
+              src={src}
+              alt=""
+              className="pointer-events-none absolute opacity-0"
+              onLoad={drawPreview}
+              style={{ maxWidth: 'none' }}
+            />
+            {/* Actual rendered canvas */}
+            <canvas
+              ref={canvasRef}
+              width={280}
+              height={280}
+              className="block"
+              style={{ imageRendering: 'pixelated' }}
+            />
+          </div>
+
+          {/* Zoom slider */}
+          <div className="flex w-full items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
+              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
+            >
+              <ZoomOut className="size-4" />
+            </button>
+            <input
+              type="range"
+              min={0.5}
+              max={3}
+              step={0.05}
+              value={scale}
+              onChange={(e) => setScale(Number(e.target.value))}
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-violet-600"
+            />
+            <button
+              type="button"
+              onClick={() => setScale((s) => Math.min(3, s + 0.1))}
+              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
+            >
+              <ZoomIn className="size-4" />
+            </button>
+          </div>
+
+          {/* Actions */}
+          <div className="flex w-full gap-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
+              <X className="size-4" />
+              Huỷ
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 bg-violet-600 text-white hover:bg-violet-700"
+              onClick={handleConfirm}
+            >
+              <Camera className="size-4" />
+              Dùng ảnh này
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -695,6 +1051,7 @@ function HeroStat({
 interface PublicPreviewCardProps {
   firstName: string;
   lastName: string;
+  /** Combined: pendingAvatarPreview ?? currentPhotoUrl — caller resolves this. */
   photoUrl: string | null;
   specialties: { id?: number; name?: string }[];
   ratingAvg?: number;

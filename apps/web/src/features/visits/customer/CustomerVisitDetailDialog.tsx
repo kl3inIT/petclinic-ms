@@ -1,4 +1,4 @@
-import { Calendar, Clock3, Star, UserRound } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock3, Star, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -18,8 +18,10 @@ import { InfoTile, ResultBlock, StatusPill } from './parts';
 import {
   formatVisitFee,
   fullDateFmt,
+  isWithin12Hours,
   timeRange,
   titleForVisit,
+  WITHIN_12H_MESSAGE,
   type VetInfo,
 } from './utils';
 
@@ -47,6 +49,8 @@ export function CustomerVisitDetailDialog({
   const vet = visit?.vetId !== undefined ? vetMap.get(visit.vetId) : undefined;
   const doctorName =
     visit?.vetId !== undefined ? (vet?.fullName ?? `BS #${visit.vetId}`) : null;
+
+  const locked = visit ? isWithin12Hours(visit) : false;
 
   return (
     <Dialog open={visit !== null} onOpenChange={onOpenChange}>
@@ -79,6 +83,19 @@ export function CustomerVisitDetailDialog({
               </div>
               <StatusPill status={status} />
             </div>
+
+            {/* Banner 12h lock */}
+            {canCancel && locked && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-500" />
+                <div>
+                  <p className="text-sm font-bold text-amber-800">
+                    Không thể huỷ hoặc đổi lịch
+                  </p>
+                  <p className="mt-0.5 text-xs text-amber-700">{WITHIN_12H_MESSAGE}</p>
+                </div>
+              </div>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <InfoTile
@@ -118,10 +135,21 @@ export function CustomerVisitDetailDialog({
           </DialogClose>
           {visit && canCancel ? (
             <>
-              <Button variant="outline" onClick={() => onCancel(visit)}>
+              <Button
+                variant="outline"
+                disabled={locked}
+                title={locked ? WITHIN_12H_MESSAGE : undefined}
+                onClick={() => onCancel(visit)}
+              >
                 Huỷ lịch
               </Button>
-              <Button onClick={() => onReschedule(visit)}>Đổi lịch</Button>
+              <Button
+                disabled={locked}
+                title={locked ? WITHIN_12H_MESSAGE : undefined}
+                onClick={() => onReschedule(visit)}
+              >
+                Đổi lịch
+              </Button>
             </>
           ) : null}
           {visit && canRate ? (

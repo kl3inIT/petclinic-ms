@@ -37,7 +37,8 @@ export function PetTypeSelect({ value, onChange, placeholder, disabled, id }: Pr
       value={value == null ? '' : String(value)}
       onValueChange={(v) => onChange(v ? Number(v) : undefined)}
     >
-      <SelectTrigger id={id}>
+      {/* w-full để ô Loài rộng bằng input Tên (SelectTrigger mặc định là w-fit). */}
+      <SelectTrigger id={id} className="w-full">
         <SelectValue placeholder={effectivePlaceholder} />
       </SelectTrigger>
       <SelectContent>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ import {
   useUpdateMyPet,
   useUploadMyPetPhoto,
 } from '@/lib/api/generated/owners/owners';
+import type { OwnerResponse } from '@/lib/api/generated/model/ownerResponse';
 import type { PetDto } from '@/lib/api/generated/model/petDto';
 
 import { petFormSchema } from '../schemas';
@@ -35,15 +37,50 @@ interface Props {
   pet?: PetDto | null;
 }
 
+/** Pet mới luôn có id lớn nhất (BIGSERIAL tăng dần) trong owner trả về sau khi add. */
+function newestPetId(owner: OwnerResponse): number | null {
+  return (owner.pets ?? []).reduce<number | null>(
+    (max, p) => (p.id != null && (max == null || p.id > max) ? p.id : max),
+    null,
+  );
+}
+
 /**
  * Dialog thêm/sửa thú cưng cho CHỦ NUÔI (self-service qua `/api/v1/owners/me/pets`).
  * vetId/ownerId resolve từ JWT ở BE — FE không cần truyền ownerId.
  * Khác bản admin `PetFormDialog` (cần ownerId, dùng hook `/owners/{id}/pets`).
+ *
+ * <h4>Ảnh: staged — chỉ commit lên MinIO khi bấm "Lưu"</h4>
+ * MediaUploader chạy deferred mode: chọn/kéo ảnh chỉ stage vào state + preview, KHÔNG upload
+ * ngay. Khi submit: (1) tạo/cập nhật pet, (2) nếu có ảnh staged → PUT photo theo petId
+ * (add mode lấy id từ owner trả về), (3) nếu user bấm "Xoá ảnh" mà không chọn ảnh mới →
+ * DELETE photo. Toàn bộ trong cùng một lần bấm "Lưu".
  */
 export function MyPetFormDialog({ open, onOpenChange, pet }: Props) {
   const qc = useQueryClient();
   const isEdit = !!pet?.id;
   const petTypesQuery = usePetTypes();
+
+  // Ảnh staged — chưa upload tới khi bấm "Lưu".
+  const [stagedFile, setStagedFile] = useState<File | null>(null);
+  const [stagedPreview, setStagedPreview] = useState<string | null>(null);
+  // User bấm "Xoá ảnh" trên ảnh hiện có (edit) mà chưa chọn ảnh mới.
+  const [removeExisting, setRemoveExisting] = useState(false);
+
+  useEffect(() => {
+    if (!stagedFile) {
+      setStagedPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(stagedFile);
+    setStagedPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [stagedFile]);
+
+  const resetExtras = () => {
+    setStagedFile(null);
+    setRemoveExisting(false);
+  };
 
   const invalidate = () =>
     qc.invalidateQueries({
@@ -56,29 +93,16 @@ export function MyPetFormDialog({ open, onOpenChange, pet }: Props) {
       },
     });
 
-  const addMutation = useAddMyPet({
-    mutation: {
-      onSuccess: () => {
-        toast.success('Đã thêm thú cưng');
-        void invalidate();
-        form.reset();
-        onOpenChange(false);
-      },
-      onError: (err: Error) => toast.error(err.message || 'Thêm thất bại'),
-    },
-  });
+  const addMutation = useAddMyPet();
+  const updateMutation = useUpdateMyPet();
+  const uploadPhoto = useUploadMyPetPhoto();
+  const deletePhoto = useDeleteMyPetPhoto();
 
-  const updateMutation = useUpdateMyPet({
-    mutation: {
-      onSuccess: () => {
-        toast.success('Đã cập nhật thú cưng');
-        void invalidate();
-        form.reset();
-        onOpenChange(false);
-      },
-      onError: (err: Error) => toast.error(err.message || 'Cập nhật thất bại'),
-    },
-  });
+  const pending =
+    addMutation.isPending ||
+    updateMutation.isPending ||
+    uploadPhoto.isPending ||
+    deletePhoto.isPending;
 
   const form = useForm({
     defaultValues: {
@@ -88,12 +112,12 @@ export function MyPetFormDialog({ open, onOpenChange, pet }: Props) {
       petTypeId: pet?.petTypeId ?? null,
       isActive: pet?.isActive ?? true,
       weight: pet?.weight ?? null,
-      // photoId không phơi ra cho chủ nuôi (chưa có endpoint upload ảnh pet) —
-      // giữ giá trị cũ, gửi nguyên si để không mất dữ liệu khi sửa.
+      // photoId là MinIO object key, không sửa trực tiếp ở form — giữ giá trị cũ gửi
+      // nguyên si để không mất khi sửa field khác. Ảnh thay qua upload/delete riêng.
       photoId: pet?.photoId ?? '',
     },
     validators: { onChange: petFormSchema },
-    onSubmit: ({ value }) => {
+    onSubmit: async ({ value }) => {
       const data = {
         name: value.name,
         type: value.type,
@@ -103,41 +127,43 @@ export function MyPetFormDialog({ open, onOpenChange, pet }: Props) {
         weight: value.weight ?? undefined,
         photoId: value.photoId || undefined,
       };
-      if (isEdit && pet?.id != null) {
-        updateMutation.mutate({ petId: pet.id, data });
-      } else {
-        addMutation.mutate({ data });
+      try {
+        let petId: number | null = pet?.id ?? null;
+        if (isEdit && petId != null) {
+          await updateMutation.mutateAsync({ petId, data });
+        } else {
+          const owner = await addMutation.mutateAsync({ data });
+          petId = newestPetId(owner);
+        }
+
+        // Commit ảnh sau khi pet đã tồn tại.
+        if (petId != null) {
+          if (stagedFile) {
+            await uploadPhoto.mutateAsync({ petId, data: { file: stagedFile } });
+          } else if (isEdit && removeExisting && pet?.photoUrl) {
+            await deletePhoto.mutateAsync({ petId });
+          }
+        }
+
+        toast.success(isEdit ? 'Đã cập nhật thú cưng' : 'Đã thêm thú cưng');
+        void invalidate();
+        form.reset();
+        resetExtras();
+        onOpenChange(false);
+      } catch (err) {
+        toast.error((err as Error)?.message || 'Lưu thất bại');
       }
     },
   });
-
-  const uploadPhoto = useUploadMyPetPhoto({
-    mutation: {
-      onSuccess: () => {
-        toast.success('Đã cập nhật ảnh thú cưng');
-        void invalidate();
-      },
-      onError: (err: Error) => toast.error(err.message || 'Tải ảnh thất bại'),
-    },
-  });
-
-  const deletePhoto = useDeleteMyPetPhoto({
-    mutation: {
-      onSuccess: () => {
-        toast.success('Đã xoá ảnh thú cưng');
-        void invalidate();
-      },
-      onError: (err: Error) => toast.error(err.message || 'Xoá ảnh thất bại'),
-    },
-  });
-
-  const pending = addMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog
       open={open}
       onOpenChange={(o) => {
-        if (!o) form.reset();
+        if (!o) {
+          form.reset();
+          resetExtras();
+        }
         onOpenChange(o);
       }}
     >
@@ -280,40 +306,48 @@ export function MyPetFormDialog({ open, onOpenChange, pet }: Props) {
             )}
           />
 
-          {isEdit && pet?.id != null ? (
-            <div className="space-y-2">
-              <Label>Ảnh thú cưng</Label>
-              {pet.photoUrl ? (
-                <div className="flex items-center gap-3">
-                  <img
-                    src={pet.photoUrl}
-                    alt={pet.name ?? 'Ảnh thú cưng'}
-                    className="size-16 rounded-lg border object-cover"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={deletePhoto.isPending}
-                    onClick={() => deletePhoto.mutate({ petId: pet.id! })}
-                  >
-                    Xoá ảnh
-                  </Button>
-                </div>
-              ) : null}
-              <MediaUploader
-                label="Kéo thả ảnh hoặc bấm để chọn"
-                busy={uploadPhoto.isPending}
-                onUpload={(file) =>
-                  uploadPhoto.mutateAsync({ petId: pet.id!, data: { file } })
-                }
-              />
-            </div>
-          ) : (
-            <p className="rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              Lưu thú cưng trước, rồi mở lại để thêm ảnh.
+          <div className="space-y-2">
+            <Label>Ảnh thú cưng</Label>
+            {/* Ảnh hiện có (chỉ edit, chưa stage ảnh mới, chưa bấm xoá). */}
+            {isEdit && pet?.photoUrl && !stagedFile && !removeExisting ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={pet.photoUrl}
+                  alt={pet.name ?? 'Ảnh thú cưng'}
+                  className="size-16 rounded-lg border object-cover"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => setRemoveExisting(true)}
+                >
+                  Xoá ảnh
+                </Button>
+              </div>
+            ) : null}
+
+            {/* Deferred uploader — chọn/kéo chỉ stage; preview do parent điều khiển. */}
+            <MediaUploader
+              busy={pending}
+              label="Kéo thả ảnh hoặc bấm để chọn"
+              onSelect={(file) => {
+                setStagedFile(file);
+                setRemoveExisting(false);
+              }}
+              externalPreview={stagedPreview}
+              onClearPreview={() => setStagedFile(null)}
+            />
+
+            <p className="text-xs text-muted-foreground">
+              {removeExisting && !stagedFile
+                ? 'Ảnh hiện tại sẽ bị xoá khi bấm "Lưu".'
+                : isEdit
+                  ? 'Ảnh chỉ được lưu khi bấm "Lưu".'
+                  : 'Ảnh sẽ được tải lên sau khi tạo thú cưng (khi bấm "Lưu").'}
             </p>
-          )}
+          </div>
 
           <DialogFooter>
             <Button
