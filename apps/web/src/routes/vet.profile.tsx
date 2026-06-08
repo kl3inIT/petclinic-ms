@@ -785,11 +785,13 @@ function AvatarCropDialog({
   const touchStart = useRef({ tx: 0, ty: 0, ox: 0, oy: 0 });
   function onTouchStart(e: React.TouchEvent) {
     const t = e.touches[0];
+    if (!t) return;
     touchStart.current = { tx: t.clientX, ty: t.clientY, ox: offset.x, oy: offset.y };
   }
   function onTouchMove(e: React.TouchEvent) {
     e.preventDefault();
     const t = e.touches[0];
+    if (!t) return;
     const dx = t.clientX - touchStart.current.tx;
     const dy = t.clientY - touchStart.current.ty;
     setOffset({
