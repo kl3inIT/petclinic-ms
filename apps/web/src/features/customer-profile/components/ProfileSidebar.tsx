@@ -38,9 +38,9 @@ const menuItems: MenuItem[] = [
 
 export function ProfileSidebar() {
   return (
-    <aside className="self-start rounded-[22px] border border-[#ECECF5] bg-white/95 p-3 shadow-[0_22px_60px_rgba(30,30,70,0.08)] backdrop-blur lg:sticky lg:top-24">
-      <div className="relative mb-3 grid aspect-[4/3] place-items-center overflow-hidden rounded-[18px] bg-gradient-to-br from-[#7C6CF5] via-[#8E7DF7] to-[#A997FF] shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
-        <PawPrint className="size-20 text-white/85" />
+    <aside className="self-start rounded-[22px] border border-border bg-card p-3 shadow-[0_22px_60px_rgba(15,23,42,0.06)] lg:sticky lg:top-24">
+      <div className="relative mb-3 grid aspect-[4/3] place-items-center overflow-hidden rounded-[18px] bg-gradient-to-br from-primary via-primary to-primary/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]">
+        <PawPrint className="size-20 text-primary-foreground/85" />
       </div>
 
       <nav className="space-y-1">
@@ -50,11 +50,10 @@ export function ProfileSidebar() {
             to={item.to}
             activeOptions={{ exact: item.exact ?? false }}
             activeProps={{
-              className:
-                'bg-[#F4F1FF] text-[#6D5CE8] shadow-[inset_0_0_0_1px_rgba(124,108,245,0.08)]',
+              className: 'bg-accent text-accent-foreground',
             }}
             className={cn(
-              'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-bold text-slate-600 transition-all duration-200 hover:bg-[#F5F2FF] hover:text-[#6D5CE8]',
+              'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-xs font-bold text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-accent-foreground',
             )}
           >
             <item.icon className="size-4" />
@@ -63,19 +62,19 @@ export function ProfileSidebar() {
         ))}
       </nav>
 
-      <div className="mt-5 rounded-[18px] border border-[#ECECF5] bg-gradient-to-br from-[#F8F7FC] to-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-        <span className="flex size-9 items-center justify-center rounded-full bg-[#F1EEFF] text-[#7C6CF5] shadow-sm">
+      <div className="mt-5 rounded-[18px] border border-border bg-muted/40 p-4">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Headphones className="size-5" />
         </span>
-        <p className="mt-3 text-sm font-black text-slate-900">Cần hỗ trợ?</p>
-        <p className="mt-2 text-xs leading-5 font-medium text-slate-500">
+        <p className="mt-3 text-sm font-black text-foreground">Cần hỗ trợ?</p>
+        <p className="mt-2 text-xs leading-5 font-medium text-muted-foreground">
           Đội ngũ của chúng tôi luôn sẵn sàng giúp bạn.
         </p>
         <Button
           asChild
           variant="outline"
           size="sm"
-          className="mt-3 rounded-xl border-[#E4DEFF] bg-white text-xs font-bold text-[#6D5CE8] shadow-sm hover:bg-[#F7F4FF]"
+          className="mt-3 w-full text-xs font-bold"
         >
           <Link to="/customer/profile/help">Liên hệ ngay</Link>
         </Button>

@@ -66,23 +66,23 @@ function HelpPage() {
             return (
               <li
                 key={i}
-                className="overflow-hidden rounded-xl border border-[#ECECF5] bg-white"
+                className="overflow-hidden rounded-xl border border-border bg-card"
               >
                 <button
                   type="button"
                   onClick={() => setOpenIdx(isOpen ? null : i)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-black text-slate-900 hover:bg-[#FBFAFF]"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-black text-foreground hover:bg-muted/50"
                   aria-expanded={isOpen}
                 >
                   {f.q}
                   <ChevronDown
-                    className={`size-4 shrink-0 text-slate-500 transition ${
+                    className={`size-4 shrink-0 text-muted-foreground transition ${
                       isOpen ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
                 {isOpen ? (
-                  <div className="border-t border-[#F0F0F7] bg-[#FBFAFF] px-4 py-3 text-sm leading-6 font-medium text-slate-600">
+                  <div className="border-t border-border bg-muted/40 px-4 py-3 text-sm leading-6 font-medium text-muted-foreground">
                     {f.a}
                   </div>
                 ) : null}
@@ -95,10 +95,10 @@ function HelpPage() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <ProfileCard>
           <CardTitleRow icon={Phone} title="Hotline 24/7" />
-          <p className="mt-4 text-2xl font-black tracking-wider text-[#7C6CF5]">
+          <p className="mt-4 text-2xl font-black tracking-wider text-primary">
             1900 8268
           </p>
-          <p className="mt-2 text-xs font-medium text-slate-500">
+          <p className="mt-2 text-xs font-medium text-muted-foreground">
             Cuộc gọi miễn phí từ điện thoại cố định. Di động tính theo nhà mạng.
           </p>
         </ProfileCard>
@@ -107,11 +107,11 @@ function HelpPage() {
           <CardTitleRow icon={Mail} title="Email hỗ trợ" />
           <a
             href="mailto:support@petclinic.local"
-            className="mt-4 inline-block text-lg font-black text-[#7C6CF5] underline-offset-4 hover:underline"
+            className="mt-4 inline-block text-lg font-black text-primary underline-offset-4 hover:underline"
           >
             support@petclinic.local
           </a>
-          <p className="mt-2 text-xs font-medium text-slate-500">
+          <p className="mt-2 text-xs font-medium text-muted-foreground">
             Trả lời trong 4 giờ làm việc (8h-18h, T2-T7).
           </p>
         </ProfileCard>
@@ -119,21 +119,21 @@ function HelpPage() {
         <ProfileCard>
           <CardTitleRow icon={MessageCircle} title="Chat trực tuyến" />
           <Button
-            className="mt-4 w-full rounded-xl bg-[#7C6CF5] font-black hover:bg-[#6D5CE8]"
+            className="mt-4 w-full rounded-xl font-black"
             disabled
             title="Sẽ enable cùng chatbot AI assistant"
           >
             Bắt đầu chat
           </Button>
-          <p className="mt-2 text-xs font-medium text-slate-500">
+          <p className="mt-2 text-xs font-medium text-muted-foreground">
             Chatbot AI assistant đang chạy beta — hiện chỉ active ở phía admin.
           </p>
         </ProfileCard>
 
         <ProfileCard>
           <CardTitleRow icon={MapPin} title="Đến trực tiếp" />
-          <p className="mt-4 text-sm font-bold text-slate-900">PetClinic MSS301</p>
-          <p className="mt-1 text-xs leading-5 font-medium text-slate-500">
+          <p className="mt-4 text-sm font-bold text-foreground">PetClinic MSS301</p>
+          <p className="mt-1 text-xs leading-5 font-medium text-muted-foreground">
             12 Lê Lợi, Quận 1, TP. Hồ Chí Minh
             <br />
             Mở cửa: 7h00 - 21h00, mọi ngày trong tuần

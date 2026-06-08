@@ -49,8 +49,12 @@ public class Owner extends AbstractAuditingEntity {
     private String avatarObjectKey;
 
     // Unidirectional one-to-many — Pet không có back-reference Owner để JSON serialize đơn giản.
+    // nullable=false BẮT BUỘC: cột pets.owner_id là NOT NULL (liquibase 001). Không có nó,
+    // Hibernate dùng insert-then-update (INSERT pet với owner_id=NULL rồi UPDATE set FK) →
+    // vi phạm NOT NULL ngay khi thêm pet. Có nullable=false, Hibernate đưa owner_id vào
+    // chính câu INSERT (1 statement). Pet.ownerId mirror để insertable/updatable=false.
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "owner_id")
+    @JoinColumn(name = "owner_id", nullable = false)
     private List<Pet> pets = new ArrayList<>();
 
     protected Owner() {

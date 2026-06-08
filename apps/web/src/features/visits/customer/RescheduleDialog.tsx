@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { Calendar, Trash2 } from 'lucide-react';
+import { AlertTriangle, Calendar, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -14,10 +14,17 @@ import {
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
 
 import { InfoTile } from './parts';
-import { fullDateFmt, timeRange, titleForVisit } from './utils';
+import {
+  fullDateFmt,
+  isWithin12Hours,
+  timeRange,
+  titleForVisit,
+  WITHIN_12H_MESSAGE,
+} from './utils';
 
 /**
  * "Đổi lịch" tạm thời = đặt lịch mới + huỷ lịch cũ (BE chưa có reschedule nguyên tử).
+ * Nếu lịch trong vòng 12h → cả hai hành động bị khoá, chỉ hiện banner giải thích.
  */
 export function RescheduleDialog({
   visit,
@@ -29,6 +36,7 @@ export function RescheduleDialog({
   onCancelOldVisit: (visit: VisitResponse) => void;
 }) {
   const date = visit?.scheduledAt ? new Date(visit.scheduledAt) : null;
+  const locked = visit ? isWithin12Hours(visit) : false;
 
   return (
     <Dialog open={visit !== null} onOpenChange={onOpenChange}>
@@ -54,6 +62,19 @@ export function RescheduleDialog({
               </p>
             </div>
 
+            {/* Banner cảnh báo 12h */}
+            {locked && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-500" />
+                <div>
+                  <p className="text-sm font-bold text-amber-800">
+                    Không thể huỷ hoặc đổi lịch
+                  </p>
+                  <p className="mt-0.5 text-xs text-amber-700">{WITHIN_12H_MESSAGE}</p>
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-3 sm:grid-cols-2">
               <InfoTile
                 icon={Calendar}
@@ -74,12 +95,26 @@ export function RescheduleDialog({
             <Button variant="outline">Để sau</Button>
           </DialogClose>
           {visit ? (
-            <Button variant="outline" onClick={() => onCancelOldVisit(visit)}>
+            <Button
+              variant="outline"
+              disabled={locked}
+              title={locked ? WITHIN_12H_MESSAGE : undefined}
+              onClick={() => onCancelOldVisit(visit)}
+            >
               Huỷ lịch cũ
             </Button>
           ) : null}
-          <Button asChild>
-            <Link to="/customer/book">Đặt lịch mới</Link>
+          {/* Trong 12h: disable nút đặt lịch mới tại dialog, kèm tooltip */}
+          <Button
+            asChild={!locked}
+            disabled={locked}
+            title={locked ? WITHIN_12H_MESSAGE : undefined}
+          >
+            {locked ? (
+              <span>Đặt lịch mới</span>
+            ) : (
+              <Link to="/customer/book">Đặt lịch mới</Link>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

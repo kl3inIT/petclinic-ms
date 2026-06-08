@@ -48,7 +48,7 @@ export const Route = createFileRoute('/customer/book')({
 });
 
 const PET_PAGE_SIZE = 6;
-const VET_PAGE_SIZE = 4;
+const VET_PAGE_SIZE = 6;
 
 /** Tuổi thú cưng dẫn xuất từ birthDate thật. < 1 năm → hiển thị theo tháng. */
 function petAge(birthDate?: string): string | null {
@@ -105,12 +105,58 @@ function slotStatus(remaining: number | undefined) {
   return { text: `Còn ${remaining}`, tone: 'success' as const, full: false };
 }
 
+/**
+ * Ô tìm kiếm "deferred": chỉ áp dụng khi người dùng bấm Enter hoặc nút "Tìm"
+ * (không filter tức thì khi gõ). Giữ giá trị nháp nội bộ; `onSearch` đẩy term đã
+ * trim lên cha. `preventDefault` ở Enter để KHÔNG submit form đặt lịch bao ngoài.
+ */
+function SearchBar({
+  placeholder,
+  defaultValue = '',
+  onSearch,
+}: {
+  placeholder: string;
+  defaultValue?: string;
+  onSearch: (term: string) => void;
+}) {
+  const [value, setValue] = useState(defaultValue);
+  const submit = () => onSearch(value.trim());
+  return (
+    <div className="flex gap-2">
+      <div className="relative flex-1">
+        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder={placeholder}
+          className="h-10 pl-9"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submit();
+            }
+          }}
+        />
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        className="h-10 shrink-0"
+        onClick={submit}
+      >
+        Tìm
+      </Button>
+    </div>
+  );
+}
+
 function BookVisitPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: '/customer/book' });
   const qc = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [vetSearch, setVetSearch] = useState('');
   const [petPage, setPetPage] = useState(0);
   const [vetPage, setVetPage] = useState(0);
   const appliedPetIdRef = useRef<number | undefined>(undefined);
@@ -126,6 +172,7 @@ function BookVisitPage() {
   const ownerLoading = ownerQuery.isLoading || ownerQuery.isError;
 
   const vetsQuery = useListVets({
+    lastName: vetSearch || undefined,
     pageable: { page: vetPage, size: VET_PAGE_SIZE, sort: ['lastName,asc'] },
   });
   const vetsLoading = vetsQuery.isLoading || vetsQuery.isError;
@@ -321,14 +368,12 @@ function BookVisitPage() {
               subtitle="Các bé trong hồ sơ của bạn."
             />
 
-            <div className="relative mt-4">
-              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
+            <div className="mt-4">
+              <SearchBar
                 placeholder="Tìm theo tên hoặc loài…"
-                className="h-10 pl-9"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                defaultValue={searchTerm}
+                onSearch={(term) => {
+                  setSearchTerm(term);
                   setPetPage(0);
                 }}
               />
@@ -361,8 +406,16 @@ function BookVisitPage() {
                             selected={isSelected}
                             onClick={() => field.handleChange(p.id ?? 0)}
                           >
-                            <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                              <PawPrint className="size-5" />
+                            <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-accent text-accent-foreground">
+                              {p.photoUrl ? (
+                                <img
+                                  src={p.photoUrl}
+                                  alt={p.name ?? ''}
+                                  className="size-full object-cover"
+                                />
+                              ) : (
+                                <PawPrint className="size-5" />
+                              )}
                             </span>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold text-foreground">
@@ -407,6 +460,17 @@ function BookVisitPage() {
               subtitle="Đội ngũ bác sĩ thú y của phòng khám."
             />
 
+            <div className="mt-4">
+              <SearchBar
+                placeholder="Tìm bác sĩ theo tên…"
+                defaultValue={vetSearch}
+                onSearch={(term) => {
+                  setVetSearch(term);
+                  setVetPage(0);
+                }}
+              />
+            </div>
+
             <form.Field
               name="vetId"
               children={(field) => (
@@ -420,7 +484,12 @@ function BookVisitPage() {
                   ) : vets.length === 0 ? (
                     <EmptyState
                       icon={<Stethoscope className="size-8 text-muted-foreground/50" />}
-                      title="Chưa có bác sĩ khả dụng"
+                      title={
+                        vetSearch ? 'Không tìm thấy bác sĩ' : 'Chưa có bác sĩ khả dụng'
+                      }
+                      hint={
+                        vetSearch ? `Không có bác sĩ khớp "${vetSearch}".` : undefined
+                      }
                     />
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -437,7 +506,7 @@ function BookVisitPage() {
                               setSelectedTimeSlot(null);
                             }}
                           >
-                            <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted text-sm font-semibold text-muted-foreground">
+                            <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-muted text-sm font-semibold text-muted-foreground">
                               {vetData.photoUrl ? (
                                 <img
                                   src={vetData.photoUrl}

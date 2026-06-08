@@ -9,17 +9,37 @@ const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
 
 interface Props {
-  onUpload: (file: File) => Promise<unknown>;
+  /** Eager mode: called immediately when a file is picked — component handles preview reset after promise resolves. */
+  onUpload?: (file: File) => Promise<unknown>;
+  /** Deferred mode: called when a file is picked; caller decides when to actually upload.
+   *  Use `externalPreview` + `onClearPreview` to let the parent control the preview state. */
+  onSelect?: (file: File) => void;
+  /** When in deferred mode the parent can pass a preview URL it controls. */
+  externalPreview?: string | null;
+  /** Called when the user clicks the ✕ button while in deferred mode. */
+  onClearPreview?: () => void;
   busy?: boolean;
   label?: string;
   description?: string;
   className?: string;
 }
 
-export function MediaUploader({ onUpload, busy, label, description, className }: Props) {
+export function MediaUploader({
+  onUpload,
+  onSelect,
+  externalPreview,
+  onClearPreview,
+  busy,
+  label,
+  description,
+  className,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  // internal preview — only used in eager (onUpload) mode
+  const [internalPreview, setInternalPreview] = useState<string | null>(null);
+
+  const preview = onSelect ? externalPreview : internalPreview;
 
   function handle(file: File) {
     if (!ACCEPTED.includes(file.type)) {
@@ -30,11 +50,30 @@ export function MediaUploader({ onUpload, busy, label, description, className }:
       toast.error('File vượt quá 10MB');
       return;
     }
-    setPreview(URL.createObjectURL(file));
-    void onUpload(file).finally(() => {
-      setPreview(null);
-      if (inputRef.current) inputRef.current.value = '';
-    });
+
+    if (onSelect) {
+      // Deferred mode — just notify the caller, don't upload
+      onSelect(file);
+      return;
+    }
+
+    if (onUpload) {
+      // Eager mode — upload immediately and reset preview afterwards
+      setInternalPreview(URL.createObjectURL(file));
+      void onUpload(file).finally(() => {
+        setInternalPreview(null);
+        if (inputRef.current) inputRef.current.value = '';
+      });
+    }
+  }
+
+  function handleClear() {
+    if (onSelect && onClearPreview) {
+      onClearPreview();
+    } else {
+      setInternalPreview(null);
+    }
+    if (inputRef.current) inputRef.current.value = '';
   }
 
   return (
@@ -73,7 +112,7 @@ export function MediaUploader({ onUpload, busy, label, description, className }:
           <button
             type="button"
             className="absolute -top-2 -right-2 rounded-full bg-background p-1 shadow"
-            onClick={() => setPreview(null)}
+            onClick={handleClear}
           >
             <X className="size-3" />
           </button>
