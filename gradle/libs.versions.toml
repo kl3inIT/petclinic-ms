@@ -37,7 +37,7 @@ awsSdk             = "2.30.21"
 openpdf            = "3.0.5"
 
 # BPM / integration (workflow-service)
-camunda            = "8.9.5"
+camunda            = "8.9.8"
 camel              = "4.14.4"            # Spring Boot 4 compatible từ 4.14.x
 
 [libraries]
