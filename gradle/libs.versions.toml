@@ -18,7 +18,7 @@ springdoc          = "3.0.3"            # OpenAPI/Swagger UI — version riêng 
 # Spring Boot Admin (codecentric) — UI quản trị + monitoring cho 5 Spring services.
 # 4.0.4 fix variables.css template — expose colors trực tiếp thay vì T(...)/bean method
 # (#5251) → tương thích Thymeleaf 3.1.4+ stricter SpEL trên CSS template.
-springBootAdmin    = "4.0.4"
+springBootAdmin    = "4.1.0"
 
 # Spring AI 2.0.0-M6 — latest milestone (May 2026). M6 → GA churn còn có thể có break;
 # vì vậy chỉ dùng trong 2 service: mcp-server (expose tools) + genai-service (chat).
