@@ -38,7 +38,7 @@ openpdf            = "3.0.5"
 
 # BPM / integration (workflow-service)
 camunda            = "8.9.5"
-camel              = "4.14.4"            # Spring Boot 4 compatible từ 4.14.x
+camel              = "4.21.0"            # Spring Boot 4 compatible từ 4.14.x
 
 [libraries]
 # --- Spring Boot starters (Spring MVC stack, blocking) ---
