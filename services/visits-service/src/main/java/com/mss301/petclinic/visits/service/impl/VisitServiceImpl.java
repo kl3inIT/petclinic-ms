@@ -47,8 +47,8 @@ import com.mss301.petclinic.visits.model.Visit;
 import com.mss301.petclinic.visits.model.VisitStatus;
 import com.mss301.petclinic.visits.repository.VisitRepository;
 import com.mss301.petclinic.visits.repository.VisitSpecifications;
-import com.mss301.petclinic.visits.saga.NotificationSaga;
-import com.mss301.petclinic.visits.saga.NotificationSagaRepository;
+import com.mss301.petclinic.visits.saga.VisitCompletionSaga;
+import com.mss301.petclinic.visits.saga.VisitCompletionSagaRepository;
 import com.mss301.petclinic.visits.service.VisitService;
 
 @Service
@@ -77,15 +77,15 @@ public class VisitServiceImpl implements VisitService {
     /** Optional — workflow-service có thể chưa start hoặc down. Booking vẫn thành công. */
     private final ObjectProvider<WorkflowServiceClient> workflowClient;
     private final WorkflowCallbackProperties workflowProperties;
-    /** Saga state — track notification choreography per VisitCompletedEvent. Null khi broker disabled. */
-    private final NotificationSagaRepository sagaRepo;
+    /** Saga state — track billing + notification choreography per VisitCompletedEvent. */
+    private final VisitCompletionSagaRepository sagaRepo;
 
     public VisitServiceImpl(VisitRepository repository,
                             RemoteClientsFacade remoteClients,
                             ObjectProvider<EventPublisher> events,
                             ObjectProvider<WorkflowServiceClient> workflowClient,
                             WorkflowCallbackProperties workflowProperties,
-                            NotificationSagaRepository sagaRepo) {
+                            VisitCompletionSagaRepository sagaRepo) {
         this.repository = repository;
         this.remoteClients = remoteClients;
         this.events = events;
@@ -390,8 +390,7 @@ public class VisitServiceImpl implements VisitService {
             //   - DB commit FAIL + broker publish OK → mailer ack nhưng saga row không tồn tại
             // Production cần Transactional Outbox: ghi event vào bảng outbox cùng TX,
             // poller riêng publish → broker với retry. Reference: microservices.io/patterns/data/transactional-outbox
-            sagaRepo.save(NotificationSaga.start(
-                    event.eventId(), v.getId(), "visit.completed.notification"));
+            sagaRepo.save(VisitCompletionSaga.start(event.eventId(), v.getId()));
 
             publisher.publish(event);
         } catch (RuntimeException ex) {

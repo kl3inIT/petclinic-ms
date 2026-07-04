@@ -3,6 +3,7 @@ package com.mss301.petclinic.billing.consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.mss301.petclinic.billing.model.ProcessedEvent;
 import com.mss301.petclinic.billing.repository.ProcessedEventRepository;
 import com.mss301.petclinic.billing.service.InvoiceService;
+import com.mss301.petclinic.common.events.EventPublisher;
+import com.mss301.petclinic.common.events.saga.SagaStepAck;
+import com.mss301.petclinic.common.events.saga.SagaStepFailed;
 
 /**
  * Consume {@code visit.completed} → bơm phí khám vào hoá đơn gộp của khách.
@@ -38,11 +42,14 @@ public class VisitCompletedConsumer {
 
     private final InvoiceService invoiceService;
     private final ProcessedEventRepository processedEvents;
+    private final ObjectProvider<EventPublisher> events;
 
     public VisitCompletedConsumer(InvoiceService invoiceService,
-                                  ProcessedEventRepository processedEvents) {
+                                  ProcessedEventRepository processedEvents,
+                                  ObjectProvider<EventPublisher> events) {
         this.invoiceService = invoiceService;
         this.processedEvents = processedEvents;
+        this.events = events;
     }
 
     @RabbitListener(queues = "billing.visit.completed")
@@ -54,22 +61,67 @@ public class VisitCompletedConsumer {
         }
         if (event.customerUserId() == null || event.visitId() == null) {
             log.warn("VisitCompleted thiếu customerUserId/visitId — bỏ qua (visitId={})", event.visitId());
+            markFailed(event, "VisitCompleted thiếu customerUserId/visitId");
+            markProcessed(event);
             return;
         }
 
-        invoiceService.appendVisitFee(
-                event.customerUserId(),
-                event.customerUsername(),
-                event.customerEmail(),
-                event.visitId(),
-                event.fee(),
-                buildDescription(event));
-
-        if (event.eventId() != null) {
-            processedEvents.save(new ProcessedEvent(event.eventId()));
+        try {
+            invoiceService.appendVisitFee(
+                    event.customerUserId(),
+                    event.customerUsername(),
+                    event.customerEmail(),
+                    event.visitId(),
+                    event.fee(),
+                    buildDescription(event));
+            markProcessed(event);
+            markAck(event);
+        } catch (RuntimeException ex) {
+            log.warn("Xử lý VisitCompleted thất bại (visit={}, event={}): {}",
+                    event.visitId(), event.eventId(), ex.getMessage());
+            markFailed(event, ex.getMessage());
+            markProcessed(event);
+            return;
         }
         log.info("Đã bơm phí khám visit={} (fee={}) vào hoá đơn khách {}",
                 event.visitId(), event.fee(), event.customerUserId());
+    }
+
+    private void markProcessed(VisitCompletedPayload event) {
+        if (event.eventId() != null && !processedEvents.existsById(event.eventId())) {
+            processedEvents.save(new ProcessedEvent(event.eventId()));
+        }
+    }
+
+    private void markAck(VisitCompletedPayload event) {
+        EventPublisher publisher = events.getIfAvailable();
+        if (publisher == null || event.eventId() == null) {
+            return;
+        }
+        try {
+            publisher.publish(SagaStepAck.of(
+                    "visit", "billing", event.eventId(), String.valueOf(event.visitId()),
+                    "Visit fee appended to invoice", "billing-service"));
+        } catch (RuntimeException ex) {
+            log.warn("Publish visit.billing.ack failed (visit={}, event={}): {}",
+                    event.visitId(), event.eventId(), ex.getMessage());
+        }
+    }
+
+    private void markFailed(VisitCompletedPayload event, String errorMessage) {
+        EventPublisher publisher = events.getIfAvailable();
+        if (publisher == null || event.eventId() == null) {
+            return;
+        }
+        try {
+            publisher.publish(SagaStepFailed.of(
+                    "visit", "billing", event.eventId(), String.valueOf(event.visitId()),
+                    errorMessage != null ? errorMessage : "billing step failed",
+                    "billing-service"));
+        } catch (RuntimeException ex) {
+            log.warn("Publish visit.billing.failed failed (visit={}, event={}): {}",
+                    event.visitId(), event.eventId(), ex.getMessage());
+        }
     }
 
     private static String buildDescription(VisitCompletedPayload event) {

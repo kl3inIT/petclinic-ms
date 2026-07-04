@@ -250,12 +250,15 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     @Transactional
-    public InvoiceResponse appendMedicationItems(UUID customerUserId, String customerName,
+    public InvoiceResponse appendMedicationItems(UUID customerUserId, String customerName, Long prescriptionId,
                                                  List<InvoiceService.MedicationLine> lines) {
         Invoice invoice = repository.findFirstByCustomerUserIdAndStatus(customerUserId, InvoiceStatus.OPEN)
                 .orElseGet(() -> repository.save(Invoice.open(customerUserId, customerName, null)));
+        if (prescriptionId != null && invoice.hasMedicationPrescription(prescriptionId)) {
+            return InvoiceResponse.from(invoice);
+        }
         for (InvoiceService.MedicationLine line : lines) {
-            invoice.addItem(InvoiceItemSource.MEDICATION, line.productId(), line.name(),
+            invoice.addItem(InvoiceItemSource.MEDICATION, prescriptionId, line.name(),
                     line.unitPrice() != null ? line.unitPrice() : BigDecimal.ZERO,
                     line.quantity() > 0 ? line.quantity() : 1);
         }

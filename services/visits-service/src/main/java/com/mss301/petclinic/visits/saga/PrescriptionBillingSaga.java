@@ -17,38 +17,27 @@ import jakarta.persistence.Table;
 import com.mss301.petclinic.common.events.saga.SagaStatus;
 
 /**
- * State record cho 1 saga instance.
+ * Saga state for prescription billing.
  *
- * <p>Saga choreography KHÔNG có orchestrator central — state lưu phân tán ở service initiator.
- * visits-service vừa publish event vừa giữ NotificationSaga record để track:
- * <ul>
- *   <li>Saga đã COMPLETED chưa? (mailer ack thành công)</li>
- *   <li>Saga đã COMPENSATED chưa? (mail fail → compensating action đã chạy)</li>
- * </ul>
- *
- * <p>{@code eventId} unique = idempotency: nếu mailer redeliver, saga handler chỉ apply 1 lần.
- *
- * <p>Khác Visit (entity nghiệp vụ chính), NotificationSaga là <b>infra/coordination state</b> —
- * KHÔNG expose qua REST API; chỉ dùng internal cho saga handler + monitoring.
+ * <p>The prescription is clinical truth and remains valid even when billing
+ * cannot append medication items. Compensation is manual billing follow-up.
  */
 @Entity
-@Table(name = "notification_sagas")
-public class NotificationSaga {
+@Table(name = "prescription_billing_sagas")
+public class PrescriptionBillingSaga {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** UUID của event gốc (vd VisitCompletedEvent.eventId). Unique → idempotency. */
     @Column(name = "event_id", nullable = false, unique = true)
     private UUID eventId;
 
+    @Column(name = "prescription_id", nullable = false)
+    private Long prescriptionId;
+
     @Column(name = "visit_id", nullable = false)
     private Long visitId;
-
-    /** Loại saga — vd {@code "visit.completed.notification"} cho phép mở rộng tương lai. */
-    @Column(name = "saga_type", nullable = false, length = 40)
-    private String sagaType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -66,55 +55,55 @@ public class NotificationSaga {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected NotificationSaga() {}
+    protected PrescriptionBillingSaga() {
+        // JPA
+    }
 
-    private NotificationSaga(UUID eventId, Long visitId, String sagaType) {
+    private PrescriptionBillingSaga(UUID eventId, Long prescriptionId, Long visitId) {
         this.eventId = eventId;
+        this.prescriptionId = prescriptionId;
         this.visitId = visitId;
-        this.sagaType = sagaType;
         this.status = SagaStatus.PENDING;
         this.attempts = 0;
     }
 
-    public static NotificationSaga start(UUID eventId, Long visitId, String sagaType) {
-        return new NotificationSaga(eventId, visitId, sagaType);
+    public static PrescriptionBillingSaga start(UUID eventId, Long prescriptionId, Long visitId) {
+        return new PrescriptionBillingSaga(eventId, prescriptionId, visitId);
     }
 
-    /** Mailer ack thành công → saga hoàn tất happy path. */
     public void markCompleted() {
         if (status != SagaStatus.PENDING) {
-            return; // idempotent — đã terminal
+            return;
         }
-        this.status = SagaStatus.COMPLETED;
-        this.attempts++;
+        status = SagaStatus.COMPLETED;
+        attempts++;
     }
 
-    /** Mailer fail vĩnh viễn → trigger compensation. {@code reason} ghi log cuối. */
     public void markCompensated(String reason) {
         if (status != SagaStatus.PENDING) {
             return;
         }
-        this.status = SagaStatus.COMPENSATED;
-        this.lastError = reason;
-        this.attempts++;
+        status = SagaStatus.COMPENSATED;
+        lastError = reason;
+        attempts++;
     }
 
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
-        this.createdAt = now;
-        this.updatedAt = now;
+        createdAt = now;
+        updatedAt = now;
     }
 
     @PreUpdate
     void onUpdate() {
-        this.updatedAt = Instant.now();
+        updatedAt = Instant.now();
     }
 
     public Long getId() { return id; }
     public UUID getEventId() { return eventId; }
+    public Long getPrescriptionId() { return prescriptionId; }
     public Long getVisitId() { return visitId; }
-    public String getSagaType() { return sagaType; }
     public SagaStatus getStatus() { return status; }
     public Integer getAttempts() { return attempts; }
     public String getLastError() { return lastError; }

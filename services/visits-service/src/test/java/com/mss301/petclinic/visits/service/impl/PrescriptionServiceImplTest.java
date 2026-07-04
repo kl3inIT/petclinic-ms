@@ -30,6 +30,7 @@ import com.mss301.petclinic.visits.model.Prescription;
 import com.mss301.petclinic.visits.model.Visit;
 import com.mss301.petclinic.visits.repository.PrescriptionRepository;
 import com.mss301.petclinic.visits.repository.VisitRepository;
+import com.mss301.petclinic.visits.saga.PrescriptionBillingSagaRepository;
 import com.mss301.petclinic.visits.service.PrescriptionPdfGenerator;
 
 class PrescriptionServiceImplTest {
@@ -45,6 +46,7 @@ class PrescriptionServiceImplTest {
     private PrescriptionPdfGenerator pdfGenerator;
     private RemoteClientsFacade remoteClients;
     private ObjectProvider<EventPublisher> events;
+    private PrescriptionBillingSagaRepository sagaRepository;
     private PrescriptionServiceImpl service;
 
     @BeforeEach
@@ -56,9 +58,11 @@ class PrescriptionServiceImplTest {
         pdfGenerator = mock(PrescriptionPdfGenerator.class);
         remoteClients = mock(RemoteClientsFacade.class);
         events = mock(ObjectProvider.class);
+        sagaRepository = mock(PrescriptionBillingSagaRepository.class);
         when(events.getIfAvailable()).thenReturn(null);   // broker off — publish no-op
         service = new PrescriptionServiceImpl(
-                visitRepository, prescriptionRepository, files, pdfGenerator, remoteClients, events);
+                visitRepository, prescriptionRepository, files, pdfGenerator,
+                remoteClients, events, sagaRepository);
     }
 
     /** Visit ở trạng thái IN_PROGRESS (đủ điều kiện kê đơn), do VET_ID phụ trách. */

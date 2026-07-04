@@ -6,10 +6,11 @@ import java.util.UUID;
 import com.mss301.petclinic.common.events.DomainEvent;
 
 /**
- * Compensating event — phát ra khi saga "visit.completed.notification" rollback do mailer fail.
+ * Compensating event — phát ra khi saga "visit.completed" có participant fail
+ * (billing hoặc notification).
  *
  * <p>Consumer (mailer-service hoặc admin channel) phát alert tới ops/vet để liên hệ
- * khách hàng trực tiếp (không qua email tự động).
+ * khách hàng trực tiếp hoặc reconcile billing thủ công.
  *
  * <p>Routing key: {@code visit.manual-followup-required}.
  *
@@ -24,7 +25,7 @@ public record VisitManualFollowUpRequiredEvent(
 
         Long visitId,
         UUID originalEventId,             // VisitCompletedEvent.eventId — để trace saga
-        String reason,                     // mailer error message
+        String reason,                     // billing / notification error message
         UUID customerUserId,
         String customerUsername,
         String customerEmail

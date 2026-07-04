@@ -28,6 +28,8 @@ import com.mss301.petclinic.visits.model.Visit;
 import com.mss301.petclinic.visits.model.VisitStatus;
 import com.mss301.petclinic.visits.repository.PrescriptionRepository;
 import com.mss301.petclinic.visits.repository.VisitRepository;
+import com.mss301.petclinic.visits.saga.PrescriptionBillingSaga;
+import com.mss301.petclinic.visits.saga.PrescriptionBillingSagaRepository;
 import com.mss301.petclinic.visits.service.PrescriptionPdfGenerator;
 import com.mss301.petclinic.visits.service.PrescriptionService;
 
@@ -50,19 +52,22 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final RemoteClientsFacade remoteClients;
     /** Optional — broker có thể disabled (test profile) hoặc tạm down. */
     private final ObjectProvider<EventPublisher> events;
+    private final PrescriptionBillingSagaRepository sagaRepository;
 
     public PrescriptionServiceImpl(VisitRepository visitRepository,
                                    PrescriptionRepository prescriptionRepository,
                                    FilesClient files,
                                    PrescriptionPdfGenerator pdfGenerator,
                                    RemoteClientsFacade remoteClients,
-                                   ObjectProvider<EventPublisher> events) {
+                                   ObjectProvider<EventPublisher> events,
+                                   PrescriptionBillingSagaRepository sagaRepository) {
         this.visitRepository = visitRepository;
         this.prescriptionRepository = prescriptionRepository;
         this.files = files;
         this.pdfGenerator = pdfGenerator;
         this.remoteClients = remoteClients;
         this.events = events;
+        this.sagaRepository = sagaRepository;
     }
 
     @Override
@@ -182,8 +187,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             } catch (RuntimeException e) {
                 log.warn("Enrich username thất bại (userId={}): {}", visit.getCustomerUserId(), e.toString());
             }
-            publisher.publish(PrescriptionIssuedEvent.of(
-                    saved.getId(), visit.getId(), visit.getCustomerUserId(), username, pricedLines));
+            PrescriptionIssuedEvent event = PrescriptionIssuedEvent.of(
+                    saved.getId(), visit.getId(), visit.getCustomerUserId(), username, pricedLines);
+            sagaRepository.save(PrescriptionBillingSaga.start(
+                    event.eventId(), saved.getId(), visit.getId()));
+            publisher.publish(event);
         } catch (RuntimeException ex) {
             log.warn("Publish prescription.issued failed (visit={}): {}", visit.getId(), ex.getMessage());
         }

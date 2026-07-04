@@ -44,10 +44,10 @@ public interface InvoiceService {
 
     /**
      * Bơm các dòng thuốc kê đơn vào tab OPEN của khách (tạo tab nếu chưa có).
-     * Idempotency theo {@code eventId} do consumer đảm bảo. Dùng bởi consumer
-     * {@code PrescriptionIssuedEvent}.
+     * Idempotent theo prescriptionId để broker redeliver không bơm trùng thuốc.
+     * Dùng bởi consumer {@code PrescriptionIssuedEvent}.
      */
-    InvoiceResponse appendMedicationItems(UUID customerUserId, String customerName,
+    InvoiceResponse appendMedicationItems(UUID customerUserId, String customerName, Long prescriptionId,
                                           List<MedicationLine> lines);
 
     /** Một dòng thuốc tính tiền (snapshot từ event). */

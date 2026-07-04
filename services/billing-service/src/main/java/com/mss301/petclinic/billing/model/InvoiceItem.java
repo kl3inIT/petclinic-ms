@@ -38,7 +38,7 @@ public class InvoiceItem extends AbstractAuditingEntity {
     @Column(name = "source_type", nullable = false, length = 20)
     private InvoiceItemSource sourceType;
 
-    /** visitId / diseaseId / productId — nullable cho dòng MISC tự do. */
+    /** visitId / diseaseId / prescriptionId / productId — nullable cho dòng MISC tự do. */
     @Column(name = "source_ref")
     private Long sourceRef;
 

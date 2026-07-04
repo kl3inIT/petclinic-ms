@@ -110,6 +110,11 @@ public class Invoice extends AbstractAuditingEntity {
         return new Invoice(customerUserId, customerName, customerEmail);
     }
 
+    /** Backward-compatible factory cho call sites/test không có email snapshot. */
+    public static Invoice open(UUID customerUserId, String customerName) {
+        return open(customerUserId, customerName, null);
+    }
+
     /** Thêm một dòng chi phí. Yêu cầu status OPEN. Trả về dòng vừa tạo. */
     public InvoiceItem addItem(InvoiceItemSource sourceType, Long sourceRef,
                                String description, BigDecimal unitPrice, int quantity) {
@@ -137,12 +142,24 @@ public class Invoice extends AbstractAuditingEntity {
                         && visitId.equals(it.getSourceRef()));
     }
 
+    /** Đã có dòng MEDICATION cho đơn thuốc này chưa? */
+    public boolean hasMedicationPrescription(Long prescriptionId) {
+        return items.stream().anyMatch(it ->
+                it.getSourceType() == InvoiceItemSource.MEDICATION
+                        && prescriptionId.equals(it.getSourceRef()));
+    }
+
     /** Chốt + thanh toán (OPEN → PAID). */
     public void checkout(PaymentMethod method, String paymentReference) {
         transitionTo(InvoiceStatus.PAID);
         this.paymentMethod = method;
         this.paymentReference = paymentReference;
         this.paidAt = Instant.now();
+    }
+
+    /** Backward-compatible checkout cho phương thức không cần payment reference. */
+    public void checkout(PaymentMethod method) {
+        checkout(method, null);
     }
 
     /** Huỷ hoá đơn (OPEN → CANCELLED). */

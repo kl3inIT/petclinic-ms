@@ -28,7 +28,7 @@ import com.mss301.petclinic.visits.config.WorkflowCallbackProperties;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
 import com.mss301.petclinic.visits.model.Visit;
 import com.mss301.petclinic.visits.repository.VisitRepository;
-import com.mss301.petclinic.visits.saga.NotificationSagaRepository;
+import com.mss301.petclinic.visits.saga.VisitCompletionSagaRepository;
 
 class VisitServiceImplTest {
 
@@ -51,7 +51,7 @@ class VisitServiceImplTest {
         @SuppressWarnings("unchecked")
         ObjectProvider<WorkflowServiceClient> workflowClient = mock(ObjectProvider.class);
         WorkflowCallbackProperties workflowProperties = new WorkflowCallbackProperties("test-secret", "visit-booking");
-        NotificationSagaRepository sagaRepository = mock(NotificationSagaRepository.class);
+        VisitCompletionSagaRepository sagaRepository = mock(VisitCompletionSagaRepository.class);
         service = new VisitServiceImpl(repository, remoteClients, events, workflowClient, workflowProperties, sagaRepository);
     }
 

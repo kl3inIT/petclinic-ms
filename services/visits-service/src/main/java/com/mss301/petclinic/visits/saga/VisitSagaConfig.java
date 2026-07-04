@@ -11,11 +11,15 @@ import com.mss301.petclinic.common.events.config.EventsProperties;
 /**
  * AMQP topology cho saga listener trong visits-service.
  *
- * <p>Mailer publish 2 event sau khi xử lý visit.completed — bound qua routing key
- * convention {@code <domain>.notification.<ack|failed>}:
+ * <p>Billing và mailer publish ACK/FAILED sau khi xử lý event của visits — bound qua
+ * routing key convention {@code <domain>.<step>.<ack|failed>}:
  * <ul>
+ *   <li>{@code visits.visit.billing.ack}          ← routing {@code visit.billing.ack}</li>
+ *   <li>{@code visits.visit.billing.failed}       ← routing {@code visit.billing.failed}</li>
  *   <li>{@code visits.visit.notification.ack}     ← routing {@code visit.notification.ack}</li>
  *   <li>{@code visits.visit.notification.failed}  ← routing {@code visit.notification.failed}</li>
+ *   <li>{@code visits.prescription.billing.ack}   ← routing {@code prescription.billing.ack}</li>
+ *   <li>{@code visits.prescription.billing.failed}← routing {@code prescription.billing.failed}</li>
  * </ul>
  *
  * <p>Convention: queue name = {@code <service>.<routingKey>} — match helper bên Go mailer
@@ -25,7 +29,19 @@ import com.mss301.petclinic.common.events.config.EventsProperties;
  */
 @Configuration
 @ConditionalOnProperty(prefix = "petclinic.events", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class NotificationSagaConfig {
+public class VisitSagaConfig {
+
+    @Bean
+    Declarables visitBillingAckQueue(EventsProperties props) {
+        return EventQueues.consumer(
+                "visits.visit.billing.ack", "visit.billing.ack", props);
+    }
+
+    @Bean
+    Declarables visitBillingFailedQueue(EventsProperties props) {
+        return EventQueues.consumer(
+                "visits.visit.billing.failed", "visit.billing.failed", props);
+    }
 
     @Bean
     Declarables visitNotificationAckQueue(EventsProperties props) {
@@ -37,5 +53,17 @@ public class NotificationSagaConfig {
     Declarables visitNotificationFailedQueue(EventsProperties props) {
         return EventQueues.consumer(
                 "visits.visit.notification.failed", "visit.notification.failed", props);
+    }
+
+    @Bean
+    Declarables prescriptionBillingAckQueue(EventsProperties props) {
+        return EventQueues.consumer(
+                "visits.prescription.billing.ack", "prescription.billing.ack", props);
+    }
+
+    @Bean
+    Declarables prescriptionBillingFailedQueue(EventsProperties props) {
+        return EventQueues.consumer(
+                "visits.prescription.billing.failed", "prescription.billing.failed", props);
     }
 }
