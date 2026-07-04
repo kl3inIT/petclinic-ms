@@ -1,7 +1,7 @@
 # Gateway — env-agnostic routes + default filters.
 #
 # IMPORTANT: Spring Cloud Gateway 5.0.x (Boot 4 / Cloud 2025.x) đổi prefix:
-#   - Cloud 4.x:  spring.cloud.gateway.mvc.*  (deprecated)
+#   - Cloud 4.x:  spring.cloud.gateway.mvc.*  (legacy prefix)
 #   - Cloud 5.x:  spring.cloud.gateway.server.webmvc.*  ← dùng cái này
 # Verify bằng /actuator/configprops — bean `gatewayMvcProperties` có prefix=spring.cloud.gateway.server.webmvc.
 #
@@ -51,6 +51,10 @@ springdoc:
         url: /v3/api-docs/billing
       - name: products-service
         url: /v3/api-docs/products
+      - name: reviews-service
+        url: /v3/api-docs/reviews
+      - name: genai-service
+        url: /v3/api-docs/genai
   api-docs:
     enabled: false                          # gateway tự không có endpoint nghiệp vụ — tắt spec riêng
   show-actuator: false
@@ -75,6 +79,10 @@ resilience4j:
         base-config: default
       billingCircuitBreaker:
         base-config: default
+      productsCircuitBreaker:
+        base-config: default
+      reviewsCircuitBreaker:
+        base-config: default
       authCircuitBreaker:
         base-config: default
       # Genai: LLM streaming có thể chạy 30-120s. Threshold nới lỏng — chỉ trip khi
@@ -96,6 +104,10 @@ resilience4j:
       visitsCircuitBreaker:
         base-config: default
       billingCircuitBreaker:
+        base-config: default
+      productsCircuitBreaker:
+        base-config: default
+      reviewsCircuitBreaker:
         base-config: default
       authCircuitBreaker:
         base-config: default
@@ -126,6 +138,8 @@ resilience4j:
       billingBulkhead:
         base-config: default
       productsBulkhead:
+        base-config: default
+      reviewsBulkhead:
         base-config: default
       authBulkhead:
         max-concurrent-calls: 50            # auth login burst lúc peak hour, nới hơn

@@ -2,6 +2,10 @@ package com.mss301.petclinic.auth.service;
 
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import com.mss301.petclinic.auth.dto.req.AdminUpdateUserRequest;
 import com.mss301.petclinic.auth.dto.req.LoginRequest;
 import com.mss301.petclinic.auth.dto.req.RegisterRequest;
 import com.mss301.petclinic.auth.dto.res.AuthResponse;
@@ -18,6 +22,12 @@ public interface AuthService {
     void logout(UUID userId);
 
     UserResponse getCurrentUser(UUID userId);
+
+    /** Admin search over username/email. */
+    Page<UserResponse> searchUsers(String query, Pageable pageable);
+
+    /** Admin patch for static role assignment, enablement, and domain links. */
+    UserResponse updateUserAdmin(UUID userId, AdminUpdateUserRequest request);
 
     /**
      * Phase L — admin link user account ↔ customer (owner) entity.

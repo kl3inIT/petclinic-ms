@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import com.mss301.petclinic.billing.dto.req.AddInvoiceItemRequest;
 import com.mss301.petclinic.billing.dto.req.CheckoutRequest;
 import com.mss301.petclinic.billing.dto.req.CreateInvoiceRequest;
 import com.mss301.petclinic.billing.dto.res.InvoiceResponse;
+import com.mss301.petclinic.billing.events.InvoicePaidEvent;
 import com.mss301.petclinic.billing.exception.DiseaseNotFoundException;
 import com.mss301.petclinic.billing.exception.InvoiceNotFoundException;
 import com.mss301.petclinic.billing.model.Disease;
@@ -30,6 +32,7 @@ import com.mss301.petclinic.billing.repository.DiseaseRepository;
 import com.mss301.petclinic.billing.repository.InvoiceRepository;
 import com.mss301.petclinic.billing.repository.InvoiceSpecifications;
 import com.mss301.petclinic.billing.service.InvoiceService;
+import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 
 @Service
@@ -41,12 +44,15 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final InvoiceRepository repository;
     private final DiseaseRepository diseaseRepository;
     private final ProductsClient productsClient;
+    private final ObjectProvider<EventPublisher> events;
 
     public InvoiceServiceImpl(InvoiceRepository repository, DiseaseRepository diseaseRepository,
-                              ProductsClient productsClient) {
+                              ProductsClient productsClient,
+                              ObjectProvider<EventPublisher> events) {
         this.repository = repository;
         this.diseaseRepository = diseaseRepository;
         this.productsClient = productsClient;
+        this.events = events;
     }
 
     @Override
@@ -73,7 +79,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 return InvoiceResponse.from(existing.get());
             }
         }
-        Invoice invoice = Invoice.open(request.customerUserId(), request.customerName());
+        Invoice invoice = Invoice.open(request.customerUserId(), request.customerName(), request.customerEmail());
         if (request.notes() != null) {
             invoice.setNotes(request.notes());
         }
@@ -175,8 +181,23 @@ public class InvoiceServiceImpl implements InvoiceService {
         // lúc kê đơn nên KHÔNG trừ lại. Best-effort: lỗi products-service chỉ log, không chặn
         // thanh toán (quầy đã giao hàng vật lý) — chỉnh kho tay nếu lệch. ⚠️ dual-write.
         consumeProductStock(invoice);
-        invoice.checkout(request.paymentMethod());
+        String paymentReference = normalizePaymentReference(request);
+        invoice.checkout(request.paymentMethod(), paymentReference);
+        publishInvoicePaid(invoice);
         return InvoiceResponse.from(invoice);
+    }
+
+    private static String normalizePaymentReference(CheckoutRequest request) {
+        String ref = request.paymentReference() == null ? null : request.paymentReference().trim();
+        if (ref != null && ref.isBlank()) {
+            ref = null;
+        }
+        if (request.paymentMethod() == com.mss301.petclinic.billing.model.PaymentMethod.TRANSFER && ref == null) {
+            throw new BadRequestAlertException(
+                    "Thanh toán chuyển khoản cần mã giao dịch/tham chiếu.",
+                    "Invoice", "payment-reference-required");
+        }
+        return ref;
     }
 
     private void consumeProductStock(Invoice invoice) {
@@ -204,11 +225,22 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
+    public boolean hasPaidProductPurchase(UUID customerUserId, Long productId) {
+        if (customerUserId == null || productId == null) {
+            return false;
+        }
+        return repository.existsPaidProductPurchase(customerUserId, productId);
+    }
+
+    @Override
     @Transactional
-    public InvoiceResponse appendVisitFee(UUID customerUserId, String customerName,
+    public InvoiceResponse appendVisitFee(UUID customerUserId, String customerName, String customerEmail,
                                           Long visitId, BigDecimal fee, String description) {
         Invoice invoice = repository.findFirstByCustomerUserIdAndStatus(customerUserId, InvoiceStatus.OPEN)
-                .orElseGet(() -> repository.save(Invoice.open(customerUserId, customerName)));
+                .orElseGet(() -> repository.save(Invoice.open(customerUserId, customerName, customerEmail)));
+        if (invoice.getCustomerEmail() == null && customerEmail != null && !customerEmail.isBlank()) {
+            invoice.setCustomerEmail(customerEmail);
+        }
         if (!invoice.hasVisitFee(visitId)) {
             invoice.addItem(InvoiceItemSource.VISIT_FEE, visitId, description,
                     fee != null ? fee : BigDecimal.ZERO, 1);
@@ -221,7 +253,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     public InvoiceResponse appendMedicationItems(UUID customerUserId, String customerName,
                                                  List<InvoiceService.MedicationLine> lines) {
         Invoice invoice = repository.findFirstByCustomerUserIdAndStatus(customerUserId, InvoiceStatus.OPEN)
-                .orElseGet(() -> repository.save(Invoice.open(customerUserId, customerName)));
+                .orElseGet(() -> repository.save(Invoice.open(customerUserId, customerName, null)));
         for (InvoiceService.MedicationLine line : lines) {
             invoice.addItem(InvoiceItemSource.MEDICATION, line.productId(), line.name(),
                     line.unitPrice() != null ? line.unitPrice() : BigDecimal.ZERO,
@@ -240,6 +272,18 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new BadRequestAlertException(
                     "Hoá đơn đã chốt (" + invoice.getStatus() + ") — không thể chỉnh sửa",
                     "Invoice", "invoice-not-open");
+        }
+    }
+
+    private void publishInvoicePaid(Invoice invoice) {
+        EventPublisher publisher = events.getIfAvailable();
+        if (publisher == null || invoice.getCustomerEmail() == null || invoice.getCustomerEmail().isBlank()) {
+            return;
+        }
+        try {
+            publisher.publish(InvoicePaidEvent.of(invoice));
+        } catch (RuntimeException ex) {
+            log.warn("Publish invoice.paid failed (invoice={}): {}", invoice.getId(), ex.getMessage());
         }
     }
 }

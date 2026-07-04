@@ -83,7 +83,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new ReviewAlreadyExistsException(req.targetType(), req.targetId().toString());
         }
 
-        // 2. Eligibility — VET/VISIT cần visit COMPLETED của author. PRODUCT skip v1.
+        // 2. Eligibility — VET/VISIT require completed visit; PRODUCT requires paid purchase.
         checkEligibility(req.targetType(), req.targetId(), authorId);
 
         // 3. Moderation — hit profanity → status PENDING_MODERATION (không reject).
@@ -258,14 +258,19 @@ public class ReviewServiceImpl implements ReviewService {
      * Eligibility rules:
      * <ul>
      *   <li>VET/VISIT: phải có visit COMPLETED với customerUserId = author</li>
-     *   <li>PRODUCT: skip v1 (chưa có billing-service kiểm tra invoice PAID)</li>
+     *   <li>PRODUCT: phải có invoice PAID chứa dòng PRODUCT cùng productId</li>
      * </ul>
      *
      * <p>Convention business: FE pass visitId làm targetId trong cả 2 case VET và VISIT
-     * (review VET phải qua 1 visit cụ thể). PRODUCT skip eligibility v1.
+     * (review VET phải qua 1 visit cụ thể). PRODUCT dùng targetId = productId.
      */
     private void checkEligibility(TargetType type, Long targetId, UUID authorId) {
         if (type == TargetType.PRODUCT) {
+            var eligibility = remoteClients.checkProductPurchase(targetId, authorId);
+            if (!eligibility.eligible()) {
+                throw new EligibilityNotMetException(type,
+                        "bạn chỉ có thể review sản phẩm đã thanh toán trong hoá đơn PAID");
+            }
             return;
         }
 

@@ -14,7 +14,7 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
-# Resilience4j cho VisitsClient eligibility check trong ReviewServiceImpl.create().
+# Resilience4j cho VisitsClient/BillingClient eligibility check trong ReviewServiceImpl.create().
 # Instance name `visits-service` = `@CircuitBreaker(name="visits-service")` trên RemoteClientsFacade (W4).
 #
 # 4xx (NotFound 404 = visit không tồn tại, BadRequest = invalid id) — service HEALTHY,
@@ -38,8 +38,12 @@ resilience4j:
     instances:
       visits-service:
         base-config: default
+      billing-service:
+        base-config: default
 
   timelimiter:
     instances:
       visits-service:
+        timeout-duration: 3s
+      billing-service:
         timeout-duration: 3s

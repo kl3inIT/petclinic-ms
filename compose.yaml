@@ -139,7 +139,7 @@ services:
   # Metrics scrape backend — Prometheus pull /actuator/prometheus mỗi 15s.
   # UI: http://localhost:9090  | Targets: /targets  | Graph: /graph
   prometheus:
-    image: prom/prometheus:v3.11.3
+    image: prom/prometheus:v3.13.0
     container_name: petclinic-prometheus
     profiles: ["obs", "all"]
     ports:
@@ -163,7 +163,7 @@ services:
   # Metrics visualization. Provision datasource Prometheus + 1 default dashboard tự load.
   # UI: http://localhost:3000  (admin/admin — đổi pwd lần đầu trừ khi env override)
   grafana:
-    image: grafana/grafana:13.0.1
+    image: grafana/grafana:13.1.0
     container_name: petclinic-grafana
     profiles: ["obs", "all"]
     depends_on:
@@ -213,7 +213,7 @@ services:
 
   # Camunda 8 secondary storage for Operate/Tasklist/Flowset UI.
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.9
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
     container_name: petclinic-camunda-elasticsearch
     profiles: ["workflow", "all"]
     environment:
@@ -235,7 +235,7 @@ services:
   # Camunda 8 single-node developer runtime.
   # REST/UI: http://localhost:8088, gRPC: http://localhost:26500
   camunda:
-    image: camunda/camunda:8.9.5
+    image: camunda/camunda:8.9.11
     container_name: petclinic-camunda
     profiles: ["workflow", "all"]
     depends_on:
@@ -484,6 +484,10 @@ services:
       customers-service: { condition: service_healthy }
       vets-service: { condition: service_healthy }
       visits-service: { condition: service_healthy }
+      billing-service: { condition: service_healthy }
+      products-service: { condition: service_healthy }
+      reviews-service: { condition: service_healthy }
+      genai-service: { condition: service_healthy }
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
@@ -573,6 +577,7 @@ services:
       # POST /reviews sẽ 503 (circuit breaker fallback) — depends_on tránh ngay
       # cả tình huống boot-up bị spam fail.
       visits-service: { condition: service_healthy }
+      billing-service: { condition: service_healthy }
     environment:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DOCKER_COMPOSE_ENABLED: "false"

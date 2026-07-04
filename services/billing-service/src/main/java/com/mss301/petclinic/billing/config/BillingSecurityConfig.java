@@ -68,6 +68,7 @@ public class BillingSecurityConfig {
                             .hasAnyRole("STAFF", "ADMIN", "VET")
 
                         // ── Hoá đơn: đọc ──
+                        .requestMatchers(HttpMethod.GET, "/api/v1/invoices/eligibility/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/invoices/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/invoices")
                             .hasAnyRole("STAFF", "ADMIN", "VET")

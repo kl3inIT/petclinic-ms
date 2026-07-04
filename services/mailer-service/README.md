@@ -80,6 +80,7 @@ Tất cả có default, override bằng env:
 | Routing key | Queue | Action |
 |---|---|---|
 | `user.registered` | `mailer.user.registered` | Gửi welcome mail |
+| `invoice.paid` | `mailer.invoice.paid` | Gửi biên nhận thanh toán |
 
 Thêm event mới = thêm 1 closure handler trong `main.go` + 1 dòng `cons.Subscribe(...)`.
 

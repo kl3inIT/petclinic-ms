@@ -28,6 +28,7 @@ import com.mss301.petclinic.billing.dto.req.AddInvoiceItemRequest;
 import com.mss301.petclinic.billing.dto.req.CheckoutRequest;
 import com.mss301.petclinic.billing.dto.req.CreateInvoiceRequest;
 import com.mss301.petclinic.billing.dto.res.InvoiceResponse;
+import com.mss301.petclinic.billing.dto.res.ProductPurchaseEligibilityResponse;
 import com.mss301.petclinic.billing.model.InvoiceStatus;
 import com.mss301.petclinic.billing.service.InvoiceService;
 
@@ -82,6 +83,21 @@ public class InvoiceController {
             throw new AccessDeniedException("Bạn không thể xem hoá đơn của người khác");
         }
         return invoice;
+    }
+
+    @GetMapping("/eligibility/products/{productId}/purchase")
+    @Operation(summary = "Check whether a customer has a PAID invoice containing a product")
+    public ProductPurchaseEligibilityResponse checkProductPurchaseEligibility(
+            @PathVariable Long productId,
+            @RequestParam UUID customerUserId,
+            @AuthenticationPrincipal Jwt jwt) {
+        if (!isPrivileged(jwt) && !currentUserId(jwt).equals(customerUserId)) {
+            throw new AccessDeniedException("Bạn không thể kiểm tra lịch sử mua hàng của người khác");
+        }
+        return new ProductPurchaseEligibilityResponse(
+                productId,
+                customerUserId,
+                service.hasPaidProductPurchase(customerUserId, productId));
     }
 
     @PostMapping

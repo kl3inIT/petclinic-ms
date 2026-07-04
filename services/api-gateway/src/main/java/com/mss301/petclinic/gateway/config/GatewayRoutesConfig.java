@@ -111,6 +111,16 @@ public class GatewayRoutesConfig {
     }
 
     @Bean
+    public RouterFunction<ServerResponse> reviewsServiceRoute() {
+        return route("reviews-service")
+                .route(path("/api/v1/reviews/**").or(path("/api/v1/admin/reviews/**")), http())
+                .filter(lb("reviews-service"))
+                .filter(bulkhead(bulkheadRegistry, "reviewsBulkhead"))
+                .filter(circuitBreaker(c -> c.setId("reviewsCircuitBreaker").setFallbackUri(FALLBACK_URI.toString())))
+                .build();
+    }
+
+    @Bean
     public RouterFunction<ServerResponse> workflowServiceRoute() {
         return route("workflow-service")
                 .route(path("/api/v1/workflows/**"), http())
@@ -244,6 +254,15 @@ public class GatewayRoutesConfig {
                 .route(path("/v3/api-docs/products"), http())
                 .before(setPath("/v3/api-docs"))
                 .filter(lb("products-service"))
+                .build();
+    }
+
+    @Bean
+    public RouterFunction<ServerResponse> apiDocsReviewsRoute() {
+        return route("api-docs-reviews")
+                .route(path("/v3/api-docs/reviews"), http())
+                .before(setPath("/v3/api-docs"))
+                .filter(lb("reviews-service"))
                 .build();
     }
 

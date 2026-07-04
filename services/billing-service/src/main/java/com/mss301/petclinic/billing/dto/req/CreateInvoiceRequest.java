@@ -11,6 +11,7 @@ import jakarta.validation.constraints.Size;
 public record CreateInvoiceRequest(
         UUID customerUserId,
         @Size(max = 150) String customerName,
+        @Size(max = 100) String customerEmail,
         String notes
 ) {
 }

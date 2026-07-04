@@ -70,6 +70,25 @@ type VisitCompleted struct {
 	Fee string `json:"fee"`
 }
 
+// InvoicePaid — phát ra bởi billing-service sau khi checkout hoá đơn thành công.
+// Routing key: "invoice.paid".
+type InvoicePaid struct {
+	EventID    string    `json:"eventId"`
+	EventType  string    `json:"eventType"`
+	OccurredAt time.Time `json:"occurredAt"`
+	Source     string    `json:"source"`
+
+	InvoiceID      int64     `json:"invoiceId"`
+	CustomerUserID string    `json:"customerUserId"`
+	CustomerName   string    `json:"customerName"`
+	CustomerEmail  string    `json:"customerEmail"`
+	Total          string    `json:"total"`
+	Currency       string    `json:"currency"`
+	PaymentMethod  string    `json:"paymentMethod"`
+	PaymentRef     string    `json:"paymentReference"`
+	PaidAt         time.Time `json:"paidAt"`
+}
+
 // NotificationAck — generic envelope phát ra khi notification gửi THÀNH CÔNG.
 // Routing key convention: "<domain>.notification.ack" (vd "visit.notification.ack").
 // Match Java common-events.saga.NotificationAck record — Tolerant Reader cross-language.
@@ -82,8 +101,8 @@ type NotificationAck struct {
 	OccurredAt      time.Time `json:"occurredAt"`
 	Source          string    `json:"source"`
 	OriginalEventID string    `json:"originalEventId"`
-	Domain          string    `json:"domain"`    // "visit" | "user" | ...
-	EntityID        string    `json:"entityId"`  // domain entity ID (string để cross-language safe)
+	Domain          string    `json:"domain"`   // "visit" | "user" | ...
+	EntityID        string    `json:"entityId"` // domain entity ID (string để cross-language safe)
 	Recipient       string    `json:"recipient"`
 }
 

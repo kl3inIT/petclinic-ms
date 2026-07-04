@@ -51,6 +51,9 @@ public class Invoice extends AbstractAuditingEntity {
     @Column(name = "customer_name", length = 150)
     private String customerName;
 
+    @Column(name = "customer_email", length = 100)
+    private String customerEmail;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private InvoiceStatus status;
@@ -77,6 +80,9 @@ public class Invoice extends AbstractAuditingEntity {
     @Column(name = "payment_method", length = 20)
     private PaymentMethod paymentMethod;
 
+    @Column(name = "payment_reference", length = 120)
+    private String paymentReference;
+
     @Version
     private Long version;
 
@@ -88,9 +94,10 @@ public class Invoice extends AbstractAuditingEntity {
         // JPA
     }
 
-    private Invoice(UUID customerUserId, String customerName) {
+    private Invoice(UUID customerUserId, String customerName, String customerEmail) {
         this.customerUserId = customerUserId;
         this.customerName = customerName;
+        this.customerEmail = customerEmail;
         this.status = InvoiceStatus.OPEN;
         this.currency = "VND";
         this.subtotal = BigDecimal.ZERO;
@@ -99,8 +106,8 @@ public class Invoice extends AbstractAuditingEntity {
     }
 
     /** Mở một tab mới (status OPEN) cho khách. */
-    public static Invoice open(UUID customerUserId, String customerName) {
-        return new Invoice(customerUserId, customerName);
+    public static Invoice open(UUID customerUserId, String customerName, String customerEmail) {
+        return new Invoice(customerUserId, customerName, customerEmail);
     }
 
     /** Thêm một dòng chi phí. Yêu cầu status OPEN. Trả về dòng vừa tạo. */
@@ -131,9 +138,10 @@ public class Invoice extends AbstractAuditingEntity {
     }
 
     /** Chốt + thanh toán (OPEN → PAID). */
-    public void checkout(PaymentMethod method) {
+    public void checkout(PaymentMethod method, String paymentReference) {
         transitionTo(InvoiceStatus.PAID);
         this.paymentMethod = method;
+        this.paymentReference = paymentReference;
         this.paidAt = Instant.now();
     }
 
@@ -164,12 +172,14 @@ public class Invoice extends AbstractAuditingEntity {
     }
 
     public void setNotes(String notes) { this.notes = notes; }
+    public void setCustomerEmail(String customerEmail) { this.customerEmail = customerEmail; }
 
     public boolean isOpen() { return status == InvoiceStatus.OPEN; }
 
     public Long getId() { return id; }
     public UUID getCustomerUserId() { return customerUserId; }
     public String getCustomerName() { return customerName; }
+    public String getCustomerEmail() { return customerEmail; }
     public InvoiceStatus getStatus() { return status; }
     public String getCurrency() { return currency; }
     public BigDecimal getSubtotal() { return subtotal; }
@@ -178,6 +188,7 @@ public class Invoice extends AbstractAuditingEntity {
     public Instant getIssuedAt() { return issuedAt; }
     public Instant getPaidAt() { return paidAt; }
     public PaymentMethod getPaymentMethod() { return paymentMethod; }
+    public String getPaymentReference() { return paymentReference; }
     public Long getVersion() { return version; }
     public List<InvoiceItem> getItems() { return items; }
 }

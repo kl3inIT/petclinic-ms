@@ -29,6 +29,8 @@ const SERVICES = [
   'workflow',
   'billing',
   'products',
+  'reviews',
+  'genai',
 ] as const;
 const OUTPUT = resolve(__dirname, '../openapi/petclinic-api.json');
 
@@ -119,12 +121,10 @@ async function main() {
   console.log(`Fetching ${SERVICES.length} service specs via ${GATEWAY}`);
 
   const fetched = await Promise.all(
-    SERVICES.map(
-      async (s): Promise<readonly [string, OpenApiSpec | null]> => [
-        s,
-        await fetchSpec(s),
-      ],
-    ),
+    SERVICES.map(async (s): Promise<readonly [string, OpenApiSpec | null]> => [
+      s,
+      await fetchSpec(s),
+    ]),
   );
   const specs = fetched.filter(
     (entry): entry is readonly [string, OpenApiSpec] => entry[1] !== null,

@@ -1,13 +1,19 @@
 package com.mss301.petclinic.auth.service.impl;
 
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mss301.petclinic.auth.dto.req.AdminUpdateUserRequest;
 import com.mss301.petclinic.auth.dto.req.LoginRequest;
 import com.mss301.petclinic.auth.dto.req.RegisterRequest;
 import com.mss301.petclinic.auth.dto.res.AuthResponse;
@@ -28,6 +34,8 @@ import com.mss301.petclinic.common.web.exception.ResourceNotFoundException;
 @Service
 @Transactional(readOnly = true)
 public class AuthServiceImpl implements AuthService {
+
+    private static final Set<String> ALLOWED_ROLES = Set.of("USER", "STAFF", "VET", "ADMIN");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -131,6 +139,71 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId.toString()));
         return UserResponse.from(user);
+    }
+
+    @Override
+    public Page<UserResponse> searchUsers(String query, Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        Page<User> users = q.isBlank()
+                ? userRepository.findAll(pageable)
+                : userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(q, q, pageable);
+        return users.map(UserResponse::from);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateUserAdmin(UUID userId, AdminUpdateUserRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId.toString()));
+
+        if (request.hasRoles()) {
+            user.setRoles(normalizeRoles(request.roles()));
+        }
+        if (request.hasEnabled()) {
+            user.setEnabled(request.enabled());
+        }
+        if (request.hasVetId()) {
+            user.setVetId(request.vetId());
+        }
+        if (request.hasCustomerId()) {
+            user.setCustomerId(request.customerId());
+        }
+
+        try {
+            User saved = userRepository.saveAndFlush(user);
+            audit.userAuthorizationUpdated(currentAdminId(), saved.getId(), saved.getRoles(), saved.isEnabled());
+            return UserResponse.from(saved);
+        } catch (DataIntegrityViolationException ex) {
+            String msg = ex.getMostSpecificCause().getMessage();
+            if (msg != null && msg.contains("uk_users_customer_id")) {
+                throw new BadRequestAlertException(
+                        "Customer " + request.customerId() + " đã được link với user khác.",
+                        "User", "customer-already-linked");
+            }
+            throw ex;
+        }
+    }
+
+    private static Set<String> normalizeRoles(Set<String> rawRoles) {
+        if (rawRoles == null || rawRoles.isEmpty()) {
+            throw new BadRequestAlertException("User phải có ít nhất 1 role.", "User", "roles-required");
+        }
+        Set<String> normalized = new HashSet<>();
+        for (String role : rawRoles) {
+            if (role == null || role.isBlank()) {
+                throw new BadRequestAlertException("Role không hợp lệ.", "User", "role-invalid");
+            }
+            String value = role.trim().toUpperCase(Locale.ROOT);
+            if (value.startsWith("ROLE_")) {
+                value = value.substring("ROLE_".length());
+            }
+            if (!ALLOWED_ROLES.contains(value)) {
+                throw new BadRequestAlertException(
+                        "Role không được hỗ trợ: " + role, "User", "role-unsupported");
+            }
+            normalized.add(value);
+        }
+        return normalized;
     }
 
     @Override

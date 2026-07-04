@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi">
+<body style="font-family: Arial, sans-serif; line-height: 1.5; color: #172033">
+  <h2>Petclinic MSS301</h2>
+  <p>Xin chào {{if .CustomerName}}{{.CustomerName}}{{else}}quý khách{{end}},</p>
+  <p>Hoá đơn #{{.InvoiceID}} đã được thanh toán thành công.</p>
+  <table style="border-collapse: collapse; min-width: 320px">
+    <tr>
+      <td style="padding: 6px 12px; border: 1px solid #d7dde8">Tổng tiền</td>
+      <td style="padding: 6px 12px; border: 1px solid #d7dde8"><strong>{{.Total}} {{.Currency}}</strong></td>
+    </tr>
+    <tr>
+      <td style="padding: 6px 12px; border: 1px solid #d7dde8">Phương thức</td>
+      <td style="padding: 6px 12px; border: 1px solid #d7dde8">{{.PaymentMethod}}</td>
+    </tr>
+    {{if .PaymentReference}}
+    <tr>
+      <td style="padding: 6px 12px; border: 1px solid #d7dde8">Mã tham chiếu</td>
+      <td style="padding: 6px 12px; border: 1px solid #d7dde8">{{.PaymentReference}}</td>
+    </tr>
+    {{end}}
+    <tr>
+      <td style="padding: 6px 12px; border: 1px solid #d7dde8">Thời gian</td>
+      <td style="padding: 6px 12px; border: 1px solid #d7dde8">{{.PaidAtFormatted}}</td>
+    </tr>
+  </table>
+  <p>Cảm ơn bạn đã sử dụng dịch vụ của phòng khám.</p>
+  <p><a href="{{.AppBaseURL}}">Mở Petclinic</a></p>
+</body>
+</html>

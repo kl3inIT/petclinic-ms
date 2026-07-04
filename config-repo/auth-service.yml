@@ -38,6 +38,7 @@ petclinic:
       # + Phase K link vet.
       admin-endpoints:
         - { method: GET,   path: /api/v1/admin/users/** }
+        - { method: PATCH, path: /api/v1/admin/users/** }
         - { method: GET,   path: /api/v1/admin/audit/** }
         - { method: PATCH, path: /api/v1/users/*/customer-link }
         - { method: PATCH, path: /api/v1/users/*/vet-link }

@@ -1,5 +1,7 @@
 package com.mss301.petclinic.reviews.client;
 
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -30,9 +32,11 @@ public class RemoteClientsFacade {
     private static final Logger log = LoggerFactory.getLogger(RemoteClientsFacade.class);
 
     private final VisitsClient visitsClient;
+    private final BillingClient billingClient;
 
-    public RemoteClientsFacade(VisitsClient visitsClient) {
+    public RemoteClientsFacade(VisitsClient visitsClient, BillingClient billingClient) {
         this.visitsClient = visitsClient;
+        this.billingClient = billingClient;
     }
 
     @CircuitBreaker(name = "visits-service", fallbackMethod = "fetchVisitFallback")
@@ -44,5 +48,19 @@ public class RemoteClientsFacade {
     private VisitSummary fetchVisitFallback(Long visitId, Throwable t) {
         log.warn("visits-service circuit OPEN/down (visitId={}): {}", visitId, t.toString());
         throw new ExternalServiceUnavailableException("visits-service", t);
+    }
+
+    @CircuitBreaker(name = "billing-service", fallbackMethod = "checkProductPurchaseFallback")
+    public ProductPurchaseEligibility checkProductPurchase(Long productId, UUID customerUserId) {
+        return billingClient.checkProductPurchase(productId, customerUserId);
+    }
+
+    @SuppressWarnings("unused") // referenced by @CircuitBreaker fallbackMethod
+    private ProductPurchaseEligibility checkProductPurchaseFallback(Long productId,
+                                                                    UUID customerUserId,
+                                                                    Throwable t) {
+        log.warn("billing-service circuit OPEN/down (productId={}, customerUserId={}): {}",
+                productId, customerUserId, t.toString());
+        throw new ExternalServiceUnavailableException("billing-service", t);
     }
 }

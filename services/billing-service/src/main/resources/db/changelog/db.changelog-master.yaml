@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/changes/001-init-billing.yaml
   - include:
       file: db/changelog/changes/002-add-medication-source.yaml
+  - include:
+      file: db/changelog/changes/003-add-invoice-contact-payment-reference.yaml

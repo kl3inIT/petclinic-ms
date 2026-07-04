@@ -13,6 +13,7 @@ public record VisitCompletedPayload(
         Long visitId,
         UUID customerUserId,
         String customerUsername,
+        String customerEmail,
         String petName,
         String diagnosis,
         BigDecimal fee

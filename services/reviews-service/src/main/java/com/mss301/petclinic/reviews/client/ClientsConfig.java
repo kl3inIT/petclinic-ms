@@ -26,4 +26,15 @@ public class ClientsConfig {
                 .build()
                 .createClient(VisitsClient.class);
     }
+
+    @Bean
+    public BillingClient billingClient(@LoadBalanced RestClient.Builder lbBuilder) {
+        RestClient client = lbBuilder.clone()
+                .baseUrl("http://billing-service")
+                .build();
+        return HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(client))
+                .build()
+                .createClient(BillingClient.class);
+    }
 }

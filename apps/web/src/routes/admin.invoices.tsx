@@ -200,6 +200,11 @@ function InvoiceDetailContent({
   const cancel = useCancelInvoice();
   const [paymentMethod, setPaymentMethod] =
     useState<CheckoutRequestPaymentMethod>('CASH');
+  const [paymentReference, setPaymentReference] = useState('');
+  const trimmedPaymentReference = paymentReference.trim();
+  const referenceRequired = paymentMethod === 'TRANSFER';
+  const canCheckout =
+    items.length > 0 && (!referenceRequired || trimmedPaymentReference.length > 0);
 
   return (
     <Card>
@@ -231,20 +236,45 @@ function InvoiceDetailContent({
 
         {isOpen ? (
           /* Thanh toán / huỷ — chỉ quầy thu ngân (STAFF/ADMIN) */
-          <div className="flex items-center justify-between gap-3 rounded-lg border-2 border-primary/20 bg-primary/5 p-3">
-            <div className="flex items-center gap-2">
-              <Wallet className="size-5 text-primary" />
-              <select
-                value={paymentMethod}
-                onChange={(e) =>
-                  setPaymentMethod(e.target.value as CheckoutRequestPaymentMethod)
-                }
-                className="h-9 rounded-md border bg-white px-2 text-sm"
-              >
-                <option value="CASH">Tiền mặt</option>
-                <option value="CARD">Thẻ</option>
-                <option value="TRANSFER">Chuyển khoản</option>
-              </select>
+          <div className="flex flex-col gap-3 rounded-lg border-2 border-primary/20 bg-primary/5 p-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="grid gap-2 sm:grid-cols-[180px_minmax(220px,1fr)]">
+              <div className="space-y-1">
+                <Label className="text-xs">Phương thức</Label>
+                <div className="flex items-center gap-2">
+                  <Wallet className="size-5 text-primary" />
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => {
+                      const next = e.target.value as CheckoutRequestPaymentMethod;
+                      setPaymentMethod(next);
+                      if (next === 'CASH') {
+                        setPaymentReference('');
+                      }
+                    }}
+                    className="h-9 rounded-md border bg-white px-2 text-sm"
+                  >
+                    <option value="CASH">Tiền mặt</option>
+                    <option value="CARD">Thẻ</option>
+                    <option value="TRANSFER">Chuyển khoản</option>
+                  </select>
+                </div>
+              </div>
+              {paymentMethod !== 'CASH' ? (
+                <div className="space-y-1">
+                  <Label htmlFor="payment-reference" className="text-xs">
+                    Mã tham chiếu{referenceRequired ? ' *' : ''}
+                  </Label>
+                  <Input
+                    id="payment-reference"
+                    value={paymentReference}
+                    onChange={(e) => setPaymentReference(e.target.value)}
+                    placeholder={
+                      referenceRequired ? 'Bắt buộc với chuyển khoản' : 'Mã giao dịch thẻ'
+                    }
+                    maxLength={120}
+                  />
+                </div>
+              ) : null}
             </div>
             <div className="flex gap-2">
               <Button
@@ -269,7 +299,15 @@ function InvoiceDetailContent({
               <Button
                 onClick={() =>
                   checkout.mutate(
-                    { id: invoiceId, data: { paymentMethod } },
+                    {
+                      id: invoiceId,
+                      data: {
+                        paymentMethod,
+                        ...(trimmedPaymentReference
+                          ? { paymentReference: trimmedPaymentReference }
+                          : {}),
+                      },
+                    },
                     {
                       onSuccess: () => {
                         toast.success(`Đã thanh toán ${formatVnd(invoice.total)}`);
@@ -280,7 +318,7 @@ function InvoiceDetailContent({
                     },
                   )
                 }
-                disabled={checkout.isPending || items.length === 0}
+                disabled={checkout.isPending || !canCheckout}
               >
                 Thanh toán {formatVnd(invoice.total)}
               </Button>

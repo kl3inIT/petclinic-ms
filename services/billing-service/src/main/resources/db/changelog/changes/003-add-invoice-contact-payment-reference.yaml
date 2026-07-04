@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-add-invoice-contact-payment-reference
+      author: mss301
+      changes:
+        - addColumn:
+            schemaName: billing
+            tableName: invoices
+            columns:
+              - column:
+                  name: customer_email
+                  type: VARCHAR(100)
+              - column:
+                  name: payment_reference
+                  type: VARCHAR(120)

@@ -60,6 +60,7 @@ public class VisitCompletedConsumer {
         invoiceService.appendVisitFee(
                 event.customerUserId(),
                 event.customerUsername(),
+                event.customerEmail(),
                 event.visitId(),
                 event.fee(),
                 buildDescription(event));

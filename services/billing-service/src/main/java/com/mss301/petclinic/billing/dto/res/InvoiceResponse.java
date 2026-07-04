@@ -13,6 +13,7 @@ public record InvoiceResponse(
         Long id,
         UUID customerUserId,
         String customerName,
+        String customerEmail,
         InvoiceStatus status,
         String currency,
         BigDecimal subtotal,
@@ -21,6 +22,7 @@ public record InvoiceResponse(
         Instant issuedAt,
         Instant paidAt,
         PaymentMethod paymentMethod,
+        String paymentReference,
         List<InvoiceItemResponse> items
 ) {
     public static InvoiceResponse from(Invoice inv) {
@@ -28,9 +30,9 @@ public record InvoiceResponse(
                 .map(InvoiceItemResponse::from)
                 .toList();
         return new InvoiceResponse(
-                inv.getId(), inv.getCustomerUserId(), inv.getCustomerName(),
+                inv.getId(), inv.getCustomerUserId(), inv.getCustomerName(), inv.getCustomerEmail(),
                 inv.getStatus(), inv.getCurrency(), inv.getSubtotal(), inv.getTotal(),
                 inv.getNotes(), inv.getIssuedAt(), inv.getPaidAt(), inv.getPaymentMethod(),
-                items);
+                inv.getPaymentReference(), items);
     }
 }

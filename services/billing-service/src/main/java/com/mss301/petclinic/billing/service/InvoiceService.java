@@ -33,11 +33,13 @@ public interface InvoiceService {
 
     InvoiceResponse cancel(Long invoiceId);
 
+    boolean hasPaidProductPurchase(UUID customerUserId, Long productId);
+
     /**
      * Bơm phí khám vào tab OPEN của khách (tạo tab nếu chưa có). Idempotent theo visitId.
      * Dùng bởi consumer {@code VisitCompletedEvent}.
      */
-    InvoiceResponse appendVisitFee(UUID customerUserId, String customerName,
+    InvoiceResponse appendVisitFee(UUID customerUserId, String customerName, String customerEmail,
                                    Long visitId, BigDecimal fee, String description);
 
     /**

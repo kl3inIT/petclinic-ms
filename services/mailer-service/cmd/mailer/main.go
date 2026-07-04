@@ -90,6 +90,8 @@ func run() error {
 		makeVisitScheduledHandler(m, idem, cfg.AppBaseURL, log))
 	subscribe("mailer.visit.completed", "visit.completed", "visit-completed",
 		makeVisitCompletedHandler(m, idem, cfg.AppBaseURL, cons, log))
+	subscribe("mailer.invoice.paid", "invoice.paid", "invoice-paid",
+		makeInvoicePaidHandler(m, idem, cfg.AppBaseURL, log))
 
 	// Health HTTP server — k8s/CI ping liveness/readiness.
 	srv := &http.Server{
@@ -247,6 +249,30 @@ func makeVisitCompletedHandler(m *mailer.Mailer, idem *store.Idempotency, appURL
 		// (consumer outer dispatch sẽ ack message gốc visit.completed).
 		// Nếu trả sendErr → message gốc rớt DLQ + saga failed event cũng publish → double signal.
 		return nil
+	}
+}
+
+func makeInvoicePaidHandler(m *mailer.Mailer, idem *store.Idempotency, appURL string, log *slog.Logger) consumer.Handler {
+	return func(ctx context.Context, body []byte) error {
+		ev, ok, err := claim[events.InvoicePaid](ctx, body, idem, "invoice.paid",
+			func(e *events.InvoicePaid) string { return e.EventID },
+			func(e *events.InvoicePaid) string { return e.CustomerEmail },
+			log)
+		if err != nil || !ok {
+			return err
+		}
+		return m.Send(ctx, ev.CustomerEmail,
+			fmt.Sprintf("Biên nhận thanh toán #%d — Petclinic MSS301", ev.InvoiceID),
+			"invoice-paid", map[string]any{
+				"CustomerName":     ev.CustomerName,
+				"InvoiceID":        ev.InvoiceID,
+				"Total":            ev.Total,
+				"Currency":         ev.Currency,
+				"PaymentMethod":    ev.PaymentMethod,
+				"PaymentReference": ev.PaymentRef,
+				"PaidAtFormatted":  ev.PaidAt.Local().Format(vnTimeLayout),
+				"AppBaseURL":       appURL,
+			})
 	}
 }
 

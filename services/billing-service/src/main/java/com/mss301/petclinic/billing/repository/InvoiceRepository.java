@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.mss301.petclinic.billing.model.Invoice;
 import com.mss301.petclinic.billing.model.InvoiceStatus;
@@ -17,4 +19,16 @@ public interface InvoiceRepository
      * getOrCreateOpenInvoice — append charge vào tab thay vì tạo hoá đơn mới mỗi visit.
      */
     Optional<Invoice> findFirstByCustomerUserIdAndStatus(UUID customerUserId, InvoiceStatus status);
+
+    @Query("""
+            select count(i) > 0
+            from Invoice i
+            join i.items item
+            where i.customerUserId = :customerUserId
+              and i.status = com.mss301.petclinic.billing.model.InvoiceStatus.PAID
+              and item.sourceType = com.mss301.petclinic.billing.model.InvoiceItemSource.PRODUCT
+              and item.sourceRef = :productId
+            """)
+    boolean existsPaidProductPurchase(@Param("customerUserId") UUID customerUserId,
+                                      @Param("productId") Long productId);
 }

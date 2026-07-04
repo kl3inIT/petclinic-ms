@@ -1,5 +1,6 @@
 package com.mss301.petclinic.auth.security;
 
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -43,6 +44,7 @@ public class AuthAuditLogger {
     private static final String ACTION_EVENT_PUBLISH_FAILURE = "event.publish.failure";
     private static final String ACTION_CUSTOMER_LINKED  = "authorization.customer.linked";
     private static final String ACTION_VET_LINKED       = "authorization.vet.linked";
+    private static final String ACTION_USER_AUTHZ_UPDATED = "authorization.user.updated";
     private static final String ACTION_PASSWORD_CHANGE_SUCCESS = "authentication.password.change.success";
     private static final String ACTION_PASSWORD_CHANGE_FAILURE = "authentication.password.change.failure";
 
@@ -157,6 +159,23 @@ public class AuthAuditLogger {
         } finally {
             MDC.remove("actor.user.id");
             MDC.remove("vet.id");
+            clearAll();
+        }
+    }
+
+    /** Admin changed roles/enablement/domain links. Audit because this changes effective privileges. */
+    public void userAuthorizationUpdated(UUID adminId, UUID targetUserId, Set<String> roles, boolean enabled) {
+        try {
+            putBase(ACTION_USER_AUTHZ_UPDATED, OUTCOME_SUCCESS);
+            if (adminId != null) MDC.put("actor.user.id", adminId.toString());
+            MDC.put(K_USER_ID, targetUserId.toString());
+            MDC.put("user.roles", String.join(",", roles));
+            MDC.put("user.enabled", Boolean.toString(enabled));
+            log.info("User authorization updated");
+        } finally {
+            MDC.remove("actor.user.id");
+            MDC.remove("user.roles");
+            MDC.remove("user.enabled");
             clearAll();
         }
     }

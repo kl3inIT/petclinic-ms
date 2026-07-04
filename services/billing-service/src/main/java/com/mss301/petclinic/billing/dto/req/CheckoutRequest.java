@@ -1,6 +1,7 @@
 package com.mss301.petclinic.billing.dto.req;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import com.mss301.petclinic.billing.model.PaymentMethod;
 
@@ -11,6 +12,7 @@ import com.mss301.petclinic.billing.model.PaymentMethod;
  * chưa triển khai. Khi làm sẽ thêm thông tin thẻ + xác thực qua payment gateway thật.
  */
 public record CheckoutRequest(
-        @NotNull PaymentMethod paymentMethod
+        @NotNull PaymentMethod paymentMethod,
+        @Size(max = 120) String paymentReference
 ) {
 }

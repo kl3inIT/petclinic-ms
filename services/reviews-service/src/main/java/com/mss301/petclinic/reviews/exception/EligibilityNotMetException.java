@@ -9,7 +9,7 @@ import com.mss301.petclinic.reviews.model.TargetType;
  * Throw khi review tạo không thỏa eligibility:
  * <ul>
  *   <li>VET/VISIT: chưa có visit COMPLETED với target này + author</li>
- *   <li>PRODUCT: skip v1 — chưa có billing-service</li>
+ *   <li>PRODUCT: cần invoice PAID chứa sản phẩm</li>
  * </ul>
  */
 public class EligibilityNotMetException extends BadRequestAlertException {
