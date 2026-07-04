@@ -17,7 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
  *   <li>GET (tra cứu catalog) → mọi user đã đăng nhập (vet/quầy chọn khi kê đơn/lập hoá đơn).</li>
  *   <li>{@code POST /{id}/consume} (trừ kho khi kê đơn) → STAFF/ADMIN/VET. visits-service
  *       forward JWT của vet khi gọi.</li>
- *   <li>CRUD + {@code /restock} (quản trị catalog + nhập kho) → ADMIN.</li>
+ *   <li>CRUD + {@code /restock} (quản trị catalog + nhập kho) → ADMIN/INVENTORY_MANAGER.</li>
  * </ul>
  */
 @Configuration
@@ -44,11 +44,15 @@ public class ProductsSecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/*/consume")
                             .hasAnyRole("STAFF", "ADMIN", "VET")
 
-                        // ── Quản trị catalog + nhập kho — chỉ ADMIN ──
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/*/restock").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasRole("ADMIN")
+                        // ── Quản trị catalog + nhập kho — ADMIN hoặc INVENTORY_MANAGER ──
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/*/restock")
+                            .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products")
+                            .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**")
+                            .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**")
+                            .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
 
                         // ── Đọc catalog — mọi user đã đăng nhập ──
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").authenticated()

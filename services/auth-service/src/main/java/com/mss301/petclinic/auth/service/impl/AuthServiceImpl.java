@@ -35,7 +35,8 @@ import com.mss301.petclinic.common.web.exception.ResourceNotFoundException;
 @Transactional(readOnly = true)
 public class AuthServiceImpl implements AuthService {
 
-    private static final Set<String> ALLOWED_ROLES = Set.of("USER", "STAFF", "VET", "ADMIN");
+    private static final Set<String> ALLOWED_ROLES =
+            Set.of("USER", "STAFF", "VET", "ADMIN", "INVENTORY_MANAGER");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;

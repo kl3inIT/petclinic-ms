@@ -12,7 +12,7 @@ import com.mss301.petclinic.products.model.Product;
 import com.mss301.petclinic.products.model.ProductType;
 
 /**
- * Tạo mục catalog mới (ADMIN). {@code stockQuantity}/{@code reorderLevel} bỏ qua nếu
+ * Tạo mục catalog mới (ADMIN/INVENTORY_MANAGER). {@code stockQuantity}/{@code reorderLevel} bỏ qua nếu
  * type=SERVICE (không quản lý tồn kho).
  */
 public record CreateProductRequest(

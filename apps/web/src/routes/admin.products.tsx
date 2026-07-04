@@ -45,7 +45,8 @@ import { RestockDialog } from '@/features/products/components/RestockDialog';
 export const Route = createFileRoute('/admin/products')({
   beforeLoad: () => {
     const user = useAuthStore.getState().user;
-    if (!user?.roles.includes('ADMIN')) {
+    const roles = user?.roles ?? [];
+    if (!roles.includes('ADMIN') && !roles.includes('INVENTORY_MANAGER')) {
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: '/admin' });
     }

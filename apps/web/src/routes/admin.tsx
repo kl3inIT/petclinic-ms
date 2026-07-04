@@ -23,9 +23,12 @@ import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: ({ location }) => {
-    // /admin/** cho ADMIN + STAFF (STAFF có quyền duyệt thay đổi vet).
-    // Trang nào chỉ ADMIN (vd /admin/llm-config) tự render conditionally qua isAdmin.
-    requireAnyRole({ redirectFrom: location.href, allowedRoles: ['ADMIN', 'STAFF'] });
+    // /admin/** cho ADMIN + STAFF + INVENTORY_MANAGER.
+    // Trang nào hẹp quyền hơn tự guard riêng.
+    requireAnyRole({
+      redirectFrom: location.href,
+      allowedRoles: ['ADMIN', 'STAFF', 'INVENTORY_MANAGER'],
+    });
   },
   component: AdminLayout,
 });
@@ -46,27 +49,48 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
-  adminOnly?: boolean;
+  roles?: readonly string[];
 }
 
 const navItems: NavItem[] = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { to: '/admin/visits', label: 'Visits', icon: CalendarCheck },
-  { to: '/admin/workflows', label: 'Workflows', icon: Workflow, adminOnly: true },
-  { to: '/admin/owners', label: 'Owners', icon: Users },
-  { to: '/admin/pets', label: 'Pets', icon: PawPrint },
-  { to: '/admin/vets', label: 'Vets', icon: Stethoscope },
-  { to: '/admin/invoices', label: 'Hoá đơn', icon: Receipt },
-  { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill, adminOnly: true },
-  { to: '/admin/products', label: 'Danh mục sản phẩm', icon: Package, adminOnly: true },
-  { to: '/admin/vet-reviews', label: 'Duyệt thay đổi', icon: ShieldCheck },
-  { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, adminOnly: true },
+  {
+    to: '/admin',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    exact: true,
+    roles: ['ADMIN', 'STAFF', 'INVENTORY_MANAGER'],
+  },
+  {
+    to: '/admin/visits',
+    label: 'Visits',
+    icon: CalendarCheck,
+    roles: ['ADMIN', 'STAFF'],
+  },
+  { to: '/admin/workflows', label: 'Workflows', icon: Workflow, roles: ['ADMIN'] },
+  { to: '/admin/owners', label: 'Owners', icon: Users, roles: ['ADMIN', 'STAFF'] },
+  { to: '/admin/pets', label: 'Pets', icon: PawPrint, roles: ['ADMIN', 'STAFF'] },
+  { to: '/admin/vets', label: 'Vets', icon: Stethoscope, roles: ['ADMIN', 'STAFF'] },
+  { to: '/admin/invoices', label: 'Hoá đơn', icon: Receipt, roles: ['ADMIN', 'STAFF'] },
+  { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill, roles: ['ADMIN'] },
+  {
+    to: '/admin/products',
+    label: 'Danh mục sản phẩm',
+    icon: Package,
+    roles: ['ADMIN', 'INVENTORY_MANAGER'],
+  },
+  {
+    to: '/admin/vet-reviews',
+    label: 'Duyệt thay đổi',
+    icon: ShieldCheck,
+    roles: ['ADMIN', 'STAFF'],
+  },
+  { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, roles: ['ADMIN'] },
 ];
 
 function AdminLayout() {
   const clear = useAuthStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
-  const isAdmin = user?.roles.includes('ADMIN') ?? false;
+  const roles = user?.roles ?? [];
   // Logout BE để revoke refresh token; clear local store rồi redirect dù BE fail.
   const logoutMutation = useLogout({
     mutation: {
@@ -77,7 +101,9 @@ function AdminLayout() {
     },
   });
 
-  const visibleNav = navItems.filter((item) => !item.adminOnly || isAdmin);
+  const visibleNav = navItems.filter(
+    (item) => roles.includes('ADMIN') || item.roles?.some((role) => roles.includes(role)),
+  );
 
   return (
     <div className="flex min-h-screen">

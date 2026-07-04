@@ -34,14 +34,17 @@ function LoginPage() {
           user: { id: data.userId!, username: data.username!, roles: data.roles ?? [] },
         });
         toast.success(`Xin chào ${data.username}`);
-        // Redirect theo role (Phase K). VET → /vet, ADMIN|STAFF → /admin, fallback /.
+        // Redirect theo role (Phase K). VET → /vet, ADMIN|STAFF → /admin,
+        // INVENTORY_MANAGER → /admin/products, fallback /.
         // URL search.redirect override role-based default (deep-link login).
         const roles = data.roles ?? [];
         const roleHome = roles.includes('VET')
           ? '/vet'
           : roles.includes('ADMIN') || roles.includes('STAFF')
             ? '/admin'
-            : '/';
+            : roles.includes('INVENTORY_MANAGER')
+              ? '/admin/products'
+              : '/';
         void navigate({ to: search.redirect ?? roleHome });
       },
       onError: () => {

@@ -32,7 +32,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Catalog thuốc / dịch vụ khám / vật tư + tồn kho. Read mở cho user đã đăng nhập
- * (vet/quầy tra cứu khi kê đơn/lập hoá đơn); write + điều chỉnh kho chỉ ADMIN
+ * (vet/quầy tra cứu khi kê đơn/lập hoá đơn); write + điều chỉnh kho chỉ ADMIN/INVENTORY_MANAGER
  * (khai báo ở {@link com.mss301.petclinic.products.config.ProductsSecurityConfig}).
  *
  * <p>Endpoint {@code /{id}/consume} dùng nội bộ — visits-service gọi (forward JWT) để
@@ -71,7 +71,7 @@ public class ProductController {
     }
 
     @PostMapping
-    @Operation(summary = "Tạo sản phẩm mới (ADMIN)")
+    @Operation(summary = "Tạo sản phẩm mới (ADMIN/INVENTORY_MANAGER)")
     public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody CreateProductRequest request) {
         ProductResponse created = service.create(request);
         URI location = ServletUriComponentsBuilder
@@ -80,7 +80,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}")
-    @Operation(summary = "Cập nhật sản phẩm (ADMIN)")
+    @Operation(summary = "Cập nhật sản phẩm (ADMIN/INVENTORY_MANAGER)")
     public ProductResponse updateProduct(@PathVariable Long id,
                                          @Valid @RequestBody UpdateProductRequest request) {
         return service.update(id, request);
@@ -88,7 +88,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Xoá sản phẩm (ADMIN)")
+    @Operation(summary = "Xoá sản phẩm (ADMIN/INVENTORY_MANAGER)")
     public void deleteProduct(@PathVariable Long id) {
         service.delete(id);
     }
@@ -101,7 +101,7 @@ public class ProductController {
     }
 
     @PostMapping("/{id}/restock")
-    @Operation(summary = "Nhập thêm tồn kho (ADMIN)")
+    @Operation(summary = "Nhập thêm tồn kho (ADMIN/INVENTORY_MANAGER)")
     public ProductResponse restockProduct(@PathVariable Long id,
                                           @Valid @RequestBody StockAdjustRequest request) {
         return service.restock(id, request.quantity());
