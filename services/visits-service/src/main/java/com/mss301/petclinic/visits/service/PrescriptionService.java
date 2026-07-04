@@ -8,7 +8,7 @@ public interface PrescriptionService {
     /**
      * Bác sĩ kê đơn cho visit. {@code vetIdFromJwt} là vetId trong token (có thể null nếu
      * caller là ADMIN không link vet). Service tự kiểm tra: visit ở trạng thái lâm sàng,
-     * người kê là vet phụ trách (trừ ADMIN), mỗi visit chỉ 1 đơn. Sinh PDF + lưu MinIO.
+     * người kê là vet phụ trách (trừ ADMIN), mỗi visit chỉ 1 đơn. Sinh PDF + lưu qua files-service.
      */
     PrescriptionResponse create(Long visitId, CreatePrescriptionRequest request,
                                 Long vetIdFromJwt, boolean isAdmin);

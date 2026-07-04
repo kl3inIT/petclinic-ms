@@ -17,8 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.mss301.petclinic.common.events.DomainEvent;
 import com.mss301.petclinic.common.events.EventPublisher;
-import com.mss301.petclinic.common.storage.StorageProperties;
-import com.mss301.petclinic.common.storage.StorageService;
+import com.mss301.petclinic.customers.client.FilesClient;
 import com.mss301.petclinic.customers.dto.req.OwnerRequest;
 import com.mss301.petclinic.customers.dto.req.PetRequest;
 import com.mss301.petclinic.customers.dto.req.UpdateOwnerRequest;
@@ -47,8 +46,7 @@ public class OwnerServiceImpl implements OwnerService {
 
     private final OwnerRepository repository;
     private final PetTypeService petTypeService;
-    private final StorageService storage;
-    private final StorageProperties storageProps;
+    private final FilesClient files;
     /**
      * {@code ObjectProvider} cho phép service hoạt động khi
      * {@code petclinic.events.enabled=false} (test profile) — broker không cần.
@@ -57,22 +55,20 @@ public class OwnerServiceImpl implements OwnerService {
 
     public OwnerServiceImpl(OwnerRepository repository,
                             PetTypeService petTypeService,
-                            StorageService storage,
-                            StorageProperties storageProps,
+                            FilesClient files,
                             ObjectProvider<EventPublisher> eventPublisherProvider) {
         this.repository = repository;
         this.petTypeService = petTypeService;
-        this.storage = storage;
-        this.storageProps = storageProps;
+        this.files = files;
         this.eventPublisherProvider = eventPublisherProvider;
     }
 
-    /** key MinIO → presigned URL string; null/blank key → null (chưa có ảnh). */
+    /** object key → presigned URL string; null/blank key → null (chưa có ảnh). */
     private String presign(String key) {
         if (key == null || key.isBlank()) {
             return null;
         }
-        return storage.presignedGet(key, storageProps.presignedTtl()).toString();
+        return files.presignedUrl(key);
     }
 
     private OwnerResponse toResponse(Owner owner) {
@@ -202,11 +198,11 @@ public class OwnerServiceImpl implements OwnerService {
                 .filter(candidate -> petId.equals(candidate.getId()))
                 .findFirst()
                 .orElseThrow(() -> new PetNotFoundException(petId.toString()));
-        MediaValidator.validate(file, PET_PHOTO_ENTITY, storageProps.maxFileSizeBytes());
+        MediaValidator.validate(file, PET_PHOTO_ENTITY, files.maxFileSizeBytes());
 
-        // Key cố định theo petId → re-upload overwrite object cũ (idempotent). Ghi MinIO
-        // trước, set photoId sau. Nếu MinIO ghi xong mà DB fail → @Transactional rollback
-        // photoId (DB) nhưng object MinIO mới đã đè; re-upload sẽ retry idempotent.
+        // Key cố định theo petId → re-upload overwrite object cũ (idempotent). Ghi file
+        // trước, set photoId sau. Nếu file ghi xong mà DB fail → @Transactional rollback
+        // photoId (DB) nhưng object mới đã đè; re-upload sẽ retry idempotent.
         String key = "pets/" + petId;
         uploadToStorage(key, file, PET_PHOTO_ENTITY);
         pet.setPhotoId(key);
@@ -223,8 +219,8 @@ public class OwnerServiceImpl implements OwnerService {
                 .findFirst()
                 .orElseThrow(() -> new PetNotFoundException(petId.toString()));
         if (pet.getPhotoId() != null) {
-            // Xoá MinIO trước, clear DB sau — fail MinIO → giữ photoId, retry được.
-            storage.delete(pet.getPhotoId());
+            // Xoá file trước, clear DB sau — fail files-service → giữ photoId, retry được.
+            files.delete(pet.getPhotoId());
             pet.setPhotoId(null);
         }
         return toResponse(owner);
@@ -235,7 +231,7 @@ public class OwnerServiceImpl implements OwnerService {
     public OwnerResponse uploadOwnerAvatar(Long ownerId, MultipartFile file) {
         var owner = repository.findById(ownerId)
                 .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
-        MediaValidator.validate(file, OWNER_AVATAR_ENTITY, storageProps.maxFileSizeBytes());
+        MediaValidator.validate(file, OWNER_AVATAR_ENTITY, files.maxFileSizeBytes());
 
         String key = "owners/" + ownerId;
         uploadToStorage(key, file, OWNER_AVATAR_ENTITY);
@@ -249,7 +245,7 @@ public class OwnerServiceImpl implements OwnerService {
         var owner = repository.findById(ownerId)
                 .orElseThrow(() -> new OwnerNotFoundException(ownerId.toString()));
         if (owner.getAvatarObjectKey() != null) {
-            storage.delete(owner.getAvatarObjectKey());
+            files.delete(owner.getAvatarObjectKey());
             owner.setAvatarObjectKey(null);
         }
         return toResponse(owner);
@@ -257,7 +253,7 @@ public class OwnerServiceImpl implements OwnerService {
 
     private void uploadToStorage(String key, MultipartFile file, String entityName) {
         try {
-            storage.upload(key, file.getContentType(), file.getInputStream(), file.getSize());
+            files.upload(key, file);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read uploaded file for " + entityName + " " + key, e);
         }

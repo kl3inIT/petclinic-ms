@@ -30,7 +30,7 @@ public interface OwnerService {
     /** Upload/overwrite ảnh 1 pet thuộc owner. Trả owner đã enrich presigned URL. */
     OwnerResponse uploadPetPhoto(Long ownerId, Long petId, MultipartFile file);
 
-    /** Xoá ảnh pet (MinIO trước, set photoId=null sau). */
+    /** Xoá ảnh pet qua files-service trước, set photoId=null sau. */
     OwnerResponse deletePetPhoto(Long ownerId, Long petId);
 
     /** Upload/overwrite avatar chủ nuôi. */

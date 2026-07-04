@@ -19,7 +19,7 @@ import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 /**
  * Đơn thuốc do bác sĩ kê cho một lần khám. Một visit có thể có NHIỀU đơn (kê nhiều lần
  * trong quá trình điều trị) — {@code visit_id} KHÔNG unique. PDF được sinh khi tạo đơn,
- * lưu trên MinIO; {@code objectKey} trỏ tới object đó (key gồm cả prescriptionId nên không trùng).
+ * lưu qua files-service; {@code objectKey} trỏ tới object đó (key gồm cả prescriptionId nên không trùng).
  */
 @Entity
 @Table(name = "prescriptions")
@@ -39,7 +39,7 @@ public class Prescription extends AbstractAuditingEntity {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
-    /** Key của file PDF trên MinIO (set sau khi sinh + upload PDF). */
+    /** Key của file PDF trên object storage (set sau khi sinh + upload PDF). */
     @Column(name = "object_key", length = 255)
     private String objectKey;
 

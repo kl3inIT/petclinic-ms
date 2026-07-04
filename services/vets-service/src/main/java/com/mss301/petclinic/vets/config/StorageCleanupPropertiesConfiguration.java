@@ -5,9 +5,9 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Activator cho {@link StorageCleanupProperties} (orphan-cleanup job — vet-specific).
- * {@code StorageProperties} (cấu hình MinIO chung) giờ do
- * {@code shared/common-storage} kích hoạt qua auto-config — không khai báo lại ở đây.
+ * Binary IO đi qua Go files-service; vets-service chỉ giữ cleanup policy gắn với
+ * metadata review/gallery của vets.
  */
 @Configuration
 @EnableConfigurationProperties(StorageCleanupProperties.class)
-public class StoragePropertiesConfiguration {}
+public class StorageCleanupPropertiesConfiguration {}

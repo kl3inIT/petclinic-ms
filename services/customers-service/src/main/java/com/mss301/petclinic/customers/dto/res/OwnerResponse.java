@@ -24,8 +24,8 @@ public record OwnerResponse(
     }
 
     /**
-     * Map kèm resolver biến MinIO object key → presigned URL ({@code null} nếu chưa có ảnh).
-     * Service layer truyền {@code key -> storage.presignedGet(key, ttl).toString()}.
+     * Map kèm resolver biến object key → presigned URL ({@code null} nếu chưa có ảnh).
+     * Service layer truyền resolver gọi files-service.
      */
     public static OwnerResponse from(Owner owner, Function<String, String> urlResolver) {
         var pets = owner.getPets() == null

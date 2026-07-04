@@ -43,8 +43,8 @@ public class Owner extends AbstractAuditingEntity {
     private String city;
     private String telephone;
 
-    /** MinIO object key của avatar chủ nuôi (key {@code owners/<id>}). Null = chưa upload.
-     *  Binary nằm ở MinIO; entity chỉ giữ key. Presigned URL sinh ở service layer. */
+    /** Object key của avatar chủ nuôi (key {@code owners/<id>}). Null = chưa upload.
+     *  Binary đi qua files-service; entity chỉ giữ key. Presigned URL sinh ở service layer. */
     @Column(name = "avatar_object_key", length = 255)
     private String avatarObjectKey;
 

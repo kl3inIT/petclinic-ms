@@ -29,15 +29,8 @@ petclinic:
       jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
       issuer: petclinic-test
       audience: petclinic-test
-  # Dummy storage props cho smoke test (context load). common-storage StorageProperties
-  # require @NotBlank endpoint/access-key/secret-key; @SpringBootTest tắt Config Server nên
-  # config-repo không nạp → phải khai báo tại đây. IT qua Testcontainers MinIO sẽ override
-  # via @DynamicPropertySource. Mirror vets-service.
-  storage:
-    minio:
-      endpoint: http://localhost:9000
-      access-key: minioadmin
-      secret-key: minioadmin
-      bucket: pet-photos
-      presigned-ttl: PT1H
-      max-file-size-bytes: 10485760
+  files:
+    base-url: http://localhost:8193
+    bucket: pet-photos
+    presigned-ttl: PT1H
+    max-file-size-bytes: 10485760

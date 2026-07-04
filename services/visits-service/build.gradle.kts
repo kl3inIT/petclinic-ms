@@ -8,7 +8,6 @@ dependencies {
     implementation(project(":shared:common-security"))      // JWT bearer auth
     implementation(project(":shared:common-clients"))       // service-to-service RestClient + JWT forward
     implementation(project(":shared:common-events"))        // publish visit.scheduled / visit.completed → mailer
-    implementation(project(":shared:common-storage"))       // Phase đơn thuốc — lưu PDF lên MinIO/S3
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.data.jpa)
@@ -35,5 +34,4 @@ dependencies {
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.junit.jupiter)
-    testImplementation(libs.testcontainers.minio)           // Phase đơn thuốc — IT lưu PDF
 }

@@ -12,9 +12,9 @@ import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 /**
  * Avatar 1-1 của vet. {@code vet_id} là PK + FK đồng thời (composition strong) —
- * 1 vet chỉ có 1 photo. Re-upload = overwrite (cùng key MinIO + cùng PK DB).
+ * 1 vet chỉ có 1 photo. Re-upload = overwrite (cùng object key + cùng PK DB).
  *
- * <p>Binary nằm ở MinIO key {@code vets/photo/<vetId>}. Entity chỉ giữ metadata.</p>
+ * <p>Binary đi qua files-service, key {@code vets/photo/<vetId>}. Entity chỉ giữ metadata.</p>
  */
 @Entity
 @Table(name = "vet_photo")

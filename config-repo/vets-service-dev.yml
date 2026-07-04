@@ -8,7 +8,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   # Phase G — publish vet.rating.added cần RabbitMQ.
-  # Phase E2 — MinIO storage. → bật cả `storage` + `mq` + `db`.
+  # Files-service dùng MinIO nên dev bật thêm `storage`.
   docker:
     compose:
       profiles:

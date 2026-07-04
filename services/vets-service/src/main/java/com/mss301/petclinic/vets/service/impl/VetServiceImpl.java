@@ -14,9 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.mss301.petclinic.common.storage.StorageProperties;
-import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
+import com.mss301.petclinic.vets.client.FilesClient;
 import com.mss301.petclinic.vets.dto.req.UpdateVetRequest;
 import com.mss301.petclinic.vets.dto.req.VetRequest;
 import com.mss301.petclinic.vets.dto.res.VetResponse;
@@ -45,17 +44,15 @@ public class VetServiceImpl implements VetService {
     private final RatingRepository ratingRepository;
     private final VetPhotoRepository photoRepository;
     private final BadgeRepository badgeRepository;
-    private final StorageService storage;
-    private final StorageProperties props;
+    private final FilesClient files;
 
-    public VetServiceImpl(VetRepository vetRepository, SpecialtyRepository specialtyRepository, RatingRepository ratingRepository, VetPhotoRepository photoRepository, BadgeRepository badgeRepository, StorageService storage, StorageProperties props) {
+    public VetServiceImpl(VetRepository vetRepository, SpecialtyRepository specialtyRepository, RatingRepository ratingRepository, VetPhotoRepository photoRepository, BadgeRepository badgeRepository, FilesClient files) {
         this.vetRepository = vetRepository;
         this.specialtyRepository = specialtyRepository;
         this.ratingRepository = ratingRepository;
         this.photoRepository = photoRepository;
         this.badgeRepository = badgeRepository;
-        this.storage = storage;
-        this.props = props;
+        this.files = files;
     }
 
     @Override
@@ -72,7 +69,7 @@ public class VetServiceImpl implements VetService {
         Map<Long, String> photoMap = new HashMap<>();
         for (VetPhoto p : photoRepository.findAllById(vetIds)) {
             try {
-                photoMap.put(p.getVetId(), storage.presignedGet(p.getObjectKey(), props.presignedTtl()).toString());
+                photoMap.put(p.getVetId(), files.presignedUrlString(p.getObjectKey()));
             } catch (Exception e) { /* ignore */ }
         }
 
@@ -86,7 +83,7 @@ public class VetServiceImpl implements VetService {
                     String photoUrl = photoRepository.findById(id)
                             .map(p -> {
                                 try {
-                                    return storage.presignedGet(p.getObjectKey(), props.presignedTtl()).toString();
+                                    return files.presignedUrlString(p.getObjectKey());
                                 } catch (Exception e) { return null; }
                             })
                             .orElse(null);
@@ -181,7 +178,7 @@ public class VetServiceImpl implements VetService {
         String photoUrl = photoRepository.findById(id)
                 .map(p -> {
                     try {
-                        return storage.presignedGet(p.getObjectKey(), props.presignedTtl()).toString();
+                        return files.presignedUrlString(p.getObjectKey());
                     } catch (Exception e) { return null; }
                 })
                 .orElse(null);

@@ -13,7 +13,7 @@ import jakarta.persistence.Table;
 import com.mss301.petclinic.common.jpa.entity.AbstractAuditingEntity;
 
 /**
- * Album photo (1-N) của vet — gallery. Binary ở MinIO key
+ * Album photo (1-N) của vet — gallery. Binary đi qua files-service, key
  * {@code vets/album/<vetId>/<photoId>}. Caption optional.
  */
 @Entity

@@ -3,7 +3,6 @@ package com.mss301.petclinic.visits.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -11,7 +10,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.InputStream;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -23,8 +21,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.access.AccessDeniedException;
 
 import com.mss301.petclinic.common.events.EventPublisher;
-import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
+import com.mss301.petclinic.visits.client.FilesClient;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.dto.req.CreatePrescriptionRequest;
 import com.mss301.petclinic.visits.dto.res.PrescriptionResponse;
@@ -43,7 +41,7 @@ class PrescriptionServiceImplTest {
 
     private VisitRepository visitRepository;
     private PrescriptionRepository prescriptionRepository;
-    private StorageService storage;
+    private FilesClient files;
     private PrescriptionPdfGenerator pdfGenerator;
     private RemoteClientsFacade remoteClients;
     private ObjectProvider<EventPublisher> events;
@@ -54,13 +52,13 @@ class PrescriptionServiceImplTest {
     void setUp() {
         visitRepository = mock(VisitRepository.class);
         prescriptionRepository = mock(PrescriptionRepository.class);
-        storage = mock(StorageService.class);
+        files = mock(FilesClient.class);
         pdfGenerator = mock(PrescriptionPdfGenerator.class);
         remoteClients = mock(RemoteClientsFacade.class);
         events = mock(ObjectProvider.class);
         when(events.getIfAvailable()).thenReturn(null);   // broker off — publish no-op
         service = new PrescriptionServiceImpl(
-                visitRepository, prescriptionRepository, storage, pdfGenerator, remoteClients, events);
+                visitRepository, prescriptionRepository, files, pdfGenerator, remoteClients, events);
     }
 
     /** Visit ở trạng thái IN_PROGRESS (đủ điều kiện kê đơn), do VET_ID phụ trách. */
@@ -90,7 +88,7 @@ class PrescriptionServiceImplTest {
                 .isInstanceOf(AccessDeniedException.class);
 
         verify(prescriptionRepository, never()).save(any());
-        verify(storage, never()).upload(anyString(), anyString(), any(), anyLong());
+        verify(files, never()).upload(anyString(), anyString(), any(byte[].class));
     }
 
     @Test
@@ -126,11 +124,10 @@ class PrescriptionServiceImplTest {
         assertThat(response.pdfAvailable()).isTrue();
 
         // PDF upload đúng content-type, key bắt đầu bằng prefix prescriptions/<visitId>/
-        verify(storage).upload(
+        verify(files).upload(
                 eq("prescriptions/" + VISIT_ID + "/null.pdf"),
                 eq("application/pdf"),
-                any(InputStream.class),
-                eq(4L));
+                any(byte[].class));
     }
 
     @Test
@@ -139,8 +136,8 @@ class PrescriptionServiceImplTest {
         rx.attachPdf("prescriptions/10/1.pdf", "application/pdf", 4L);
         when(prescriptionRepository.findFirstByVisitIdOrderByIssuedAtDescIdDesc(VISIT_ID))
                 .thenReturn(Optional.of(rx));
-        when(storage.download("prescriptions/10/1.pdf"))
-                .thenReturn(new java.io.ByteArrayInputStream(new byte[]{'%', 'P', 'D', 'F'}));
+        when(files.download("prescriptions/10/1.pdf"))
+                .thenReturn(new byte[]{'%', 'P', 'D', 'F'});
 
         var pdf = service.downloadPdf(VISIT_ID);
 

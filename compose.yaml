@@ -211,6 +211,31 @@ services:
       "
     restart: "no"
 
+  # Go files-service — only service that owns MinIO credentials/SDK.
+  # Java services keep domain metadata and call this HTTP API for object IO.
+  files-service:
+    build:
+      context: ./services/files-service
+      dockerfile: Dockerfile
+    image: petclinic-ms/files-service:latest
+    container_name: petclinic-files-service
+    profiles: ["apps"]
+    ports:
+      - "8193:8193"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      HTTP_PORT: "8193"
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_ENDPOINT: localhost:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_USE_SSL: "false"
+      DEFAULT_PRESIGNED_TTL: 1h
+      MAX_UPLOAD_BYTES: "52428800"
+    restart: unless-stopped
+
   # Camunda 8 secondary storage for Operate/Tasklist/Flowset UI.
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
@@ -386,6 +411,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      files-service: { condition: service_started }
       config-server: { condition: service_healthy }
       discovery-server: { condition: service_healthy }
     environment:
@@ -395,6 +421,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
+      FILES_SERVICE_URL: http://files-service:8193
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
@@ -416,7 +443,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-      minio: { condition: service_healthy }
+      files-service: { condition: service_started }
       config-server: { condition: service_healthy }
       discovery-server: { condition: service_healthy }
     environment:
@@ -426,7 +453,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
-      MINIO_ENDPOINT: http://minio:9000
+      FILES_SERVICE_URL: http://files-service:8193
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:
@@ -448,7 +475,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-      minio: { condition: service_healthy }
+      files-service: { condition: service_started }
       config-server: { condition: service_healthy }
       discovery-server: { condition: service_healthy }
       customers-service: { condition: service_healthy }
@@ -460,7 +487,7 @@ services:
       EUREKA_URL: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/petclinic
       SPRING_RABBITMQ_HOST: rabbitmq
-      MINIO_ENDPOINT: http://minio:9000
+      FILES_SERVICE_URL: http://files-service:8193
       OTLP_ENDPOINT: http://zipkin:9411/v1/traces
       JWKS_URI: http://auth-service:8183/.well-known/jwks.json
     healthcheck:

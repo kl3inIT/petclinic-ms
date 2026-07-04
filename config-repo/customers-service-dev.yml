@@ -9,10 +9,11 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   # Customers publish owner/pet domain events qua common-events → cần RabbitMQ.
+  # Upload pet/owner ảnh gọi Go files-service → cần MinIO storage profile.
   docker:
     compose:
       profiles:
-        active: ["db", "mq"]
+        active: ["db", "mq", "storage"]
 
 logging:
   level:

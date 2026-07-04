@@ -1,5 +1,8 @@
 package com.mss301.petclinic.vets.controller;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -10,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -20,36 +24,22 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mss301.petclinic.vets.client.FilesClient;
 
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
-
-/**
- * Integration test cho VetPhotoController với Testcontainers MinIO.
- *
- * <p>{@code @DynamicPropertySource} override storage props với container endpoint/creds.
- * Bucket được tạo lại trong {@code @BeforeEach} (idempotent qua catch
- * {@link BucketAlreadyOwnedByYouException}) — đảm bảo test deterministic bất kể chạy
- * thứ tự nào.</p>
- */
 @SpringBootTest
 @Testcontainers
 @Transactional
 class VetPhotoControllerIT {
-
-    private static final String TEST_BUCKET = "test-avatars";
 
     @Container
     @ServiceConnection
@@ -58,45 +48,29 @@ class VetPhotoControllerIT {
             .withUsername("postgres")
             .withPassword("postgres");
 
-    @Container
-    static MinIOContainer minio = new MinIOContainer("minio/minio:RELEASE.2025-09-07T16-13-09Z")
-            .withUserName("testuser")
-            .withPassword("testpass1234");
-
-    @DynamicPropertySource
-    static void storageProps(DynamicPropertyRegistry r) {
-        r.add("petclinic.storage.minio.endpoint", minio::getS3URL);
-        r.add("petclinic.storage.minio.access-key", minio::getUserName);
-        r.add("petclinic.storage.minio.secret-key", minio::getPassword);
-        r.add("petclinic.storage.minio.bucket", () -> TEST_BUCKET);
-    }
-
     @Autowired
     WebApplicationContext wac;
 
     @Autowired
     ObjectMapper om;
 
-    @Autowired
-    S3Client s3;
+    @MockitoBean
+    FilesClient filesClient;
 
     MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         mvc = webAppContextSetup(wac).apply(springSecurity()).build();
-        try {
-            s3.createBucket(b -> b.bucket(TEST_BUCKET));
-        } catch (BucketAlreadyOwnedByYouException ignored) {
-            // Idempotent — bucket persist giữa các test trong cùng container
-        }
+        reset(filesClient);
+        when(filesClient.maxFileSizeBytes()).thenReturn(10_485_760L);
+        when(filesClient.presignedUrl(anyString()))
+                .thenAnswer(inv -> URI.create("http://files.test/" + inv.getArgument(0, String.class)).toURL());
     }
 
     private static RequestPostProcessor staff() {
         return jwt().authorities(new SimpleGrantedAuthority("ROLE_STAFF"));
     }
-
-    // ---------- GET ----------
 
     @Test
     void getVetPhoto_noPhotoUploaded_returns404() throws Exception {
@@ -117,8 +91,6 @@ class VetPhotoControllerIT {
                 .andExpect(jsonPath("$.sizeBytes").isNumber())
                 .andExpect(jsonPath("$.presignedUrl").isString());
     }
-
-    // ---------- UPLOAD ----------
 
     @Test
     void uploadVetPhoto_validJpeg_returns200WithMetadata() throws Exception {
@@ -142,11 +114,10 @@ class VetPhotoControllerIT {
         uploadPhoto(vetId, "v1.jpg", "image/jpeg", "V1".getBytes(StandardCharsets.UTF_8));
         uploadPhoto(vetId, "v2.png", "image/png", "V2_LARGER".getBytes(StandardCharsets.UTF_8));
 
-        // Sau lần upload thứ 2, contentType phải là image/png (overwrite không phải merge)
         mvc.perform(get("/api/v1/vets/{vetId}/photo", vetId).with(staff()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contentType").value("image/png"))
-                .andExpect(jsonPath("$.sizeBytes").value(9));  // "V2_LARGER" = 9 bytes
+                .andExpect(jsonPath("$.sizeBytes").value(9));
     }
 
     @Test
@@ -187,8 +158,6 @@ class VetPhotoControllerIT {
                 .andExpect(status().isNotFound());
     }
 
-    // ---------- DELETE ----------
-
     @Test
     void deleteVetPhoto_existing_returns204_thenGetReturns404() throws Exception {
         Long vetId = firstVetId();
@@ -207,8 +176,6 @@ class VetPhotoControllerIT {
         mvc.perform(delete("/api/v1/vets/{vetId}/photo", vetId).with(staff()))
                 .andExpect(status().isNotFound());
     }
-
-    // ---------- helpers ----------
 
     private Long firstVetId() throws Exception {
         String body = mvc.perform(get("/api/v1/vets").param("active", "true").with(staff()))

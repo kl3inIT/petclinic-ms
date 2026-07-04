@@ -7,6 +7,8 @@ import com.mss301.petclinic.common.web.exception.ResourceNotFoundException;
  */
 public class PrescriptionNotFoundException extends ResourceNotFoundException {
 
+    private static final long serialVersionUID = 1L;
+
     public PrescriptionNotFoundException(Long visitId) {
         super("Prescription", "visit=" + visitId);
     }

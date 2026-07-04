@@ -10,13 +10,13 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Config cho orphan-cleanup job (Phase I). Object trên MinIO mà DB không reference được
- * sẽ bị xoá — nguyên nhân thường gặp: rollback transaction sau khi upload S3 xong, hoặc
+ * Config cho orphan-cleanup job (Phase I). Object mà DB không reference được
+ * sẽ bị xoá — nguyên nhân thường gặp: rollback transaction sau khi upload file xong, hoặc
  * crash giữa upload và DB save.
  *
  * <p>{@code minAge} là grace window để TRÁNH xoá nhầm object vừa upload — race điển hình:
- * {@code VetAlbumServiceImpl} saveAndFlush placeholder, upload S3, save lại object key thật.
- * Giữa 2 bước cuối, S3 đã có key "vets/album/X/Y" mà DB row vẫn là "placeholder" →
+ * {@code VetAlbumServiceImpl} saveAndFlush placeholder, upload file, save lại object key thật.
+ * Giữa 2 bước cuối, object store đã có key "vets/album/X/Y" mà DB row vẫn là "placeholder" →
  * job thấy orphan giả. Window 1 giờ đủ rộng cho mọi upload bình thường.</p>
  *
  * <p>{@code enabled=false} tắt schedule (test profile dùng). {@code dryRun=true} chỉ log

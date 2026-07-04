@@ -9,8 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.mss301.petclinic.common.storage.StorageProperties;
-import com.mss301.petclinic.common.storage.StorageService;
+import com.mss301.petclinic.vets.client.FilesClient;
 import com.mss301.petclinic.vets.dto.res.VetPhotoResponse;
 import com.mss301.petclinic.vets.exception.VetNotFoundException;
 import com.mss301.petclinic.vets.exception.VetPhotoNotFoundException;
@@ -27,15 +26,13 @@ public class VetPhotoServiceImpl implements VetPhotoService {
 
     private final VetPhotoRepository photoRepository;
     private final VetRepository vetRepository;
-    private final StorageService storage;
-    private final StorageProperties props;
+    private final FilesClient files;
 
     public VetPhotoServiceImpl(VetPhotoRepository photoRepository, VetRepository vetRepository,
-                               StorageService storage, StorageProperties props) {
+                               FilesClient files) {
         this.photoRepository = photoRepository;
         this.vetRepository = vetRepository;
-        this.storage = storage;
-        this.props = props;
+        this.files = files;
     }
 
     @Override
@@ -43,30 +40,30 @@ public class VetPhotoServiceImpl implements VetPhotoService {
         ensureVetExists(vetId);
         VetPhoto photo = photoRepository.findById(vetId)
                 .orElseThrow(() -> new VetPhotoNotFoundException(vetId.toString()));
-        return VetPhotoResponse.from(photo, storage.presignedGet(photo.getObjectKey(), props.presignedTtl()));
+        return VetPhotoResponse.from(photo, files.presignedUrl(photo.getObjectKey()));
     }
 
     @Override
     @Transactional
     public VetPhotoResponse uploadPhoto(Long vetId, MultipartFile file) {
         ensureVetExists(vetId);
-        MediaValidator.validate(file, ENTITY_NAME, props.maxFileSizeBytes());
+        MediaValidator.validate(file, ENTITY_NAME, files.maxFileSizeBytes());
 
-        // Avatar 1-1: key cố định theo vetId → re-upload tự động overwrite MinIO object
+        // Avatar 1-1: key cố định theo vetId → re-upload tự động overwrite object
         // + DB entity (upsert qua save với cùng PK). Idempotent giữa các lần upload.
         String key = "vets/photo/" + vetId;
         try {
-            storage.upload(key, file.getContentType(), file.getInputStream(), file.getSize());
+            files.upload(key, file);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read uploaded file for vet " + vetId, e);
         }
 
-        // Compensating cleanup: nếu DB save fail sau khi MinIO đã ghi → revert MinIO object về
+        // Compensating cleanup: nếu DB save fail sau khi file đã ghi → xoá object mới
         // state cũ (xoá nếu là insert mới). Không revert được thành state trước-upload cho
         // case update (object cũ đã bị overwrite), nhưng tránh được state inconsistency tệ
-        // nhất: DB metadata cũ + MinIO content mới. Re-upload sẽ retry idempotent.
+        // nhất: DB metadata cũ + object content mới. Re-upload sẽ retry idempotent.
         // Single findById giảm race window (CodeRabbit review): concurrent upload khác
-        // không thể insert giữa 2 query rồi xoá MinIO object oan.
+        // không thể insert giữa 2 query rồi xoá object oan.
         Optional<VetPhoto> existing = photoRepository.findById(vetId);
         boolean isNew = existing.isEmpty();
         try {
@@ -82,10 +79,10 @@ public class VetPhotoServiceImpl implements VetPhotoService {
             photo.setReviewedAt(null);
             photo.setRejectReason(null);
             VetPhoto saved = photoRepository.save(photo);
-            return VetPhotoResponse.from(saved, storage.presignedGet(key, props.presignedTtl()));
+            return VetPhotoResponse.from(saved, files.presignedUrl(key));
         } catch (RuntimeException ex) {
             if (isNew) {
-                try { storage.delete(key); } catch (RuntimeException ignored) { /* best-effort */ }
+                try { files.delete(key); } catch (RuntimeException ignored) { /* best-effort */ }
             }
             throw ex;
         }
@@ -98,7 +95,7 @@ public class VetPhotoServiceImpl implements VetPhotoService {
         VetPhoto photo = photoRepository.findById(vetId)
                 .orElseThrow(() -> new VetPhotoNotFoundException(vetId.toString()));
         photo.approve(reviewer);
-        return VetPhotoResponse.from(photo, storage.presignedGet(photo.getObjectKey(), props.presignedTtl()));
+        return VetPhotoResponse.from(photo, files.presignedUrl(photo.getObjectKey()));
     }
 
     @Override
@@ -108,13 +105,13 @@ public class VetPhotoServiceImpl implements VetPhotoService {
         VetPhoto photo = photoRepository.findById(vetId)
                 .orElseThrow(() -> new VetPhotoNotFoundException(vetId.toString()));
         photo.reject(reviewer, reason);
-        return VetPhotoResponse.from(photo, storage.presignedGet(photo.getObjectKey(), props.presignedTtl()));
+        return VetPhotoResponse.from(photo, files.presignedUrl(photo.getObjectKey()));
     }
 
     @Override
     public List<VetPhotoResponse> listPendingPhotos() {
         return photoRepository.findByStatus("PENDING").stream()
-                .map(p -> VetPhotoResponse.from(p, storage.presignedGet(p.getObjectKey(), props.presignedTtl())))
+                .map(p -> VetPhotoResponse.from(p, files.presignedUrl(p.getObjectKey())))
                 .toList();
     }
 
@@ -124,9 +121,9 @@ public class VetPhotoServiceImpl implements VetPhotoService {
         ensureVetExists(vetId);
         VetPhoto photo = photoRepository.findById(vetId)
                 .orElseThrow(() -> new VetPhotoNotFoundException(vetId.toString()));
-        // Xoá MinIO TRƯỚC, DB SAU. Nếu MinIO fail → exception, DB row giữ lại → retry được.
-        // Ngược lại sẽ leak orphan object trong MinIO mà DB không biết.
-        storage.delete(photo.getObjectKey());
+        // Xoá binary qua files-service TRƯỚC, DB SAU. Nếu fail → giữ row, retry được.
+        // Ngược lại sẽ leak orphan object mà DB không biết.
+        files.delete(photo.getObjectKey());
         photoRepository.delete(photo);
     }
 

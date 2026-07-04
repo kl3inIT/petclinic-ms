@@ -27,9 +27,6 @@ springAi           = "2.0.0"
 # Test
 junit              = "6.1.1"
 
-# AWS SDK v2 — dùng cho S3-compatible storage (MinIO). Không quản lý bởi Spring Boot BOM,
-# pin tại đây. 2.30+ stable May 2026.
-awsSdk             = "2.46.21"
 openaiJava         = "4.39.1"
 
 # OpenPDF — sinh PDF đơn thuốc (visits-service). 3.0.x đổi package com.lowagie.* → org.openpdf.*
@@ -82,9 +79,6 @@ testcontainers-postgresql              = { module = "org.testcontainers:testcont
 testcontainers-junit-jupiter           = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
 testcontainers-minio                   = { module = "org.testcontainers:testcontainers-minio", version.ref = "testcontainers" }
 testcontainers-rabbitmq                = { module = "org.testcontainers:testcontainers-rabbitmq", version.ref = "testcontainers" }
-
-# --- AWS S3 SDK v2 (S3-compatible: AWS, MinIO, Cloudflare R2, ...) ---
-aws-sdk-s3                             = { module = "software.amazon.awssdk:s3", version.ref = "awsSdk" }
 
 # --- PDF generation (OpenPDF 3.x — package org.openpdf.*) ---
 openpdf                                = { module = "com.github.librepdf:openpdf", version.ref = "openpdf" }

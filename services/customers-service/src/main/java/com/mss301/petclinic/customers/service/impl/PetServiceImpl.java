@@ -9,8 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.mss301.petclinic.common.storage.StorageProperties;
-import com.mss301.petclinic.common.storage.StorageService;
+import com.mss301.petclinic.customers.client.FilesClient;
 import com.mss301.petclinic.customers.dto.res.PetResponse;
 import com.mss301.petclinic.customers.exception.PetNotFoundException;
 import com.mss301.petclinic.customers.model.Pet;
@@ -25,21 +24,18 @@ public class PetServiceImpl implements PetService {
     private static final String PET_PHOTO_ENTITY = "pet-photo";
 
     private final PetRepository petRepository;
-    private final StorageService storage;
-    private final StorageProperties storageProps;
+    private final FilesClient files;
 
-    public PetServiceImpl(PetRepository petRepository, StorageService storage,
-                          StorageProperties storageProps) {
+    public PetServiceImpl(PetRepository petRepository, FilesClient files) {
         this.petRepository = petRepository;
-        this.storage = storage;
-        this.storageProps = storageProps;
+        this.files = files;
     }
 
     private String presign(String key) {
         if (key == null || key.isBlank()) {
             return null;
         }
-        return storage.presignedGet(key, storageProps.presignedTtl()).toString();
+        return files.presignedUrl(key);
     }
 
     @Override
@@ -61,11 +57,11 @@ public class PetServiceImpl implements PetService {
     public PetResponse uploadPhoto(Long id, MultipartFile file) {
         Pet pet = petRepository.findById(id)
                 .orElseThrow(() -> new PetNotFoundException(id.toString()));
-        MediaValidator.validate(file, PET_PHOTO_ENTITY, storageProps.maxFileSizeBytes());
+        MediaValidator.validate(file, PET_PHOTO_ENTITY, files.maxFileSizeBytes());
 
         String key = "pets/" + id;
         try {
-            storage.upload(key, file.getContentType(), file.getInputStream(), file.getSize());
+            files.upload(key, file);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to read uploaded file for pet " + id, e);
         }
@@ -79,7 +75,7 @@ public class PetServiceImpl implements PetService {
         Pet pet = petRepository.findById(id)
                 .orElseThrow(() -> new PetNotFoundException(id.toString()));
         if (pet.getPhotoId() != null) {
-            storage.delete(pet.getPhotoId());
+            files.delete(pet.getPhotoId());
             pet.setPhotoId(null);
             petRepository.save(pet);
         }

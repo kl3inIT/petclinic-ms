@@ -31,7 +31,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  */
 @RestController
 @RequestMapping("/api/v1/vets/{vetId}/photo")
-@Tag(name = "Vet Photo", description = "Avatar 1-1 của veterinarian (binary ở MinIO)")
+@Tag(name = "Vet Photo", description = "Avatar 1-1 của veterinarian (binary qua files-service)")
 public class VetPhotoController {
 
     private final VetPhotoService service;
@@ -44,7 +44,7 @@ public class VetPhotoController {
     @Operation(
             summary = "Get photo metadata + presigned URL",
             description = "Trả 404 nếu vet chưa upload photo. Presigned URL TTL config qua " +
-                          "petclinic.storage.minio.presigned-ttl (default 1h)."
+                          "petclinic.files.presigned-ttl (default 1h)."
     )
     public VetPhotoResponse getVetPhoto(@PathVariable Long vetId) {
         return service.getPhoto(vetId);
@@ -55,7 +55,7 @@ public class VetPhotoController {
             summary = "Upload or replace vet photo (idempotent)",
             description = "Multipart field 'file'. Max 10MB (config). Content-type: image/jpeg|png|webp. " +
                           "File quá lớn → 400 error.file-too-large. Type khác → 400 error.unsupported-media. " +
-                          "Re-upload overwrite cùng key MinIO + upsert DB row."
+                          "Re-upload overwrite cùng object key qua files-service + upsert DB row."
     )
     public VetPhotoResponse uploadVetPhoto(
             @PathVariable Long vetId,
@@ -66,7 +66,7 @@ public class VetPhotoController {
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete vet photo (xoá MinIO object trước, DB row sau)")
+    @Operation(summary = "Delete vet photo (xoá object qua files-service trước, DB row sau)")
     public void deleteVetPhoto(@PathVariable Long vetId) {
         service.deletePhoto(vetId);
     }

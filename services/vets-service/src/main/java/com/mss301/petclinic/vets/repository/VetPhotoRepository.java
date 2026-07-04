@@ -11,7 +11,7 @@ public interface VetPhotoRepository extends JpaRepository<VetPhoto, Long> {
     // Sử dụng findById(vetId) trực tiếp vì vetId == PK
 
     /**
-     * Projection — chỉ trả object key, KHÔNG hydrate full entity. Dùng cho MinIO
+     * Projection — chỉ trả object key, KHÔNG hydrate full entity. Dùng cho file cleanup
      * orphan cleanup job (review item M1): scale 10K vet thì findAll().map(getObjectKey)
      * load hết entity vào RAM, projection nhẹ hơn hàng order-of-magnitude.
      */

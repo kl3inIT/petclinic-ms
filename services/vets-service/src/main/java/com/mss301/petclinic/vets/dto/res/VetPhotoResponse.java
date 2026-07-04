@@ -6,9 +6,9 @@ import java.time.OffsetDateTime;
 import com.mss301.petclinic.vets.model.VetPhoto;
 
 /**
- * Photo metadata + presigned URL FE dùng để fetch trực tiếp từ MinIO/S3.
+ * Photo metadata + presigned URL FE dùng để fetch object.
  *
- * <p>{@code presignedUrl} có TTL (config qua {@code petclinic.storage.minio.presigned-ttl},
+ * <p>{@code presignedUrl} có TTL (config qua {@code petclinic.files.presigned-ttl},
  * mặc định 1h) — FE cache trong RAM, không persist. Sau TTL gọi lại GET endpoint
  * để lấy URL mới.</p>
  *

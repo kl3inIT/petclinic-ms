@@ -21,17 +21,14 @@ spring:
       max-file-size: 10MB
       max-request-size: 11MB
 
-# Phase E2 — S3-compatible storage config. Local dev dùng MinIO ở compose profile `storage`.
-# Override ở -prod env cho AWS S3 thật (endpoint + IAM creds).
+# Binary file access goes through Go files-service. Vets keeps review metadata
+# and calls files-service for upload/delete/presigned URL/list.
 petclinic:
-  storage:
-    minio:
-      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
-      access-key: ${MINIO_ACCESS_KEY:minioadmin}
-      secret-key: ${MINIO_SECRET_KEY:minioadmin}
-      bucket: ${MINIO_BUCKET:avatars}
-      presigned-ttl: PT1H
-      max-file-size-bytes: 10485760  # 10 MB
+  files:
+    base-url: ${FILES_SERVICE_URL:http://localhost:8193}
+    bucket: ${FILES_BUCKET:avatars}
+    presigned-ttl: PT1H
+    max-file-size-bytes: 10485760  # 10 MB
     # Phase I — orphan-cleanup job. Disable bằng MINIO_CLEANUP_ENABLED=false ở env nếu
     # job overlap với backup/maintenance window. Dry-run bật tuần đầu prod để verify.
     cleanup:

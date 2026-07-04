@@ -30,7 +30,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  */
 @RestController
 @RequestMapping("/api/v1/vets/{vetId}/album")
-@Tag(name = "Vet Album", description = "Gallery 1-N của veterinarian (binary ở MinIO)")
+@Tag(name = "Vet Album", description = "Gallery 1-N của veterinarian (binary qua files-service)")
 public class VetAlbumController {
 
     private final VetAlbumService service;

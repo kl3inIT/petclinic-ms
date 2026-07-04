@@ -24,6 +24,11 @@ petclinic:
       jwk-set-uri: http://localhost:0/dummy-jwks-for-test.json
       issuer: petclinic-test
       audience: petclinic-test
+  files:
+    base-url: http://localhost:8193
+    bucket: prescriptions
+    presigned-ttl: PT1H
+    max-file-size-bytes: 10485760
 
 # Disable event publishing trong test — broker không có sẵn.
 # ObjectProvider<EventPublisher> sẽ getIfAvailable() return null → service skip publish.

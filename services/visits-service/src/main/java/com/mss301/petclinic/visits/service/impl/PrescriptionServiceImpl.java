@@ -1,9 +1,5 @@
 package com.mss301.petclinic.visits.service.impl;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,8 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 
 import com.mss301.petclinic.common.events.EventPublisher;
-import com.mss301.petclinic.common.storage.StorageService;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
+import com.mss301.petclinic.visits.client.FilesClient;
 import com.mss301.petclinic.visits.client.ProductSummary;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.UserSummary;
@@ -49,7 +45,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
     private final VisitRepository visitRepository;
     private final PrescriptionRepository prescriptionRepository;
-    private final StorageService storage;
+    private final FilesClient files;
     private final PrescriptionPdfGenerator pdfGenerator;
     private final RemoteClientsFacade remoteClients;
     /** Optional — broker có thể disabled (test profile) hoặc tạm down. */
@@ -57,13 +53,13 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
     public PrescriptionServiceImpl(VisitRepository visitRepository,
                                    PrescriptionRepository prescriptionRepository,
-                                   StorageService storage,
+                                   FilesClient files,
                                    PrescriptionPdfGenerator pdfGenerator,
                                    RemoteClientsFacade remoteClients,
                                    ObjectProvider<EventPublisher> events) {
         this.visitRepository = visitRepository;
         this.prescriptionRepository = prescriptionRepository;
-        this.storage = storage;
+        this.files = files;
         this.pdfGenerator = pdfGenerator;
         this.remoteClients = remoteClients;
         this.events = events;
@@ -115,10 +111,10 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         }
         Prescription saved = prescriptionRepository.save(rx);
 
-        // 5. Sinh PDF + upload MinIO. Enrich tên best-effort (không chặn nếu downstream lỗi).
+        // 5. Sinh PDF + upload qua files-service. Enrich tên best-effort (không chặn nếu downstream lỗi).
         byte[] pdf = pdfGenerator.render(saved, buildContext(visit));
         String key = "prescriptions/" + visitId + "/" + saved.getId() + ".pdf";
-        storage.upload(key, CONTENT_TYPE_PDF, new ByteArrayInputStream(pdf), pdf.length);
+        files.upload(key, CONTENT_TYPE_PDF, pdf);
         saved.attachPdf(key, CONTENT_TYPE_PDF, pdf.length);
 
         // 6. Trừ tồn kho (best-effort — đã pre-check tồn ở bước 4) + publish event để billing
@@ -209,11 +205,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             // Đơn tồn tại nhưng PDF chưa gắn (lỗi giữa chừng lúc tạo) — coi như chưa có.
             throw new PrescriptionNotFoundException(visitId);
         }
-        try (InputStream in = storage.download(rx.getObjectKey())) {
-            return new PrescriptionPdf(in.readAllBytes(), "prescription-visit-" + visitId + ".pdf");
-        } catch (IOException e) {
-            throw new UncheckedIOException("Không đọc được PDF đơn thuốc visit=" + visitId, e);
-        }
+        byte[] pdf = files.download(rx.getObjectKey());
+        return new PrescriptionPdf(pdf, "prescription-visit-" + visitId + ".pdf");
     }
 
     private PrescriptionPdfGenerator.VisitContext buildContext(Visit visit) {

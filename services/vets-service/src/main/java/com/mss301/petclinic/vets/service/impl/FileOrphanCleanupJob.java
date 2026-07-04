@@ -10,43 +10,43 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.mss301.petclinic.common.storage.StorageObject;
-import com.mss301.petclinic.common.storage.StorageService;
+import com.mss301.petclinic.vets.client.FilesClient;
+import com.mss301.petclinic.vets.client.FilesClient.FileObjectResponse;
 import com.mss301.petclinic.vets.config.StorageCleanupProperties;
 import com.mss301.petclinic.vets.repository.VetAlbumPhotoRepository;
 import com.mss301.petclinic.vets.repository.VetPhotoRepository;
 
 /**
- * Scheduled job rà MinIO ↔ DB, xoá object mồ côi (S3 có, DB không reference).
+ * Scheduled job rà files-service ↔ DB, xoá object mồ côi (object có, DB không reference).
  *
- * <p>Origin của orphan: rollback transaction sau khi đã upload S3, hoặc crash giữa
+ * <p>Origin của orphan: rollback transaction sau khi đã upload file, hoặc crash giữa
  * upload và DB save. Cleanup chạy 3 AM hằng ngày (configurable qua
  * {@link StorageCleanupProperties#cron()}) — giờ idle để tránh đua với traffic thật.</p>
  *
  * <p>{@code petclinic.storage.cleanup.enabled=false} tắt schedule, nhưng vẫn giữ bean
  * để integration test có thể gọi {@link #runCleanup()} trực tiếp.</p>
  *
- * <p><b>KHÔNG</b> đảo lại: DB row trỏ tới object S3 không tồn tại — đó là dấu hiệu data
+ * <p><b>KHÔNG</b> đảo lại: DB row trỏ tới object không tồn tại — đó là dấu hiệu data
  * corruption nghiêm trọng hơn, cần alert manual chứ không tự fix.</p>
  */
 @Component
-public class MinioOrphanCleanupJob {
+public class FileOrphanCleanupJob {
 
-    private static final Logger log = LoggerFactory.getLogger(MinioOrphanCleanupJob.class);
+    private static final Logger log = LoggerFactory.getLogger(FileOrphanCleanupJob.class);
 
     static final String PHOTO_PREFIX = "vets/photo/";
     static final String ALBUM_PREFIX = "vets/album/";
 
-    private final StorageService storage;
+    private final FilesClient files;
     private final VetPhotoRepository photoRepository;
     private final VetAlbumPhotoRepository albumRepository;
     private final StorageCleanupProperties cleanupProps;
 
-    public MinioOrphanCleanupJob(StorageService storage,
-                                 VetPhotoRepository photoRepository,
-                                 VetAlbumPhotoRepository albumRepository,
-                                 StorageCleanupProperties cleanupProps) {
-        this.storage = storage;
+    public FileOrphanCleanupJob(FilesClient files,
+                                VetPhotoRepository photoRepository,
+                                VetAlbumPhotoRepository albumRepository,
+                                StorageCleanupProperties cleanupProps) {
+        this.files = files;
         this.photoRepository = photoRepository;
         this.albumRepository = albumRepository;
         this.cleanupProps = cleanupProps;
@@ -66,7 +66,7 @@ public class MinioOrphanCleanupJob {
      * <p>M1+M2 fix: NO {@code @Transactional} ở method-level — Spring Data repo
      * method tự mở/đóng tx riêng cho mỗi {@code findAllObjectKeys()} call (default
      * REQUIRED). Trước đây {@code @Transactional(readOnly=true)} wrap cả method
-     * → DB connection giữ trong suốt network I/O với MinIO (có thể vài phút khi
+     * → DB connection giữ trong suốt network I/O với object storage (có thể vài phút khi
      * bucket lớn) → connection pool starvation risk.
      *
      * <p>Projection query (M1): trả {@code List<String>} thay vì hydrate entity vào
@@ -81,20 +81,20 @@ public class MinioOrphanCleanupJob {
         Set<String> validPhotoKeys = new HashSet<>(photoRepository.findAllObjectKeys());
         Set<String> validAlbumKeys = new HashSet<>(albumRepository.findAllObjectKeys());
 
-        // S3 sweep ngoài tx — list + delete S3 chạy với network latency tự do,
+        // files-service sweep ngoài tx — list + delete chạy với network latency tự do,
         // KHÔNG khoá DB connection.
         int photoOrphans = sweep(PHOTO_PREFIX, validPhotoKeys, cutoff);
         int albumOrphans = sweep(ALBUM_PREFIX, validAlbumKeys, cutoff);
 
-        log.info("MinIO cleanup done: photo orphans={}, album orphans={}, dryRun={}",
+        log.info("File cleanup done: photo orphans={}, album orphans={}, dryRun={}",
                 photoOrphans, albumOrphans, cleanupProps.dryRun());
         return new CleanupReport(photoOrphans, albumOrphans);
     }
 
     private int sweep(String prefix, Set<String> validKeys, Instant cutoff) {
-        List<StorageObject> objects = storage.list(prefix);
+        List<FileObjectResponse> objects = files.list(prefix);
         int orphanCount = 0;
-        for (StorageObject obj : objects) {
+        for (FileObjectResponse obj : objects) {
             if (validKeys.contains(obj.key())) {
                 continue;
             }
@@ -111,7 +111,7 @@ public class MinioOrphanCleanupJob {
             } else {
                 log.warn("Deleting orphan: {} (size={}B, lastModified={})",
                         obj.key(), obj.sizeBytes(), obj.lastModified());
-                storage.delete(obj.key());
+                files.delete(obj.key());
             }
         }
         return orphanCount;
