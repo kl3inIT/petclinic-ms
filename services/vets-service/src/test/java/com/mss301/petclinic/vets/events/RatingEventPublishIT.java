@@ -32,11 +32,11 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.containers.RabbitMQContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.rabbitmq.RabbitMQContainer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -73,7 +73,7 @@ class RatingEventPublishIT {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine")
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18-alpine")
             .withDatabaseName("petclinic")
             .withUsername("postgres")
             .withPassword("postgres");
@@ -132,7 +132,7 @@ class RatingEventPublishIT {
         // PetClinicEventsAutoConfiguration đã declare khi context load.
         // Queue config: durable=true, exclusive=false, autoDelete=false.
         // RabbitMQ 4.x reject transient_nonexcl_queues (durable=false + exclusive=false +
-        // autoDelete=true) với reply-code 541 INTERNAL_ERROR — feature deprecated/disabled
+        // autoDelete=true) với reply-code 541 INTERNAL_ERROR — feature disabled
         // mặc định. Dùng durable queue; RabbitMQContainer mới spawn mỗi test class run nên
         // không leak giữa runs. exclusive=false để rabbitTemplate.receive() từ channel khác
         // vẫn poll được message (CachingConnectionFactory share connection nhưng pool channels).

@@ -1,9 +1,9 @@
 package com.mss301.petclinic.common.testing;
 
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 /**
@@ -51,7 +51,7 @@ public abstract class AbstractPostgresIntegrationTest {
     @Container
     @ServiceConnection
     @SuppressWarnings("resource") // singleton, stop bởi Ryuk
-    protected static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(POSTGRES_IMAGE)
+    protected static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(POSTGRES_IMAGE)
             .withDatabaseName("petclinic_test")
             .withUsername("test")
             .withPassword("test")

@@ -10,7 +10,6 @@
     "strict": true,
     "verbatimModuleSyntax": true,
     "types": ["node"],
-    "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["e2e/**/*", "playwright.config.ts"]

@@ -449,6 +449,8 @@ public class WorkflowOrchestrationServiceImpl implements WorkflowOrchestrationSe
     }
 
     private static class OperateNotFoundException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
         OperateNotFoundException(String path) { super("Not found: " + path); }
     }
 }

@@ -71,7 +71,7 @@ public record PetclinicAiProperties(
      *   <li>Ollama local ({@code http://localhost:11434/v1} + bất kỳ key, không check)</li>
      * </ul>
      *
-     * <p>Empty apiKey → RAG bean skip, ChatClient build không có {@code QuestionAnswerAdvisor}.
+     * <p>Empty apiKey → RAG bean skip, ChatClient build không có retrieval augmentation advisor.
      * App vẫn chạy bình thường, chỉ thiếu domain knowledge augmentation.
      *
      * @param baseUrl     embedding API root, vd {@code https://api.openai.com/v1}

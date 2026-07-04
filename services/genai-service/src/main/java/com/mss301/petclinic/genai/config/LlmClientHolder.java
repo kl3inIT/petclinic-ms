@@ -1,13 +1,15 @@
 package com.mss301.petclinic.genai.config;
 
+import jakarta.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
+import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
@@ -55,10 +57,13 @@ public class LlmClientHolder {
         if (this.vectorStore == null) {
             log.info("VectorStore bean absent — RAG disabled. Set petclinic.ai.embedding.api-key to enable.");
         } else {
-            log.info("VectorStore bean present — RAG enabled, QuestionAnswerAdvisor wired into ChatClient.");
+            log.info("VectorStore bean present — RAG enabled, RetrievalAugmentationAdvisor wired into ChatClient.");
         }
-        // Bootstrap từ env. {@link com.mss301.petclinic.genai.admin.LlmConfigService}
-        // @PostConstruct sẽ override sau khi load DB row (nếu có).
+    }
+
+    @PostConstruct
+    void bootstrapFromEnvironment() {
+        // Bootstrap từ env. LlmConfigService @PostConstruct sẽ override sau khi load DB row (nếu có).
         // Nếu apiKey rỗng (chưa set) → defer build, ChatController trả lỗi tới khi admin save.
         PetclinicAiProperties.Llm llm = bootstrapProperties.llm();
         if (llm.apiKey() == null || llm.apiKey().isBlank()) {
@@ -116,14 +121,17 @@ public class LlmClientHolder {
                 .build();
 
         ChatClient.Builder builder = ChatClient.builder(chatModel)
-                .defaultToolCallbacks(mcpToolProvider);
+                .defaultTools(mcpToolProvider);
 
         if (vectorStore != null) {
             // RAG: similarity top-3 chunks → inject vào prompt context. Mỗi chat call
             // sẽ search VectorStore TRƯỚC khi gửi message lên LLM.
             builder.defaultAdvisors(
-                    QuestionAnswerAdvisor.builder(vectorStore)
-                            .searchRequest(SearchRequest.builder().topK(3).build())
+                    RetrievalAugmentationAdvisor.builder()
+                            .documentRetriever(VectorStoreDocumentRetriever.builder()
+                                    .vectorStore(vectorStore)
+                                    .topK(3)
+                                    .build())
                             .build());
         }
 

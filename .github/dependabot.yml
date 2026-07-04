@@ -61,6 +61,73 @@ updates:
       prefix: "deps(docker)"
 
   # ─────────────────────────────────────────────────────────
+  # npm / pnpm workspace — root package.json + apps/web package.json
+  # ─────────────────────────────────────────────────────────
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 99
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "deps(npm)"
+    groups:
+      frontend-runtime:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@tanstack/*"
+          - "@radix-ui/*"
+          - "radix-ui"
+          - "axios"
+          - "zod"
+      frontend-tooling:
+        patterns:
+          - "vite"
+          - "vitest"
+          - "@vitejs/*"
+          - "typescript"
+          - "typescript-eslint"
+          - "eslint*"
+          - "@eslint/*"
+          - "prettier*"
+          - "orval"
+          - "@playwright/*"
+
+  - package-ecosystem: "npm"
+    directory: "/apps/web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 99
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "deps(web)"
+    groups:
+      web-runtime:
+        patterns:
+          - "*"
+
+  # ─────────────────────────────────────────────────────────
+  # Go modules — mailer-service
+  # ─────────────────────────────────────────────────────────
+
+  - package-ecosystem: "gomod"
+    directory: "/services/mailer-service"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 99
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "deps(go)"
+
+  # ─────────────────────────────────────────────────────────
   # GitHub Actions — scan các action ref trong .github/workflows/.
   # ─────────────────────────────────────────────────────────
 

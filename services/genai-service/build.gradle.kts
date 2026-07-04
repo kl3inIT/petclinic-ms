@@ -27,9 +27,11 @@ dependencies {
     // Phase 12d — RAG via pgvector. Auto-config tạo PgVectorStore bean nếu spring.ai.vectorstore.*
     // có config; nếu skip → bean không create, RagConfig handle graceful.
     implementation(libs.spring.ai.starter.vector.store.pgvector)
-    // QuestionAnswerAdvisor (Phase 12d) sống ở module tách riêng từ core
-    // (spring-ai-client-chat KHÔNG kéo). Mới add ở 2.0.
-    implementation(libs.spring.ai.advisors.vector.store)
+    // RetrievalAugmentationAdvisor (Phase 12d) sống ở module tách riêng từ core
+    // (spring-ai-client-chat KHÔNG kéo).
+    implementation(libs.spring.ai.rag)
+    // Spring AI 2.0 depends on openai-java-core. Dynamic runtime rebuilds need the OkHttp client builder too.
+    implementation(libs.openai.java.client.okhttp)
     // MCP client: discover mcp-server qua Eureka, consume tools qua SyncMcpToolCallbackProvider
     implementation(libs.spring.ai.starter.mcp.client)
 

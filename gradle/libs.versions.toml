@@ -2,13 +2,13 @@
 # Tham chiếu trong build script bằng `libs.spring.boot.starter.web` (dots → camelCase tự sinh).
 
 [versions]
-# Core (verified May 2026)
+# Core (verified July 2026)
 java               = "25"
-springBoot         = "4.0.6"            # latest stable
-springCloud        = "2025.1.1"         # Oakwood — tương thích Boot 4.0.x
+springBoot         = "4.1.0"            # latest stable
+springCloud        = "2025.1.2"         # Oakwood — compatible with Boot 4.1.x
 
 # DB / Migration
-postgresql         = "42.7.11"
+postgresql         = "42.7.12"
 testcontainers     = "2.0.5"            # 2.x đổi artifactId pattern `testcontainers-*`
 # Liquibase version managed by spring-boot-dependencies BOM — không pin tại đây.
 
@@ -18,27 +18,28 @@ springdoc          = "3.0.3"            # OpenAPI/Swagger UI — version riêng 
 # Spring Boot Admin (codecentric) — UI quản trị + monitoring cho 5 Spring services.
 # 4.0.4 fix variables.css template — expose colors trực tiếp thay vì T(...)/bean method
 # (#5251) → tương thích Thymeleaf 3.1.4+ stricter SpEL trên CSS template.
-springBootAdmin    = "4.0.4"
+springBootAdmin    = "4.1.1"
 
-# Spring AI 2.0.0-M6 — latest milestone (May 2026). M6 → GA churn còn có thể có break;
-# vì vậy chỉ dùng trong 2 service: mcp-server (expose tools) + genai-service (chat).
+# Spring AI GA. Chỉ dùng trong 2 service: mcp-server (expose tools) + genai-service (chat).
 # OpenRouter routing dùng OpenAI adapter với base-url override → 1 SDK đa-provider.
-springAi           = "2.0.0-M6"
+springAi           = "2.0.0"
 
 # Test
-junit              = "6.1.0"
+junit              = "6.1.1"
 
 # AWS SDK v2 — dùng cho S3-compatible storage (MinIO). Không quản lý bởi Spring Boot BOM,
 # pin tại đây. 2.30+ stable May 2026.
-awsSdk             = "2.30.21"
+awsSdk             = "2.46.21"
+openaiJava         = "4.39.1"
 
 # OpenPDF — sinh PDF đơn thuốc (visits-service). 3.0.x đổi package com.lowagie.* → org.openpdf.*
 # (com.lowagie bị bỏ hẳn). 3.0.5 stable (May 2026). LGPL/MPL — OK cho dependency.
 openpdf            = "3.0.5"
 
 # BPM / integration (workflow-service)
-camunda            = "8.9.5"
-camel              = "4.14.4"            # Spring Boot 4 compatible từ 4.14.x
+camunda            = "8.9.11"
+camel              = "4.21.0"            # Spring Boot 4.1 compatible line
+spotless           = "8.8.0"
 
 [libraries]
 # --- Spring Boot starters (Spring MVC stack, blocking) ---
@@ -103,7 +104,7 @@ spring-cloud-starter-circuitbreaker-resilience4j = { module = "org.springframewo
 # --- Spring Boot Admin ---
 spring-boot-admin-starter-server       = { module = "de.codecentric:spring-boot-admin-starter-server", version.ref = "springBootAdmin" }
 
-# --- Spring AI 2.0.0-M6 ---
+# --- Spring AI 2.0.0 ---
 # BOM import qua dependencyManagement trong module-level build.gradle.kts (mcp-server, genai-service).
 # Starter version managed by BOM — KHÔNG pin trên từng artifact.
 spring-ai-bom                          = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
@@ -117,13 +118,14 @@ spring-ai-starter-model-openai         = { module = "org.springframework.ai:spri
 # (upgrade-notes nói "spring-ai-model-chat-memory-*" → "spring-ai-model-chat-memory-repository-*").
 spring-ai-starter-model-chat-memory-repository-jdbc = { module = "org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc" }
 spring-ai-starter-vector-store-pgvector = { module = "org.springframework.ai:spring-ai-starter-vector-store-pgvector" }
-# RAG advisor module — QuestionAnswerAdvisor + VectorStoreChatMemoryAdvisor. Tách riêng từ core.
-spring-ai-advisors-vector-store        = { module = "org.springframework.ai:spring-ai-advisors-vector-store" }
+# RAG advisor module — RetrievalAugmentationAdvisor + vector-store document retrieval.
+spring-ai-rag                          = { module = "org.springframework.ai:spring-ai-rag" }
+openai-java-client-okhttp              = { module = "com.openai:openai-java-client-okhttp", version.ref = "openaiJava" }
 
 # --- Plugin artifacts (dùng trong build-logic) ---
 spring-boot-gradle-plugin              = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
 # Spotless: format/lint Java. Áp whitespace-only rules (KHÔNG reformat code body).
-spotless-gradle-plugin                 = { module = "com.diffplug.spotless:spotless-plugin-gradle", version = "8.5.1" }
+spotless-gradle-plugin                 = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 
 # --- Camunda 8 ---
 camunda-spring-boot-starter            = { module = "io.camunda:camunda-spring-boot-starter", version.ref = "camunda" }

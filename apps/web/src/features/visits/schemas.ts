@@ -6,8 +6,8 @@ import { z } from 'zod';
  *   scheduledAt (Instant, future), reason (String, optional ≤ 500)
  */
 export const bookVisitSchema = z.object({
-  petId: z.coerce.number({ message: 'Bắt buộc' }).int().positive('Bắt buộc'),
-  vetId: z.coerce.number({ message: 'Bắt buộc' }).int().positive('Bắt buộc'),
+  petId: z.number({ message: 'Bắt buộc' }).int().positive('Bắt buộc'),
+  vetId: z.number({ message: 'Bắt buộc' }).int().positive('Bắt buộc'),
   // datetime-local sinh ra "YYYY-MM-DDTHH:MM" (no seconds, no zone) — chuyển sang ISO ở mutation.
   scheduledAt: z
     .string()
@@ -31,8 +31,8 @@ export type BookVisitInput = z.infer<typeof bookVisitSchema>;
 export const completeVisitSchema = z.object({
   diagnosis: z.string().min(1, 'Bắt buộc').max(4000),
   treatment: z.string().max(4000),
-  fee: z.coerce.number({ message: 'Nhập số' }).nonnegative('Phải ≥ 0'),
-  serviceProductId: z.coerce.number().int().nonnegative(),
+  fee: z.number({ message: 'Nhập số' }).nonnegative('Phải ≥ 0'),
+  serviceProductId: z.number().int().nonnegative(),
 });
 
 export type CompleteVisitInput = z.infer<typeof completeVisitSchema>;

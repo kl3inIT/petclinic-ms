@@ -21,9 +21,6 @@ import {
   Activity,
   Heart,
   ChevronDown,
-  Facebook,
-  Instagram,
-  Youtube,
   Mail,
   MapPin,
   CheckCircle2,
@@ -1355,19 +1352,25 @@ function SiteFooter() {
               href="#"
               className="rounded-xl bg-white/5 p-2.5 transition-all hover:bg-violet-600 hover:text-white"
             >
-              <Facebook className="size-4" />
+              <span className="block size-4 text-center text-xs leading-4 font-bold">
+                f
+              </span>
             </a>
             <a
               href="#"
               className="rounded-xl bg-white/5 p-2.5 transition-all hover:bg-violet-600 hover:text-white"
             >
-              <Instagram className="size-4" />
+              <span className="block size-4 text-center text-xs leading-4 font-bold">
+                ig
+              </span>
             </a>
             <a
               href="#"
               className="rounded-xl bg-white/5 p-2.5 transition-all hover:bg-violet-600 hover:text-white"
             >
-              <Youtube className="size-4" />
+              <span className="block size-4 text-center text-xs leading-4 font-bold">
+                yt
+              </span>
             </a>
           </div>
         </div>
