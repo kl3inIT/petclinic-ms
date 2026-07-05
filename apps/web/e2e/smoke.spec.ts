@@ -15,7 +15,7 @@ test('landing page renders without error', async ({ page }) => {
     if (msg.type() === 'error') consoleErrors.push(msg.text());
   });
 
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveTitle(/petclinic/i);
   await expect(page.locator('body')).toBeVisible();
 
@@ -32,7 +32,7 @@ test('landing page renders without error', async ({ page }) => {
 });
 
 test('login route accessible (FE-only — no BE required)', async ({ page }) => {
-  await page.goto('/login');
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
   // Form fields render (auth login form). Không submit — BE không up trong smoke.
   await expect(page.getByRole('textbox').first()).toBeVisible({ timeout: 5000 });
 });
