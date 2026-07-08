@@ -260,7 +260,7 @@ services:
   # Camunda 8 single-node developer runtime.
   # REST/UI: http://localhost:8088, gRPC: http://localhost:26500
   camunda:
-    image: camunda/camunda:8.9.11
+    image: camunda/camunda:8.9.12
     container_name: petclinic-camunda
     profiles: ["workflow", "all"]
     depends_on:
