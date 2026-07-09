@@ -1,0 +1,63 @@
+@startuml
+title Files & Media Service - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "files-service" {
+  enum FileVisibility {
+    OWNER_ONLY
+    STAFF_ONLY
+    PUBLIC_APPROVED
+    SERVICE_INTERNAL
+  }
+
+  class FileObject {
+    +UUID id
+    +String ownerService
+    +String ownerType
+    +String ownerId
+    +String objectKey
+    +String contentType
+    +long sizeBytes
+    +String checksum
+    +FileVisibility visibility
+    +Instant uploadedAt
+  }
+
+  class FileAccessPolicy {
+    +UUID id
+    +String role
+    +boolean canRead
+    +boolean canWrite
+  }
+
+  class FileService {
+    +upload(command)
+    +getSignedReadUrl(fileId, actor)
+    +delete(fileId, actor)
+  }
+
+  interface StorageClient {
+    +putObject(key, stream)
+    +presignGet(key, ttl)
+    +deleteObject(key)
+  }
+
+  class MediaValidator {
+    +validateContentType(file)
+    +validateSize(file)
+    +calculateChecksum(file)
+  }
+}
+
+FileObject "1" o-- "1..*" FileAccessPolicy
+FileService --> FileObject
+FileService --> StorageClient
+FileService --> MediaValidator
+FileObject --> FileVisibility
+
+note right of FileObject
+Domain services store fileId/object reference only.
+Binary content stays in MinIO/S3 behind files-service.
+end note
+@enduml

@@ -1,0 +1,34 @@
+@startuml
+title Login - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "User" as User
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "auth-service\nAuthController" as Auth
+participant "AuthService" as Service
+database "auth.users\nrefresh_tokens" as DB
+participant "JwtTokenProvider" as JWT
+
+User -> Web: Enter email/password
+Web -> Gateway: POST /api/v1/auth/login
+Gateway -> Auth: route request
+Auth -> Service: login(LoginRequest)
+Service -> DB: load user by email
+DB --> Service: User
+Service -> Service: verify bcrypt hash\ncheck enabled + emailVerified
+alt credentials valid
+  Service -> JWT: issue access + refresh token
+  JWT --> Service: AuthResponse
+  Service -> DB: persist hashed refresh token
+  Service --> Auth: AuthResponse
+  Auth --> Gateway: 200 OK
+  Gateway --> Web: tokens + role claims
+  Web -> Web: store session and open role dashboard
+else invalid / locked / unverified
+  Service --> Auth: ProblemDetail
+  Auth --> Gateway: 401/403
+  Gateway --> Web: error message
+end
+@enduml

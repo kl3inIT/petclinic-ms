@@ -1,0 +1,36 @@
+@startuml
+title Upload Media / Retrieve Signed URL - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Authorized user" as User
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "files-service" as Files
+participant "MediaValidator" as Validator
+database "files schema" as DB
+collections "MinIO / S3" as S3
+participant "owning service\ncustomers/vets/visits/billing" as Owner
+
+User -> Web: Select file
+Web -> Gateway: POST /api/v1/files multipart
+Gateway -> Files: route with JWT claims
+Files -> Validator: type, size, checksum
+alt valid file
+  Files -> S3: putObject(objectKey)
+  Files -> DB: persist FileObject metadata
+  Files -> Owner: attach file reference to domain resource
+  Owner --> Files: accepted
+  Files --> Web: fileId + signed read URL
+else invalid type/size
+  Files --> Web: ProblemDetail 400
+end
+
+User -> Web: Open photo/PDF
+Web -> Gateway: GET /api/v1/files/{id}/signed-url
+Gateway -> Files: authorize actor
+Files -> DB: load FileObject + policy
+Files -> S3: presignGet(objectKey, ttl)
+Files --> Web: signed URL
+Web -> S3: GET object via signed URL
+@enduml

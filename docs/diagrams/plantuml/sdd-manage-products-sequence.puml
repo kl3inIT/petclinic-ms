@@ -1,0 +1,27 @@
+@startuml
+title Manage Products & Medicines - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Inventory Manager / Admin" as Manager
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "products-service\nProductController" as Controller
+participant "ProductService" as Service
+database "products schema" as DB
+
+Manager -> Web: Create or edit catalogue item
+Web -> Gateway: POST/PATCH /api/v1/products
+Gateway -> Controller: route with INVENTORY_MANAGER/ADMIN
+Controller -> Service: createOrUpdateProduct(request)
+Service -> DB: validate code uniqueness and type
+Service -> DB: save product
+Controller --> Web: ProductResponse
+
+Manager -> Web: Discontinue product
+Web -> Gateway: PATCH /api/v1/products/{id}/active=false
+Gateway -> Controller: route
+Controller -> Service: deactivateProduct(id)
+Service -> DB: active=false, keep invoice history
+Controller --> Web: ProductResponse
+@enduml

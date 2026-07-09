@@ -1,0 +1,34 @@
+@startuml
+title Cancel / Reschedule Visit - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Owner / Receptionist" as User
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "visits-service\nVisitController" as Visits
+participant "VisitService" as Service
+database "visits schema" as DB
+participant "vets-service" as Vets
+queue "RabbitMQ" as MQ
+
+alt cancel visit
+  User -> Web: Cancel scheduled visit with reason
+  Web -> Gateway: PATCH /api/v1/visits/{id}/cancel
+  Gateway -> Visits: route with JWT
+  Visits -> Service: cancel(id, actor)
+  Service -> DB: load visit and check ownership/role
+  Service -> DB: status=CANCELLED
+  Service -> MQ: publish visit.cancelled
+  Visits --> Web: updated VisitResponse
+else reschedule visit
+  User -> Web: Pick new time slot
+  Web -> Gateway: PATCH /api/v1/visits/{id}/reschedule
+  Gateway -> Visits: route
+  Visits -> Vets: verify new slot available
+  Vets --> Visits: available
+  Visits -> DB: update scheduledAt
+  Visits -> MQ: publish visit.rescheduled
+  Visits --> Web: updated VisitResponse
+end
+@enduml

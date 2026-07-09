@@ -1,0 +1,47 @@
+@startuml
+title Vet Discovery & Scheduling - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "vets-service" {
+  class Vet {
+    +Long id
+    +UUID userId
+    +String firstName
+    +String lastName
+    +String email
+    +boolean active
+  }
+
+  class Specialty
+  class WorkScheduleSlot
+  class WorkHour
+  class Rating
+  class Badge
+  class Education
+  class VetPhoto
+  class VetAlbumPhoto
+
+  class VetController
+  class VetMeController
+  class WorkScheduleController
+  class VetService
+  class WorkScheduleService
+  class RatingService
+  interface VetRepository
+  interface WorkScheduleSlotRepository
+}
+
+Vet "*" -- "*" Specialty
+Vet "1" o-- "0..*" WorkScheduleSlot
+Vet "1" o-- "0..*" Rating
+Vet "1" o-- "0..*" Badge
+Vet "1" o-- "0..*" Education
+Vet "1" o-- "0..1" VetPhoto
+Vet "1" o-- "0..*" VetAlbumPhoto
+VetController --> VetService
+VetMeController --> VetService
+WorkScheduleController --> WorkScheduleService
+VetService --> VetRepository
+WorkScheduleService --> WorkScheduleSlotRepository
+@enduml

@@ -1,0 +1,27 @@
+@startuml
+title Ask the Assistant (RAG) - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Pet Owner" as Owner
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "genai-service\nChatController" as Chat
+participant "LlmClientHolder" as Holder
+participant "RagIngestService / vector store" as RAG
+participant "MCP client" as MCP
+participant "LLM Provider" as LLM
+
+Owner -> Web: Ask care question
+Web -> Gateway: POST /api/v1/ai/chat/stream
+Gateway -> Chat: route with USER JWT
+Chat -> RAG: retrieve clinic knowledge chunks
+Chat -> MCP: fetch permitted owner/pet/visit context
+MCP --> Chat: scoped tool results
+Chat -> Holder: get active provider config
+Holder --> Chat: ChatClient
+Chat -> LLM: prompt + context + safety instructions
+LLM --> Chat: streamed tokens
+Chat --> Web: Server-Sent Events stream
+Web --> Owner: answer with source/context hint
+@enduml

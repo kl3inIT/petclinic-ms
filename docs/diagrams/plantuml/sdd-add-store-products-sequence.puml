@@ -1,0 +1,27 @@
+@startuml
+title Add Store Products - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Receptionist" as Staff
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "billing-service\nInvoiceController" as Billing
+participant "InvoiceService" as InvoiceService
+participant "products-service" as Products
+database "billing schema" as DB
+
+Staff -> Web: Add product/medicine line to OPEN invoice
+Web -> Gateway: POST /api/v1/invoices/{id}/items
+Gateway -> Billing: route with STAFF JWT
+Billing -> InvoiceService: addItem(invoiceId, request)
+InvoiceService -> DB: load OPEN invoice
+InvoiceService -> Products: GET product summary and stock
+Products --> InvoiceService: price, active, quantity
+alt active and enough stock
+  InvoiceService -> DB: add PRODUCT/MEDICATION line
+  Billing --> Web: InvoiceResponse with recalculated total
+else inactive or insufficient stock
+  Billing --> Web: ProblemDetail 400
+end
+@enduml

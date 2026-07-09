@@ -1,0 +1,23 @@
+@startuml
+title Check Availability - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Pet Owner / Receptionist" as User
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "visits-service\nVisitController" as Visits
+participant "RemoteClientsFacade" as Remote
+participant "vets-service" as Vets
+database "visits schema" as VisitDB
+
+User -> Web: Select vet and date
+Web -> Gateway: GET /api/v1/visits/availability
+Gateway -> Visits: route
+Visits -> Remote: getVetAvailability(vetId, date)
+Remote -> Vets: GET /api/v1/vets/{id}/availability
+Vets --> Remote: working slots
+Visits -> VisitDB: load existing SCHEDULED/IN_PROGRESS visits
+Visits -> Visits: subtract occupied 30-minute slots
+Visits --> Web: available slots
+@enduml

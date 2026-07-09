@@ -1,0 +1,54 @@
+# Use Case — Customer (role USER). Actor left, external actors right.
+direction: right
+title: Use Case — Pet Owner (Customer) {
+  near: top-center; shape: text
+  style: { font-size: 22; bold: true; font-color: "#1864ab" }
+}
+
+owner: Pet Owner\n(Customer) {
+  shape: person
+  style: { fill: "#d0ebff"; stroke: "#1971c2"; font-size: 16 }
+}
+
+sys: PetClinic Management System {
+  style: { fill: "#fbfcfe"; stroke: "#adb5bd"; font-size: 16 }
+  reg: Register { shape: oval; style.fill: "#fff9db" }
+  login: Login / Logout { shape: oval; style.fill: "#fff9db" }
+  prof: Manage Profile & Password { shape: oval; style.fill: "#fff9db" }
+  pets: Manage Pets (+ photos) { shape: oval; style.fill: "#e7f5ff" }
+  book: Book Appointment { shape: oval; style.fill: "#e7f5ff" }
+  avail: Check Vet Availability { shape: oval; style.fill: "#d0ebff" }
+  cancel: Cancel Appointment { shape: oval; style.fill: "#e7f5ff" }
+  hist: View Visits & Prescriptions { shape: oval; style.fill: "#e7f5ff" }
+  pay: View & Pay Invoice { shape: oval; style.fill: "#e7f5ff" }
+  review: Write & Vote Review { shape: oval; style.fill: "#e7f5ff" }
+  browse: Browse Vets / Store { shape: oval; style.fill: "#e7f5ff" }
+  chat: Chat with AI Assistant { shape: oval; style.fill: "#e7f5ff" }
+}
+
+llm: LLM Provider\n(OpenRouter / OpenAI) {
+  shape: person; style: { fill: "#e9ecef"; stroke: "#495057"; font-size: 15 }
+}
+bank: Payment /\nBank Channel {
+  shape: person; style: { fill: "#ffe8cc"; stroke: "#e8590c"; font-size: 15 }
+}
+smtp: Email / SMTP {
+  shape: person; style: { fill: "#fff3bf"; stroke: "#f08c00"; font-size: 15 }
+}
+
+owner -> sys.reg
+owner -> sys.login
+owner -> sys.prof
+owner -> sys.pets
+owner -> sys.book
+owner -> sys.cancel
+owner -> sys.hist
+owner -> sys.pay
+owner -> sys.review
+owner -> sys.browse
+owner -> sys.chat
+
+sys.book -> sys.avail: <<include>> { style.stroke-dash: 3 }
+sys.chat -> llm: prompt / completion
+sys.pay -> bank: transfer ref
+sys.pay -> smtp: receipt { style.stroke-dash: 3 }

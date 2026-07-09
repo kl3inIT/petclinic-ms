@@ -1,0 +1,43 @@
+@startuml
+title Catalogue & Inventory - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "products-service" {
+  enum ProductType {
+    MEDICATION
+    SERVICE
+    SUPPLY
+    MERCHANDISE
+  }
+
+  enum StockStatus {
+    AVAILABLE
+    LOW
+    OUT
+  }
+
+  class Product {
+    +Long id
+    +String code
+    +String name
+    +ProductType type
+    +BigDecimal price
+    +Integer stockQuantity
+    +Integer reorderLevel
+    +boolean active
+    +stockStatus()
+  }
+
+  class ProductController
+  class ProductService
+  interface ProductRepository
+  class ProductSpecifications
+}
+
+Product --> ProductType
+Product ..> StockStatus
+ProductController --> ProductService
+ProductService --> ProductRepository
+ProductRepository --> ProductSpecifications
+@enduml

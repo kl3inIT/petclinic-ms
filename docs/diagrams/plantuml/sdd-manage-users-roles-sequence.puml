@@ -1,0 +1,29 @@
+@startuml
+title Manage Users & Roles - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Admin" as Admin
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "auth-service\nUsersController" as Users
+participant "AuthService" as AuthService
+database "auth.users" as DB
+participant "AuthAuditLogger" as Audit
+
+Admin -> Web: Search user and edit roles/enabled flag
+Web -> Gateway: PATCH /api/v1/users/{id}/roles
+Gateway -> Users: route with ADMIN JWT
+Users -> AuthService: assignRoles(userId, roles, actor)
+AuthService -> DB: load and update user roles
+AuthService -> Audit: record role change
+Users --> Web: UserResponse
+
+Admin -> Web: Disable/enable user
+Web -> Gateway: PATCH /api/v1/users/{id}/status
+Gateway -> Users: route
+Users -> AuthService: changeStatus(userId, enabled)
+AuthService -> DB: update enabled flag
+AuthService -> Audit: record account status change
+Users --> Web: UserResponse
+@enduml

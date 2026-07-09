@@ -1,0 +1,48 @@
+@startuml
+title Customer & Pet Management - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "customers-service" {
+  class Owner {
+    +Long id
+    +UUID userId
+    +String firstName
+    +String lastName
+    +String phone
+    +String address
+  }
+
+  class Pet {
+    +Long id
+    +String name
+    +LocalDate birthDate
+    +String breed
+    +String profile
+    +String photoRef
+  }
+
+  class PetType {
+    +Long id
+    +String name
+  }
+
+  class OwnerController
+  class PetController
+  class OwnerService
+  class PetService
+  class OwnerSecurity
+  interface OwnerRepository
+  interface PetRepository
+  interface PetTypeRepository
+}
+
+Owner "1" o-- "0..*" Pet
+Pet "*" --> "1" PetType
+OwnerController --> OwnerService
+PetController --> PetService
+OwnerService --> OwnerRepository
+PetService --> PetRepository
+PetService --> PetTypeRepository
+PetService --> OwnerSecurity
+@enduml

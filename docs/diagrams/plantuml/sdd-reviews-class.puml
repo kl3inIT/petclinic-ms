@@ -1,0 +1,54 @@
+@startuml
+title Reviews & Ratings - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "reviews-service" {
+  enum TargetType {
+    VET
+    PRODUCT
+    VISIT
+  }
+
+  enum ReviewStatus {
+    PUBLISHED
+    PENDING_MODERATION
+    FLAGGED
+    HIDDEN
+    DELETED
+  }
+
+  enum VoteType {
+    HELPFUL
+    NOT_HELPFUL
+  }
+
+  class Review {
+    +Long id
+    +UUID authorUserId
+    +TargetType targetType
+    +String targetId
+    +int rating
+    +String title
+    +String body
+    +ReviewStatus status
+    +int helpfulCount
+  }
+
+  class ReviewVote
+  class ReviewService
+  class ContentModerator
+  class RemoteClientsFacade
+  interface ReviewRepository
+  interface ReviewVoteRepository
+}
+
+Review "1" o-- "0..*" ReviewVote
+Review --> TargetType
+Review --> ReviewStatus
+ReviewVote --> VoteType
+ReviewService --> ReviewRepository
+ReviewService --> ReviewVoteRepository
+ReviewService --> ContentModerator
+ReviewService --> RemoteClientsFacade
+@enduml

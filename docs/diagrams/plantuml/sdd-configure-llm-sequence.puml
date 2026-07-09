@@ -1,0 +1,33 @@
+@startuml
+title Configure LLM (BYOK) - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Admin" as Admin
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "genai-service\nAdminLlmController" as Controller
+participant "LlmConfigService" as Service
+participant "AesGcmEncryptor" as Crypto
+database "genai.llm_config" as DB
+participant "LLM Provider" as LLM
+participant "LlmClientHolder" as Holder
+
+Admin -> Web: Enter base URL, model, API key
+Web -> Gateway: POST /api/v1/admin/llm/validate
+Gateway -> Controller: route with ADMIN JWT
+Controller -> Service: validate(request)
+Service -> LLM: test lightweight request
+LLM --> Service: accepted / rejected
+Controller --> Web: validation result
+
+Admin -> Web: Save configuration
+Web -> Gateway: PUT /api/v1/admin/llm/config
+Gateway -> Controller: route
+Controller -> Service: save(request)
+Service -> Crypto: encrypt API key
+Crypto --> Service: encryptedKey
+Service -> DB: persist active config
+Service -> Holder: rebuild active ChatClient
+Controller --> Web: saved config with masked key
+@enduml

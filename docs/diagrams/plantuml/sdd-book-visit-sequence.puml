@@ -1,0 +1,32 @@
+@startuml
+title Book Visit - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Pet Owner" as Owner
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "visits-service\nVisitController" as Visits
+participant "VisitService" as Service
+participant "RemoteClientsFacade" as Remote
+participant "customers-service" as Customers
+participant "vets-service" as Vets
+database "visits schema" as DB
+queue "RabbitMQ" as MQ
+participant "workflow-service" as Workflow
+
+Owner -> Web: Choose pet, vet, date/time, reason
+Web -> Gateway: POST /api/v1/visits
+Gateway -> Visits: route with USER JWT
+Visits -> Service: bookVisit(request, jwt)
+Service -> Remote: load pet and owner snapshot
+Remote -> Customers: GET pet/owner
+Customers --> Remote: PetSummary, OwnerSummary
+Service -> Remote: validate vet availability
+Remote -> Vets: GET availability
+Vets --> Remote: slot available
+Service -> DB: insert Visit(status=SCHEDULED)
+Service -> MQ: publish VisitScheduledEvent
+Service -> Workflow: start visit workflow
+Visits --> Web: VisitResponse
+@enduml

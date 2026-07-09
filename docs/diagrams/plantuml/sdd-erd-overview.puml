@@ -1,0 +1,39 @@
+@startuml
+title PCMS - Database Schema Ownership and Cross-Service Relationships
+
+top to bottom direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam componentStyle rectangle
+skinparam defaultFontName Arial
+skinparam defaultFontSize 18
+skinparam nodesep 20
+skinparam ranksep 26
+skinparam component {
+  BorderColor #333333
+  BackgroundColor #FFFFFF
+}
+
+component "Identity and Profile Schemas\n\nAUTH schema\n- users(id UUID PK, roles_csv, vet_id, customer_id)\n- refresh_tokens(single-use token rotation)\n\nCUSTOMERS schema\n- owners(user_id loose ref, avatar_file_id loose ref)\n- pets(owner_id FK, type_id FK, photo_file_id loose ref)\n- pet_types\n\nVETS schema\n- vets, specialties, vet_specialties\n- vet_work_schedule, vet_photo, vet_album_photos, ratings" as identity
+
+component "Clinical Workflow Schema\n\nVISITS schema\n- visits(owner_id, pet_id, vet_id loose refs; status lifecycle)\n- prescriptions and prescription_items\n- notification_sagas(event_id correlation, status)" as clinical
+
+component "Commerce and Feedback Schemas\n\nBILLING schema\n- invoices(customer_user_id loose ref, status OPEN/PAID/CANCELLED)\n- invoice_items(source_type + source_ref)\n- diseases, processed_events\n\nPRODUCTS schema\n- products(code, type, unit_price, stock_quantity, reorder_level)\n\nREVIEWS schema\n- reviews(target_type VET/PRODUCT/VISIT, target_id, author_id, rating, status)\n- review_votes" as commerce
+
+component "Support Schemas\n\nFILES schema (SRS target)\n- file_objects(owner_service/type/id, bucket, object_key, checksum)\n- file_access_policies\n\nGENAI schema\n- ai_llm_config\n- spring_ai_chat_memory\n- vector_store(pgvector embeddings)" as support
+
+component "Data relationship rules\n\nInside a service schema, physical FK is allowed and documented in Table Descriptions.\nAcross services, relationships are loose ids, denormalized snapshots, polymorphic targets, or events.\nLiquibase owns DDL; Hibernate ddl-auto=validate.\nPayment v1 stores method/reference only; no card PAN/CVV or bank credentials.\nConsumers dedupe with processed_events or saga event_id." as rules
+
+identity --> clinical : owner / pet / vet snapshots
+clinical --> commerce : visit.completed and prescription.issued events
+commerce --> identity : customer_user_id loose reference
+identity --> support : avatar / pet / vet media file ids
+clinical --> support : prescription PDF file ids
+commerce --> support : invoice PDF file ids
+support --> identity : genai owner-scoped chat identity
+rules ..> identity
+rules ..> clinical
+rules ..> commerce
+rules ..> support
+
+@enduml

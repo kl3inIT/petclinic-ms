@@ -1,0 +1,30 @@
+@startuml
+title Register & Verify Email - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Guest" as Guest
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "auth-service" as Auth
+database "auth.users" as DB
+queue "RabbitMQ\nuser.registered" as MQ
+participant "mailer-service (Go)" as Mailer
+participant "SMTP / Mailpit" as SMTP
+
+Guest -> Web: Submit registration form
+Web -> Gateway: POST /api/v1/auth/register
+Gateway -> Auth: route request
+Auth -> DB: validate uniqueness + insert user\nemailVerified=false
+Auth -> MQ: publish UserRegisteredEvent
+Auth --> Gateway: 201 Created / pending verification
+Gateway --> Web: show verification notice
+MQ -> Mailer: consume user.registered
+Mailer -> SMTP: send verification email
+SMTP --> Mailer: delivery accepted
+Guest -> Web: Open verification link
+Web -> Gateway: POST /api/v1/auth/verify-email
+Gateway -> Auth: verify token
+Auth -> DB: mark emailVerified=true
+Auth --> Web: verification success
+@enduml

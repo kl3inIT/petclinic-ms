@@ -1,0 +1,28 @@
+@startuml
+title Vote & Moderate Review - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Pet Owner" as Owner
+actor "Receptionist/Admin" as Staff
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "reviews-service\nReviewController" as ReviewController
+participant "ReviewModerationController" as ModerationController
+participant "ReviewService" as Service
+database "reviews schema" as DB
+
+Owner -> Web: Click helpful / not helpful
+Web -> Gateway: POST /api/v1/reviews/{id}/votes
+Gateway -> ReviewController: route with USER JWT
+ReviewController -> Service: vote(reviewId, voteType, user)
+Service -> DB: upsert ReviewVote and update helpfulCount
+ReviewController --> Web: ReviewResponse
+
+Staff -> Web: Open moderation queue
+Web -> Gateway: PATCH /api/v1/reviews/{id}/moderation
+Gateway -> ModerationController: route with STAFF/ADMIN
+ModerationController -> Service: approve/hide/delete(reviewId)
+Service -> DB: transition ReviewStatus
+ModerationController --> Web: moderated ReviewResponse
+@enduml

@@ -1,0 +1,30 @@
+@startuml
+title Manage Pets (Owner) - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Pet Owner" as Owner
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "customers-service\nPetController" as PetController
+participant "OwnerSecurity" as Security
+participant "PetService" as PetService
+database "customers schema" as DB
+participant "files-service" as Files
+
+Owner -> Web: Create/update pet profile
+Web -> Gateway: POST/PATCH /api/v1/pets
+Gateway -> PetController: route with JWT
+PetController -> Security: verify owner can access pet
+PetController -> PetService: save pet data
+PetService -> DB: persist Owner/Pet/PetType
+alt photo attached
+  Web -> Gateway: POST /api/v1/files multipart
+  Gateway -> Files: upload photo
+  Files --> Web: fileId / signed URL
+  Web -> Gateway: PATCH pet.photoRef
+  Gateway -> PetController: update photoRef
+  PetService -> DB: store photo reference only
+end
+PetController --> Web: PetResponse
+@enduml

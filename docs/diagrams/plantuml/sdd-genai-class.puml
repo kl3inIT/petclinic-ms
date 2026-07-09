@@ -1,0 +1,31 @@
+@startuml
+title AI Care Assistant - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "genai-service" {
+  class ChatController
+  class ChatRequest
+  class ChatReply
+  class StreamChatRequest
+  class RagIngestService
+  class SystemPrompts
+  class LlmClientHolder
+  class PetclinicAiProperties
+
+  package "admin" {
+    class LlmConfigEntity
+    class LlmConfigService
+    class AesGcmEncryptor
+    interface LlmConfigRepository
+  }
+}
+
+ChatController --> LlmClientHolder
+ChatController --> SystemPrompts
+ChatController --> RagIngestService
+LlmClientHolder --> LlmConfigService
+LlmConfigService --> LlmConfigRepository
+LlmConfigService --> AesGcmEncryptor
+LlmConfigService --> LlmConfigEntity
+@enduml

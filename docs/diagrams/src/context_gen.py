@@ -1,80 +1,78 @@
-"""Generate Figure 1-1 PCMS System Context.
+# -*- coding: utf-8 -*-
+"""PCMS System Context diagram + Core Business Process strip."""
+from _dio import Canvas, emit
+from pathlib import Path
 
-Classic DFD context diagram:
-  * central process drawn as a CIRCLE
-  * external entities = equal-size rounded boxes on a rectangular perimeter,
-    aligned in rows/columns (3 top, 3 right, 2 left, 2 bottom)
-  * TWO separate parallel arrows per entity, each with its OWN label:
-        entity -> PCMS  : request   (what the entity sends in)
-        PCMS  -> entity : response  (what PCMS sends back)
+ROOT = Path(__file__).resolve().parents[2]
+c = Canvas()
+W, H = 1480, 1080
 
-Run:    python docs/diagrams/src/context_gen.py
-Render: neato -Tpng docs/diagrams/src/context.dot -o docs/diagrams/out/context.png
-"""
-import os
+# ---------- central system ----------
+SXc, SYc = 740, 430
+c.rrect("sys", "PetClinic Management System (PCMS)\n\nReact SPA  ·  API Gateway  ·  16 Spring Cloud microservices\nPostgreSQL · RabbitMQ · Redis · MinIO",
+        SXc-200, SYc-90, 400, 180, "#d0ebff", "#1864ab", fontsize=13, bold=True)
 
-# id -> (box label, request label [in], response label [out])
-# aligned to the revised business model (no online shop / cart / payment gateway)
-ENT = {
-    "guest": ("Guest\\n(Anonymous)",            "browse vets / info",      "vet directory"),
-    "owner": ("Pet Owner",                      "book visit · manage pets","visits · invoices · AI"),
-    "staff": ("Receptionist\\n(Staff)",         "records · visits · billing","schedule · invoices"),
-    "vet":   ("Veterinarian",                   "examine · prescribe · charge","assigned visits · slots"),
-    "inv":   ("Inventory Manager",              "products · medicines · stock","catalog · stock levels"),
-    "admin": ("System Admin",                   "users · AI · mail",       "metrics · config"),
-    "llm":   ("LLM Provider",                   "completion · embed",      "prompt + context"),
-    "pay":   ("Bank Transfer\\nChannel",        "transfer confirmation",   "payment reference"),
-    "smtp":  ("SMTP Server",                    "delivery status",         "email message"),
-    "obj":   ("Object Storage",                 "stored URL",              "upload media / PDF"),
-}
+# ---------- external entities ----------
+def entity(id, label, x, y, fill, stroke, w=180, h=72):
+    c.rrect(id, label, x, y, w, h, fill, stroke, fontsize=12, bold=True)
 
-# rectangular perimeter (points). x grows right, y grows up.
-# generous spacing so each entity's two flow labels have room and never collide.
-POS = {
-    # TOP row (aligned y)
-    "guest": (-620, 640), "owner": (0, 640), "staff": (620, 640),
-    # RIGHT column (aligned x)
-    "llm": (1060, 380), "pay": (1060, 0), "smtp": (1060, -380),
-    # LEFT column (aligned x)
-    "vet": (-1060, 200), "inv": (-1060, -200),
-    # BOTTOM row (aligned y)
-    "admin": (-380, -640), "obj": (380, -640),
-}
+# human actors (corners/sides)
+entity("e_owner", "Pet Owner\n(Customer)",   120,  150, "#e7f5ff", "#1971c2")
+entity("e_vet",   "Veterinarian",            120,  430, "#ebfbee", "#2f9e44")
+entity("e_staff", "Clinic Staff\n(Receptionist)", 1180, 150, "#f3f0ff", "#7048e8")
+entity("e_admin", "Administrator",           1180, 430, "#ffe3e3", "#e03131")
+# external systems (bottom + top)
+entity("e_store", "Object Storage\n(MinIO / S3)",   120,  690, "#fff9db", "#f08c00")
+entity("e_mail",  "Email / SMTP\n(notifications)",  490,  720, "#fff3bf", "#e8590c")
+entity("e_pay",   "Payment /\nBank Channel",        760,  720, "#ffe8cc", "#e8590c")
+entity("e_llm",   "LLM Provider\n(OpenRouter / OpenAI)", 1180, 690, "#e9ecef", "#495057")
 
-lines = [
-    'digraph context {',
-    '  graph [splines=true, overlap=false, outputorder=edgesfirst,',
-    '         bgcolor="white", dpi=160];',
-    '  node  [fontname="Arial Bold", fontsize=15, fixedsize=true,',
-    '         width=2.2, height=0.85];',          # equal-size boxes
-    '  edge  [fontname="Arial", fontsize=12, fontcolor="#2b2b2b",',
-    '         color="#5a5a5a", penwidth=1.5, arrowsize=0.85];',
-    '',
-    '  pcms [pos="0,0!", shape=circle, fixedsize=true, width=2.2,',
-    '        style="filled,bold", fillcolor="#a5d8ff", color="#1971c2",',
-    '        penwidth=4, fontsize=19, fontname="Arial Bold", fontcolor="#0b3d66",',
-    '        label="Pet Care\\nManagement\\nSystem\\n(PCMS)"];',
-    '',
-    '  node [shape=box, style="rounded,filled", fillcolor="#ffe8cc",',
-    '        color="#e8820c", penwidth=2.4, fontcolor="#8a4b00"];',
-    '',
+BLUE, GRN, PUR, RED, ORG, GRY = "#1971c2","#2f9e44","#7048e8","#e03131","#e8590c","#868e96"
+def flow(a, b, label, color, dashed=False, both=False, fs=10):
+    c.edge(a, b, label=label, color=color, dashed=dashed, arrow="block",
+           start=("block" if both else "none"), style="straight", fontsize=fs)
+
+# human → system (requests) and system → human (responses) summarized on one bidirectional arrow
+flow("e_owner", "sys", "book · manage pets · pay · chat   /   confirmations · prescriptions · AI replies", BLUE, both=True)
+flow("e_vet",   "sys", "diagnose · prescribe · set schedule   /   appointments · ratings", GRN, both=True)
+flow("e_staff", "sys", "manage owners/vets · invoices · moderate", PUR, both=True)
+flow("e_admin", "sys", "catalog · account links · AI & workflow config", RED, both=True)
+# system → external systems
+flow("sys", "e_store", "store / fetch photos · prescription PDFs", ORG, both=True)
+flow("sys", "e_mail",  "send booking &amp; receipt emails", ORG)
+flow("sys", "e_pay",   "checkout reference", ORG)
+flow("sys", "e_llm",   "prompt + RAG embeddings   /   completions", GRY, both=True)
+
+# ---------- business process strip ----------
+PY = 900
+c.text("bp_t", "Core Business Process — Visit-to-Payment lifecycle (event-driven choreography + saga)",
+       60, PY-30, W-120, 24, fontsize=14, bold=True, color="#1864ab", align="left")
+steps = [
+    ("Book\nAppointment", "#e7f5ff", "#1971c2", "Owner"),
+    ("Approve\nBooking", "#f3f0ff", "#7048e8", "Staff / Camunda"),
+    ("Start\nExamination", "#ebfbee", "#2f9e44", "Vet"),
+    ("Complete Visit\n&amp; Diagnose", "#ebfbee", "#2f9e44", "Vet"),
+    ("Issue\nPrescription", "#ebfbee", "#2f9e44", "Vet"),
+    ("Auto-build\nInvoice", "#fff9db", "#f08c00", "events → Billing"),
+    ("Checkout\n&amp; Pay", "#ffe8cc", "#e8590c", "Staff / Owner"),
+    ("Email\nReceipt", "#fff3bf", "#e8590c", "Mailer (saga)"),
 ]
+n = len(steps); gap = 14
+sw = (W - 120 - gap * (n - 1)) / n
+x = 60
+ids = []
+for i, (label, fill, stroke, who) in enumerate(steps):
+    sid = f"bp{i}"
+    st = (f"shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;"
+          f"fillColor={fill};strokeColor={stroke};fontSize=11;fontStyle=1;fontColor=#1a1a1a;")
+    c.box(sid, label, int(x), PY, int(sw), 64, st)
+    c.text(f"who{i}", who, int(x), PY+66, int(sw), 18, fontsize=9, color="#666")
+    ids.append(sid)
+    x += sw + gap
+for i in range(n-1):
+    c.edge(ids[i], ids[i+1], color="#888", arrow="block", style="straight",
+           ex=1, ey=0.5, tx=0, ty=0.5)
 
-for eid, (label, _i, _o) in ENT.items():
-    x, y = POS[eid]
-    lines.append(f'  {eid} [pos="{x},{y}!", label="{label}"];')
-
-lines.append('')
-lines.append('  // labels sit near the ENTITY end of each spoke (tail/head label)')
-lines.append('  // so they fan out around the perimeter instead of piling at center')
-for eid, (_label, in_lbl, out_lbl) in ENT.items():
-    # request: entity -> PCMS  (label nearer the entity, one side)
-    lines.append(f'  {eid} -> pcms [taillabel="{in_lbl}", labeldistance=4.0, labelangle=34];')
-    # response: PCMS -> entity (label staggered further out, other side)
-    lines.append(f'  pcms -> {eid} [headlabel="{out_lbl}", labeldistance=8.0, labelangle=-34];')
-lines.append('}')
-
-out = os.path.join(os.path.dirname(__file__), "context.dot")
-with open(out, "w", encoding="utf-8") as f:
-    f.write("\n".join(lines) + "\n")
-print("wrote", os.path.abspath(out))
+emit(c, W, H, "PCMS — Application Context &amp; Core Business Process",
+     ROOT / "docs/diagrams/out/context.drawio",
+     ROOT / "docs/diagrams/out/context.png", width=2300)

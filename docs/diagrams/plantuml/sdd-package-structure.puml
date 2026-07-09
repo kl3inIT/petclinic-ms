@@ -1,0 +1,120 @@
+@startuml
+title PCMS - Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam nodesep 22
+skinparam ranksep 28
+skinparam package {
+  BorderColor #333333
+  BackgroundColor #FFFFFF
+}
+
+package "services/<name>\ncom.mss301.petclinic.<service>" as svc <<Spring Boot service>> {
+  package "api" as api_group {
+    package "controller" as controller {
+    }
+    package "dto" as dto {
+      package "req" as dto_req {
+      }
+      package "res" as dto_res {
+      }
+    }
+  }
+
+  package "application" as application_group {
+    package "service" as service {
+      package "impl" as service_impl {
+      }
+    }
+  }
+
+  package "persistence" as persistence_group {
+    package "repository" as repository {
+    }
+    package "model" as model {
+    }
+  }
+
+  package "integration" as integration_group {
+    package "config" as config {
+    }
+    package "client" as client {
+    }
+    package "events / consumer / saga" as events {
+    }
+    package "exception" as exception {
+    }
+  }
+}
+
+package "shared/common-* auto-configuration" as shared <<infrastructure only>> {
+  package "common-web" as common_web {
+  }
+  package "common-jpa" as common_jpa {
+  }
+  package "common-security" as common_security {
+  }
+  package "common-clients" as common_clients {
+  }
+  package "common-events" as common_events {
+  }
+  package "common-storage" as common_storage {
+  }
+  package "common-testing" as common_testing {
+  }
+}
+
+package "supporting repository modules" as repo_modules {
+  package "apps/web" as web {
+  }
+  package "build-logic" as build_logic {
+  }
+  package "config-repo" as config_repo {
+  }
+}
+
+web ..> controller : generated API client
+config_repo ..> config : @ConfigurationProperties
+build_logic ..> svc : petclinic.spring-boot-service
+build_logic ..> shared : petclinic.shared-library
+
+controller ..> service : uses interface
+controller ..> dto_req
+controller ..> dto_res
+service ..> service_impl : implemented by
+service_impl ..> repository
+service_impl ..> model
+service_impl ..> client
+service_impl ..> events
+repository ..> model
+dto_req ..> model : toEntity()
+dto_res ..> model : from()
+
+controller ..> common_web
+controller ..> common_security
+model ..> common_jpa
+client ..> common_clients
+client ..> common_storage
+events ..> common_events
+exception ..> common_web
+svc ..> common_testing
+
+note right of svc
+Package dependency rule:
+controller -> service -> service.impl -> repository/model.
+DTO mapping stays on records. No mapper layer, no Lombok.
+Domain entities, repositories and workflows stay inside the service.
+end note
+
+note right of shared
+Shared packages provide cross-cutting infrastructure only:
+ProblemDetail, auditing, JWT, HTTP clients, events, storage and tests.
+They do not contain domain entities or repositories.
+end note
+
+@enduml

@@ -1,0 +1,31 @@
+@startuml
+title Administration - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "auth-service" {
+  class UsersController
+  class AuthService
+  class User
+  class AuthAuditLogger
+}
+
+package "genai-service" {
+  class AdminLlmController
+  class LlmConfigService
+  class LlmConfigEntity
+  class AesGcmEncryptor
+}
+
+package "admin-server" {
+  class SpringBootAdminServer
+}
+
+UsersController --> AuthService
+AuthService --> User
+AuthService --> AuthAuditLogger
+AdminLlmController --> LlmConfigService
+LlmConfigService --> LlmConfigEntity
+LlmConfigService --> AesGcmEncryptor
+SpringBootAdminServer ..> "Eureka / Actuator"
+@enduml

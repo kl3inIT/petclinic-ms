@@ -1,0 +1,28 @@
+@startuml
+title Maintain Owner & Pet (Staff) - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Receptionist" as Staff
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "customers-service\nOwnerController" as OwnerController
+participant "OwnerService" as OwnerService
+participant "PetService" as PetService
+database "customers schema" as DB
+queue "RabbitMQ" as MQ
+
+Staff -> Web: Search owner / create walk-in record
+Web -> Gateway: GET/POST /api/v1/owners
+Gateway -> OwnerController: route with STAFF role
+OwnerController -> OwnerService: createOrUpdateOwner()
+OwnerService -> DB: upsert owner
+OwnerService -> MQ: publish OwnerCreated/Updated
+Staff -> Web: Add or update pet
+Web -> Gateway: POST/PATCH /api/v1/owners/{id}/pets
+Gateway -> OwnerController: route request
+OwnerController -> PetService: createOrUpdatePet(ownerId)
+PetService -> DB: upsert pet
+PetService -> MQ: publish PetAdded/Updated
+OwnerController --> Web: owner detail with pets
+@enduml

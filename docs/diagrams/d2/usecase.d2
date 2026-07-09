@@ -1,0 +1,139 @@
+# PCMS — Use Case Diagram (roles split). System actors LEFT, external actors RIGHT.
+direction: right
+
+title: PCMS — Use Case Diagram (roles split) {
+  near: top-center
+  shape: text
+  style: { font-size: 24; bold: true; font-color: "#1864ab" }
+}
+
+# ================= PRIMARY ACTORS (left) =================
+owner: Pet Owner\n(Customer) {
+  shape: person
+  style: { fill: "#d0ebff"; stroke: "#1971c2"; font-size: 16 }
+}
+vet: Veterinarian {
+  shape: person
+  style: { fill: "#d3f9d8"; stroke: "#2f9e44"; font-size: 16 }
+}
+staff: Clinic Staff\n(Receptionist) {
+  shape: person
+  style: { fill: "#e5dbff"; stroke: "#7048e8"; font-size: 16 }
+}
+admin: Administrator {
+  shape: person
+  style: { fill: "#ffe3e3"; stroke: "#e03131"; font-size: 16 }
+}
+
+# ================= SYSTEM BOUNDARY (middle, grouped by role) =================
+sys: PetClinic Management System {
+  style: { fill: "#fbfcfe"; stroke: "#adb5bd"; font-size: 18 }
+
+  account: Account · all roles {
+    style.fill: "#fff9db"
+    reg: Register { shape: oval }
+    login: Login / Logout { shape: oval }
+    prof: Manage Profile\n& Password { shape: oval }
+  }
+
+  customer: Customer {
+    style.fill: "#e7f5ff"
+    pets: Manage Pets\n(+ photos) { shape: oval }
+    book: Book Appointment { shape: oval }
+    avail: Check Vet\nAvailability { shape: oval; style.fill: "#d0ebff" }
+    cancel: Cancel Appointment { shape: oval }
+    hist: View Visits\n& Prescriptions { shape: oval }
+    pay: View & Pay Invoice { shape: oval }
+    review: Write & Vote Review { shape: oval }
+    browse: Browse Vets / Store { shape: oval }
+    chat: Chat with AI Assistant { shape: oval }
+  }
+
+  vetg: Veterinarian {
+    style.fill: "#ebfbee"
+    sched: Manage Work Schedule { shape: oval }
+    start: Start Examination { shape: oval }
+    complete: Complete Visit\n& Diagnose { shape: oval }
+    presc: Issue Prescription { shape: oval }
+    pdf: Generate PDF { shape: oval; style.fill: "#d3f9d8" }
+    vprof: Manage Vet Profile { shape: oval }
+    rate: View Ratings & Badges { shape: oval }
+  }
+
+  staffg: Clinic Staff {
+    style.fill: "#f3f0ff"
+    approve: Approve Visit Booking { shape: oval }
+    owners: Manage Owners { shape: oval }
+    vets: Manage Vets { shape: oval }
+    vetrev: Approve Vet Changes { shape: oval }
+    inv: Create & Checkout\nInvoice { shape: oval }
+    autoinv: Auto-append\nInvoice Line { shape: oval; style.fill: "#e5dbff" }
+    mod: Moderate Reviews { shape: oval }
+  }
+
+  adming: Administrator · extends Staff {
+    style.fill: "#fff0f6"
+    catalog: Manage Catalog\n(Products · Diseases) { shape: oval }
+    accts: Link User Accounts { shape: oval }
+    aicfg: Configure AI / Workflows { shape: oval }
+  }
+}
+
+# ================= EXTERNAL / SECONDARY ACTORS (right) =================
+llm: LLM Provider\n(OpenRouter / OpenAI) {
+  shape: person
+  style: { fill: "#e9ecef"; stroke: "#495057"; font-size: 16 }
+}
+smtp: Email / SMTP {
+  shape: person
+  style: { fill: "#fff3bf"; stroke: "#f08c00"; font-size: 16 }
+}
+bank: Payment /\nBank Channel {
+  shape: person
+  style: { fill: "#ffe8cc"; stroke: "#e8590c"; font-size: 16 }
+}
+
+# ================= ASSOCIATIONS: primary actors -> use cases =================
+owner -> sys.account.reg
+owner -> sys.account.login
+owner -> sys.account.prof
+owner -> sys.customer.pets
+owner -> sys.customer.book
+owner -> sys.customer.cancel
+owner -> sys.customer.hist
+owner -> sys.customer.pay
+owner -> sys.customer.review
+owner -> sys.customer.browse
+owner -> sys.customer.chat
+
+vet -> sys.account.login
+vet -> sys.vetg.sched
+vet -> sys.vetg.start
+vet -> sys.vetg.complete
+vet -> sys.vetg.presc
+vet -> sys.vetg.vprof
+vet -> sys.vetg.rate
+
+staff -> sys.account.login
+staff -> sys.staffg.approve
+staff -> sys.staffg.owners
+staff -> sys.staffg.vets
+staff -> sys.staffg.vetrev
+staff -> sys.staffg.inv
+staff -> sys.staffg.mod
+
+admin -> sys.adming.catalog
+admin -> sys.adming.accts
+admin -> sys.adming.aicfg
+admin -> staff: inherits { style: { stroke-dash: 4; stroke: "#e03131" } }
+
+# ================= INCLUDE relationships =================
+sys.customer.book -> sys.customer.avail: <<include>> { style.stroke-dash: 3 }
+sys.vetg.presc -> sys.vetg.pdf: <<include>> { style.stroke-dash: 3 }
+sys.vetg.complete -> sys.staffg.autoinv: <<include>> { style.stroke-dash: 3 }
+
+# ================= use cases -> external actors (RIGHT) =================
+sys.customer.chat -> llm: prompt / completion
+sys.customer.pay -> bank: transfer ref
+sys.customer.pay -> smtp: receipt { style.stroke-dash: 3 }
+sys.vetg.complete -> smtp: notify { style.stroke-dash: 3 }

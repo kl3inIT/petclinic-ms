@@ -1,0 +1,33 @@
+@startuml
+title Completion Notification Saga - Sequence Design
+autonumber
+skinparam shadowing false
+
+participant "visits-service" as Visits
+database "visits.NotificationSaga" as SagaDB
+queue "RabbitMQ\npetclinic.events" as MQ
+participant "mailer-service (Go)" as Mailer
+participant "SMTP" as SMTP
+participant "staff dashboard" as Staff
+
+Visits -> SagaDB: create saga row PENDING\ncorrelation=eventId
+Visits -> MQ: publish VisitCompletedEvent
+MQ -> Mailer: deliver event
+Mailer -> SMTP: send visit summary email
+alt email accepted
+  Mailer -> MQ: publish NotificationAck(originalEventId)
+  MQ -> Visits: consume ack
+  Visits -> SagaDB: mark COMPLETED
+else delivery failed
+  Mailer -> MQ: publish NotificationFailed(originalEventId, reason)
+  MQ -> Visits: consume failure
+  Visits -> SagaDB: mark COMPENSATED
+  Visits -> MQ: publish VisitManualFollowUpRequiredEvent
+  MQ -> Staff: show manual follow-up task
+end
+
+note over Visits,SagaDB
+Publisher + DB commit is not atomic in v1.
+Production-grade design should add a transactional outbox.
+end note
+@enduml

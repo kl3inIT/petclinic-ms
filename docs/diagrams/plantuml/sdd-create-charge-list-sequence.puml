@@ -1,0 +1,23 @@
+@startuml
+title Create Charge List to Clinical Invoice - Sequence Design
+autonumber
+skinparam shadowing false
+
+participant "visits-service" as Visits
+queue "RabbitMQ" as MQ
+participant "billing-service\nVisitCompletedConsumer" as Consumer
+participant "InvoiceService" as InvoiceService
+database "billing schema" as DB
+
+Visits -> MQ: publish VisitCompletedEvent\nvisit fee, customerUserId, customerName
+MQ -> Consumer: deliver visit.completed
+Consumer -> DB: insert ProcessedEvent(eventId)
+alt first delivery
+  Consumer -> InvoiceService: appendVisitFee(event)
+  InvoiceService -> DB: find OPEN invoice or create one
+  InvoiceService -> DB: add VISIT_FEE line
+  Consumer --> MQ: ack
+else duplicate delivery
+  Consumer --> MQ: ack without side effect
+end
+@enduml

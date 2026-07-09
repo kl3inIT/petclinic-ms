@@ -1,0 +1,34 @@
+@startuml
+title Collect Payment & Send Receipt - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Receptionist" as Staff
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "billing-service\nInvoiceController" as Billing
+participant "InvoiceService" as InvoiceService
+participant "products-service" as Products
+database "billing schema" as DB
+queue "RabbitMQ" as MQ
+participant "mailer-service (Go)" as Mailer
+participant "SMTP" as SMTP
+
+Staff -> Web: Select OPEN invoice and payment method\nCASH / CARD / TRANSFER
+Web -> Gateway: POST /api/v1/invoices/{id}/checkout
+Gateway -> Billing: route with JWT
+Billing -> InvoiceService: checkout(invoiceId, method)
+InvoiceService -> DB: load invoice + items
+InvoiceService -> Products: decrement stock for product lines
+alt stock and invoice valid
+  Products --> InvoiceService: stock updated
+  InvoiceService -> DB: status=PAID, paymentMethod=method
+  InvoiceService -> MQ: publish invoice.paid
+  Billing --> Web: 200 InvoiceResponse
+  MQ -> Mailer: consume invoice.paid
+  Mailer -> SMTP: send receipt email
+else invalid state or stock
+  InvoiceService --> Billing: ProblemDetail
+  Billing --> Web: checkout error
+end
+@enduml

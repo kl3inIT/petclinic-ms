@@ -1,0 +1,91 @@
+@startuml
+title Clinical Billing & Invoicing - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "billing-service" {
+  enum InvoiceStatus {
+    OPEN
+    PAID
+    CANCELLED
+  }
+
+  enum PaymentMethod {
+    CASH
+    CARD
+    TRANSFER
+  }
+
+  enum InvoiceItemSource {
+    VISIT_FEE
+    MEDICATION
+    PRODUCT
+    DISEASE
+    MISC
+  }
+
+  class Invoice {
+    +Long id
+    +UUID customerUserId
+    +String customerName
+    +InvoiceStatus status
+    +PaymentMethod paymentMethod
+    +BigDecimal total
+    +addItem(...)
+    +removeItem(itemId)
+    +checkout(method)
+    +cancel()
+  }
+
+  class InvoiceItem {
+    +Long id
+    +InvoiceItemSource sourceType
+    +Long sourceRef
+    +String description
+    +BigDecimal unitPrice
+    +int quantity
+    +BigDecimal lineTotal()
+  }
+
+  class Disease {
+    +Long id
+    +String code
+    +String name
+    +BigDecimal defaultPrice
+  }
+
+  class ProcessedEvent {
+    +UUID eventId
+    +String eventType
+    +Instant processedAt
+  }
+
+  class InvoiceService {
+    +createInvoice(request)
+    +addItem(invoiceId, request)
+    +checkout(invoiceId, request)
+    +cancel(invoiceId)
+    +appendVisitFee(event)
+    +appendMedicationItems(event)
+  }
+
+  interface ProductsClient
+}
+
+Invoice "1" o-- "1..*" InvoiceItem
+Invoice --> InvoiceStatus
+Invoice --> PaymentMethod
+InvoiceItem --> InvoiceItemSource
+Disease "0..*" <-- InvoiceItem : sourceRef when DISEASE
+InvoiceService --> Invoice
+InvoiceService --> ProductsClient : product lookup / stock decrement
+InvoiceService --> ProcessedEvent : idempotent event consume
+
+note right of InvoiceStatus
+v1 state machine:
+OPEN -> PAID
+OPEN -> CANCELLED
+PAID/CANCELLED are terminal.
+No OVERDUE state in v1.
+end note
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+title Token Refresh - Sequence Design
+autonumber
+skinparam shadowing false
+
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "auth-service" as Auth
+participant "RefreshTokenService" as Refresh
+database "auth.refresh_tokens" as DB
+participant "JwtTokenProvider" as JWT
+
+Web -> Gateway: POST /api/v1/auth/refresh\nrefresh token
+Gateway -> Auth: route request
+Auth -> Refresh: rotate(refreshToken)
+Refresh -> DB: find token hash
+alt valid and unused
+  Refresh -> DB: mark old token used/revoked
+  Refresh -> JWT: issue new access + refresh token
+  Refresh -> DB: persist new refresh hash
+  Refresh --> Auth: AuthResponse
+  Auth --> Web: 200 OK
+else expired, reused, or revoked
+  Refresh -> DB: revoke token family
+  Refresh --> Auth: ProblemDetail 401
+  Auth --> Web: force login
+end
+@enduml

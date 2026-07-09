@@ -1,0 +1,79 @@
+@startuml
+title Authentication & RBAC - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+package "auth-service" {
+  class User {
+    +UUID id
+    +String email
+    +String passwordHash
+    +Set<String> roles
+    +boolean enabled
+    +boolean emailVerified
+    +UUID customerId
+    +Long vetId
+  }
+
+  class RefreshToken {
+    +UUID id
+    +String tokenHash
+    +Instant expiresAt
+    +boolean revoked
+    +Instant usedAt
+  }
+
+  class AuthService {
+    +register(request)
+    +login(request)
+    +refresh(request)
+    +changePassword(request)
+  }
+
+  class JwtTokenProvider {
+    +issueAccessToken(user)
+    +issueRefreshToken(user)
+    +jwkSet()
+  }
+
+  class UsersController {
+    +getMe(jwt)
+    +listUsers()
+    +assignRoles(userId, roles)
+    +deactivateUser(userId)
+  }
+
+  class AuthAuditLogger {
+    +recordLogin(userId, outcome)
+    +recordRoleChange(actor, target)
+  }
+
+  interface UserRepository
+  interface RefreshTokenRepository
+}
+
+package "shared/common-security" {
+  class PetClinicSecurityAutoConfiguration
+  class PetClinicJwtProperties
+  class EndpointSecurityCustomizer
+}
+
+User "1" o-- "0..*" RefreshToken
+AuthService --> UserRepository
+AuthService --> RefreshTokenRepository
+AuthService --> JwtTokenProvider
+AuthService --> AuthAuditLogger
+UsersController --> AuthService
+PetClinicSecurityAutoConfiguration --> PetClinicJwtProperties
+PetClinicSecurityAutoConfiguration --> EndpointSecurityCustomizer
+
+note right of User
+Roles are claim strings:
+USER, STAFF, VET, ADMIN,
+INVENTORY_MANAGER.
+ADMIN has super-access.
+Ownership checks still run in
+downstream services.
+end note
+@enduml

@@ -1,0 +1,45 @@
+@startuml
+title Visit Lifecycle & Prescription - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "visits-service" {
+  class Visit
+  class Prescription {
+    +Long id
+    +Long visitId
+    +Long issuedByVetId
+    +String notes
+    +String objectKey
+    +Instant issuedAt
+    +attachPdf(...)
+  }
+
+  class PrescriptionItem {
+    +Long id
+    +String medicineName
+    +String dosage
+    +String duration
+    +String instructions
+  }
+
+  class NotificationSaga {
+    +UUID eventId
+    +SagaStatus status
+    +markCompleted()
+    +markCompensated()
+  }
+
+  class PrescriptionService
+  class PrescriptionPdfGenerator
+  class EventPublisher
+  interface PrescriptionRepository
+}
+
+Visit "1" o-- "0..*" Prescription
+Prescription "1" o-- "1..*" PrescriptionItem
+NotificationSaga --> Visit
+PrescriptionService --> PrescriptionRepository
+PrescriptionService --> PrescriptionPdfGenerator
+PrescriptionService --> EventPublisher
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+title Write a Review - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Pet Owner" as Owner
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "reviews-service\nReviewController" as Reviews
+participant "ReviewService" as Service
+participant "RemoteClientsFacade" as Remote
+participant "visits-service" as Visits
+participant "ContentModerator" as Moderator
+database "reviews schema" as DB
+queue "RabbitMQ" as MQ
+
+Owner -> Web: Submit rating and text
+Web -> Gateway: POST /api/v1/reviews
+Gateway -> Reviews: route with USER JWT
+Reviews -> Service: createReview(request, author)
+Service -> Remote: verify eligibility
+Remote -> Visits: check completed visit / target relation
+Visits --> Remote: eligible
+Service -> Moderator: scan profanity / policy
+alt clean text
+  Service -> DB: save PUBLISHED or PENDING_MODERATION
+  Service -> MQ: publish ReviewCreatedEvent
+  Reviews --> Web: ReviewResponse
+else not eligible or blocked
+  Service --> Reviews: ProblemDetail
+  Reviews --> Web: error
+end
+@enduml

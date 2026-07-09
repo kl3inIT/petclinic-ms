@@ -1,0 +1,28 @@
+@startuml
+title Browse & Search Vets - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Guest / Pet Owner" as User
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "vets-service\nVetController" as Vets
+participant "VetService" as Service
+database "vets schema" as DB
+participant "files-service" as Files
+
+User -> Web: Search by name, specialty, rating
+Web -> Gateway: GET /api/v1/vets?filters
+Gateway -> Vets: public route
+Vets -> Service: search(filters, pageable)
+Service -> DB: query vets + specialties + rating summary
+Service --> Vets: page of VetResponse
+Vets --> Web: results
+User -> Web: Open vet profile
+Web -> Gateway: GET /api/v1/vets/{id}
+Gateway -> Vets: route
+Vets -> DB: load vet profile
+Vets -> Files: request signed URLs for approved media
+Files --> Vets: signed URLs
+Vets --> Web: profile, schedule summary, reviews, media
+@enduml

@@ -1,0 +1,23 @@
+@startuml
+title Manage Schedule - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Veterinarian" as Vet
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "vets-service\nWorkScheduleController" as Controller
+participant "WorkScheduleService" as Service
+database "vets.work_schedule_slots" as DB
+
+Vet -> Web: Edit working hours / unavailable slot
+Web -> Gateway: PUT /api/v1/vets/me/schedule
+Gateway -> Controller: route with VET role
+Controller -> Service: replaceSchedule(vetId, request)
+Service -> DB: validate overlaps and save slots
+alt valid schedule
+  Controller --> Web: WorkScheduleSlotResponse
+else overlap or invalid time
+  Controller --> Web: ProblemDetail 400
+end
+@enduml

@@ -1,0 +1,29 @@
+@startuml
+title Issue Prescription - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Veterinarian" as Vet
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "visits-service\nPrescriptionController" as Controller
+participant "PrescriptionService" as Service
+participant "PrescriptionPdfGenerator" as Pdf
+participant "files-service / MinIO" as Files
+database "visits schema" as DB
+queue "RabbitMQ" as MQ
+
+Vet -> Web: Add medication lines and instructions
+Web -> Gateway: POST /api/v1/visits/{id}/prescriptions
+Gateway -> Controller: route with VET JWT
+Controller -> Service: issuePrescription(visitId, request)
+Service -> DB: load visit and validate assigned vet
+Service -> DB: save Prescription + items
+Service -> Pdf: generate PDF
+Pdf --> Service: PDF bytes
+Service -> Files: upload prescription PDF
+Files --> Service: objectKey / file reference
+Service -> DB: attach PDF metadata
+Service -> MQ: publish PrescriptionIssuedEvent
+Controller --> Web: PrescriptionResponse
+@enduml

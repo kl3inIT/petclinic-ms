@@ -1,0 +1,25 @@
+@startuml
+title Adjust Stock & Pricing - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Inventory Manager / Admin" as Manager
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "products-service\nProductController" as Controller
+participant "ProductService" as Service
+database "products schema" as DB
+
+Manager -> Web: Enter stock delta, reorder level, price
+Web -> Gateway: PATCH /api/v1/products/{id}/stock
+Gateway -> Controller: route with role
+Controller -> Service: adjustStock(productId, request)
+Service -> DB: load product
+Service -> Service: ensure stock does not go negative
+alt valid adjustment
+  Service -> DB: update stockQuantity / price / reorderLevel
+  Controller --> Web: ProductResponse with StockStatus
+else negative stock
+  Controller --> Web: ProblemDetail 400
+end
+@enduml

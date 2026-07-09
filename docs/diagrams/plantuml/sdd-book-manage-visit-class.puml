@@ -1,0 +1,42 @@
+@startuml
+title Book & Manage Visit - Class Design
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+package "visits-service" {
+  enum VisitStatus {
+    SCHEDULED
+    IN_PROGRESS
+    COMPLETED
+    CANCELLED
+  }
+
+  class Visit {
+    +Long id
+    +Long petId
+    +Long vetId
+    +UUID customerUserId
+    +Instant scheduledAt
+    +String reason
+    +VisitStatus status
+    +start()
+    +complete(...)
+    +cancel()
+  }
+
+  class VisitController
+  class VisitService
+  class VisitSecurity
+  class RemoteClientsFacade
+  interface VisitRepository
+}
+
+Visit --> VisitStatus
+VisitController --> VisitService
+VisitController --> VisitSecurity
+VisitService --> VisitRepository
+VisitService --> RemoteClientsFacade
+RemoteClientsFacade ..> "customers-service"
+RemoteClientsFacade ..> "vets-service"
+RemoteClientsFacade ..> "workflow-service"
+@enduml

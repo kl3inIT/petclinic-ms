@@ -1,0 +1,28 @@
+@startuml
+title Start / Complete Examination - Sequence Design
+autonumber
+skinparam shadowing false
+
+actor "Veterinarian" as Vet
+participant "Web SPA" as Web
+participant "api-gateway" as Gateway
+participant "visits-service\nVisitController" as Visits
+participant "VisitService" as Service
+database "visits schema" as DB
+queue "RabbitMQ" as MQ
+
+Vet -> Web: Open assigned visit
+Web -> Gateway: PATCH /api/v1/visits/{id}/start
+Gateway -> Visits: route with VET JWT
+Visits -> Service: startVisit(id, vetId)
+Service -> DB: transition SCHEDULED -> IN_PROGRESS
+Visits --> Web: VisitResponse
+
+Vet -> Web: Enter diagnosis, treatment, fee
+Web -> Gateway: PATCH /api/v1/visits/{id}/complete
+Gateway -> Visits: route
+Visits -> Service: completeVisit(id, request)
+Service -> DB: transition IN_PROGRESS -> COMPLETED
+Service -> MQ: publish VisitCompletedEvent
+Visits --> Web: completed VisitResponse
+@enduml
