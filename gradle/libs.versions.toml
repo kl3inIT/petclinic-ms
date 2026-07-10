@@ -27,7 +27,7 @@ springAi           = "2.0.0"
 # Test
 junit              = "6.1.1"
 
-openaiJava         = "4.39.1"
+openaiJava         = "4.42.0"
 
 # OpenPDF — sinh PDF đơn thuốc (visits-service). 3.0.x đổi package com.lowagie.* → org.openpdf.*
 # (com.lowagie bị bỏ hẳn). 3.0.5 stable (May 2026). LGPL/MPL — OK cho dependency.
