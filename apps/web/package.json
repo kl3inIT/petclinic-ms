@@ -38,7 +38,7 @@
     "@tanstack/react-table": "^8.21.3",
     "ai": "^7.0.15",
     "axios": "^1.18.1",
-    "bpmn-js": "^18.19.0",
+    "bpmn-js": "^18.21.0",
     "bpmn-js-properties-panel": "^5.60.0",
     "camunda-bpmn-js-behaviors": "^1.18.0",
     "class-variance-authority": "^0.7.1",
