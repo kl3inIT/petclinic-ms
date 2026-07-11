@@ -36,7 +36,7 @@
     "@tanstack/react-query-devtools": "^5.101.2",
     "@tanstack/react-router": "^1.170.17",
     "@tanstack/react-table": "^8.21.3",
-    "ai": "^7.0.15",
+    "ai": "^7.0.22",
     "axios": "^1.18.1",
     "bpmn-js": "^18.19.0",
     "bpmn-js-properties-panel": "^5.60.0",
