@@ -90,8 +90,8 @@ importers:
         specifier: ^18.19.0
         version: 18.19.0
       bpmn-js-properties-panel:
-        specifier: ^5.60.0
-        version: 5.60.0(@bpmn-io/properties-panel@3.47.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.0)(@codemirror/view@6.43.5)))(bpmn-js@18.19.0)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.19.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.18.1)
+        specifier: ^5.61.0
+        version: 5.61.0(@bpmn-io/properties-panel@3.47.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.0)(@codemirror/view@6.43.5)))(bpmn-js@18.19.0)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.19.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.18.1)
       camunda-bpmn-js-behaviors:
         specifier: ^1.18.0
         version: 1.18.0(bpmn-js@18.19.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0)
@@ -2699,13 +2699,18 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  baseline-browser-mapping@2.10.43:
+    resolution: {integrity: sha512-AjYpR78kDWAY3Efj+cDTFH9t9SCoL7OoTp1BOb0mQV7S+6CiLwnWM3FyxhJtdPufDFKzmCSFoUncKjWgJEZTCQ==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+
   bidi-js@1.0.3:
     resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
 
-  bpmn-js-properties-panel@5.60.0:
-    resolution: {integrity: sha512-/+bi7pYR/aLUFS4VpCP96oDtWcMk+2dAjmHUYLbuk91/Cpn+6RYSzvXrl5USQRUH43Ng1xKfXyLYDTcr0P6e/Q==}
+  bpmn-js-properties-panel@5.61.0:
+    resolution: {integrity: sha512-8WKP2AApl/MYENEx3pCELhaV28JCuGFIFit1xdCO543F3OjROMClioDGVvdlGe4rb9QYbgXq3h9BVsgr7tHvNw==}
     peerDependencies:
-      '@bpmn-io/properties-panel': '>= 3.40.6'
+      '@bpmn-io/properties-panel': '>= 3.42.0'
       bpmn-js: '>= 11.5'
       camunda-bpmn-js-behaviors: '>= 0.4'
       diagram-js: '>= 11.9'
@@ -2730,6 +2735,11 @@ packages:
 
   browserslist@4.28.4:
     resolution: {integrity: sha512-MTc8i/x9jBQd1iMw2CFGS+rwMa07eYjLR0CCTLDACl9xhxy+nIs3KeML/biicXtk9JrZ6dnnTatmc7ErPXIxqw==}
+    engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
+    hasBin: true
+
+  browserslist@4.28.6:
+    resolution: {integrity: sha512-FQBYNK15VMslhLHpA7+n+n1GOlF1kId2xcCg7/j95f24AOF6VDYMNH4mFxF7KuaTdv627faazpOAjFzMrfJOUw==}
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
 
@@ -2760,6 +2770,9 @@ packages:
 
   caniuse-lite@1.0.30001800:
     resolution: {integrity: sha512-MMHtuAz9Ys840zAY5F4k6fV5GaivZ9sPk+nz0mY+GYVzRBnYkN0mpqkSR92oWRQ19yQWo4HvBV/FnC16AJX8MA==}
+
+  caniuse-lite@1.0.30001806:
+    resolution: {integrity: sha512-72Cuvd95zbSYPKq6Fhg8eDJRlzgWDf7/mtoZv6Qe/DYNCEBdNxoA3+rZAU2ZhGCpZlns3EssFavaZomckT5Uuw==}
 
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
@@ -3146,6 +3159,9 @@ packages:
 
   electron-to-chromium@1.5.387:
     resolution: {integrity: sha512-TaxwufTFDufvPEoXdhwVrA3UdFWBeWGkYoJ1K8ldF1xe6gKfth6iRNS5lTQ5JPNOHdGQm8PT1QYKUqFLCiUefQ==}
+
+  electron-to-chromium@1.5.393:
+    resolution: {integrity: sha512-kiDJdIUawuEIcp9XoICKp1iTYDEbgguIPq526N1Q7jIQDeQ3CqoMx71025PI/7E48Ddtw2HuWsVjY7afEgNxmg==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -4294,6 +4310,9 @@ packages:
   min-dash@5.0.0:
     resolution: {integrity: sha512-EGuoBnVL7/Fnv2sqakpX5WGmZehZ3YMmLayT7sM8E9DRU74kkeyMg4Rik1lsOkR2GbFNeBca4/L+UfU6gF0Edw==}
 
+  min-dash@5.1.0:
+    resolution: {integrity: sha512-HAvN6XzmCQj+js43G9sJRRw8kj/7DvoxN7qhoIN9Xo5ZN1NMljtpyKs/NunXmw0QSWwlgZzNv6tLeEa4xaZ0tg==}
+
   min-dom@5.3.0:
     resolution: {integrity: sha512-0w5FEBgPAyHhmFojW3zxd7we3D+m5XYS3E/06OyvxmbHJoiQVa4Nagj6RWvoAKYRw5xth6cP5TMePc5cR1M9hA==}
 
@@ -4378,6 +4397,10 @@ packages:
 
   node-releases@2.0.50:
     resolution: {integrity: sha512-J6l92tKHX6w8Jy5nO1Vuc01NoIiRGi/d6qBKVxh+IQ8Cr3b6HbVNfKiF8ZpFKufTwpwxMmce2W3iQZ861ZRyTg==}
+    engines: {node: '>=18'}
+
+  node-releases@2.0.51:
+    resolution: {integrity: sha512-wRNIrw4DmVLKQlbgOMdkMx27Wrpzes2hh5Jtbi2bjPd+4wJstWIqP5A+lscnqbm0xxmT5Bpg8Lec5ItEBwx6BQ==}
     engines: {node: '>=18'}
 
   npm-run-path@4.0.1:
@@ -4540,8 +4563,13 @@ packages:
     resolution: {integrity: sha512-vuwillviilfKZsg0VGj5R/YwwcHx4SLsIOI/7K6mQkWx+l5cUHTjj5g0AasTBcyXsbfTgrwsUNmVUb5xVwyPwg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  preact@10.29.4:
-    resolution: {integrity: sha512-GMpwh9+NJ8tSmqwIaVyFRQkiKfBEzQ+k7r7tle4W+kaJ+7wJiB9hFz9BixAomMtenPPSBfM4bZhXozGxhf0uFQ==}
+  preact@10.29.7:
+    resolution: {integrity: sha512-DCHYrK/B10yUD3ZjLfhZ3WIE/9Vf9VFUODcRE2dRomTYDpJk6z6L9wecSfhfE6M9ZTHUdyQkoC46arIDhEV84Q==}
+    peerDependencies:
+      preact-render-to-string: '>=5'
+    peerDependenciesMeta:
+      preact-render-to-string:
+        optional: true
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -4840,14 +4868,14 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  seroval-plugins@1.5.4:
-    resolution: {integrity: sha512-S0xQPhUTefAhNvNWFg0c1J8qJArHt5KdtJ/cFAofo06KD1MVSeFWyl4iiu+ApDIuw0WhjpOfCdgConOfAnLgkw==}
+  seroval-plugins@1.5.5:
+    resolution: {integrity: sha512-+BDhqYM6CEn3x09v44dpa9p6974FuUB2dxk+Ctn04k0cO1Zt6QODTXfmEZK0eBaTe/fJBvP4NMGuNJ+R8T+QMg==}
     engines: {node: '>=10'}
     peerDependencies:
       seroval: ^1.0
 
-  seroval@1.5.4:
-    resolution: {integrity: sha512-46uFvgrXTVxZcUorgSSRZ4y+ieqLLQRMlG4bnCZKW3qI6BZm7Rg4ntMW4p1mILEEBZWrFlcpp0AyIIlM6jD9iw==}
+  seroval@1.5.5:
+    resolution: {integrity: sha512-bSjOuPcwPKLSJNhr9+bZxA20nQxVle5J5MNsYRVE6cIg7KpRLXGupymePavu0jrxlPiPsr4xGZSB8yUY2sH2sw==}
     engines: {node: '>=10'}
 
   set-function-length@1.2.2:
@@ -5692,7 +5720,7 @@ snapshots:
     dependencies:
       '@babel/compat-data': 7.29.7
       '@babel/helper-validator-option': 7.29.7
-      browserslist: 4.28.4
+      browserslist: 4.28.6
       lru-cache: 5.1.1
       semver: 6.3.1
 
@@ -5764,11 +5792,13 @@ snapshots:
   '@bpmn-io/diagram-js-ui@0.2.4':
     dependencies:
       htm: 3.1.1
-      preact: 10.29.4
+      preact: 10.29.7
+    transitivePeerDependencies:
+      - preact-render-to-string
 
   '@bpmn-io/extract-process-variables@2.2.1':
     dependencies:
-      min-dash: 5.0.0
+      min-dash: 5.1.0
 
   '@bpmn-io/feel-editor@2.6.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.0)(@codemirror/view@6.43.5))':
     dependencies:
@@ -5832,13 +5862,13 @@ snapshots:
     dependencies:
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.10
-      min-dash: 5.0.0
+      min-dash: 5.1.0
 
   '@bpmn-io/lezer-feel@3.0.1':
     dependencies:
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.10
-      min-dash: 5.0.0
+      min-dash: 5.1.0
 
   '@bpmn-io/lezer-feelers@1.0.0':
     dependencies:
@@ -7632,8 +7662,8 @@ snapshots:
     dependencies:
       '@tanstack/history': 1.162.0
       cookie-es: 3.1.1
-      seroval: 1.5.4
-      seroval-plugins: 1.5.4(seroval@1.5.4)
+      seroval: 1.5.5
+      seroval-plugins: 1.5.5(seroval@1.5.5)
 
   '@tanstack/router-devtools-core@1.168.0(@tanstack/router-core@1.171.14)(csstype@3.2.3)':
     dependencies:
@@ -8249,11 +8279,13 @@ snapshots:
 
   baseline-browser-mapping@2.10.42: {}
 
+  baseline-browser-mapping@2.10.43: {}
+
   bidi-js@1.0.3:
     dependencies:
       require-from-string: 2.0.2
 
-  bpmn-js-properties-panel@5.60.0(@bpmn-io/properties-panel@3.47.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.0)(@codemirror/view@6.43.5)))(bpmn-js@18.19.0)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.19.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.18.1):
+  bpmn-js-properties-panel@5.61.0(@bpmn-io/properties-panel@3.47.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.0)(@codemirror/view@6.43.5)))(bpmn-js@18.19.0)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.19.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.18.1):
     dependencies:
       '@bpmn-io/extract-process-variables': 2.2.1
       '@bpmn-io/properties-panel': 3.47.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.0)(@codemirror/view@6.43.5))
@@ -8262,7 +8294,7 @@ snapshots:
       camunda-bpmn-js-behaviors: 1.18.0(bpmn-js@18.19.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0)
       diagram-js: 15.18.1
       ids: 3.0.2
-      min-dash: 5.0.0
+      min-dash: 5.1.0
       min-dom: 5.3.0
 
   bpmn-js@18.19.0:
@@ -8275,6 +8307,8 @@ snapshots:
       min-dash: 5.0.0
       min-dom: 5.3.0
       tiny-svg: 4.1.4
+    transitivePeerDependencies:
+      - preact-render-to-string
 
   bpmn-moddle@10.0.0:
     dependencies:
@@ -8302,6 +8336,14 @@ snapshots:
       electron-to-chromium: 1.5.387
       node-releases: 2.0.50
       update-browserslist-db: 1.2.3(browserslist@4.28.4)
+
+  browserslist@4.28.6:
+    dependencies:
+      baseline-browser-mapping: 2.10.43
+      caniuse-lite: 1.0.30001806
+      electron-to-chromium: 1.5.393
+      node-releases: 2.0.51
+      update-browserslist-db: 1.2.3(browserslist@4.28.6)
 
   call-bind-apply-helpers@1.0.2:
     dependencies:
@@ -8333,6 +8375,8 @@ snapshots:
   camunda-bpmn-moddle@7.0.1: {}
 
   caniuse-lite@1.0.30001800: {}
+
+  caniuse-lite@1.0.30001806: {}
 
   ccount@2.0.1: {}
 
@@ -8710,11 +8754,13 @@ snapshots:
       clsx: 2.1.1
       didi: 11.0.0
       inherits-browser: 0.1.0
-      min-dash: 5.0.0
+      min-dash: 5.1.0
       min-dom: 5.3.0
       object-refs: 0.4.0
       path-intersection: 4.1.0
       tiny-svg: 4.1.4
+    transitivePeerDependencies:
+      - preact-render-to-string
 
   didi@11.0.0: {}
 
@@ -8741,6 +8787,8 @@ snapshots:
       gopd: 1.2.0
 
   electron-to-chromium@1.5.387: {}
+
+  electron-to-chromium@1.5.393: {}
 
   emoji-regex@10.6.0: {}
 
@@ -10272,6 +10320,8 @@ snapshots:
 
   min-dash@5.0.0: {}
 
+  min-dash@5.1.0: {}
+
   min-dom@5.3.0:
     dependencies:
       domify: 3.0.0
@@ -10295,13 +10345,13 @@ snapshots:
 
   moddle-xml@12.0.0(moddle@8.1.0):
     dependencies:
-      min-dash: 5.0.0
+      min-dash: 5.1.0
       moddle: 8.1.0
       saxen: 11.0.2
 
   moddle@8.1.0:
     dependencies:
-      min-dash: 5.0.0
+      min-dash: 5.1.0
 
   motion-dom@12.42.2:
     dependencies:
@@ -10347,6 +10397,8 @@ snapshots:
       es6-promise: 3.3.1
 
   node-releases@2.0.50: {}
+
+  node-releases@2.0.51: {}
 
   npm-run-path@4.0.1:
     dependencies:
@@ -10548,7 +10600,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  preact@10.29.4: {}
+  preact@10.29.7: {}
 
   prelude-ls@1.2.1: {}
 
@@ -10891,11 +10943,11 @@ snapshots:
 
   semver@7.8.5: {}
 
-  seroval-plugins@1.5.4(seroval@1.5.4):
+  seroval-plugins@1.5.5(seroval@1.5.5):
     dependencies:
-      seroval: 1.5.4
+      seroval: 1.5.5
 
-  seroval@1.5.4: {}
+  seroval@1.5.5: {}
 
   set-function-length@1.2.2:
     dependencies:
@@ -11377,6 +11429,12 @@ snapshots:
   update-browserslist-db@1.2.3(browserslist@4.28.4):
     dependencies:
       browserslist: 4.28.4
+      escalade: 3.2.0
+      picocolors: 1.1.1
+
+  update-browserslist-db@1.2.3(browserslist@4.28.6):
+    dependencies:
+      browserslist: 4.28.6
       escalade: 3.2.0
       picocolors: 1.1.1
 
