@@ -82,7 +82,7 @@
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "orval": "^7.21.0",
-    "postcss": "^8.5.16",
+    "postcss": "^8.5.19",
     "tailwindcss": "^4.3.2",
     "tsx": "^4.23.0",
     "typescript": "^5.9.3",
