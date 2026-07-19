@@ -8,14 +8,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
@@ -26,8 +30,11 @@ import com.mss301.petclinic.visits.client.VetSummary;
 import com.mss301.petclinic.visits.client.WorkflowServiceClient;
 import com.mss301.petclinic.visits.config.WorkflowCallbackProperties;
 import com.mss301.petclinic.visits.dto.req.BookVisitRequest;
+import com.mss301.petclinic.visits.dto.req.CompleteVisitRequest;
+import com.mss301.petclinic.visits.events.VisitCompletedEvent;
 import com.mss301.petclinic.visits.model.Visit;
 import com.mss301.petclinic.visits.repository.VisitRepository;
+import com.mss301.petclinic.visits.saga.VisitCompletionSaga;
 import com.mss301.petclinic.visits.saga.VisitCompletionSagaRepository;
 
 class VisitServiceImplTest {
@@ -40,6 +47,8 @@ class VisitServiceImplTest {
 
     private VisitRepository repository;
     private RemoteClientsFacade remoteClients;
+    private EventPublisher eventPublisher;
+    private VisitCompletionSagaRepository sagaRepository;
     private VisitServiceImpl service;
 
     @BeforeEach
@@ -48,10 +57,12 @@ class VisitServiceImplTest {
         remoteClients = mock(RemoteClientsFacade.class);
         @SuppressWarnings("unchecked")
         ObjectProvider<EventPublisher> events = mock(ObjectProvider.class);
+        eventPublisher = mock(EventPublisher.class);
+        when(events.getIfAvailable()).thenReturn(eventPublisher);
         @SuppressWarnings("unchecked")
         ObjectProvider<WorkflowServiceClient> workflowClient = mock(ObjectProvider.class);
         WorkflowCallbackProperties workflowProperties = new WorkflowCallbackProperties("test-secret", "visit-booking");
-        VisitCompletionSagaRepository sagaRepository = mock(VisitCompletionSagaRepository.class);
+        sagaRepository = mock(VisitCompletionSagaRepository.class);
         service = new VisitServiceImpl(repository, remoteClients, events, workflowClient, workflowProperties, sagaRepository);
     }
 
@@ -121,6 +132,33 @@ class VisitServiceImplTest {
 
         verify(remoteClients, never()).checkVetAvailability(any(), any(), any());
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void completePublishesBillableEventWhenWorkflowCallbackHasNoJwtForEnrichment() {
+        Visit visit = Visit.book(PET_ID,
+                new Visit.PetSnapshot("Milu", "Cat", null),
+                new Visit.OwnerSnapshot("Nguyen Van A", "0900000000"),
+                VET_ID, USER_ID, slot("2026-05-25T09:00:00+07:00"), "checkup");
+        ReflectionTestUtils.setField(visit, "id", 42L);
+        visit.start();
+        when(repository.findById(42L)).thenReturn(Optional.of(visit));
+        when(remoteClients.fetchUser(USER_ID)).thenThrow(new RuntimeException("no forwarded JWT"));
+        when(remoteClients.fetchPet(PET_ID)).thenThrow(new RuntimeException("no forwarded JWT"));
+        when(remoteClients.fetchVet(VET_ID)).thenThrow(new RuntimeException("no forwarded JWT"));
+
+        service.complete(42L, new CompleteVisitRequest(
+                "Healthy", "Monitor diet", new BigDecimal("250000"), null));
+
+        ArgumentCaptor<VisitCompletedEvent> eventCaptor = ArgumentCaptor.forClass(VisitCompletedEvent.class);
+        verify(sagaRepository).save(any(VisitCompletionSaga.class));
+        verify(eventPublisher).publish(eventCaptor.capture());
+        VisitCompletedEvent event = eventCaptor.getValue();
+        assertThat(event.visitId()).isEqualTo(42L);
+        assertThat(event.customerUserId()).isEqualTo(USER_ID);
+        assertThat(event.customerUsername()).isEqualTo("Nguyen Van A");
+        assertThat(event.petName()).isEqualTo("Milu");
+        assertThat(event.fee()).isEqualByComparingTo("250000");
     }
 
     private static Instant slot(String value) {

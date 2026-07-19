@@ -371,27 +371,55 @@ public class VisitServiceImpl implements VisitService {
         if (publisher == null) {
             return;
         }
+
+        // Completion may be invoked by the workflow callback, which is authenticated by the
+        // workflow shared secret rather than an end-user JWT. The RestClient interceptor then
+        // has no Bearer token to forward to auth/customers/vets. Enrichment must therefore be
+        // best-effort; it must never prevent the billable completion event from being emitted.
+        UserSummary user = new UserSummary(v.getCustomerUserId(), v.getOwnerName(), null);
+        PetSummary pet = new PetSummary(v.getPetId(), v.getPetName(), v.getPetBreed(),
+                v.getPetBirthDate(), null);
+        VetSummary vet = new VetSummary(v.getVetId(), null, null);
+
         try {
-            UserSummary user = remoteClients.fetchUser(v.getCustomerUserId());
-            PetSummary pet = remoteClients.fetchPet(v.getPetId());
-            VetSummary vet = remoteClients.fetchVet(v.getVetId());
-            VisitCompletedEvent event = VisitCompletedEvent.of(
-                    v.getId(), v.getScheduledAt(), Instant.now(),
-                    user.id(), user.username(), user.email(),
-                    pet.id(), pet.name(),
-                    vet.id(), vet.firstName() + " " + vet.lastName(),
-                    v.getDiagnosis(), v.getTreatment(), v.getFee());
+            user = remoteClients.fetchUser(v.getCustomerUserId());
+        } catch (RuntimeException ex) {
+            log.warn("Could not enrich completed visit {} with customer data; using visit snapshot: {}",
+                    v.getId(), ex.toString());
+        }
+        try {
+            pet = remoteClients.fetchPet(v.getPetId());
+        } catch (RuntimeException ex) {
+            log.warn("Could not enrich completed visit {} with pet data; using visit snapshot: {}",
+                    v.getId(), ex.toString());
+        }
+        try {
+            vet = remoteClients.fetchVet(v.getVetId());
+        } catch (RuntimeException ex) {
+            log.warn("Could not enrich completed visit {} with vet data; using visit snapshot: {}",
+                    v.getId(), ex.toString());
+        }
 
-            // Saga state — record TRƯỚC publish để mailer ack arrive nhanh hơn vẫn match được row.
-            // Cùng @Transactional với Visit.complete() → atomic giữa DB write của Visit + saga.
-            //
-            // ⚠️ KHÔNG fully atomic với broker (dual-write problem):
-            //   - DB commit OK + broker publish FAIL → saga PENDING orphan, không bao giờ resolve
-            //   - DB commit FAIL + broker publish OK → mailer ack nhưng saga row không tồn tại
-            // Production cần Transactional Outbox: ghi event vào bảng outbox cùng TX,
-            // poller riêng publish → broker với retry. Reference: microservices.io/patterns/data/transactional-outbox
+        String vetName = String.join(" ",
+                vet.firstName() != null ? vet.firstName() : "",
+                vet.lastName() != null ? vet.lastName() : "").trim();
+        VisitCompletedEvent event = VisitCompletedEvent.of(
+                v.getId(), v.getScheduledAt(), Instant.now(),
+                user.id(), user.username(), user.email(),
+                pet.id(), pet.name(),
+                vet.id(), vetName.isEmpty() ? null : vetName,
+                v.getDiagnosis(), v.getTreatment(), v.getFee());
+
+        // Saga state — record TRƯỚC publish để mailer ack arrive nhanh hơn vẫn match được row.
+        // Cùng @Transactional với Visit.complete() → atomic giữa DB write của Visit + saga.
+        //
+        // ⚠️ KHÔNG fully atomic với broker (dual-write problem):
+        //   - DB commit OK + broker publish FAIL → saga PENDING orphan, không bao giờ resolve
+        //   - DB commit FAIL + broker publish OK → mailer ack nhưng saga row không tồn tại
+        // Production cần Transactional Outbox: ghi event vào bảng outbox cùng TX,
+        // poller riêng publish → broker với retry. Reference: microservices.io/patterns/data/transactional-outbox
+        try {
             sagaRepo.save(VisitCompletionSaga.start(event.eventId(), v.getId()));
-
             publisher.publish(event);
         } catch (RuntimeException ex) {
             log.warn("Publish visit.completed failed (visit={}): {}", v.getId(), ex.getMessage());

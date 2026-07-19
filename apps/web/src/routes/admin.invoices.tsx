@@ -232,7 +232,11 @@ function InvoiceDetailContent({
       </CardHeader>
 
       <CardContent className="space-y-5">
-        <InvoiceItemsEditor invoice={invoice} onChanged={onChanged} />
+        <InvoiceItemsEditor
+          invoice={invoice}
+          onChanged={onChanged}
+          showTreatmentAdd={false}
+        />
 
         {isOpen ? (
           /* Thanh toán / huỷ — chỉ quầy thu ngân (STAFF/ADMIN) */

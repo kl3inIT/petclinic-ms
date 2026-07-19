@@ -9,10 +9,10 @@ when a service is next changed.
 | `discovery-server` | Eureka registry. |
 | `api-gateway` | Public gateway, fallback route, OpenAPI aggregation, route-level security/rate-limiting. |
 | `admin-server` | Spring Boot Admin dashboard. |
-| `auth-service` | Registration, login, refresh/logout, current user, admin users, customer/vet links, JWKS. |
-| `customers-service` | Owners, pets, pet types, owner/pet events. |
-| `vets-service` | Vets, specialties, work schedules, ratings, badges, vet media metadata. |
-| `visits-service` | Visit booking/search/lifecycle, prescriptions, PDF generation, workflow callbacks, notification/billing sagas. |
+| `auth-service` | Registration, login, refresh/logout, current user, admin users, customer/vet links, JWKS, and a dev customer account linked to owner seed #1. |
+| `customers-service` | Owners, pets, pet types, owner/pet events, and Files service media-reference validation. |
+| `vets-service` | Vets, specialties, work schedules, ratings, badges, vet media metadata, and Files service media-reference validation. |
+| `visits-service` | Visit booking/search/lifecycle, prescriptions, PDF generation, workflow callbacks, notification/billing sagas. Completion events always reach the billing saga; remote customer/pet/vet enrichment is best-effort so shared-token workflow callbacks can fall back to visit snapshots. |
 | `reviews-service` | Review creation/listing, moderation, votes, purchase/visit eligibility checks. |
 | `workflow-service` | Camunda workflows, process definitions, instances, user tasks, designer support. |
 | `billing-service` | Diseases, invoices, invoice items, checkout, prescription/visit billing consumers. |

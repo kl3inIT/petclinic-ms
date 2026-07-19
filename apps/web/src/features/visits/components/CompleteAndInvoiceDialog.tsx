@@ -540,7 +540,11 @@ function InvoiceStep({ visit, onClose }: { visit: VisitResponse; onClose: () => 
           </div>
         ) : (
           <>
-            <InvoiceItemsEditor invoice={invoice} onChanged={refreshAll} />
+            <InvoiceItemsEditor
+              invoice={invoice}
+              onChanged={refreshAll}
+              showRetailAdd={false}
+            />
             <div className="flex items-center justify-between rounded-lg border-2 border-primary/20 bg-primary/5 p-3">
               <span className="text-sm font-medium">Tổng cộng</span>
               <span className="font-mono text-lg font-bold">

@@ -1,0 +1,15 @@
+databaseChangeLog:
+
+  # Keep the customer portal runnable on a fresh local database. The owner
+  # seed uses deterministic ID 1, so this is safe only for the dev context.
+  - changeSet:
+      id: 009-001-link-customer1-to-owner-1
+      author: mss301
+      context: dev
+      changes:
+        - update:
+            schemaName: auth
+            tableName: users
+            columns:
+              - column: { name: customer_id, valueNumeric: 1 }
+            where: username = 'customer1' AND customer_id IS NULL

@@ -24,6 +24,10 @@ interface Props {
   invoice: InvoiceResponse;
   /** Gọi sau khi thêm/bớt dòng để parent refetch hoá đơn (getInvoice hoặc list). */
   onChanged?: () => void;
+  /** Màn quầy chỉ thanh toán/bán hàng, không thêm khoản điều trị theo danh mục bệnh. */
+  showTreatmentAdd?: boolean;
+  /** Màn bác sĩ không bán hàng bán lẻ. */
+  showRetailAdd?: boolean;
 }
 
 /**
@@ -31,7 +35,12 @@ interface Props {
  * KHÔNG bao gồm checkout/huỷ — phần thanh toán do parent (quầy admin) tự render.
  * Dùng chung bởi quầy admin (`admin.invoices`) và màn lập hoá đơn của vet.
  */
-export function InvoiceItemsEditor({ invoice, onChanged }: Props) {
+export function InvoiceItemsEditor({
+  invoice,
+  onChanged,
+  showTreatmentAdd = true,
+  showRetailAdd = true,
+}: Props) {
   const isOpen = invoice.status === 'OPEN';
   const invoiceId = invoice.id!;
   const items = invoice.items ?? [];
@@ -203,63 +212,67 @@ export function InvoiceItemsEditor({ invoice, onChanged }: Props) {
 
       {isOpen ? (
         <>
-          {/* Thêm điều trị từ danh mục bệnh */}
-          <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
-            <Label className="text-xs font-semibold">Thêm điều trị (theo bệnh)</Label>
-            <div className="flex gap-2">
-              <select
-                value={diseaseId}
-                onChange={(e) => setDiseaseId(e.target.value)}
-                className="h-9 flex-1 rounded-md border bg-white px-2 text-sm"
-              >
-                <option value="">— Chọn bệnh —</option>
-                {diseases.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({formatVnd(d.baseCost)})
-                  </option>
-                ))}
-              </select>
-              <Button onClick={addDisease} disabled={!diseaseId || addItem.isPending}>
-                Thêm
-              </Button>
+          {showTreatmentAdd ? (
+            /* Thêm điều trị từ danh mục bệnh */
+            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              <Label className="text-xs font-semibold">Thêm điều trị (theo bệnh)</Label>
+              <div className="flex gap-2">
+                <select
+                  value={diseaseId}
+                  onChange={(e) => setDiseaseId(e.target.value)}
+                  className="h-9 flex-1 rounded-md border bg-white px-2 text-sm"
+                >
+                  <option value="">— Chọn bệnh —</option>
+                  {diseases.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({formatVnd(d.baseCost)})
+                    </option>
+                  ))}
+                </select>
+                <Button onClick={addDisease} disabled={!diseaseId || addItem.isPending}>
+                  Thêm
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : null}
 
-          {/* Thêm hàng bán lẻ từ catalog */}
-          <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
-            <Label className="text-xs font-semibold">
-              Thêm hàng bán lẻ (đồ chơi, thức ăn, phụ kiện)
-            </Label>
-            <div className="flex gap-2">
-              <select
-                value={productId}
-                onChange={(e) => setProductId(e.target.value)}
-                className="h-9 flex-1 rounded-md border bg-white px-2 text-sm"
-              >
-                <option value="">— Chọn sản phẩm —</option>
-                {merchandise.map((p) => (
-                  <option key={p.id} value={p.id} disabled={p.stockStatus === 'OUT'}>
-                    {p.name} ({formatVnd(p.unitPrice)}
-                    {p.unit ? `/${p.unit}` : ''}) — tồn {p.stockQuantity ?? 0}
-                    {p.stockStatus === 'OUT' ? ' · hết hàng' : ''}
-                  </option>
-                ))}
-              </select>
-              <Input
-                type="number"
-                min="1"
-                className="w-20"
-                value={productQty}
-                onChange={(e) => setProductQty(Number(e.target.value))}
-              />
-              <Button onClick={addProduct} disabled={!productId || addItem.isPending}>
-                Thêm
-              </Button>
+          {showRetailAdd ? (
+            /* Thêm hàng bán lẻ từ catalog */
+            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              <Label className="text-xs font-semibold">
+                Thêm hàng bán lẻ (đồ chơi, thức ăn, phụ kiện)
+              </Label>
+              <div className="flex gap-2">
+                <select
+                  value={productId}
+                  onChange={(e) => setProductId(e.target.value)}
+                  className="h-9 flex-1 rounded-md border bg-white px-2 text-sm"
+                >
+                  <option value="">— Chọn sản phẩm —</option>
+                  {merchandise.map((p) => (
+                    <option key={p.id} value={p.id} disabled={p.stockStatus === 'OUT'}>
+                      {p.name} ({formatVnd(p.unitPrice)}
+                      {p.unit ? `/${p.unit}` : ''}) — tồn {p.stockQuantity ?? 0}
+                      {p.stockStatus === 'OUT' ? ' · hết hàng' : ''}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  type="number"
+                  min="1"
+                  className="w-20"
+                  value={productQty}
+                  onChange={(e) => setProductQty(Number(e.target.value))}
+                />
+                <Button onClick={addProduct} disabled={!productId || addItem.isPending}>
+                  Thêm
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Giá lấy theo catalog; tồn kho bị trừ khi thanh toán.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Giá lấy theo catalog; tồn kho bị trừ khi thanh toán.
-            </p>
-          </div>
+          ) : null}
 
           {/* Thêm dòng tự do (phụ phí ngoài catalog) */}
           <form
