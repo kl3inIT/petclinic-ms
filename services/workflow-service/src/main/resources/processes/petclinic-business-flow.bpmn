@@ -1,0 +1,670 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_PetclinicBusinessFlow" targetNamespace="http://mss301.petclinic/workflow" exporter="Camunda Modeler" exporterVersion="5.45.0">
+  <bpmn:process id="petclinic-business-flow" name="Petclinic - Full Business Flow" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_Roles">
+      <bpmn:lane id="Lane_Customer" name="Pet Owner">
+        <bpmn:flowNodeRef>UT_CustomerConfirmReschedule</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_PayCash</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_PayBank</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Start</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Receptionist" name="Receptionist">
+        <bpmn:flowNodeRef>UT_Modify</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_AddProducts</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ExtrasJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_ReceptionReview</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_ReviewInvoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_RequestPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1hbj6zt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1h4x86x</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ReceptionDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_CustomerConfirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Extras</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_PayMethod</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Veterinarian" name="Veterinarian">
+        <bpmn:flowNodeRef>UT_StartExam</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_CompleteExam</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="System">
+        <bpmn:flowNodeRef>ST_CancelByReception</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ST_NotifyReschedule</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ST_MarkInProgress</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ST_MarkCompleted</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ST_CreateInvoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ST_FinalizeInvoice</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_00jgogm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0k61gwl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0ch9us0</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Cancelled</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_SEPay" name="SE Pay">
+        <bpmn:flowNodeRef>ST_SEPayVerifyPayment</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_SMTP" name="SMTP">
+        <bpmn:flowNodeRef>ST_SendEmail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Done</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start" name="Pet owner books appointment">
+      <bpmn:outgoing>Flow_Start_to_Review</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="UT_ReceptionReview" name="Receptionist reviews appointment">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="receptionist" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_to_Review</bpmn:incoming>
+      <bpmn:incoming>Flow_0qz5x3r</bpmn:incoming>
+      <bpmn:outgoing>Flow_Review_to_Decision</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_ReceptionDecision" name="Reception decision">
+      <bpmn:incoming>Flow_Review_to_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Proceed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Modify</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CancelByReception</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="UT_Modify" name="Modify time slot / veterinarian">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="receptionist" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Modify</bpmn:incoming>
+      <bpmn:incoming>Flow_CustomerAccept</bpmn:incoming>
+      <bpmn:outgoing>Flow_Modify_to_Notify</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0qz5x3r</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="ST_NotifyReschedule" name="Send reschedule notification">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:notify:reschedule" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= visitId" target="visitId" />
+          <zeebe:input source="= ownerId" target="ownerId" />
+          <zeebe:input source="= customerEmail" target="to" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Modify_to_Notify</bpmn:incoming>
+      <bpmn:outgoing>Flow_Notify_to_Confirm</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="UT_CustomerConfirmReschedule" name="Pet owner confirms new schedule">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="customer" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Notify_to_Confirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_Confirm_to_GW</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_CustomerConfirm" name="Pet owner accepts?">
+      <bpmn:incoming>Flow_Confirm_to_GW</bpmn:incoming>
+      <bpmn:outgoing>Flow_CustomerAccept</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CustomerReject</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="ST_CancelByReception" name="Cancel visit">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:visit:transition" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= visitId" target="visitId" />
+          <zeebe:input source="= &#34;CANCELLED&#34;" target="targetStatus" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_CancelByReception</bpmn:incoming>
+      <bpmn:incoming>Flow_CustomerReject</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_EndCancelled</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Cancelled" name="Cancelled">
+      <bpmn:incoming>Flow_to_EndCancelled</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="UT_StartExam" name="Veterinarian starts exam">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="vet" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Proceed</bpmn:incoming>
+      <bpmn:outgoing>Flow_Start_to_InProgress</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="ST_MarkInProgress" name="Mark visit in progress">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:visit:transition" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= visitId" target="visitId" />
+          <zeebe:input source="= &#34;IN_PROGRESS&#34;" target="targetStatus" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start_to_InProgress</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_CompleteExam</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="UT_CompleteExam" name="Record diagnosis, treatment, fee">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="vet" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_CompleteExam</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_VisitCompleted</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="ST_MarkCompleted" name="Mark visit completed">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:visit:transition" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= visitId" target="visitId" />
+          <zeebe:input source="= &#34;COMPLETED&#34;" target="targetStatus" />
+          <zeebe:input source="= diagnosis" target="diagnosis" />
+          <zeebe:input source="= treatment" target="treatment" />
+          <zeebe:input source="= fee" target="fee" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_VisitCompleted</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_CreateInvoice</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="ST_CreateInvoice" name="Create draft invoice">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:invoice:create" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= visitId" target="visitId" />
+          <zeebe:input source="= ownerId" target="ownerId" />
+          <zeebe:input source="= fee" target="visitFee" />
+          <zeebe:output source="= invoiceId" target="invoiceId" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_CreateInvoice</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_ReviewInvoice</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="UT_ReviewInvoice" name="Receptionist reviews invoice">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="receptionist" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_ReviewInvoice</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_GW_Extras</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Extras" name="Add products?">
+      <bpmn:incoming>Flow_to_GW_Extras</bpmn:incoming>
+      <bpmn:outgoing>Flow_1mybzl0</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Extras_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="UT_AddProducts" name="Add inventory line items">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="receptionist" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1mybzl0</bpmn:incoming>
+      <bpmn:outgoing>Flow_AddProducts_to_Join</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="UT_RequestPayment" name="Receptionist requests payment">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="receptionist" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_RequestPay</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_GW_PayMethod</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_PayMethod" name="Payment method?">
+      <bpmn:incoming>Flow_to_GW_PayMethod</bpmn:incoming>
+      <bpmn:outgoing>Flow_Pay_Bank</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Pay_Cash</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="UT_PayCash" name="Pet owner pays cash">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="customer,receptionist" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Pay_Cash</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cash_to_Join</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="ST_SendEmail" name="Send invoice PDF email">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:email:sendInvoice" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= invoiceId" target="invoiceId" />
+          <zeebe:input source="= customerEmail" target="to" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0gifuj0</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_EndDone</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Done" name="Completed">
+      <bpmn:incoming>Flow_to_EndDone</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="GW_ExtrasJoin">
+      <bpmn:incoming>Flow_AddProducts_to_Join</bpmn:incoming>
+      <bpmn:incoming>Flow_Extras_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_Finalize</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="ST_FinalizeInvoice" name="Finalize invoice">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:invoice:finalize" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= invoiceId" target="invoiceId" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_Finalize</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_RequestPay</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="UT_PayBank" name="Pet owner pays by bank transfer">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition candidateGroups="customer,receptionist" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Pay_Bank</bpmn:incoming>
+      <bpmn:outgoing>Flow_Bank_to_SEPay</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="ST_SEPayVerifyPayment" name="SE Pay verifies transaction">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="petclinic:payment:sepay:verify" />
+        <zeebe:ioMapping>
+          <zeebe:input source="= invoiceId" target="invoiceId" />
+          <zeebe:input source="= paymentMethod" target="paymentMethod" />
+          <zeebe:output source="= sePayTransactionId" target="sePayTransactionId" />
+          <zeebe:output source="= paymentVerified" target="paymentVerified" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Bank_to_SEPay</bpmn:incoming>
+      <bpmn:outgoing>Flow_1vrhd6z</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Start_to_Review" sourceRef="Start" targetRef="UT_ReceptionReview" />
+    <bpmn:sequenceFlow id="Flow_CustomerAccept" name="Accept" sourceRef="GW_CustomerConfirm" targetRef="UT_Modify">
+      <bpmn:conditionExpression>= customerReschedule = "ACCEPT"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Review_to_Decision" sourceRef="UT_ReceptionReview" targetRef="GW_ReceptionDecision" />
+    <bpmn:sequenceFlow id="Flow_Proceed" name="Proceed" sourceRef="GW_ReceptionDecision" targetRef="UT_StartExam">
+      <bpmn:conditionExpression>= receptionDecision = "PROCEED"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Modify" name="Modify" sourceRef="GW_ReceptionDecision" targetRef="UT_Modify">
+      <bpmn:conditionExpression>= receptionDecision = "MODIFY"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_CancelByReception" name="Cancel" sourceRef="GW_ReceptionDecision" targetRef="ST_CancelByReception">
+      <bpmn:conditionExpression>= receptionDecision = "CANCEL"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Modify_to_Notify" sourceRef="UT_Modify" targetRef="ST_NotifyReschedule" />
+    <bpmn:sequenceFlow id="Flow_Notify_to_Confirm" sourceRef="ST_NotifyReschedule" targetRef="UT_CustomerConfirmReschedule" />
+    <bpmn:sequenceFlow id="Flow_Confirm_to_GW" sourceRef="UT_CustomerConfirmReschedule" targetRef="GW_CustomerConfirm" />
+    <bpmn:sequenceFlow id="Flow_CustomerReject" name="Reject" sourceRef="GW_CustomerConfirm" targetRef="ST_CancelByReception">
+      <bpmn:conditionExpression>= customerReschedule = "REJECT"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_to_EndCancelled" sourceRef="ST_CancelByReception" targetRef="End_Cancelled" />
+    <bpmn:sequenceFlow id="Flow_Start_to_InProgress" sourceRef="UT_StartExam" targetRef="ST_MarkInProgress" />
+    <bpmn:sequenceFlow id="Flow_to_CompleteExam" sourceRef="ST_MarkInProgress" targetRef="UT_CompleteExam" />
+    <bpmn:sequenceFlow id="Flow_to_VisitCompleted" sourceRef="UT_CompleteExam" targetRef="ST_MarkCompleted" />
+    <bpmn:sequenceFlow id="Flow_to_CreateInvoice" sourceRef="ST_MarkCompleted" targetRef="ST_CreateInvoice" />
+    <bpmn:sequenceFlow id="Flow_to_ReviewInvoice" sourceRef="ST_CreateInvoice" targetRef="UT_ReviewInvoice" />
+    <bpmn:sequenceFlow id="Flow_to_GW_Extras" sourceRef="UT_ReviewInvoice" targetRef="GW_Extras" />
+    <bpmn:sequenceFlow id="Flow_1mybzl0" name="Yes" sourceRef="GW_Extras" targetRef="UT_AddProducts" />
+    <bpmn:sequenceFlow id="Flow_Extras_No" name="No" sourceRef="GW_Extras" targetRef="GW_ExtrasJoin">
+      <bpmn:conditionExpression>= addExtras = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AddProducts_to_Join" sourceRef="UT_AddProducts" targetRef="GW_ExtrasJoin" />
+    <bpmn:sequenceFlow id="Flow_to_RequestPay" sourceRef="ST_FinalizeInvoice" targetRef="UT_RequestPayment" />
+    <bpmn:sequenceFlow id="Flow_to_GW_PayMethod" sourceRef="UT_RequestPayment" targetRef="GW_PayMethod" />
+    <bpmn:sequenceFlow id="Flow_Pay_Bank" name="Bank transfer" sourceRef="GW_PayMethod" targetRef="UT_PayBank">
+      <bpmn:conditionExpression>= paymentMethod = "BANK"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Pay_Cash" name="Cash" sourceRef="GW_PayMethod" targetRef="UT_PayCash">
+      <bpmn:conditionExpression>= paymentMethod = "CASH"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Cash_to_Join" sourceRef="UT_PayCash" targetRef="Activity_1hbj6zt" />
+    <bpmn:sequenceFlow id="Flow_Bank_to_SEPay" sourceRef="UT_PayBank" targetRef="ST_SEPayVerifyPayment" />
+    <bpmn:sequenceFlow id="Flow_to_EndDone" sourceRef="ST_SendEmail" targetRef="End_Done" />
+    <bpmn:sequenceFlow id="Flow_to_Finalize" sourceRef="GW_ExtrasJoin" targetRef="ST_FinalizeInvoice" />
+    <bpmn:sequenceFlow id="Flow_1vrhd6z" sourceRef="ST_SEPayVerifyPayment" targetRef="Activity_00jgogm" />
+    <bpmn:serviceTask id="Activity_00jgogm" name="Update payment status">
+      <bpmn:incoming>Flow_1vrhd6z</bpmn:incoming>
+      <bpmn:outgoing>Flow_0zbb8v0</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0zbb8v0" sourceRef="Activity_00jgogm" targetRef="Activity_1hbj6zt" />
+    <bpmn:userTask id="Activity_1hbj6zt" name="Receptionist confirms payment">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cash_to_Join</bpmn:incoming>
+      <bpmn:incoming>Flow_0zbb8v0</bpmn:incoming>
+      <bpmn:outgoing>Flow_1t0dl18</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_1t0dl18" sourceRef="Activity_1hbj6zt" targetRef="Activity_1h4x86x" />
+    <bpmn:userTask id="Activity_1h4x86x" name="Create receipt">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1t0dl18</bpmn:incoming>
+      <bpmn:outgoing>Flow_1e6tyf1</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_1e6tyf1" sourceRef="Activity_1h4x86x" targetRef="Activity_0k61gwl" />
+    <bpmn:serviceTask id="Activity_0k61gwl" name="Save payment receipt">
+      <bpmn:incoming>Flow_1e6tyf1</bpmn:incoming>
+      <bpmn:outgoing>Flow_0ylwxtp</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0ylwxtp" sourceRef="Activity_0k61gwl" targetRef="Activity_0ch9us0" />
+    <bpmn:serviceTask id="Activity_0ch9us0" name="Update visit history">
+      <bpmn:incoming>Flow_0ylwxtp</bpmn:incoming>
+      <bpmn:outgoing>Flow_0gifuj0</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0gifuj0" sourceRef="Activity_0ch9us0" targetRef="ST_SendEmail" />
+    <bpmn:sequenceFlow id="Flow_0qz5x3r" sourceRef="UT_Modify" targetRef="UT_ReceptionReview" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Petclinic">
+    <bpmndi:BPMNPlane id="BPMNPlane_Petclinic" bpmnElement="petclinic-business-flow">
+      <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="false">
+        <dc:Bounds x="160" y="40" width="350" height="2830" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Receptionist_di" bpmnElement="Lane_Receptionist" isHorizontal="false">
+        <dc:Bounds x="510" y="40" width="340" height="2830" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Veterinarian_di" bpmnElement="Lane_Veterinarian" isHorizontal="false">
+        <dc:Bounds x="850" y="40" width="410" height="2830" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="false">
+        <dc:Bounds x="1260" y="40" width="580" height="2830" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_SEPay_di" bpmnElement="Lane_SEPay" isHorizontal="false">
+        <dc:Bounds x="1840" y="40" width="310" height="2830" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_SMTP_di" bpmnElement="Lane_SMTP" isHorizontal="false">
+        <dc:Bounds x="2150" y="40" width="290" height="2830" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_ReceptionDecision_di" bpmnElement="GW_ReceptionDecision" isMarkerVisible="true">
+        <dc:Bounds x="655" y="270" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="610" y="313" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_Modify_di" bpmnElement="UT_Modify">
+        <dc:Bounds x="615" y="395" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_AddProducts_di" bpmnElement="UT_AddProducts">
+        <dc:Bounds x="615" y="1590" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_ExtrasJoin_di" bpmnElement="GW_ExtrasJoin" isMarkerVisible="true">
+        <dc:Bounds x="655" y="1730" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_ReceptionReview_di" bpmnElement="UT_ReceptionReview">
+        <dc:Bounds x="605" y="125" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_StartExam_di" bpmnElement="UT_StartExam">
+        <dc:Bounds x="975" y="500" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_CustomerConfirm_di" bpmnElement="GW_CustomerConfirm" isMarkerVisible="true">
+        <dc:Bounds x="655" y="615" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="640" y="665" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_CancelByReception_di" bpmnElement="ST_CancelByReception">
+        <dc:Bounds x="1570" y="600" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Cancelled_di" bpmnElement="End_Cancelled">
+        <dc:Bounds x="1752" y="622" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1752" y="598" width="35" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_NotifyReschedule_di" bpmnElement="ST_NotifyReschedule">
+        <dc:Bounds x="1335" y="710" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_MarkInProgress_di" bpmnElement="ST_MarkInProgress">
+        <dc:Bounds x="1460" y="860" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_CompleteExam_di" bpmnElement="UT_CompleteExam">
+        <dc:Bounds x="965" y="860" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_ReviewInvoice_di" bpmnElement="UT_ReviewInvoice">
+        <dc:Bounds x="615" y="1240" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Extras_di" bpmnElement="GW_Extras" isMarkerVisible="true">
+        <dc:Bounds x="655" y="1445" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="715" y="1463" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_MarkCompleted_di" bpmnElement="ST_MarkCompleted">
+        <dc:Bounds x="1460" y="1050" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_CreateInvoice_di" bpmnElement="ST_CreateInvoice">
+        <dc:Bounds x="1460" y="1240" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_FinalizeInvoice_di" bpmnElement="ST_FinalizeInvoice">
+        <dc:Bounds x="1480" y="1712" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_RequestPayment_di" bpmnElement="UT_RequestPayment">
+        <dc:Bounds x="615" y="1850" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_PayMethod_di" bpmnElement="GW_PayMethod" isMarkerVisible="true">
+        <dc:Bounds x="655" y="1990" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="715" y="2008" width="55" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1hbj6zt_di" bpmnElement="Activity_1hbj6zt">
+        <dc:Bounds x="595" y="2345" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_00jgogm_di" bpmnElement="Activity_00jgogm">
+        <dc:Bounds x="1445" y="2260" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1h4x86x_di" bpmnElement="Activity_1h4x86x">
+        <dc:Bounds x="605" y="2500" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0k61gwl_di" bpmnElement="Activity_0k61gwl">
+        <dc:Bounds x="1445" y="2500" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0ch9us0_di" bpmnElement="Activity_0ch9us0">
+        <dc:Bounds x="1455" y="2660" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_SendEmail_di" bpmnElement="ST_SendEmail">
+        <dc:Bounds x="2205" y="2660" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Done_di" bpmnElement="End_Done">
+        <dc:Bounds x="2262" y="2812" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2259" y="2848" width="43" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_SEPayVerifyPayment_di" bpmnElement="ST_SEPayVerifyPayment">
+        <dc:Bounds x="1920" y="2180" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start">
+        <dc:Bounds x="312" y="92" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="285" y="128" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_CustomerConfirmReschedule_di" bpmnElement="UT_CustomerConfirmReschedule">
+        <dc:Bounds x="255" y="710" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_PayCash_di" bpmnElement="UT_PayCash">
+        <dc:Bounds x="175" y="1980" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_PayBank_di" bpmnElement="UT_PayBank">
+        <dc:Bounds x="315" y="2120" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Review_to_Decision_di" bpmnElement="Flow_Review_to_Decision">
+        <di:waypoint x="630" y="205" />
+        <di:waypoint x="630" y="295" />
+        <di:waypoint x="655" y="295" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Proceed_di" bpmnElement="Flow_Proceed">
+        <di:waypoint x="705" y="295" />
+        <di:waypoint x="1040" y="295" />
+        <di:waypoint x="1040" y="500" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="853" y="270" width="39" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Modify_di" bpmnElement="Flow_Modify">
+        <di:waypoint x="680" y="320" />
+        <di:waypoint x="680" y="395" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="675" y="348" width="41" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CancelByReception_di" bpmnElement="Flow_CancelByReception">
+        <di:waypoint x="680" y="270" />
+        <di:waypoint x="680" y="240" />
+        <di:waypoint x="1640" y="240" />
+        <di:waypoint x="1640" y="600" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1152" y="215" width="21" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CustomerAccept_di" bpmnElement="Flow_CustomerAccept">
+        <di:waypoint x="680" y="615" />
+        <di:waypoint x="680" y="475" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="668" y="533" width="54" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Modify_to_Notify_di" bpmnElement="Flow_Modify_to_Notify">
+        <di:waypoint x="745" y="435" />
+        <di:waypoint x="1410" y="435" />
+        <di:waypoint x="1410" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0qz5x3r_di" bpmnElement="Flow_0qz5x3r">
+        <di:waypoint x="615" y="435" />
+        <di:waypoint x="580" y="435" />
+        <di:waypoint x="580" y="165" />
+        <di:waypoint x="605" y="165" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1mybzl0_di" bpmnElement="Flow_1mybzl0">
+        <di:waypoint x="680" y="1495" />
+        <di:waypoint x="680" y="1590" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="688" y="1532" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AddProducts_to_Join_di" bpmnElement="Flow_AddProducts_to_Join">
+        <di:waypoint x="680" y="1670" />
+        <di:waypoint x="680" y="1730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Extras_No_di" bpmnElement="Flow_Extras_No">
+        <di:waypoint x="655" y="1470" />
+        <di:waypoint x="560" y="1470" />
+        <di:waypoint x="560" y="1755" />
+        <di:waypoint x="655" y="1755" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="564" y="1603" width="32" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_Finalize_di" bpmnElement="Flow_to_Finalize">
+        <di:waypoint x="704" y="1754" />
+        <di:waypoint x="1480" y="1754" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Start_to_Review_di" bpmnElement="Flow_Start_to_Review">
+        <di:waypoint x="348" y="110" />
+        <di:waypoint x="670" y="110" />
+        <di:waypoint x="670" y="125" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Start_to_InProgress_di" bpmnElement="Flow_Start_to_InProgress">
+        <di:waypoint x="1105" y="540" />
+        <di:waypoint x="1510" y="540" />
+        <di:waypoint x="1510" y="860" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Confirm_to_GW_di" bpmnElement="Flow_Confirm_to_GW">
+        <di:waypoint x="330" y="710" />
+        <di:waypoint x="330" y="640" />
+        <di:waypoint x="655" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CustomerReject_di" bpmnElement="Flow_CustomerReject">
+        <di:waypoint x="705" y="640" />
+        <di:waypoint x="1570" y="640" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1123" y="615" width="37" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_EndCancelled_di" bpmnElement="Flow_to_EndCancelled">
+        <di:waypoint x="1710" y="640" />
+        <di:waypoint x="1752" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Notify_to_Confirm_di" bpmnElement="Flow_Notify_to_Confirm">
+        <di:waypoint x="1335" y="750" />
+        <di:waypoint x="405" y="750" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_CompleteExam_di" bpmnElement="Flow_to_CompleteExam">
+        <di:waypoint x="1460" y="900" />
+        <di:waypoint x="1115" y="900" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_VisitCompleted_di" bpmnElement="Flow_to_VisitCompleted">
+        <di:waypoint x="1040" y="940" />
+        <di:waypoint x="1040" y="1090" />
+        <di:waypoint x="1460" y="1090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_ReviewInvoice_di" bpmnElement="Flow_to_ReviewInvoice">
+        <di:waypoint x="1460" y="1280" />
+        <di:waypoint x="745" y="1280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_GW_Extras_di" bpmnElement="Flow_to_GW_Extras">
+        <di:waypoint x="680" y="1320" />
+        <di:waypoint x="680" y="1445" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_CreateInvoice_di" bpmnElement="Flow_to_CreateInvoice">
+        <di:waypoint x="1530" y="1130" />
+        <di:waypoint x="1530" y="1240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_RequestPay_di" bpmnElement="Flow_to_RequestPay">
+        <di:waypoint x="1550" y="1792" />
+        <di:waypoint x="1550" y="1890" />
+        <di:waypoint x="745" y="1890" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_GW_PayMethod_di" bpmnElement="Flow_to_GW_PayMethod">
+        <di:waypoint x="680" y="1930" />
+        <di:waypoint x="680" y="1990" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Pay_Bank_di" bpmnElement="Flow_Pay_Bank">
+        <di:waypoint x="680" y="2040" />
+        <di:waypoint x="680" y="2169" />
+        <di:waypoint x="465" y="2169" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="532" y="2145" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Pay_Cash_di" bpmnElement="Flow_Pay_Cash">
+        <di:waypoint x="655" y="2015" />
+        <di:waypoint x="325" y="2015" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="476" y="1992" width="43" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cash_to_Join_di" bpmnElement="Flow_Cash_to_Join">
+        <di:waypoint x="250" y="2050" />
+        <di:waypoint x="250" y="2385" />
+        <di:waypoint x="595" y="2385" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0zbb8v0_di" bpmnElement="Flow_0zbb8v0">
+        <di:waypoint x="1445" y="2300" />
+        <di:waypoint x="670" y="2300" />
+        <di:waypoint x="670" y="2345" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1t0dl18_di" bpmnElement="Flow_1t0dl18">
+        <di:waypoint x="670" y="2425" />
+        <di:waypoint x="670" y="2500" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1vrhd6z_di" bpmnElement="Flow_1vrhd6z">
+        <di:waypoint x="2000" y="2260" />
+        <di:waypoint x="2000" y="2300" />
+        <di:waypoint x="1595" y="2300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1e6tyf1_di" bpmnElement="Flow_1e6tyf1">
+        <di:waypoint x="735" y="2540" />
+        <di:waypoint x="1445" y="2540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ylwxtp_di" bpmnElement="Flow_0ylwxtp">
+        <di:waypoint x="1520" y="2580" />
+        <di:waypoint x="1520" y="2660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0gifuj0_di" bpmnElement="Flow_0gifuj0">
+        <di:waypoint x="1605" y="2700" />
+        <di:waypoint x="2205" y="2700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_to_EndDone_di" bpmnElement="Flow_to_EndDone">
+        <di:waypoint x="2280" y="2740" />
+        <di:waypoint x="2280" y="2812" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Bank_to_SEPay_di" bpmnElement="Flow_Bank_to_SEPay">
+        <di:waypoint x="390" y="2200" />
+        <di:waypoint x="390" y="2220" />
+        <di:waypoint x="1920" y="2220" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

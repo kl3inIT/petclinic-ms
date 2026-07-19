@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation(project(":shared:common-web"))
     implementation(project(":shared:common-jpa"))
+    implementation(project(":shared:common-clients"))
     implementation(project(":shared:common-security"))      // Iter 2
     implementation(project(":shared:common-events"))        // Phase G — publish vet.rating.added
     implementation(libs.spring.boot.starter.web)

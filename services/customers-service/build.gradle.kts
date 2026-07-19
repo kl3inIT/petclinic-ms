@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation(project(":shared:common-web"))
     implementation(project(":shared:common-jpa"))
+    implementation(project(":shared:common-clients"))
     implementation(project(":shared:common-security"))      // Iter 2: JWT bearer auth + zero-trust validation
     implementation(project(":shared:common-events"))        // publish owner/pet domain events → mailer + analytics
     implementation(libs.spring.boot.starter.web)
