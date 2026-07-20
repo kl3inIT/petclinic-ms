@@ -1,0 +1,31 @@
+flowchart TB
+  subgraph mailer_module["mailer-service"]
+    direction TB
+    subgraph mailer_base["github.com/mss301/petclinic-mailer"]
+      direction TB
+      subgraph cmd_pkg["cmd"]
+        main_pkg["main (cmd/mailer)"]
+      end
+      subgraph internal_pkg["internal"]
+        direction LR
+        config["config"]
+        consumer["consumer"]
+        events["events"]
+        mailer["mailer"]
+        sba["sba"]
+        store["store"]
+      end
+    end
+  end
+
+  subgraph event_contracts["remote event contracts"]
+    direction LR
+    auth_events["auth events"]
+    visits_events["visits events"]
+    billing_events["billing events"]
+  end
+  admin_api["Spring Boot Admin API"]
+
+  main_pkg -.-> internal_pkg
+  events -.->|schemas| event_contracts
+  sba -.->|registration| admin_api

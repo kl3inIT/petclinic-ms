@@ -48,7 +48,7 @@ RUN jlink \
         --strip-debug \
         --output /jre-minimal
 
-RUN java -Djarmode=layertools -jar /app.jar extract --destination /extracted
+RUN java -Djarmode=tools -jar /app.jar extract --layers --destination /extracted
 
 # ============== STAGE 2: Runtime — alpine + custom JRE ==============
 FROM alpine:3.21
@@ -73,4 +73,4 @@ ENV TZ=Asia/Ho_Chi_Minh \
 
 EXPOSE 8188 9188
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["java", "org.springframework.boot.loader.launch.JarLauncher"]
+CMD ["java", "-jar", "app.jar"]

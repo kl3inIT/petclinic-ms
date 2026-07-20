@@ -31,6 +31,7 @@ RUN --mount=type=cache,id=gradle-cache,target=/cache/.gradle,sharing=locked     
 COPY shared/common-web/src shared/common-web/src
 COPY shared/common-jpa/src shared/common-jpa/src
 COPY shared/common-security/src shared/common-security/src
+COPY shared/common-clients/src shared/common-clients/src
 COPY shared/common-events/src shared/common-events/src
 # Service src
 COPY services/customers-service/src services/customers-service/src
@@ -50,7 +51,7 @@ RUN jdeps --ignore-missing-deps -q --recursive --multi-release 25         --prin
 RUN jlink         --add-modules "$(cat /deps.info),java.instrument,java.sql,java.sql.rowset,java.management.rmi,java.rmi,jdk.management,jdk.management.agent,jdk.naming.dns,jdk.naming.rmi,jdk.crypto.ec,jdk.crypto.cryptoki,jdk.unsupported,jdk.zipfs,java.net.http,jdk.httpserver,jdk.net,jdk.attach,java.compiler,java.scripting,java.desktop,java.security.jgss,java.security.sasl,jdk.security.auth"         --compress zip-9         --no-header-files         --no-man-pages         --strip-debug         --output /jre-minimal
 
 # Spring Boot layered JAR — 4 layer cho cache hit cao
-RUN java -Djarmode=layertools -jar /app.jar extract --destination /extracted
+RUN java -Djarmode=tools -jar /app.jar extract --layers --destination /extracted
 
 # ============== STAGE 2: Runtime — alpine + custom JRE ==============
 FROM alpine:3.21
@@ -74,4 +75,4 @@ ENV TZ=Asia/Ho_Chi_Minh     JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxR
 
 EXPOSE 8181 9181
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["java", "org.springframework.boot.loader.launch.JarLauncher"]
+CMD ["java", "-jar", "app.jar"]

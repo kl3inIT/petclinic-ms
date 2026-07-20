@@ -1,0 +1,68 @@
+@startuml
+title PCMS - System Package Overview
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "petclinic-ms" {
+  package "apps" {
+    package "web" <<React application>>
+  }
+
+  package "services" {
+    package "platform services" {
+      package "api-gateway" <<Spring Boot service>>
+      package "config-server" <<Spring Boot service>>
+      package "discovery-server" <<Spring Boot service>>
+      package "admin-server" <<Spring Boot service>>
+    }
+
+    package "business services" {
+      package "auth-service" <<Spring Boot service>>
+      package "customers-service" <<Spring Boot service>>
+      package "vets-service" <<Spring Boot service>>
+      package "visits-service" <<Spring Boot service>>
+      package "reviews-service" <<Spring Boot service>>
+      package "billing-service" <<Spring Boot service>>
+      package "products-service" <<Spring Boot service>>
+      package "workflow-service" <<Spring Boot service>>
+      package "genai-service" <<Spring Boot service>>
+    }
+
+    package "integration services" {
+      package "mcp-server" <<Spring Boot service>>
+      package "files-service" <<Go service>>
+      package "mailer-service" <<Go service>>
+    }
+  }
+
+  package "shared" {
+    package "common-web" <<library>>
+    package "common-jpa" <<library>>
+    package "common-security" <<library>>
+    package "common-clients" <<library>>
+    package "common-events" <<library>>
+    package "common-testing" <<test library>>
+  }
+}
+
+web ..> "api-gateway" : HTTPS / generated client
+
+"api-gateway" ..> "auth-service" : routes
+"api-gateway" ..> "customers-service" : routes
+"api-gateway" ..> "vets-service" : routes
+"api-gateway" ..> "visits-service" : routes
+"api-gateway" ..> "reviews-service" : routes
+"api-gateway" ..> "billing-service" : routes
+"api-gateway" ..> "products-service" : routes
+"api-gateway" ..> "workflow-service" : routes
+"api-gateway" ..> "genai-service" : routes
+
+"business services" ..> shared : Gradle dependencies
+"mcp-server" ..> shared : Gradle dependencies
+"api-gateway" ..> shared : Gradle dependencies
+
+@enduml

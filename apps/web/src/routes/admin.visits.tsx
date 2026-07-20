@@ -32,7 +32,8 @@ export const Route = createFileRoute('/admin/visits')({
 
 const ALL = 'ALL' as const;
 
-function VisitsPage() {
+export function VisitsPage({ mode = 'clinical' }: { mode?: 'clinical' | 'reception' }) {
+  const receptionMode = mode === 'reception';
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<SearchVisitsStatus | typeof ALL>(ALL);
   const [bookOpen, setBookOpen] = useState(false);
@@ -80,9 +81,13 @@ function VisitsPage() {
         <div className="flex items-center gap-3">
           <CalendarCheck className="size-6 text-primary" />
           <div>
-            <h1 className="text-2xl font-semibold">Visits</h1>
+            <h1 className="text-2xl font-semibold">
+              {receptionMode ? 'Lịch hẹn' : 'Lịch khám'}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              Quản lý lịch khám — đặt mới, theo dõi tiến độ, hoàn thành.
+              {receptionMode
+                ? 'Tiếp nhận lịch hẹn — đặt mới, theo dõi và hỗ trợ huỷ lịch.'
+                : 'Quản lý lịch khám — đặt mới, theo dõi tiến độ, hoàn thành.'}
             </p>
           </div>
         </div>
@@ -118,10 +123,10 @@ function VisitsPage() {
           <VisitsDataTable
             data={listQuery.data?.content ?? []}
             isLoading={listQuery.isLoading}
-            onStart={(id) => startMutation.mutate({ id })}
-            onComplete={(v) => setCompletingVisit(v)}
+            onStart={receptionMode ? undefined : (id) => startMutation.mutate({ id })}
+            onComplete={receptionMode ? undefined : (v) => setCompletingVisit(v)}
             onCancel={(id) => cancelMutation.mutate({ id })}
-            onPrescribe={(v) => setPrescribingVisit(v)}
+            onPrescribe={receptionMode ? undefined : (v) => setPrescribingVisit(v)}
           />
           {listQuery.data ? (
             <p className="mt-3 text-xs text-muted-foreground">
@@ -133,14 +138,18 @@ function VisitsPage() {
       </Card>
 
       <BookVisitDialog open={bookOpen} onOpenChange={setBookOpen} />
-      <CompleteVisitDialog
-        visit={completingVisit}
-        onOpenChange={(o) => !o && setCompletingVisit(null)}
-      />
-      <PrescriptionDialog
-        visit={prescribingVisit}
-        onOpenChange={(o) => !o && setPrescribingVisit(null)}
-      />
+      {!receptionMode ? (
+        <>
+          <CompleteVisitDialog
+            visit={completingVisit}
+            onOpenChange={(o) => !o && setCompletingVisit(null)}
+          />
+          <PrescriptionDialog
+            visit={prescribingVisit}
+            onOpenChange={(o) => !o && setPrescribingVisit(null)}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

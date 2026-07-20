@@ -1,0 +1,7 @@
+flowchart TB
+  subgraph config_module["config-server"]
+    config_base["com.mss301.petclinic.config"]
+  end
+
+  config_repo["config-repo"]
+  config_base -.->|reads| config_repo

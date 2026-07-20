@@ -67,7 +67,7 @@ function VetReviewsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Duyệt thay đổi</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Duyệt ảnh bác sĩ</h1>
         <p className="mt-1 text-sm text-slate-500">
           Yêu cầu cập nhật ảnh đại diện từ bác sĩ — cần duyệt mới hiển thị công khai.
         </p>

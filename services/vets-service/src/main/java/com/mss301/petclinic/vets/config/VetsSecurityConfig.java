@@ -14,24 +14,19 @@ import com.mss301.petclinic.common.security.endpoints.SecurityEndpointsPropertie
 
 /**
  * Vets-service security — declarative RBAC từ {@code config-repo/vets-service.yml} qua
- * {@link EndpointSecurityCustomizer}, PLUS 2 nhóm rule hardcoded không fit YAML pattern.
+ * {@link EndpointSecurityCustomizer}, cộng nhóm {@code /me} hardcoded không fit YAML pattern.
  *
  * <h4>Hardcoded rules — lý do</h4>
  * <ol>
- *   <li><b>Phase K /me endpoints</b> — cần VET+STAFF+ADMIN (3 role). Helper
- *       {@code customRoles} chỉ support single role + ADMIN; staffEndpoints chỉ STAFF+ADMIN.
- *       Hardcode 2 dòng đơn giản hơn extend helper.</li>
- *   <li><b>Sub-resource DELETE</b> ({@code /vets/{id}/educations/**}, work-schedule, ratings,
- *       badges, photo, album) — STAFF có quyền. Helper apply admin bucket TRƯỚC staff →
- *       pattern broad {@code DELETE /vets/**} (admin-only) sẽ match sub-resource trước,
- *       STAFF bị block. Hardcode sub-resource DELETE TRƯỚC apply() để specificity win.</li>
+ *   <li><b>Phase K /me endpoints</b> — cần VET + ADMIN. Helper
+ *       {@code customRoles} không thể kết hợp rule này với bucket GET user mà vẫn giữ đúng
+ *       first-match-wins, nên khai báo trực tiếp trước các rule YAML.</li>
  * </ol>
  *
  * <h4>Filter chain order</h4>
  * <ol>
  *   <li>Infra endpoints permitAll (actuator, swagger)</li>
- *   <li>Phase K /me hardcoded — VET+STAFF+ADMIN</li>
- *   <li>Sub-resource DELETE hardcoded — STAFF+ADMIN</li>
+ *   <li>Phase K /me hardcoded — VET+ADMIN</li>
  *   <li>{@link EndpointSecurityCustomizer#apply} áp public/admin/staff/user từ YAML</li>
  *   <li>{@code anyRequest().authenticated()} — safety net</li>
  * </ol>
@@ -57,39 +52,22 @@ public class VetsSecurityConfig {
                                     "/swagger-ui.html")
                             .permitAll();
 
-                    // Phase K — /me endpoints (multi-role VET+STAFF+ADMIN, hardcoded vì
-                    // customRoles helper chỉ support role+ADMIN). Phải khai báo TRƯỚC YAML
+                    // Phase K — /me endpoints (VET+ADMIN). Phải khai báo TRƯỚC YAML
                     // rule /vets/** để first-match-wins.
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/vets/me", "/api/v1/vets/me/**")
-                            .hasAnyRole("VET", "STAFF", "ADMIN");
+                            .hasAnyRole("VET", "ADMIN");
                     auth.requestMatchers(HttpMethod.PATCH, "/api/v1/vets/me")
-                            .hasAnyRole("VET", "STAFF", "ADMIN");
+                            .hasAnyRole("VET", "ADMIN");
 
                     // Phase: vet tự quản lý avatar của mình qua /me/photo (vetId từ JWT, không
-                    // path param). PUT/DELETE phải khai báo TRƯỚC YAML staff rule (PUT /vets/**)
+                    // path param). PUT/DELETE phải khai báo TRƯỚC YAML admin rule (PUT /vets/**)
                     // VÀ trước sub-resource DELETE /vets/*/photo (pattern `*` nuốt cả `me`) để
-                    // first-match-wins, nếu không VET sẽ bị block (rule kia chỉ STAFF/ADMIN).
+                    // first-match-wins, nếu không VET sẽ bị block (rule kia chỉ ADMIN).
                     // GET /me/photo đã được rule GET /me/** ở trên cover.
                     auth.requestMatchers(HttpMethod.PUT, "/api/v1/vets/me/photo")
-                            .hasAnyRole("VET", "STAFF", "ADMIN");
+                            .hasAnyRole("VET", "ADMIN");
                     auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/me/photo")
-                            .hasAnyRole("VET", "STAFF", "ADMIN");
-
-                    // Sub-resource DELETE — STAFF (lifecycle riêng, không hard-delete vet record).
-                    // Hardcoded TRƯỚC apply() để win first-match vs YAML admin rule
-                    // DELETE /api/v1/vets/** (admin-only).
-                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/educations/**")
-                            .hasAnyRole("STAFF", "ADMIN");
-                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/work-schedule/**")
-                            .hasAnyRole("STAFF", "ADMIN");
-                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/ratings/**")
-                            .hasAnyRole("STAFF", "ADMIN");
-                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/badges/**")
-                            .hasAnyRole("STAFF", "ADMIN");
-                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/photo")
-                            .hasAnyRole("STAFF", "ADMIN");
-                    auth.requestMatchers(HttpMethod.DELETE, "/api/v1/vets/*/album/**")
-                            .hasAnyRole("STAFF", "ADMIN");
+                            .hasAnyRole("VET", "ADMIN");
 
                     // General role rules từ YAML
                     EndpointSecurityCustomizer.apply(auth, endpoints);

@@ -1,0 +1,49 @@
+@startuml
+title PCMS - Products Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "products-service" <<Spring Boot microservice>> {
+  package "com.mss301.petclinic.products" {
+    package "config"
+    package "controller"
+    package "dto" {
+      package "req"
+      package "res"
+    }
+    package "exception"
+    package "model"
+    package "repository"
+    package "service" {
+      package "impl"
+    }
+  }
+}
+
+package "shared" {
+  package "common-web" <<library>>
+  package "common-jpa" <<library>>
+  package "common-security" <<library>>
+}
+
+controller ..> service
+controller ..> req
+controller ..> res
+service ..> req
+service ..> res
+impl ..> service : implements
+impl ..> repository
+impl ..> model
+repository ..> model
+req ..> model : maps to
+res ..> model : maps from
+
+exception ..> "common-web"
+model ..> "common-jpa"
+config ..> "common-security"
+
+@enduml

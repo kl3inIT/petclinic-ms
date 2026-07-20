@@ -45,7 +45,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  *
  * <p>Resolve {@code vetId} từ JWT claim {@code vetId} (auth-service đã thêm ở Phase K1).
  * KHÔNG cần resource-level check vì client KHÔNG truyền path param — vetId hoàn toàn từ
- * server-side token. STAFF/ADMIN login dạng vet (admin link account → vet) cũng dùng được.
+ * server-side token. ADMIN có liên kết vet cũng dùng được theo quyền override.
  *
  * <p>Method name unique cross-service: {@code getMyVetProfile}, {@code updateMyVetProfile},
  * {@code listMyWorkSchedule}, {@code listMyRatings}, {@code getMyRatingsSummary}, {@code listMyBadges}.
@@ -128,7 +128,7 @@ public class VetMeController {
     @Operation(
             summary = "Upload/replace avatar của vet đang login (idempotent)",
             description = "Multipart field 'file'. Max 10MB. Content-type: image/jpeg|png|webp. " +
-                          "Mỗi lần đổi ảnh reset status PENDING — chờ STAFF/ADMIN duyệt mới hiển thị public."
+                          "Mỗi lần đổi ảnh reset status PENDING — chờ ADMIN duyệt mới hiển thị public."
     )
     public VetPhotoResponse uploadMyVetPhoto(
             @AuthenticationPrincipal Jwt jwt,

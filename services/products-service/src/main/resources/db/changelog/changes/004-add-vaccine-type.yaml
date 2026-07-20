@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-001-extend-product-type-vaccine
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              ALTER TABLE products.products
+              DROP CONSTRAINT IF EXISTS products_type_check;
+              ALTER TABLE products.products
+              ADD CONSTRAINT products_type_check
+              CHECK (type IN ('MEDICATION', 'VACCINE', 'SERVICE', 'SUPPLY', 'MERCHANDISE'));
+        - sql:
+            dbms: postgresql
+            sql: >-
+              INSERT INTO products.products
+                (code, name, category, description, type, unit_price, unit,
+                 stock_quantity, reorder_level, active, version)
+              VALUES
+                ('MED_RABIES_VAC', 'Vắc xin dại một liều', 'Vắc xin',
+                 'Vắc xin phòng bệnh dại cho chó mèo', 'VACCINE', 120000, 'liều',
+                 45, 10, true, 0),
+                ('MED_CORE_VAC', 'Vắc xin core chó mèo', 'Vắc xin',
+                 'Vắc xin phòng các bệnh truyền nhiễm cốt lõi', 'VACCINE', 180000, 'liều',
+                 55, 10, true, 0)
+              ON CONFLICT (code) DO NOTHING;

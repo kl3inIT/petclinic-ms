@@ -7,6 +7,7 @@ import com.mss301.petclinic.common.jpa.enums.IdentifiedEnum;
  *
  * <ul>
  *   <li>{@code MEDICATION}  — thuốc, có quản lý tồn kho (trừ kho khi kê đơn).</li>
+ *   <li>{@code VACCINE}     — vaccine, có quản lý tồn kho và tách riêng để kiểm soát.</li>
  *   <li>{@code SERVICE}     — dịch vụ (phí khám tổng quát/chuyên khoa…), KHÔNG tồn kho.</li>
  *   <li>{@code SUPPLY}      — vật tư tiêu hao (băng gạc, ống tiêm…), có tồn kho.</li>
  *   <li>{@code MERCHANDISE} — hàng bán lẻ tại quầy (đồ chơi, thức ăn, phụ kiện…), có tồn kho.</li>
@@ -17,6 +18,7 @@ import com.mss301.petclinic.common.jpa.enums.IdentifiedEnum;
 public enum ProductType implements IdentifiedEnum {
 
     MEDICATION(true),
+    VACCINE(true),
     SERVICE(false),
     SUPPLY(true),
     MERCHANDISE(true);

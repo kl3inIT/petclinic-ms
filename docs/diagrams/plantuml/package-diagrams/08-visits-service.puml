@@ -1,0 +1,83 @@
+@startuml
+title PCMS - Visits Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "visits-service" <<Spring Boot microservice>> {
+  package "com.mss301.petclinic.visits" {
+    package "client"
+    package "config"
+    package "controller"
+    package "dto" {
+      package "req"
+      package "res"
+    }
+    package "events"
+    package "exception"
+    package "model"
+    package "repository"
+    package "saga"
+    package "security"
+    package "service" {
+      package "impl"
+    }
+  }
+}
+
+package "shared" {
+  package "common-web" <<library>>
+  package "common-jpa" <<library>>
+  package "common-security" <<library>>
+  package "common-clients" <<library>>
+  package "common-events" <<library>>
+}
+
+package "remote API contracts" {
+  package "auth-service API" <<remote API>>
+  package "customers-service API" <<remote API>>
+  package "vets-service API" <<remote API>>
+  package "products-service API" <<remote API>>
+  package "workflow-service API" <<remote API>>
+  package "files-service API" <<remote API>>
+}
+
+package "billing-service event contract" <<remote contract>>
+
+controller ..> service
+controller ..> req
+controller ..> res
+service ..> req
+service ..> res
+impl ..> service : implements
+impl ..> repository
+impl ..> model
+impl ..> client
+impl ..> events
+impl ..> saga
+repository ..> model
+res ..> model : maps from
+saga ..> repository
+saga ..> events
+saga ..> client
+security ..> repository
+
+exception ..> "common-web"
+model ..> "common-jpa"
+security ..> "common-security"
+client ..> "common-clients"
+events ..> "common-events"
+saga ..> "common-events"
+
+client ..> "auth-service API" : HTTP
+client ..> "customers-service API" : HTTP
+client ..> "vets-service API" : HTTP
+client ..> "products-service API" : HTTP
+client ..> "workflow-service API" : HTTP
+client ..> "files-service API" : HTTP
+saga ..> "billing-service event contract" : RabbitMQ event
+
+@enduml

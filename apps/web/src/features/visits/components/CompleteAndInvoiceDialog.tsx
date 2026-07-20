@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, RefreshCw, Trash2 } from 'lucide-react';
@@ -21,6 +21,7 @@ import { FieldError } from '@/lib/form/FieldError';
 
 import { useCompleteVisit } from '@/lib/api/generated/visits/visits';
 import { useCreatePrescription } from '@/lib/api/generated/prescriptions/prescriptions';
+import type { IdempotentPrescriptionRequest } from '@/features/visits/prescription-command';
 import { useGetInvoice, useListInvoices } from '@/lib/api/generated/invoices/invoices';
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
 import { useProducts } from '@/features/products/api';
@@ -60,7 +61,7 @@ function emptyLine(): MedLine {
  * Gộp hoàn tất khám + kê đơn + lập hoá đơn vào một luồng 2 bước cho VET.
  * Bước 1: chẩn đoán + dịch vụ (phí) + thuốc → completeVisit + createPrescription.
  * Bước 2: hoá đơn OPEN của khách (do event tự sinh phí khám + thuốc) — vet thêm/bớt dòng.
- * Vet KHÔNG thu tiền; quầy (STAFF/ADMIN) checkout sau ở /admin/invoices.
+ * Vet KHÔNG thu tiền; quầy STAFF checkout sau ở /staff/invoices (ADMIN có quyền override).
  */
 export function CompleteAndInvoiceDialog({ visit, onOpenChange }: Props) {
   const open = visit !== null;
@@ -130,6 +131,11 @@ function ExamStep({
 
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<MedLine[]>([emptyLine()]);
+  const prescriptionIdempotencyKey = useRef(crypto.randomUUID());
+
+  useEffect(() => {
+    prescriptionIdempotencyKey.current = crypto.randomUUID();
+  }, [visitId]);
 
   function patchLine(idx: number, patch: Partial<MedLine>) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
@@ -185,13 +191,19 @@ function ExamStep({
         });
       if (items.length > 0) {
         try {
+          const command: IdempotentPrescriptionRequest = {
+            notes: notes.trim() || undefined,
+            items,
+            idempotencyKey: prescriptionIdempotencyKey.current,
+          };
           await prescribe.mutateAsync({
             visitId,
-            data: { notes: notes.trim() || undefined, items },
+            data: command,
           });
         } catch (err) {
           // Không chặn sang bước hoá đơn — chỉ báo lỗi kê đơn.
           toast.error('Kê đơn lỗi: ' + ((err as Error).message || 'thất bại'));
+          return;
         }
       }
 
@@ -461,15 +473,12 @@ function InvoiceStep({ visit, onClose }: { visit: VisitResponse; onClose: () => 
   );
   const invoiceId = listQuery.data?.content?.[0]?.id;
 
-  // Chi tiết hoá đơn — poll cho tới khi thấy dòng phí khám (VISIT_FEE) tới qua event.
+  // Chi tiết hoá đơn — tiếp tục poll khi còn OPEN vì phí khám và thuốc đến từ
+  // hai event độc lập; dừng ngay khi dialog unmount hoặc hoá đơn đổi trạng thái.
   const detailQuery = useGetInvoice(invoiceId ?? 0, {
     query: {
       enabled: invoiceId != null,
-      refetchInterval: (q) => {
-        const inv = q.state.data;
-        const hasFee = inv?.items?.some((it) => it.sourceType === 'VISIT_FEE');
-        return hasFee ? false : 1500;
-      },
+      refetchInterval: (q) => (q.state.data?.status === 'OPEN' ? 1500 : false),
     },
   });
   const invoice = detailQuery.data;

@@ -1,0 +1,59 @@
+@startuml
+title PCMS - Auth Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "auth-service" <<Spring Boot microservice>> {
+  package "com.mss301.petclinic.auth" {
+    package "config"
+    package "controller"
+    package "dto" {
+      package "req"
+      package "res"
+    }
+    package "events"
+    package "exception"
+    package "model"
+    package "repository"
+    package "security"
+    package "service" {
+      package "impl"
+    }
+  }
+}
+
+package "shared" {
+  package "common-web" <<library>>
+  package "common-jpa" <<library>>
+  package "common-security" <<library>>
+  package "common-events" <<library>>
+}
+
+package "mailer-service event contract" <<remote contract>>
+
+controller ..> service
+controller ..> req
+controller ..> res
+service ..> req
+service ..> res
+impl ..> service : implements
+impl ..> repository
+impl ..> model
+impl ..> events
+repository ..> model
+req ..> model : maps to
+res ..> model : maps from
+security ..> config
+security ..> repository
+
+exception ..> "common-web"
+model ..> "common-jpa"
+security ..> "common-security"
+events ..> "common-events"
+events ..> "mailer-service event contract" : RabbitMQ event
+
+@enduml

@@ -1,0 +1,21 @@
+flowchart TB
+  subgraph gateway_module["api-gateway"]
+    direction TB
+    subgraph gateway_base["com.mss301.petclinic.gateway"]
+      direction LR
+      config["config"]
+      controller["controller"]
+    end
+  end
+
+  subgraph dependencies["package dependencies"]
+    direction LR
+    common_web["shared/common-web"]
+    common_security["shared/common-security"]
+    routed_apis["routed service API contracts"]
+  end
+
+  config -.-> controller
+  config -.-> common_security
+  config -.-> routed_apis
+  controller -.-> common_web

@@ -1,0 +1,21 @@
+flowchart TB
+  subgraph files_module["files-service"]
+    direction TB
+    subgraph files_base["github.com/mss301/petclinic-files"]
+      direction TB
+      subgraph cmd_pkg["cmd"]
+        main_pkg["main (cmd/files)"]
+      end
+      subgraph internal_pkg["internal"]
+        direction LR
+        config["config"]
+        server["server"]
+      end
+    end
+  end
+
+  minio_sdk["github.com/minio/minio-go/v7"]
+
+  main_pkg -.-> config
+  main_pkg -.-> server
+  server -.->|minio client| minio_sdk

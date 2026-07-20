@@ -25,11 +25,11 @@ export function DeleteProductDialog({ product, onOpenChange }: Props) {
     <AlertDialog open={!!product} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Xoá sản phẩm khỏi catalog?</AlertDialogTitle>
+          <AlertDialogTitle>Ngừng kinh doanh sản phẩm?</AlertDialogTitle>
           <AlertDialogDescription>
-            <strong>{product?.name}</strong> (<code>{product?.code}</code>) sẽ bị xoá khỏi
-            catalog. Đơn thuốc / hoá đơn cũ đã tham chiếu không bị ảnh hưởng. Cân nhắc đặt
-            <em> ngừng kinh doanh</em> thay vì xoá để giữ lịch sử.
+            <strong>{product?.name}</strong> (<code>{product?.code}</code>) sẽ được ẩn
+            khỏi catalog và không thể nhập/xuất kho. Dữ liệu cùng lịch sử kho vẫn được giữ
+            lại.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -41,15 +41,16 @@ export function DeleteProductDialog({ product, onOpenChange }: Props) {
                 { id: product.id },
                 {
                   onSuccess: () => {
-                    toast.success('Đã xoá sản phẩm');
+                    toast.success('Đã ngừng kinh doanh sản phẩm');
                     onOpenChange(false);
                   },
-                  onError: (err) => toast.error((err as Error).message || 'Xoá thất bại'),
+                  onError: (err) =>
+                    toast.error((err as Error).message || 'Cập nhật thất bại'),
                 },
               );
             }}
           >
-            Xoá
+            Ngừng kinh doanh
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

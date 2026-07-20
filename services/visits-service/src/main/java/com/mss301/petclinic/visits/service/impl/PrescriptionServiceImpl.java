@@ -1,6 +1,10 @@
 package com.mss301.petclinic.visits.service.impl;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -9,12 +13,15 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.HttpClientErrorException;
 
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.visits.client.FilesClient;
 import com.mss301.petclinic.visits.client.ProductSummary;
+import com.mss301.petclinic.visits.client.ProductsClient;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.client.UserSummary;
 import com.mss301.petclinic.visits.dto.req.CreatePrescriptionRequest;
@@ -89,12 +96,32 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             throw new AccessDeniedException("Chỉ bác sĩ phụ trách visit mới được kê đơn.");
         }
 
+        String idempotencyKey = blankToNull(request.idempotencyKey());
+        boolean hasCatalogMedication = request.items().stream().anyMatch(item -> item.productId() != null);
+        if (hasCatalogMedication && idempotencyKey == null) {
+            throw new BadRequestAlertException(
+                    "Kê thuốc từ catalog cần idempotencyKey", "Prescription", "idempotency-key-required");
+        }
+        String requestFingerprint = fingerprint(visitId, vetIdFromJwt, request);
+        if (idempotencyKey != null) {
+            var existing = prescriptionRepository.findByIdempotencyKey(idempotencyKey);
+            if (existing.isPresent()) {
+                if (!requestFingerprint.equals(existing.get().getRequestFingerprint())) {
+                    throw new BadRequestAlertException(
+                            "Idempotency key đã được dùng cho nội dung đơn thuốc khác",
+                            "Prescription", "idempotency-key-conflict");
+                }
+                return PrescriptionResponse.from(existing.get());
+            }
+        }
+
         // 3. Một visit có thể có nhiều đơn (kê nhiều lần trong điều trị) — không chặn trùng.
 
         // 4. Build + lưu để lấy id (cần cho object key PDF). Dòng có productId → resolve giá
         //    từ catalog + validate (MEDICATION/active/đủ tồn) trước khi lưu.
         Long issuedBy = isAdmin && vetIdFromJwt == null ? visit.getVetId() : vetIdFromJwt;
-        Prescription rx = Prescription.issue(visitId, issuedBy, blankToNull(request.notes()));
+        Prescription rx = Prescription.issue(
+                visitId, issuedBy, blankToNull(request.notes()), idempotencyKey, requestFingerprint);
         List<PrescriptionIssuedEvent.Line> pricedLines = new ArrayList<>();
         for (CreatePrescriptionRequest.Item i : request.items()) {
             if (i.productId() == null) {
@@ -116,16 +143,18 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         }
         Prescription saved = prescriptionRepository.save(rx);
 
-        // 5. Sinh PDF + upload qua files-service. Enrich tên best-effort (không chặn nếu downstream lỗi).
+        // 5. Consume catalog medication as one atomic, idempotent inventory operation. A stock
+        // failure aborts the local transaction instead of returning a clinically successful but
+        // operationally inconsistent prescription.
+        consumeStock(saved.getId(), idempotencyKey, pricedLines);
+
+        // 6. Sinh PDF + upload qua files-service. Enrich tên best-effort (không chặn nếu downstream lỗi).
         byte[] pdf = pdfGenerator.render(saved, buildContext(visit));
         String key = "prescriptions/" + visitId + "/" + saved.getId() + ".pdf";
         files.upload(key, CONTENT_TYPE_PDF, pdf);
         saved.attachPdf(key, CONTENT_TYPE_PDF, pdf.length);
 
-        // 6. Trừ tồn kho (best-effort — đã pre-check tồn ở bước 4) + publish event để billing
-        //    bơm dòng MEDICATION vào hoá đơn. ⚠️ Dual-write: prescription đã lưu là sự thật lâm
-        //    sàng; nếu consume/publish lỗi chỉ log (stock có thể chỉnh tay). Production: outbox.
-        consumeStock(pricedLines);
+        // 7. Publish event để billing bơm dòng MEDICATION vào hoá đơn.
         publishIssued(saved, visit, pricedLines);
 
         return PrescriptionResponse.from(saved);
@@ -157,16 +186,19 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         return product;
     }
 
-    /** Trừ tồn kho từng dòng — best-effort (đã pre-check; race hiếm thì log, không rollback đơn). */
-    private void consumeStock(List<PrescriptionIssuedEvent.Line> lines) {
-        for (PrescriptionIssuedEvent.Line line : lines) {
-            try {
-                remoteClients.consumeProduct(line.productId(), line.quantity());
-            } catch (RuntimeException e) {
-                log.warn("Trừ tồn kho thất bại (productId={}, qty={}): {} — cần chỉnh tay",
-                        line.productId(), line.quantity(), e.toString());
-            }
+    private void consumeStock(Long prescriptionId, String idempotencyKey,
+                              List<PrescriptionIssuedEvent.Line> lines) {
+        if (lines.isEmpty()) {
+            return;
         }
+        List<ProductsClient.BatchStockConsume.Line> items = lines.stream()
+                .map(line -> new ProductsClient.BatchStockConsume.Line(line.productId(), line.quantity()))
+                .toList();
+        remoteClients.consumeProducts(
+                idempotencyKey != null
+                        ? "prescription-command:" + idempotencyKey
+                        : "prescription:" + prescriptionId + ":dispense",
+                String.valueOf(prescriptionId), items);
     }
 
     /** Publish prescription.issued (chỉ khi có dòng tính tiền + broker available). */
@@ -175,25 +207,41 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         if (pricedLines.isEmpty()) {
             return;
         }
-        EventPublisher publisher = events.getIfAvailable();
-        if (publisher == null) {
-            return;
-        }
+        String username = null;
         try {
-            String username = null;
+            UserSummary user = remoteClients.fetchUser(visit.getCustomerUserId());
+            username = user.username();
+        } catch (RuntimeException e) {
+            log.warn("Enrich username thất bại (userId={}): {}", visit.getCustomerUserId(), e.toString());
+        }
+        PrescriptionIssuedEvent event = PrescriptionIssuedEvent.of(
+                saved.getId(), visit.getId(), visit.getCustomerUserId(), username, pricedLines);
+        sagaRepository.save(PrescriptionBillingSaga.start(
+                event.eventId(), saved.getId(), visit.getId()));
+        EventPublisher publisher = events.getIfAvailable();
+        if (publisher != null) {
+            publishAfterCommit(publisher, event);
+        }
+    }
+
+    private void publishAfterCommit(EventPublisher publisher, PrescriptionIssuedEvent event) {
+        Runnable publish = () -> {
             try {
-                UserSummary user = remoteClients.fetchUser(visit.getCustomerUserId());
-                username = user.username();
-            } catch (RuntimeException e) {
-                log.warn("Enrich username thất bại (userId={}): {}", visit.getCustomerUserId(), e.toString());
+                publisher.publish(event);
+            } catch (RuntimeException ex) {
+                log.warn("Publish prescription.issued failed after commit (prescription={}): {}",
+                        event.prescriptionId(), ex.getMessage());
             }
-            PrescriptionIssuedEvent event = PrescriptionIssuedEvent.of(
-                    saved.getId(), visit.getId(), visit.getCustomerUserId(), username, pricedLines);
-            sagaRepository.save(PrescriptionBillingSaga.start(
-                    event.eventId(), saved.getId(), visit.getId()));
-            publisher.publish(event);
-        } catch (RuntimeException ex) {
-            log.warn("Publish prescription.issued failed (visit={}): {}", visit.getId(), ex.getMessage());
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    publish.run();
+                }
+            });
+        } else {
+            publish.run();
         }
     }
 
@@ -242,5 +290,16 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private static String fingerprint(Long visitId, Long vetId, CreatePrescriptionRequest request) {
+        String canonical = visitId + "|" + vetId + "|" + blankToNull(request.notes()) + "|" + request.items();
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 is not available", ex);
+        }
     }
 }

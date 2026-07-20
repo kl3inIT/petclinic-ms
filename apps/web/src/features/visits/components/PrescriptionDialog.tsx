@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Pill, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 import { useCreatePrescription } from '@/lib/api/generated/prescriptions/prescriptions';
+import type { IdempotentPrescriptionRequest } from '@/features/visits/prescription-command';
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
 import { useProducts } from '@/features/products/api';
 import { formatVnd } from '@/features/billing/format';
@@ -66,6 +67,11 @@ export function PrescriptionDialog({ visit, onOpenChange }: Props) {
   const open = visit !== null;
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
+  const idempotencyKey = useRef(crypto.randomUUID());
+
+  useEffect(() => {
+    idempotencyKey.current = crypto.randomUUID();
+  }, [visit?.id]);
 
   const medsQuery = useProducts({
     type: 'MEDICATION',
@@ -81,6 +87,7 @@ export function PrescriptionDialog({ visit, onOpenChange }: Props) {
         void qc.invalidateQueries({ queryKey: ['/api/v1/visits'] });
         setNotes('');
         setLines([emptyLine()]);
+        idempotencyKey.current = crypto.randomUUID();
         onOpenChange(false);
       },
       onError: (err: Error) => toast.error(err.message || 'Kê đơn thất bại'),
@@ -125,9 +132,14 @@ export function PrescriptionDialog({ visit, onOpenChange }: Props) {
       toast.error('Cần ít nhất 1 dòng thuốc có tên');
       return;
     }
+    const command: IdempotentPrescriptionRequest = {
+      notes: notes.trim() || undefined,
+      items,
+      idempotencyKey: idempotencyKey.current,
+    };
     createMutation.mutate({
       visitId: visit.id,
-      data: { notes: notes.trim() || undefined, items },
+      data: command,
     });
   }
 

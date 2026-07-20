@@ -1,0 +1,64 @@
+@startuml
+title PCMS - Workflow Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "workflow-service" <<Spring Boot microservice>> {
+  package "com.mss301.petclinic.workflow" {
+    package "camel"
+    package "client"
+    package "config"
+    package "controller"
+    package "delegate"
+    package "dto" {
+      package "req"
+      package "res"
+    }
+    package "exception"
+    package "service" {
+      package "impl"
+    }
+  }
+}
+
+package "shared" {
+  package "common-web" <<library>>
+  package "common-security" <<library>>
+  package "common-clients" <<library>>
+}
+
+package "remote API contracts" {
+  package "visits-service API" <<remote API>>
+  package "vets-service API" <<remote API>>
+}
+
+package "Camunda client APIs" <<external library>>
+package "Apache Camel APIs" <<external library>>
+
+controller ..> service
+controller ..> req
+controller ..> res
+service ..> req
+service ..> res
+impl ..> service : implements
+impl ..> client
+impl ..> config
+impl ..> req
+impl ..> res
+delegate ..> camel
+delegate ..> config
+
+exception ..> "common-web"
+config ..> "common-security"
+client ..> "common-clients"
+client ..> "visits-service API" : HTTP
+delegate ..> "visits-service API" : HTTP callback
+delegate ..> "vets-service API" : HTTP
+impl ..> "Camunda client APIs"
+camel ..> "Apache Camel APIs"
+
+@enduml

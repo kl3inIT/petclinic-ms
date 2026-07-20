@@ -40,12 +40,12 @@ import type {
 } from '@/lib/api/generated/model';
 
 export const Route = createFileRoute('/admin/invoices')({
-  component: InvoicesAdminPage,
+  component: InvoicesPage,
 });
 
 const STATUS_TABS: ListInvoicesStatus[] = ['OPEN', 'PAID', 'CANCELLED'];
 
-function InvoicesAdminPage() {
+export function InvoicesPage() {
   const [status, setStatus] = useState<ListInvoicesStatus>('OPEN');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -239,7 +239,7 @@ function InvoiceDetailContent({
         />
 
         {isOpen ? (
-          /* Thanh toán / huỷ — chỉ quầy thu ngân (STAFF/ADMIN) */
+          /* Thanh toán / huỷ — quầy STAFF, ADMIN có quyền override */
           <div className="flex flex-col gap-3 rounded-lg border-2 border-primary/20 bg-primary/5 p-3 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid gap-2 sm:grid-cols-[180px_minmax(220px,1fr)]">
               <div className="space-y-1">

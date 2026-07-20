@@ -1,0 +1,44 @@
+@startuml
+title PCMS - GenAI Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "genai-service" <<Spring Boot microservice>> {
+  package "com.mss301.petclinic.genai" {
+    package "admin" {
+      package "dto"
+    }
+    package "chat"
+    package "config"
+    package "rag"
+  }
+}
+
+package "shared" {
+  package "common-web" <<library>>
+  package "common-jpa" <<library>>
+  package "common-security" <<library>>
+}
+
+package "Spring AI APIs" <<external library>>
+package "mcp-server contract" <<remote MCP contract>>
+
+"com.mss301.petclinic.genai" ..> config : application properties
+admin ..> dto
+admin ..> config : rebuilds LLM client
+config ..> admin : reads LLM configuration
+chat ..> config
+
+admin ..> "common-jpa" : persistence
+admin ..> "common-web" : REST errors
+config ..> "common-security"
+chat ..> "Spring AI APIs"
+config ..> "Spring AI APIs"
+rag ..> "Spring AI APIs"
+config ..> "mcp-server contract" : MCP client
+
+@enduml

@@ -1,0 +1,58 @@
+flowchart TB
+  subgraph visits_module["visits-service"]
+    direction TB
+    subgraph visits_base["com.mss301.petclinic.visits"]
+      direction TB
+      client["client"]
+      config["config"]
+      controller["controller"]
+      subgraph dto_pkg["dto"]
+        direction LR
+        req["req"]
+        res["res"]
+      end
+      events["events"]
+      exception["exception"]
+      model["model"]
+      repository["repository"]
+      saga["saga"]
+      security["security"]
+      subgraph service_pkg["service"]
+        impl["impl"]
+      end
+    end
+  end
+
+  subgraph shared_deps["shared libraries"]
+    direction LR
+    common_web["common-web"]
+    common_jpa["common-jpa"]
+    common_security["common-security"]
+    common_clients["common-clients"]
+    common_events["common-events"]
+  end
+
+  subgraph remote_apis["remote API contracts"]
+    direction LR
+    auth_api["auth-service"]
+    customers_api["customers-service"]
+    vets_api["vets-service"]
+    products_api["products-service"]
+    workflow_api["workflow-service"]
+    files_api["files-service"]
+  end
+  billing_contract["billing-service event contract"]
+
+  controller -.-> service_pkg
+  controller -.-> dto_pkg
+  impl -.-> repository
+  impl -.-> client
+  impl -.-> events
+  impl -.-> saga
+  repository -.-> model
+  dto_pkg -.-> model
+  saga -.-> repository
+  security -.-> repository
+  visits_base -.->|Gradle| shared_deps
+  client -.->|HTTP| remote_apis
+  saga -.->|RabbitMQ| billing_contract

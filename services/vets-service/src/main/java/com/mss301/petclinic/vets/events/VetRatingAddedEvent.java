@@ -7,7 +7,7 @@ import java.util.UUID;
 import com.mss301.petclinic.common.events.DomainEvent;
 
 /**
- * Phát ra sau khi POST /api/v1/vets/{vetId}/ratings thành công (cả INSERT lẫn UPSERT update).
+ * Phát ra sau khi POST /api/v1/vets/{vetId}/ratings tạo rating thành công.
  * Consumer tiềm năng: analytics/KPI tính lại top-rated leaderboard, notification gửi cảm
  * ơn cho customer, billing tính tier-discount khi rating đạt ngưỡng.
  *
@@ -17,8 +17,8 @@ import com.mss301.petclinic.common.events.DomainEvent;
  * customerEmail KHÔNG include vì vets-service không gọi auth/customers (giữ service decoupled).
  * Consumer cần thêm field → callback qua HTTP riêng (Tolerant Reader bên consumer).
  *
- * <p>{@code updated} flag phân biệt INSERT (false) vs UPSERT-update (true) — consumer có
- * thể skip notification cho update để tránh spam (vd customer chỉnh điểm liên tục).
+ * <p>{@code updated} được giữ để tương thích payload event cũ và luôn là {@code false};
+ * rating hiện là bất biến sau khi tạo.
  */
 public record VetRatingAddedEvent(
         UUID eventId,

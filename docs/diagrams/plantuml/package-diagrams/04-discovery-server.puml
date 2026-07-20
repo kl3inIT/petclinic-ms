@@ -1,0 +1,14 @@
+@startuml
+title PCMS - Discovery Server Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "discovery-server" <<Spring Boot service>> {
+  package "com.mss301.petclinic.discovery"
+}
+
+@enduml

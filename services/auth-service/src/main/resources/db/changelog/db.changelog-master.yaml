@@ -19,3 +19,5 @@ databaseChangeLog:
       file: db/changelog/changes/008-seed-dev-customer-user.yaml
   - include:
       file: db/changelog/changes/009-link-dev-customer-user.yaml
+  - include:
+      file: db/changelog/changes/009-seed-dev-inventory-manager.yaml

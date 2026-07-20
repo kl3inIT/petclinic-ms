@@ -3,6 +3,8 @@ package com.mss301.petclinic.billing.service.impl;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -177,11 +179,10 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new BadRequestAlertException(
                     "Hoá đơn trống — không thể thanh toán", "Invoice", "invoice-empty");
         }
-        // Bán hàng = checkout → trừ kho cho các dòng PRODUCT (hàng bán lẻ). MEDICATION đã trừ
-        // lúc kê đơn nên KHÔNG trừ lại. Best-effort: lỗi products-service chỉ log, không chặn
-        // thanh toán (quầy đã giao hàng vật lý) — chỉnh kho tay nếu lệch. ⚠️ dual-write.
-        consumeProductStock(invoice);
         String paymentReference = normalizePaymentReference(request);
+        // Validate payment before the first remote side effect. Products applies the whole batch
+        // atomically and deduplicates retries with the stable invoice operation key.
+        consumeProductStock(invoice);
         invoice.checkout(request.paymentMethod(), paymentReference);
         publishInvoicePaid(invoice);
         return InvoiceResponse.from(invoice);
@@ -201,18 +202,30 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private void consumeProductStock(Invoice invoice) {
+        Map<Long, Integer> quantities = new TreeMap<>();
         for (InvoiceItem item : invoice.getItems()) {
             if (item.getSourceType() != InvoiceItemSource.PRODUCT || item.getSourceRef() == null) {
                 continue;
             }
             try {
-                productsClient.consume(item.getSourceRef(),
-                        new ProductsClient.StockAdjust(item.getQuantity()));
-            } catch (RuntimeException e) {
-                log.warn("Trừ kho sản phẩm thất bại (productId={}, qty={}): {} — cần chỉnh tay",
-                        item.getSourceRef(), item.getQuantity(), e.toString());
+                quantities.merge(item.getSourceRef(), item.getQuantity(), Math::addExact);
+            } catch (ArithmeticException ex) {
+                throw new BadRequestAlertException(
+                        "Tổng số lượng sản phẩm vượt giới hạn", "Invoice", "quantity-overflow");
             }
         }
+        if (quantities.isEmpty()) {
+            return;
+        }
+        var lines = quantities.entrySet().stream()
+                .map(entry -> new ProductsClient.BatchStockConsume.Line(entry.getKey(), entry.getValue()))
+                .toList();
+        productsClient.consumeBatch(new ProductsClient.BatchStockConsume(
+                "invoice:" + invoice.getId() + ":checkout",
+                "INVOICE",
+                String.valueOf(invoice.getId()),
+                "Checkout merchandise",
+                lines));
     }
 
     @Override

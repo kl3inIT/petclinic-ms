@@ -13,7 +13,8 @@ import jakarta.validation.constraints.Size;
  */
 public record CreatePrescriptionRequest(
         @Size(max = 2000) String notes,
-        @NotEmpty @Valid List<Item> items
+        @NotEmpty @Valid List<Item> items,
+        @Size(max = 160) String idempotencyKey
 ) {
 
     /**

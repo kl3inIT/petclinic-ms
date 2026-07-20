@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1080" viewBox="0 0 1800 1080">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#263238"/>
+    </marker>
+    <style>
+      .title { font: 700 26px Arial, sans-serif; fill: #102a43; }
+      .source { font: 13px Arial, sans-serif; fill: #52616b; }
+      .pkg-title { font: 700 14px Arial, sans-serif; fill: #102a43; }
+      .pkg { font: 12px Arial, sans-serif; fill: #102a43; }
+      .small { font: 11px Arial, sans-serif; fill: #334e68; }
+      .note { font: 12px Arial, sans-serif; fill: #243b53; }
+      .dep { stroke: #263238; stroke-width: 1.2; stroke-dasharray: 7 5; fill: none; marker-end: url(#arrow); }
+      .solid { stroke: #4a5568; stroke-width: 1.05; fill: none; marker-end: url(#arrow); }
+      .label { font: 11px Arial, sans-serif; fill: #102a43; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+      .root { fill: #ffffff; stroke: #263238; stroke-width: 1.5; }
+      .support { fill: #eaf4ff; stroke: #246aa5; }
+      .platform { fill: #fff2cc; stroke: #9a6700; }
+      .domain { fill: #e6f4ea; stroke: #2f7d32; }
+      .workflow { fill: #e0f2f1; stroke: #00796b; }
+      .internal { fill: #f7f9fb; stroke: #627d98; }
+      .shared { fill: #f1e8ff; stroke: #6f42c1; }
+      .go { fill: #ffe5ec; stroke: #b83280; }
+      .external { fill: #eeeeee; stroke: #555; }
+      .noteBox { fill: #ffffff; stroke: #90a4ae; stroke-dasharray: 5 4; }
+    </style>
+  </defs>
+
+  <text x="40" y="38" class="title">PCMS - Code Based UML Package Diagram</text>
+  <text x="40" y="62" class="source">Based on: settings.gradle.kts, services/shared package declarations, service Gradle dependencies, GatewayRoutesConfig, ClientsConfig, Rabbit listeners, go.mod</text>
+
+  <!-- Root package -->
+  <path class="root" d="M40 95 h116 v24 h1504 v915 h-1620 z"/>
+  <text x="54" y="112" class="pkg-title">petclinic-ms &lt;&lt;subsystem&gt;&gt;</text>
+
+  <!-- Supporting repository packages -->
+  <path class="support" d="M105 145 h88 v18 h240 v88 h-328 z"/>
+  <text x="119" y="161" class="pkg-title">apps/web</text>
+  <text x="134" y="190" class="pkg">routes</text>
+  <text x="134" y="208" class="pkg">features</text>
+  <text x="134" y="226" class="pkg">lib/api/generated</text>
+
+  <path class="support" d="M505 145 h98 v18 h255 v88 h-353 z"/>
+  <text x="519" y="161" class="pkg-title">build-logic</text>
+  <text x="534" y="194" class="pkg">petclinic.java-conventions</text>
+  <text x="534" y="214" class="pkg">petclinic.spring-boot-service</text>
+
+  <path class="support" d="M930 145 h100 v18 h285 v88 h-385 z"/>
+  <text x="944" y="161" class="pkg-title">config-repo</text>
+  <text x="959" y="194" class="pkg">application*.yml</text>
+  <text x="959" y="214" class="pkg">&lt;service&gt;*.yml</text>
+
+  <!-- Services subsystem -->
+  <path class="root" d="M95 315 h75 v22 h1215 v345 h-1290 z"/>
+  <text x="109" y="332" class="pkg-title">services &lt;&lt;subsystem&gt;&gt;</text>
+
+  <path class="platform" d="M125 365 h128 v20 h315 v165 h-443 z"/>
+  <text x="139" y="381" class="pkg-title">platform services</text>
+  <rect class="platform" x="150" y="410" width="150" height="34"/><text x="165" y="431" class="pkg">api-gateway</text>
+  <rect class="platform" x="320" y="410" width="150" height="34"/><text x="335" y="431" class="pkg">auth-service</text>
+  <rect class="platform" x="150" y="460" width="150" height="34"/><text x="165" y="481" class="pkg">config-server</text>
+  <rect class="platform" x="320" y="460" width="150" height="34"/><text x="335" y="481" class="pkg">discovery-server</text>
+  <rect class="platform" x="150" y="510" width="150" height="28"/><text x="165" y="529" class="pkg">admin-server</text>
+
+  <path class="domain" d="M615 365 h120 v20 h445 v165 h-565 z"/>
+  <text x="629" y="381" class="pkg-title">domain services</text>
+  <rect class="domain" x="640" y="410" width="150" height="34"/><text x="655" y="431" class="pkg">customers-service</text>
+  <rect class="domain" x="810" y="410" width="150" height="34"/><text x="825" y="431" class="pkg">vets-service</text>
+  <rect class="domain" x="980" y="410" width="150" height="34"/><text x="995" y="431" class="pkg">visits-service</text>
+  <rect class="domain" x="640" y="463" width="150" height="34"/><text x="655" y="484" class="pkg">billing-service</text>
+  <rect class="domain" x="810" y="463" width="150" height="34"/><text x="825" y="484" class="pkg">products-service</text>
+  <rect class="domain" x="980" y="463" width="150" height="34"/><text x="995" y="484" class="pkg">reviews-service</text>
+  <text x="640" y="528" class="small">com.mss301.petclinic.{customers,vets,visits,billing,products,reviews}</text>
+
+  <path class="workflow" d="M1225 365 h132 v20 h180 v165 h-312 z"/>
+  <text x="1239" y="381" class="pkg-title">workflow + AI/MCP</text>
+  <rect class="workflow" x="1250" y="410" width="165" height="34"/><text x="1265" y="431" class="pkg">workflow-service</text>
+  <rect class="workflow" x="1250" y="460" width="165" height="34"/><text x="1265" y="481" class="pkg">genai-service</text>
+  <rect class="workflow" x="1250" y="510" width="165" height="28"/><text x="1265" y="529" class="pkg">mcp-server</text>
+
+  <!-- Internal package layout -->
+  <path class="internal" d="M125 585 h246 v20 h1225 v55 h-1471 z"/>
+  <text x="139" y="601" class="pkg-title">Spring service internal packages scanned under services/*/src/main/java</text>
+  <rect class="internal" x="150" y="620" width="125" height="30"/><text x="177" y="639" class="pkg">controller</text>
+  <rect class="internal" x="300" y="620" width="145" height="30"/><text x="330" y="639" class="pkg">dto.req / res</text>
+  <rect class="internal" x="470" y="620" width="125" height="30"/><text x="491" y="639" class="pkg">service / impl</text>
+  <rect class="internal" x="620" y="620" width="155" height="30"/><text x="648" y="639" class="pkg">model / repository</text>
+  <rect class="internal" x="800" y="620" width="230" height="30"/><text x="820" y="639" class="pkg">client / events / consumer / saga</text>
+  <rect class="internal" x="1055" y="620" width="220" height="30"/><text x="1077" y="639" class="pkg">config / exception / security</text>
+  <path class="solid" d="M275 635 H300"/><text class="label" x="279" y="626">DTO</text>
+  <path class="solid" d="M445 635 H470"/><text class="label" x="449" y="626">uses</text>
+  <path class="solid" d="M595 635 H620"/><text class="label" x="599" y="626">JPA</text>
+  <path class="solid" d="M775 635 H800"/><text class="label" x="779" y="626">integration</text>
+
+  <!-- Shared subsystem -->
+  <path class="shared" d="M95 740 h75 v22 h1005 v220 h-1080 z"/>
+  <text x="109" y="757" class="pkg-title">shared &lt;&lt;subsystem&gt;&gt;</text>
+  <rect class="shared" x="125" y="795" width="160" height="50"/><text x="142" y="817" class="pkg-title">common-web</text><text x="142" y="835" class="small">exception | openapi</text>
+  <rect class="shared" x="305" y="795" width="160" height="50"/><text x="322" y="817" class="pkg-title">common-jpa</text><text x="322" y="835" class="small">audit | entity | enums</text>
+  <rect class="shared" x="485" y="795" width="180" height="50"/><text x="502" y="817" class="pkg-title">common-security</text><text x="502" y="835" class="small">jwt | endpoints</text>
+  <rect class="shared" x="685" y="795" width="180" height="50"/><text x="702" y="817" class="pkg-title">common-clients</text><text x="702" y="835" class="small">RestClient | JWT forward</text>
+  <rect class="shared" x="885" y="795" width="175" height="50"/><text x="902" y="817" class="pkg-title">common-events</text><text x="902" y="835" class="small">EventPublisher | saga</text>
+  <rect class="shared" x="125" y="875" width="185" height="50"/><text x="142" y="897" class="pkg-title">common-testing</text><text x="142" y="915" class="small">JWT tests | Postgres IT</text>
+  <text x="340" y="895" class="note">Gradle dependencies are from services/*/build.gradle.kts.</text>
+  <text x="340" y="915" class="note">Domain services use common-web/jpa/security/events; common-clients appears where RestClient packages exist.</text>
+
+  <!-- Go and external packages -->
+  <path class="go" d="M1225 740 h95 v22 h185 v220 h-280 z"/>
+  <text x="1239" y="757" class="pkg-title">Go services</text>
+  <rect class="go" x="1250" y="795" width="220" height="44"/><text x="1265" y="815" class="pkg-title">files-service</text><text x="1265" y="833" class="small">github.com/mss301/petclinic-files</text>
+  <rect class="go" x="1250" y="860" width="220" height="44"/><text x="1265" y="880" class="pkg-title">mailer-service</text><text x="1265" y="898" class="small">github.com/mss301/petclinic-mailer</text>
+
+  <path class="external" d="M1515 315 h125 v22 h125 v400 h-250 z"/>
+  <text x="1529" y="332" class="pkg-title">external</text>
+  <rect class="external" x="1540" y="365" width="165" height="30"/><text x="1555" y="385" class="pkg">PostgreSQL</text>
+  <rect class="external" x="1540" y="415" width="165" height="30"/><text x="1555" y="435" class="pkg">RabbitMQ</text>
+  <rect class="external" x="1540" y="465" width="165" height="30"/><text x="1555" y="485" class="pkg">Eureka</text>
+  <rect class="external" x="1540" y="515" width="165" height="30"/><text x="1555" y="535" class="pkg">MinIO</text>
+  <rect class="external" x="1540" y="565" width="165" height="30"/><text x="1555" y="585" class="pkg">Mailpit</text>
+  <rect class="external" x="1540" y="615" width="165" height="30"/><text x="1555" y="635" class="pkg">Camunda/Zeebe</text>
+  <rect class="external" x="1540" y="665" width="165" height="30"/><text x="1555" y="685" class="pkg">LLM Provider</text>
+
+  <!-- Clean package-level dependencies -->
+  <path class="dep" d="M225 251 V410"/><text class="label" x="236" y="330">generated REST client</text>
+  <path class="dep" d="M682 251 V315"/><text class="label" x="693" y="286">Gradle conventions</text>
+  <path class="dep" d="M1124 251 V315"/><text class="label" x="1135" y="286">externalized config</text>
+  <path class="dep" d="M470 427 H615"/><text class="label" x="505" y="419">gateway routes</text>
+  <path class="dep" d="M470 442 C780 305 1120 320 1250 410"/><text class="label" x="845" y="322">routes workflow/AI</text>
+
+  <path class="dep" d="M345 550 V740"/><text class="label" x="356" y="705">common-web/security</text>
+  <path class="dep" d="M890 550 V740"/><text class="label" x="902" y="705">common-web/jpa/security/events/clients</text>
+  <path class="dep" d="M1328 550 V740"/><text class="label" x="1218" y="705">common-web/security/clients</text>
+  <path class="dep" d="M1415 850 H1515"/><text class="label" x="1435" y="842">MinIO / Mailpit / RabbitMQ</text>
+
+  <!-- Notes instead of line clutter -->
+  <rect class="noteBox" x="1225" y="930" width="280" height="62"/>
+  <text x="1240" y="952" class="note">HTTP clients in code:</text>
+  <text x="1240" y="970" class="small">visits -> customers/vets/auth/workflow/products</text>
+  <text x="1240" y="986" class="small">reviews -> visits/billing; billing -> products</text>
+
+  <rect class="noteBox" x="1515" y="760" width="210" height="82"/>
+  <text x="1530" y="782" class="note">AMQP in code:</text>
+  <text x="1530" y="800" class="small">publish: auth/customers/vets/visits</text>
+  <text x="1530" y="816" class="small">reviews/billing</text>
+  <text x="1530" y="832" class="small">consume: billing/visits/mailer</text>
+
+  <rect class="noteBox" x="1515" y="858" width="210" height="64"/>
+  <text x="1530" y="880" class="note">Infrastructure use:</text>
+  <text x="1530" y="898" class="small">JPA services -> PostgreSQL</text>
+  <text x="1530" y="914" class="small">common-clients -> Eureka</text>
+
+  <text x="95" y="1012" class="source">Notation: folder-shaped boxes are UML packages/subsystems; dashed arrows are UML package dependencies. Repeated internal service packages are collapsed into one scanned layout to keep the diagram readable.</text>
+</svg>

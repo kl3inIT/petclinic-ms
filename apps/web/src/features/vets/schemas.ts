@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Zod schemas cho các form của vets-service (Phase A-F.1). Match BE DTO record:
  *  - VetRequest, UpdateVetRequest (Phase A)
- *  - RatingRequest (Phase D, Phase F lấy customerName từ JWT, Phase F.1 UPSERT semantic)
+ *  - RatingRequest (customerName lấy từ JWT; một rating cho mỗi customer + vet)
  *  - EducationRequest (Phase B)
  *  - BadgeRequest (Phase E1)
  *
@@ -25,11 +25,11 @@ export const vetSchema = z.object({
 });
 export type VetInput = z.infer<typeof vetSchema>;
 
-// ─── Rating form (Phase D + F.1 UPSERT) ─────────────────────────────────────────
+// ─── Rating form ─────────────────────────────────────────────────────────────────
 /**
  * Customer rate vet — 1-5 sao. customerName từ JWT, KHÔNG nằm trong schema.
- * POST trùng (cùng user, cùng vet) → BE tự UPSERT (Phase F.1) — FE chỉ cần gọi
- * mutation lại; KHÔNG cần check existed trước.
+ * POST trùng (cùng user, cùng vet) bị BE từ chối; màn hình visit chỉ mở form
+ * sau khi truy vấn rating hiện tại xác nhận khách hàng còn đủ điều kiện.
  */
 export const ratingSchema = z.object({
   score: z.coerce

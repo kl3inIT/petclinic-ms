@@ -60,8 +60,8 @@ APPS = [
          env=[("CAMUNDA_CLIENT_ZEEBE_GRPCADDRESS", "http://camunda:26500"),
               ("CAMUNDA_CLIENT_MODE", "selfmanaged")]),
     # products-service owns catalogue + stock + pricing (inventory is a role/UC, not a service)
-    dict(name="products-service", app=8191, mgmt=9191, kind=SPRING, mem=("384Mi", "768Mi"), common=True),
-    dict(name="billing-service", app=8192, mgmt=9192, kind=SPRING, mem=("384Mi", "768Mi"), common=True),
+    dict(name="products-service", app=8192, mgmt=9192, kind=SPRING, mem=("384Mi", "768Mi"), common=True),
+    dict(name="billing-service", app=8191, mgmt=9191, kind=SPRING, mem=("384Mi", "768Mi"), common=True),
 ]
 
 # Go services (lightweight, no Spring actuator). files-service = media/PDF over MinIO.

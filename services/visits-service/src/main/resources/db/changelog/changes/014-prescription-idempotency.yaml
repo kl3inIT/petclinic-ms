@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-add-prescription-idempotency
+      author: codex
+      changes:
+        - addColumn:
+            schemaName: visits
+            tableName: prescriptions
+            columns:
+              - column:
+                  name: idempotency_key
+                  type: VARCHAR(160)
+              - column:
+                  name: request_fingerprint
+                  type: VARCHAR(64)
+        - addUniqueConstraint:
+            schemaName: visits
+            tableName: prescriptions
+            columnNames: idempotency_key
+            constraintName: uk_prescriptions_idempotency_key

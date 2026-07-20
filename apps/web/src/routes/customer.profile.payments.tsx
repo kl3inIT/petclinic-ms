@@ -45,12 +45,12 @@ import {
   usePersistedState,
 } from '@/features/customer-profile/preferences';
 import { type InvoiceResponse, useMyInvoices } from '@/features/billing/api';
-import { formatDateTime, formatVnd } from '@/features/billing/format';
+import { CustomerInvoiceHistoryCard } from '@/features/billing/components/CustomerInvoiceHistoryCard';
+import { formatVnd } from '@/features/billing/format';
 import {
   INVOICE_STATUS_CLASS,
   INVOICE_STATUS_LABEL,
   ITEM_SOURCE_LABEL,
-  PAYMENT_METHOD_LABEL,
 } from '@/features/billing/labels';
 
 export const Route = createFileRoute('/customer/profile/payments')({
@@ -210,30 +210,7 @@ function MyInvoicesSection() {
             <div className="space-y-2">
               <p className="text-xs font-bold text-slate-500 uppercase">Lịch sử</p>
               {history.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex items-center justify-between rounded-xl border border-[#ECECF5] bg-white p-3 text-sm"
-                >
-                  <div>
-                    <span className="font-mono font-semibold">#{inv.id}</span>
-                    <span className="ml-2 text-slate-500">
-                      {formatDateTime(inv.paidAt ?? inv.issuedAt)}
-                    </span>
-                    {inv.paymentMethod ? (
-                      <span className="ml-2 text-xs text-slate-400">
-                        {PAYMENT_METHOD_LABEL[inv.paymentMethod]}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono font-semibold">
-                      {formatVnd(inv.total)}
-                    </span>
-                    <Badge className={INVOICE_STATUS_CLASS[inv.status ?? 'PAID']}>
-                      {INVOICE_STATUS_LABEL[inv.status ?? 'PAID']}
-                    </Badge>
-                  </div>
-                </div>
+                <CustomerInvoiceHistoryCard key={inv.id} invoice={inv} />
               ))}
             </div>
           ) : null}

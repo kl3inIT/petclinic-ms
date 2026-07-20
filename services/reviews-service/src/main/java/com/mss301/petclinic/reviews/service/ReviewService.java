@@ -37,7 +37,7 @@ public interface ReviewService {
 
     ReviewSummaryResponse summary(TargetType targetType, Long targetId);
 
-    // --- ADMIN/STAFF ---
+    // --- ADMIN moderation ---
 
     ReviewResponse approve(Long id);
 

@@ -20,13 +20,18 @@ function ForbiddenPage() {
   const roles = user?.roles ?? [];
 
   // Suggest home route theo role thực tế của user — giảm friction.
-  const homePath: '/admin' | '/vet' | '/customer' | '/login' = roles.includes('ADMIN')
-    ? '/admin'
-    : roles.includes('VET')
-      ? '/vet'
-      : roles.includes('USER')
-        ? '/customer'
-        : '/login';
+  const homePath: '/admin' | '/staff' | '/inventory' | '/vet' | '/customer' | '/login' =
+    roles.includes('ADMIN')
+      ? '/admin'
+      : roles.includes('INVENTORY_MANAGER')
+        ? '/inventory'
+        : roles.includes('STAFF')
+          ? '/staff'
+          : roles.includes('VET')
+            ? '/vet'
+            : roles.includes('USER')
+              ? '/customer'
+              : '/login';
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gradient-to-br from-rose-50 via-white to-amber-50 px-6 text-center">

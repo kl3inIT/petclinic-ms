@@ -99,7 +99,7 @@ public class VisitController {
     }
 
     @PatchMapping("/{id}/start")
-    @Operation(summary = "Mark visit IN_PROGRESS (vet/staff)")
+    @Operation(summary = "Mark visit IN_PROGRESS (vet/admin)")
     public VisitResponse startVisit(@PathVariable Long id) {
         return service.start(id);
     }

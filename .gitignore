@@ -73,6 +73,7 @@ coverage/
 test-results/
 playwright-report/
 .playwright/
+.playwright-mcp/
 
 ### Postgres backups (scripts/backup-postgres.sh) ###
 backups/

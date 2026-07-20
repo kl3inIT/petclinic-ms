@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
@@ -48,10 +49,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * khởi tạo EventPublisher (mặc định test profile = false trong test/resources/application.yml).
  * RabbitMQ chạy qua Testcontainers (artifactId {@code testcontainers-rabbitmq}, gotcha #4 CLAUDE.md).
  *
- * <p>Verify 3 case:
+ * <p>Verify 2 case:
  * <ol>
  *   <li>POST rating mới (INSERT) → event publish với {@code updated=false}, đầy đủ payload field</li>
- *   <li>POST rating cùng customer + vet (UPSERT update) → event publish với {@code updated=true}</li>
+ *   <li>POST rating trùng customer + vet bị từ chối và không publish event thứ hai.</li>
  *   <li>(Optional) afterCommit semantic — nếu transaction rollback, event KHÔNG fire.
  *       Hiện skip vì cần inject failure point — đủ tin tưởng qua code review của
  *       TransactionSynchronizationManager.registerSynchronization.</li>
@@ -124,8 +125,8 @@ class RatingEventPublishIT {
         mvc = webAppContextSetup(wac).apply(springSecurity()).build();
 
         // KHÔNG @Transactional ở class level → phải explicit cleanup giữa tests.
-        // Xoá ratings cũ trước mỗi test, nếu không UPSERT-update case sẽ thấy rating cũ
-        // từ test trước → assertion fail. Vet seed data từ Liquibase không touch.
+        // Xoá ratings cũ trước mỗi test để duplicate guard không nhìn thấy dữ liệu
+        // từ test trước. Vet seed data từ Liquibase không touch.
         ratingRepository.deleteAll();
 
         // Declare test queue + binding (idempotent). Cần exchange tồn tại — autoconfig
@@ -174,10 +175,10 @@ class RatingEventPublishIT {
 
         // Poll queue tới khi nhận message (timeout 5s — afterCommit hook + RabbitMQ
         // round-trip thường < 100ms, để 5s cho CI chậm).
-        Object msg = rabbitTemplate.receiveAndConvert(TEST_QUEUE, TimeUnit.SECONDS.toMillis(5));
+        Message msg = rabbitTemplate.receive(TEST_QUEUE, TimeUnit.SECONDS.toMillis(5));
         assertThat(msg).as("Phải nhận được vet.rating.added message trong 5s").isNotNull();
 
-        JsonNode payload = om.valueToTree(msg);
+        JsonNode payload = om.readTree(msg.getBody());
         assertThat(payload.path("eventType").asText()).isEqualTo("vet.rating.added");
         assertThat(payload.path("source").asText()).isEqualTo("vets-service");
         assertThat(payload.path("vetId").asLong()).isEqualTo(vetId);
@@ -192,7 +193,7 @@ class RatingEventPublishIT {
     }
 
     @Test
-    void addRating_upsertUpdateCase_publishesEventWithUpdatedTrue() throws Exception {
+    void addRating_duplicateCase_doesNotPublishAnotherEvent() throws Exception {
         Long vetId = firstVetId();
 
         // Lần 1: INSERT — drain event đầu tiên ra khỏi queue
@@ -201,22 +202,16 @@ class RatingEventPublishIT {
                         .content("{\"score\": 5}")
                         .with(staff("bob")))
                 .andExpect(status().isCreated());
-        rabbitTemplate.receiveAndConvert(TEST_QUEUE, 2000L); // drain INSERT event
+        rabbitTemplate.receive(TEST_QUEUE, 2000L); // drain INSERT event
 
-        // Lần 2: cùng bob, cùng vet → UPSERT update
+        // Lần 2: cùng bob, cùng vet → từ chối và không có event mới.
         mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"score\": 2, \"description\": \"changed mind\"}")
                         .with(staff("bob")))
-                .andExpect(status().isCreated());
+                .andExpect(status().isBadRequest());
 
-        Object msg = rabbitTemplate.receiveAndConvert(TEST_QUEUE, TimeUnit.SECONDS.toMillis(5));
-        assertThat(msg).as("UPSERT update phải publish event lần 2").isNotNull();
-
-        JsonNode payload = om.valueToTree(msg);
-        assertThat(payload.path("score").asInt()).isEqualTo(2);
-        assertThat(payload.path("description").asText()).isEqualTo("changed mind");
-        assertThat(payload.path("customerName").asText()).isEqualTo("bob");
-        assertThat(payload.path("updated").asBoolean()).as("UPSERT update → updated=true").isTrue();
+        Message msg = rabbitTemplate.receive(TEST_QUEUE, 500L);
+        assertThat(msg).as("Rating trùng không được publish event").isNull();
     }
 }

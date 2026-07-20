@@ -1,0 +1,46 @@
+@startuml
+title PCMS - Mailer Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "mailer-service" <<Go microservice>> {
+  package "github.com/mss301/petclinic-mailer" {
+    package "cmd" {
+      package "main (cmd/mailer)" <<main package>>
+    }
+    package "internal" {
+      package "config"
+      package "consumer"
+      package "events"
+      package "mailer"
+      package "sba"
+      package "store"
+    }
+  }
+}
+
+package "remote event contracts" {
+  package "auth events" <<remote contract>>
+  package "visits events" <<remote contract>>
+  package "billing events" <<remote contract>>
+}
+
+package "Spring Boot Admin API" <<remote API>>
+
+"main (cmd/mailer)" ..> config
+"main (cmd/mailer)" ..> consumer
+"main (cmd/mailer)" ..> events
+"main (cmd/mailer)" ..> mailer
+"main (cmd/mailer)" ..> sba
+"main (cmd/mailer)" ..> store
+
+events ..> "auth events" : event schema
+events ..> "visits events" : event schema
+events ..> "billing events" : event schema
+sba ..> "Spring Boot Admin API" : self-registration
+
+@enduml

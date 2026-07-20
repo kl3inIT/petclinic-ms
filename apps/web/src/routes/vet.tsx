@@ -19,11 +19,11 @@ import { DemoBanner } from '@/features/vet-me/components/DemoBanner';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { cn } from '@/lib/utils';
 
-const VET_PORTAL_ROLES = ['VET', 'STAFF'] as const;
+const VET_PORTAL_ROLES = ['VET'] as const;
 
 export const Route = createFileRoute('/vet')({
   beforeLoad: ({ location }) => {
-    // /vet/** chỉ cho VET + STAFF (+ ADMIN bypass). USER role không vào được —
+    // /vet/** chỉ cho VET (+ ADMIN bypass). STAFF có portal lễ tân riêng —
     // sẽ redirect /forbidden với explain context.
     requireAnyRole({ redirectFrom: location.href, allowedRoles: VET_PORTAL_ROLES });
   },

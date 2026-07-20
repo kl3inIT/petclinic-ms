@@ -52,6 +52,12 @@ public class Prescription extends AbstractAuditingEntity {
     @Column(name = "issued_at", nullable = false)
     private Instant issuedAt;
 
+    @Column(name = "idempotency_key", length = 160, unique = true, updatable = false)
+    private String idempotencyKey;
+
+    @Column(name = "request_fingerprint", length = 64, updatable = false)
+    private String requestFingerprint;
+
     @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PrescriptionItem> items = new ArrayList<>();
 
@@ -59,16 +65,25 @@ public class Prescription extends AbstractAuditingEntity {
         // JPA
     }
 
-    private Prescription(Long visitId, Long issuedByVetId, String notes, Instant issuedAt) {
+    private Prescription(Long visitId, Long issuedByVetId, String notes, Instant issuedAt,
+                         String idempotencyKey, String requestFingerprint) {
         this.visitId = visitId;
         this.issuedByVetId = issuedByVetId;
         this.notes = notes;
         this.issuedAt = issuedAt;
+        this.idempotencyKey = idempotencyKey;
+        this.requestFingerprint = requestFingerprint;
     }
 
     /** Factory — tạo đơn thuốc mới cho visit (chưa có item, chưa có PDF). */
     public static Prescription issue(Long visitId, Long issuedByVetId, String notes) {
-        return new Prescription(visitId, issuedByVetId, notes, Instant.now());
+        return issue(visitId, issuedByVetId, notes, null, null);
+    }
+
+    public static Prescription issue(Long visitId, Long issuedByVetId, String notes,
+                                     String idempotencyKey, String requestFingerprint) {
+        return new Prescription(visitId, issuedByVetId, notes, Instant.now(),
+                idempotencyKey, requestFingerprint);
     }
 
     public void addItem(PrescriptionItem item) {
@@ -93,5 +108,7 @@ public class Prescription extends AbstractAuditingEntity {
     public String getContentType() { return contentType; }
     public Long getSizeBytes() { return sizeBytes; }
     public Instant getIssuedAt() { return issuedAt; }
+    public String getIdempotencyKey() { return idempotencyKey; }
+    public String getRequestFingerprint() { return requestFingerprint; }
     public List<PrescriptionItem> getItems() { return Collections.unmodifiableList(items); }
 }

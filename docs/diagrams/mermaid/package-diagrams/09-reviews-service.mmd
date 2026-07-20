@@ -1,0 +1,50 @@
+flowchart TB
+  subgraph reviews_module["reviews-service"]
+    direction TB
+    subgraph reviews_base["com.mss301.petclinic.reviews"]
+      direction TB
+      client["client"]
+      config["config"]
+      controller["controller"]
+      subgraph dto_pkg["dto"]
+        direction LR
+        req["req"]
+        res["res"]
+      end
+      events["events"]
+      exception["exception"]
+      model["model"]
+      repository["repository"]
+      subgraph service_pkg["service"]
+        direction LR
+        impl["impl"]
+        moderation["moderation"]
+      end
+    end
+  end
+
+  subgraph shared_deps["shared libraries"]
+    direction LR
+    common_web["common-web"]
+    common_jpa["common-jpa"]
+    common_security["common-security"]
+    common_clients["common-clients"]
+    common_events["common-events"]
+  end
+  subgraph remote_apis["remote API contracts"]
+    direction LR
+    visits_api["visits-service"]
+    billing_api["billing-service"]
+  end
+
+  controller -.-> service_pkg
+  controller -.-> dto_pkg
+  impl -.-> repository
+  impl -.-> client
+  impl -.-> events
+  impl -.-> moderation
+  impl -.-> exception
+  repository -.-> model
+  dto_pkg -.-> model
+  reviews_base -.->|Gradle| shared_deps
+  client -.->|HTTP| remote_apis

@@ -1,0 +1,32 @@
+flowchart TB
+  subgraph mcp_module["mcp-server"]
+    direction TB
+    subgraph mcp_base["com.mss301.petclinic.mcp"]
+      direction TB
+      subgraph client_pkg["client"]
+        client_dto["dto"]
+      end
+      config["config"]
+      prompts["prompts"]
+      resources["resources"]
+      tools["tools"]
+    end
+  end
+
+  subgraph shared_deps["shared libraries"]
+    direction LR
+    common_web["common-web"]
+    common_security["common-security"]
+    common_clients["common-clients"]
+  end
+  subgraph remote_apis["remote API contracts"]
+    direction LR
+    customers_api["customers-service"]
+    vets_api["vets-service"]
+    visits_api["visits-service"]
+  end
+
+  resources -.-> client_pkg
+  tools -.-> client_pkg
+  mcp_base -.->|Gradle| shared_deps
+  client_pkg -.->|HTTP| remote_apis

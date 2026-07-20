@@ -1,0 +1,130 @@
+@startuml
+title PCMS - Package Diagram
+
+top to bottom direction
+
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam defaultFontName Arial
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+skinparam nodesep 45
+skinparam ranksep 60
+skinparam ArrowColor #4B5563
+skinparam PackageBorderColor #111827
+skinparam PackageFontColor #111827
+skinparam BackgroundColor #FFF2CC
+
+package "petclinic-ms" as Root #FFF2CC {
+  package "apps" as Apps #D9EAD3 {
+    package "web" as Web {
+      package "routes" as WebRoutes {
+      }
+      package "features" as WebFeatures {
+      }
+      package "components" as WebComponents {
+      }
+      package "lib" as WebLib {
+      }
+      package "styles" as WebStyles {
+      }
+      package "test" as WebTest {
+      }
+
+      WebRoutes -[hidden]right-> WebFeatures
+      WebFeatures -[hidden]right-> WebComponents
+      WebLib -[hidden]right-> WebStyles
+      WebStyles -[hidden]right-> WebTest
+      WebRoutes -[hidden]down-> WebLib
+      WebFeatures -[hidden]down-> WebStyles
+      WebComponents -[hidden]down-> WebTest
+    }
+  }
+
+  package "services" as Services #F4CCCC {
+    package "api-gateway" as ApiGateway {
+    }
+    package "config-server" as ConfigServer {
+    }
+    package "discovery-server" as DiscoveryServer {
+    }
+    package "admin-server" as AdminServer {
+    }
+    package "auth-service" as AuthService {
+    }
+    package "customers-service" as CustomersService {
+    }
+    package "vets-service" as VetsService {
+    }
+    package "visits-service" as VisitsService {
+    }
+    package "billing-service" as BillingService {
+    }
+    package "products-service" as ProductsService {
+    }
+    package "files-service" as FilesService {
+    }
+    package "mailer-service" as MailerService {
+    }
+    package "workflow-service" as WorkflowService {
+    }
+    package "genai-service" as GenAiService {
+    }
+    package "mcp-server" as McpServer {
+    }
+
+    ApiGateway -[hidden]right-> ConfigServer
+    ConfigServer -[hidden]right-> DiscoveryServer
+    DiscoveryServer -[hidden]right-> AdminServer
+    AuthService -[hidden]right-> CustomersService
+    CustomersService -[hidden]right-> VetsService
+    VetsService -[hidden]right-> VisitsService
+    BillingService -[hidden]right-> ProductsService
+    ProductsService -[hidden]right-> FilesService
+    FilesService -[hidden]right-> MailerService
+    WorkflowService -[hidden]right-> GenAiService
+    GenAiService -[hidden]right-> McpServer
+
+    ApiGateway -[hidden]down-> AuthService
+    AuthService -[hidden]down-> BillingService
+    BillingService -[hidden]down-> WorkflowService
+    ConfigServer -[hidden]down-> CustomersService
+    CustomersService -[hidden]down-> ProductsService
+    ProductsService -[hidden]down-> GenAiService
+    DiscoveryServer -[hidden]down-> VetsService
+    VetsService -[hidden]down-> FilesService
+    FilesService -[hidden]down-> McpServer
+    AdminServer -[hidden]down-> VisitsService
+    VisitsService -[hidden]down-> MailerService
+  }
+
+  package "shared" as Shared #C9DAF8 {
+    package "common-web" as CommonWeb {
+    }
+    package "common-security" as CommonSecurity {
+    }
+    package "common-clients" as CommonClients {
+    }
+    package "common-events" as CommonEvents {
+    }
+    package "common-jpa" as CommonJpa {
+    }
+    package "common-testing" as CommonTesting {
+    }
+
+    CommonWeb -[hidden]right-> CommonSecurity
+    CommonSecurity -[hidden]right-> CommonClients
+    CommonEvents -[hidden]right-> CommonJpa
+    CommonJpa -[hidden]right-> CommonTesting
+    CommonWeb -[hidden]down-> CommonEvents
+    CommonSecurity -[hidden]down-> CommonJpa
+    CommonClients -[hidden]down-> CommonTesting
+  }
+
+  Apps -down[hidden]-> Services
+  Services -down[hidden]-> Shared
+  Apps -down-> Services
+  Services -down-> Shared
+}
+
+@enduml

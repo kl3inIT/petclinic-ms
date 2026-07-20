@@ -1,157 +1,131 @@
-import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute, redirect } from '@tanstack/react-router';
 import {
-  LayoutDashboard,
-  Users,
-  PawPrint,
-  Stethoscope,
   CalendarCheck,
-  Workflow,
-  LogOut,
-  Sparkles,
-  ShieldCheck,
-  Receipt,
+  Camera,
+  LayoutDashboard,
+  PawPrint,
   Pill,
-  Package,
+  Receipt,
+  Sparkles,
+  Stethoscope,
+  Users,
+  Workflow,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Logo } from '@/components/logo';
-import { useAuthStore } from '@/features/auth/store';
+
+import { PortalShell } from '@/features/back-office/components/PortalShell';
 import { requireAnyRole } from '@/features/auth/guards';
-import { useLogout } from '@/lib/api/generated/authentication/authentication';
-import { ChatWidget } from '@/features/ai/components/ChatWidget';
-import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/features/auth/store';
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: ({ location }) => {
-    // /admin/** cho ADMIN + STAFF + INVENTORY_MANAGER.
-    // Trang nào hẹp quyền hơn tự guard riêng.
     requireAnyRole({
       redirectFrom: location.href,
-      allowedRoles: ['ADMIN', 'STAFF', 'INVENTORY_MANAGER'],
+      allowedRoles: ['ADMIN', 'INVENTORY_MANAGER'],
     });
+
+    const roles = useAuthStore.getState().user?.roles ?? [];
+    if (!roles.includes('ADMIN')) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw redirect({ to: '/inventory' });
+    }
   },
   component: AdminLayout,
 });
 
+type AdminPath =
+  | '/admin'
+  | '/admin/owners'
+  | '/admin/pets'
+  | '/admin/vets'
+  | '/admin/vet-reviews'
+  | '/admin/visits'
+  | '/admin/workflows'
+  | '/admin/invoices'
+  | '/admin/diseases'
+  | '/admin/llm-config';
+
 interface NavItem {
-  to:
-    | '/admin'
-    | '/admin/owners'
-    | '/admin/pets'
-    | '/admin/vets'
-    | '/admin/vet-reviews'
-    | '/admin/visits'
-    | '/admin/workflows'
-    | '/admin/invoices'
-    | '/admin/diseases'
-    | '/admin/products'
-    | '/admin/llm-config';
+  to: AdminPath;
   label: string;
   icon: typeof LayoutDashboard;
-  exact?: boolean;
-  roles?: readonly string[];
 }
 
-const navItems: NavItem[] = [
-  {
-    to: '/admin',
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    exact: true,
-    roles: ['ADMIN', 'STAFF', 'INVENTORY_MANAGER'],
-  },
-  {
-    to: '/admin/visits',
-    label: 'Visits',
-    icon: CalendarCheck,
-    roles: ['ADMIN', 'STAFF'],
-  },
-  { to: '/admin/workflows', label: 'Workflows', icon: Workflow, roles: ['ADMIN'] },
-  { to: '/admin/owners', label: 'Owners', icon: Users, roles: ['ADMIN', 'STAFF'] },
-  { to: '/admin/pets', label: 'Pets', icon: PawPrint, roles: ['ADMIN', 'STAFF'] },
-  { to: '/admin/vets', label: 'Vets', icon: Stethoscope, roles: ['ADMIN', 'STAFF'] },
-  { to: '/admin/invoices', label: 'Hoá đơn', icon: Receipt, roles: ['ADMIN', 'STAFF'] },
-  { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill, roles: ['ADMIN'] },
-  {
-    to: '/admin/products',
-    label: 'Danh mục sản phẩm',
-    icon: Package,
-    roles: ['ADMIN', 'INVENTORY_MANAGER'],
-  },
-  {
-    to: '/admin/vet-reviews',
-    label: 'Duyệt thay đổi',
-    icon: ShieldCheck,
-    roles: ['ADMIN', 'STAFF'],
-  },
-  { to: '/admin/llm-config', label: 'AI Config', icon: Sparkles, roles: ['ADMIN'] },
+const operationsNav: NavItem[] = [
+  { to: '/admin/visits', label: 'Lịch khám', icon: CalendarCheck },
+  { to: '/admin/owners', label: 'Chủ nuôi', icon: Users },
+  { to: '/admin/pets', label: 'Thú cưng', icon: PawPrint },
+  { to: '/admin/invoices', label: 'Hoá đơn', icon: Receipt },
+];
+
+const clinicalAdminNav: NavItem[] = [
+  { to: '/admin/vets', label: 'Bác sĩ', icon: Stethoscope },
+  { to: '/admin/diseases', label: 'Danh mục bệnh', icon: Pill },
+  { to: '/admin/vet-reviews', label: 'Duyệt ảnh bác sĩ', icon: Camera },
+];
+
+const systemNav: NavItem[] = [
+  { to: '/admin/workflows', label: 'Quy trình', icon: Workflow },
+  { to: '/admin/llm-config', label: 'Cấu hình AI', icon: Sparkles },
 ];
 
 function AdminLayout() {
-  const clear = useAuthStore((s) => s.clear);
-  const user = useAuthStore((s) => s.user);
-  const roles = user?.roles ?? [];
-  // Logout BE để revoke refresh token; clear local store rồi redirect dù BE fail.
-  const logoutMutation = useLogout({
-    mutation: {
-      onSettled: () => {
-        clear();
-        window.location.href = '/login';
-      },
-    },
-  });
-
-  const visibleNav = navItems.filter(
-    (item) => roles.includes('ADMIN') || item.roles?.some((role) => roles.includes(role)),
-  );
-
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 flex-col border-r bg-muted/30 md:flex">
-        <div className="flex h-16 items-center border-b px-4">
-          <Link to="/admin" className="flex items-center gap-2">
-            <Logo size="sm" />
-          </Link>
+    <PortalShell
+      home="/admin"
+      portalLabel="Quản trị hệ thống"
+      navigation={
+        <div className="space-y-4">
+          <NavLink
+            item={{
+              to: '/admin',
+              label: 'Tổng quan',
+              icon: LayoutDashboard,
+            }}
+            exact
+          />
+
+          <AdminNavGroup label="Vận hành" items={operationsNav} />
+          <AdminNavGroup label="Chuyên môn" items={clinicalAdminNav} />
+          <AdminNavGroup label="Hệ thống" items={systemNav} />
         </div>
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {visibleNav.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              activeOptions={{ exact: item.exact ?? false }}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
-              )}
-              activeProps={{
-                className: 'bg-accent text-accent-foreground font-medium',
-              }}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="border-t p-3">
-          <div className="px-3 pb-2 text-xs text-muted-foreground">
-            {user?.username ?? 'Anonymous'}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-            disabled={logoutMutation.isPending}
-            onClick={() => logoutMutation.mutate()}
-          >
-            <LogOut className="size-4" />
-            {logoutMutation.isPending ? 'Đang đăng xuất…' : 'Đăng xuất'}
-          </Button>
-        </div>
-      </aside>
-      <main className="flex-1 overflow-auto p-6">
-        <Outlet />
-      </main>
-      {/* Floating AI chat widget — chỉ render khi đã login (check trong widget). */}
-      <ChatWidget />
+      }
+    />
+  );
+}
+
+function AdminNavGroup({ label, items }: { label: string; items: NavItem[] }) {
+  return (
+    <NavGroup label={label}>
+      {items.map((item) => (
+        <NavLink key={item.to} item={item} />
+      ))}
+    </NavGroup>
+  );
+}
+
+function NavLink({ item, exact = false }: { item: NavItem; exact?: boolean }) {
+  return (
+    <Link
+      to={item.to}
+      activeOptions={{ exact }}
+      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-violet-50 hover:text-violet-800"
+      activeProps={{
+        className: 'bg-violet-100 text-violet-800 font-bold',
+      }}
+    >
+      <item.icon className="size-4" />
+      {item.label}
+    </Link>
+  );
+}
+
+function NavGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="px-3 pb-1 text-[10px] font-black tracking-[0.16em] text-slate-400 uppercase">
+        {label}
+      </div>
+      <div className="space-y-1">{children}</div>
     </div>
   );
 }

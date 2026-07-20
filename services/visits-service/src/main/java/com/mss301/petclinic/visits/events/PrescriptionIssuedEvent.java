@@ -51,4 +51,17 @@ public record PrescriptionIssuedEvent(
                 customerUserId, customerUsername,
                 lines);
     }
+
+    public static PrescriptionIssuedEvent replay(UUID eventId, Long prescriptionId, Long visitId,
+                                                 UUID customerUserId, String customerUsername,
+                                                 List<Line> lines) {
+        return new PrescriptionIssuedEvent(
+                eventId,
+                "prescription.issued",
+                Instant.now(),
+                "visits-service",
+                prescriptionId, visitId,
+                customerUserId, customerUsername,
+                lines);
+    }
 }

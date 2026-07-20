@@ -10,7 +10,7 @@ export const Route = createFileRoute('/admin/pets')({
   component: PetsPage,
 });
 
-function PetsPage() {
+export function PetsPage() {
   // Read-only ở admin.pets — Pet write thực hiện qua trang Owners
   // (mỗi Pet thuộc 1 Owner aggregate, không tạo Pet "không chủ").
   // Endpoint write: POST/PUT/DELETE /api/v1/owners/{id}/pets[/{petId}].

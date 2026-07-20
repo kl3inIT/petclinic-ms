@@ -1,0 +1,56 @@
+flowchart LR
+  subgraph system["petclinic-ms"]
+    direction LR
+
+    subgraph apps["apps"]
+      web["web"]
+    end
+
+    subgraph services["services"]
+      direction LR
+
+      subgraph platform["platform services"]
+        direction LR
+        gateway["api-gateway"]
+        config_server["config-server"]
+        discovery_server["discovery-server"]
+        admin_server["admin-server"]
+      end
+
+      subgraph business["business services"]
+        direction LR
+        auth["auth-service"]
+        customers["customers-service"]
+        vets["vets-service"]
+        visits["visits-service"]
+        reviews["reviews-service"]
+        billing["billing-service"]
+        products["products-service"]
+        workflow["workflow-service"]
+        genai["genai-service"]
+      end
+
+      subgraph integration["integration services"]
+        direction LR
+        mcp["mcp-server"]
+        files["files-service"]
+        mailer["mailer-service"]
+      end
+    end
+
+    subgraph shared["shared libraries"]
+      direction LR
+      common_web["common-web"]
+      common_jpa["common-jpa"]
+      common_security["common-security"]
+      common_clients["common-clients"]
+      common_events["common-events"]
+      common_testing["common-testing"]
+    end
+  end
+
+  web -->|HTTPS| gateway
+  gateway -.->|routes| business
+  business -.->|Gradle| shared
+  gateway -.->|Gradle| shared
+  mcp -.->|Gradle| shared

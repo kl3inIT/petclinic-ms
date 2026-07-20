@@ -6,6 +6,7 @@ import type {
 /** Nhãn loại sản phẩm. */
 export const PRODUCT_TYPE_LABEL: Record<ProductResponseType, string> = {
   MEDICATION: 'Thuốc',
+  VACCINE: 'Vaccine',
   SERVICE: 'Dịch vụ',
   SUPPLY: 'Vật tư',
   MERCHANDISE: 'Hàng bán lẻ',
@@ -13,6 +14,7 @@ export const PRODUCT_TYPE_LABEL: Record<ProductResponseType, string> = {
 
 export const PRODUCT_TYPE_CLASS: Record<ProductResponseType, string> = {
   MEDICATION: 'bg-teal-100 text-teal-700',
+  VACCINE: 'bg-cyan-100 text-cyan-700',
   SERVICE: 'bg-blue-100 text-blue-700',
   SUPPLY: 'bg-amber-100 text-amber-700',
   MERCHANDISE: 'bg-pink-100 text-pink-700',

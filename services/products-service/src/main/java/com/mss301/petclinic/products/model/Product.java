@@ -1,6 +1,7 @@
 package com.mss301.petclinic.products.model;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -80,13 +81,13 @@ public class Product extends AbstractAuditingEntity {
 
     public Product(String code, String name, String category, String description, ProductType type,
                    BigDecimal unitPrice, String unit, Integer stockQuantity, Integer reorderLevel) {
-        this.code = code;
-        this.name = name;
-        this.category = category;
-        this.description = description;
+        this.code = code.trim().toUpperCase(Locale.ROOT);
+        this.name = name.trim();
+        this.category = normalizeNullable(category);
+        this.description = normalizeNullable(description);
         this.type = type;
         this.unitPrice = unitPrice;
-        this.unit = unit;
+        this.unit = normalizeNullable(unit);
         this.reorderLevel = reorderLevel != null ? reorderLevel : 0;
         // SERVICE không quản lý tồn kho → ép null bất kể input.
         this.stockQuantity = type.isStockTracked() ? (stockQuantity != null ? stockQuantity : 0) : null;
@@ -95,13 +96,12 @@ public class Product extends AbstractAuditingEntity {
 
     /** Partial update — chỉ áp field non-null (PATCH semantics ở service). */
     public void update(String name, String category, String description, BigDecimal unitPrice,
-                       String unit, Integer stockQuantity, Integer reorderLevel, Boolean active) {
-        if (name != null) this.name = name;
-        if (category != null) this.category = category;
-        if (description != null) this.description = description;
+                       String unit, Integer reorderLevel, Boolean active) {
+        if (name != null) this.name = name.trim();
+        if (category != null) this.category = normalizeNullable(category);
+        if (description != null) this.description = normalizeNullable(description);
         if (unitPrice != null) this.unitPrice = unitPrice;
-        if (unit != null) this.unit = unit;
-        if (stockQuantity != null && type.isStockTracked()) this.stockQuantity = stockQuantity;
+        if (unit != null) this.unit = normalizeNullable(unit);
         if (reorderLevel != null) this.reorderLevel = reorderLevel;
         if (active != null) this.active = active;
     }
@@ -112,6 +112,9 @@ public class Product extends AbstractAuditingEntity {
 
     /** Trừ kho khi kê đơn/cấp phát. Caller (service) đã validate đủ tồn + qty>0. */
     public void consume(int qty) {
+        if (!active) {
+            throw new IllegalStateException("Sản phẩm " + code + " đã ngừng kinh doanh");
+        }
         if (!isStockTracked()) {
             throw new IllegalStateException("Sản phẩm " + code + " không quản lý tồn kho");
         }
@@ -126,13 +129,21 @@ public class Product extends AbstractAuditingEntity {
 
     /** Nhập thêm kho. */
     public void restock(int qty) {
+        if (!active) {
+            throw new IllegalStateException("Sản phẩm " + code + " đã ngừng kinh doanh");
+        }
         if (!isStockTracked()) {
             throw new IllegalStateException("Sản phẩm " + code + " không quản lý tồn kho");
         }
         if (qty <= 0) {
             throw new IllegalArgumentException("Số lượng phải > 0");
         }
-        this.stockQuantity = (stockQuantity == null ? 0 : stockQuantity) + qty;
+        this.stockQuantity = Math.addExact(stockQuantity == null ? 0 : stockQuantity, qty);
+    }
+
+    /** Public delete semantics are logical so historical invoice/prescription references stay valid. */
+    public void deactivate() {
+        this.active = false;
     }
 
     /** Trạng thái tồn kho tính động. {@code null} cho mục không quản lý tồn. */
@@ -161,4 +172,10 @@ public class Product extends AbstractAuditingEntity {
     public Integer getReorderLevel() { return reorderLevel; }
     public boolean isActive() { return active; }
     public Long getVersion() { return version; }
+
+    private static String normalizeNullable(String value) {
+        if (value == null) return null;
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
 }

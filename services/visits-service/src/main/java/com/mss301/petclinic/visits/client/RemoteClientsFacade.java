@@ -1,5 +1,6 @@
 package com.mss301.petclinic.visits.client;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -76,9 +77,11 @@ public class RemoteClientsFacade {
         return productsClient.getProduct(productId);
     }
 
-    @CircuitBreaker(name = "products-service", fallbackMethod = "consumeProductFallback")
-    public ProductSummary consumeProduct(Long productId, int quantity) {
-        return productsClient.consume(productId, new ProductsClient.StockAdjust(quantity));
+    @CircuitBreaker(name = "products-service", fallbackMethod = "consumeProductsFallback")
+    public ProductsClient.InventoryOperationSummary consumeProducts(
+            String idempotencyKey, String sourceId, List<ProductsClient.BatchStockConsume.Line> items) {
+        return productsClient.consumeBatch(new ProductsClient.BatchStockConsume(
+                idempotencyKey, "PRESCRIPTION", sourceId, "Dispense catalog medication", items));
     }
 
     @SuppressWarnings("unused") // referenced by @CircuitBreaker fallbackMethod
@@ -120,9 +123,11 @@ public class RemoteClientsFacade {
     }
 
     @SuppressWarnings("unused")
-    private ProductSummary consumeProductFallback(Long productId, int quantity, Throwable t) {
-        log.warn("products-service circuit OPEN/down (consume productId={}, qty={}): {}",
-                productId, quantity, t.toString());
+    private ProductsClient.InventoryOperationSummary consumeProductsFallback(
+            String idempotencyKey, String sourceId,
+            List<ProductsClient.BatchStockConsume.Line> items, Throwable t) {
+        log.warn("products-service circuit OPEN/down (prescription={}, items={}): {}",
+                sourceId, items.size(), t.toString());
         throw new ExternalServiceUnavailableException("products-service", t);
     }
 }

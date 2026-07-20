@@ -1,0 +1,103 @@
+@startuml
+title PCMS - Code Based UML Package Diagram
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam shadowing false
+left to right direction
+
+package "petclinic-ms" <<subsystem>> {
+  package "apps/web\nroutes | features | lib/api/generated" as Web
+  package "build-logic\npetclinic.* convention plugins" as BuildLogic
+  package "config-repo\napplication*.yml | <service>*.yml" as ConfigRepo
+
+  package "services" <<subsystem>> {
+    package "platform services" as Platform {
+      package "api-gateway" as Gateway
+      package "auth-service" as Auth
+      package "config-server" as ConfigServer
+      package "discovery-server" as Discovery
+      package "admin-server" as Admin
+    }
+
+    package "domain services" as Domain {
+      package "customers-service" as Customers
+      package "vets-service" as Vets
+      package "visits-service" as Visits
+      package "billing-service" as Billing
+      package "products-service" as Products
+      package "reviews-service" as Reviews
+    }
+
+    package "workflow + AI/MCP" as WorkflowAi {
+      package "workflow-service" as Workflow
+      package "genai-service" as Genai
+      package "mcp-server" as Mcp
+    }
+
+    package "Spring service internal packages\nscanned under services/*/src/main/java" as Internal {
+      package "controller" as Controller
+      package "dto.req / dto.res" as Dto
+      package "service / service.impl" as Service
+      package "model / repository" as Persistence
+      package "client / events / consumer / saga" as Integration
+      package "config / exception / security" as Support
+    }
+  }
+
+  package "shared" <<subsystem>> {
+    package "common-web" as CommonWeb
+    package "common-jpa" as CommonJpa
+    package "common-security" as CommonSecurity
+    package "common-clients" as CommonClients
+    package "common-events" as CommonEvents
+    package "common-testing" as CommonTesting
+  }
+
+  package "Go services" as GoServices {
+    package "files-service" as FilesGo
+    package "mailer-service" as MailerGo
+  }
+}
+
+package "external" <<external>> {
+  package "PostgreSQL" as PostgreSQL
+  package "RabbitMQ" as RabbitMQ
+  package "Eureka" as Eureka
+  package "MinIO" as MinIO
+  package "Mailpit" as Mailpit
+  package "Camunda/Zeebe" as Camunda
+  package "LLM Provider" as LLM
+}
+
+Web ..> Gateway : generated REST client
+BuildLogic ..> Services : Gradle conventions
+ConfigRepo ..> Services : externalized config
+Gateway ..> Domain : routes
+Gateway ..> WorkflowAi : routes
+
+Platform ..> Shared : common-web/security
+Domain ..> Shared : common-web/jpa/security/events/clients
+WorkflowAi ..> Shared : common-web/security/clients
+Services ..> External : PostgreSQL/RabbitMQ/Eureka/Camunda/LLM
+GoServices ..> External : MinIO/Mailpit/RabbitMQ
+
+Controller ..> Dto
+Dto ..> Service
+Service ..> Persistence
+Persistence ..> Integration
+
+note right of GoServices
+HTTP clients from code:
+visits -> customers/vets/auth/workflow/products
+reviews -> visits/billing
+billing -> products
+mcp -> customers/vets/visits
+genai -> mcp
+end note
+
+note right of External
+AMQP in code:
+publish: auth/customers/vets/visits/reviews/billing
+consume: billing/visits/mailer
+end note
+@enduml

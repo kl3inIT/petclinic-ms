@@ -1,0 +1,28 @@
+@startuml
+title PCMS - Files Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "files-service" <<Go microservice>> {
+  package "github.com/mss301/petclinic-files" {
+    package "cmd" {
+      package "main (cmd/files)" <<main package>>
+    }
+    package "internal" {
+      package "config"
+      package "server"
+    }
+  }
+}
+
+package "github.com/minio/minio-go/v7" <<external library>>
+
+"main (cmd/files)" ..> config
+"main (cmd/files)" ..> server
+server ..> "github.com/minio/minio-go/v7" : object storage client
+
+@enduml

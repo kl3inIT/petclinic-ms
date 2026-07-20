@@ -1,0 +1,29 @@
+@startuml
+title PCMS - API Gateway Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "api-gateway" <<Spring Boot service>> {
+  package "com.mss301.petclinic.gateway" {
+    package "config"
+    package "controller"
+  }
+}
+
+package "shared" {
+  package "common-web" <<library>>
+  package "common-security" <<library>>
+}
+
+package "routed service API contracts" <<external APIs>>
+
+config ..> "routed service API contracts" : route definitions
+config ..> controller : fallback endpoints
+config ..> "common-security" : JWT validation
+controller ..> "common-web" : ProblemDetail
+
+@enduml

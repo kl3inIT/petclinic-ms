@@ -1,20 +1,10 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
-import {
-  motion,
-  useReducedMotion,
-  useScroll,
-  useSpring,
-  useTransform,
-} from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   PawPrint,
   Stethoscope,
-  Syringe,
   Scissors,
-  Smile,
-  ShoppingBag,
   Phone,
-  Sparkles,
   Clock,
   CalendarCheck,
   Star,
@@ -24,31 +14,24 @@ import {
   Mail,
   MapPin,
   CheckCircle2,
-  Calendar,
   ShieldCheck,
   ChevronRight,
 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
+import { getPortalHref, PublicHeader } from '@/components/public-header';
 import { Button } from '@/components/ui/button';
-import { Logo } from '@/components/logo';
 import { useAuthStore } from '@/features/auth/store';
+import { LandingImage } from '@/features/landing/components/LandingImage';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/')({
   component: LandingPage,
 });
 
-function roleHome(roles: string[] | undefined): string {
-  if (!roles?.length) return '/login';
-  if (roles.includes('USER')) return '/customer/book';
-  if (roles.includes('VET')) return '/vet';
-  return '/admin/visits';
-}
-
 function LandingPage() {
   const user = useAuthStore((s) => s.user);
-  const ctaHref = user ? roleHome(user.roles) : '/login';
+  const ctaHref = user ? getPortalHref(user.roles) : '/login';
 
   useEffect(() => {
     document.documentElement.classList.add('landing-scrollbar-hidden');
@@ -62,7 +45,7 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#FAFAFF] font-sans text-slate-900 selection:bg-violet-200 selection:text-violet-900">
-      <SiteHeader user={user} ctaHref={ctaHref} />
+      <PublicHeader activePage="home" />
       <main>
         <Hero ctaHref={ctaHref} />
         <TrustStats />
@@ -70,7 +53,7 @@ function LandingPage() {
         <Services />
         <Process />
         <FeaturedDoctors />
-        <PetCareJourney />
+        <CareJourney />
         <Facilities />
         <Pricing ctaHref={ctaHref} />
         <Testimonials />
@@ -82,185 +65,53 @@ function LandingPage() {
   );
 }
 
-/* ────────────────────────────── Header ────────────────────────────── */
-
-interface HeaderProps {
-  user: ReturnType<typeof useAuthStore.getState>['user'];
-  ctaHref: string;
-}
-
-function SiteHeader({ user, ctaHref }: HeaderProps) {
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    let ticking = false;
-
-    const syncScrolledState = () => {
-      ticking = false;
-      const nextIsScrolled = window.scrollY > 20;
-      setIsScrolled((current) => (current === nextIsScrolled ? current : nextIsScrolled));
-    };
-
-    const handleScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        window.requestAnimationFrame(syncScrolledState);
-      }
-    };
-
-    syncScrolledState();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const nav = [
-    { label: 'Trang chủ', href: '#home' },
-    { label: 'Dịch vụ', href: '#services' },
-    { label: 'Quy trình', href: '#process' },
-    { label: 'Bác sĩ', href: '#team' },
-    { label: 'Bảng giá', href: '#pricing' },
-    { label: 'Đánh giá', href: '#testimonials' },
-  ];
-
-  return (
-    <header
-      className={cn(
-        'fixed top-0 z-50 w-full border-b transition-all duration-300',
-        isScrolled
-          ? 'border-white/45 bg-gradient-to-r from-white/70 via-white/55 to-violet-50/65 py-3 shadow-[0_10px_40px_rgba(15,23,42,0.10)] ring-1 ring-white/45 backdrop-blur-2xl backdrop-saturate-150'
-          : 'border-transparent bg-transparent py-5',
-      )}
-    >
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2">
-          <Logo size="sm" />
-        </Link>
-
-        <nav className="hidden items-center gap-6 lg:flex xl:gap-8">
-          {nav.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className="text-[15px] font-semibold text-slate-600 transition-colors hover:text-violet-600"
-            >
-              {item.label}
-            </a>
-          ))}
-          <Link
-            to="/store"
-            className="text-[15px] font-semibold text-slate-600 transition-colors hover:text-violet-600"
-          >
-            Cửa hàng
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-4">
-          <a
-            href="tel:18002424"
-            className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[15px] font-bold text-slate-700 transition-colors hover:bg-slate-50 md:flex"
-          >
-            <Phone className="size-4 text-violet-600" />
-            1800 2424
-          </a>
-          <Button
-            asChild
-            size="lg"
-            className="rounded-full bg-violet-600 px-6 font-bold shadow-lg shadow-violet-600/20 hover:bg-violet-700"
-          >
-            <Link to={ctaHref}>
-              {user ? (
-                'Trang của tôi'
-              ) : (
-                <>
-                  <CalendarCheck className="mr-2 size-5" />
-                  Đặt lịch ngay
-                </>
-              )}
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </header>
-  );
-}
-
 /* ────────────────────────────── Hero ────────────────────────────── */
 
 function Hero({ ctaHref }: { ctaHref: string }) {
-  const shouldReduceMotion = useReducedMotion();
-  const { scrollY } = useScroll();
-  const heroImageY = useTransform(scrollY, [0, 500], [0, shouldReduceMotion ? 0 : 56]);
-  const heroCardY = useTransform(scrollY, [0, 500], [0, shouldReduceMotion ? 0 : -28]);
-  const smoothHeroImageY = useSpring(heroImageY, {
-    stiffness: 120,
-    damping: 28,
-    mass: 0.25,
-  });
-  const smoothHeroCardY = useSpring(heroCardY, {
-    stiffness: 120,
-    damping: 28,
-    mass: 0.25,
-  });
-
   return (
     <section
       id="home"
-      className="relative overflow-hidden px-6 pt-32 pb-20 lg:pt-40 lg:pb-32"
+      className="relative flex min-h-[760px] items-center overflow-hidden pt-20"
     >
-      {/* Background Blobs */}
-      <div className="pointer-events-none absolute top-0 left-0 -z-10 h-full w-full overflow-hidden">
-        <div className="absolute -top-[10%] -right-[5%] h-[600px] w-[600px] rounded-full bg-violet-200/50 opacity-60 mix-blend-multiply blur-3xl" />
-        <div className="absolute top-[20%] -left-[10%] h-[500px] w-[500px] rounded-full bg-teal-200/50 opacity-60 mix-blend-multiply blur-3xl" />
-        <div className="absolute -bottom-[10%] left-[20%] h-[400px] w-[400px] rounded-full bg-pink-200/40 opacity-50 mix-blend-multiply blur-3xl" />
-      </div>
+      <LandingImage
+        src="/images/landing/hospital-hero-v2.jpg"
+        alt="Không gian bệnh viện thú y MSS301 Petclinic"
+        className="absolute inset-0 h-full w-full object-cover object-[62%_center]"
+        width={1792}
+        height={1024}
+        fetchPriority="high"
+        decoding="async"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/72 to-slate-950/10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-transparent" />
 
-      {/* Floating Paws */}
-      <motion.div
-        animate={shouldReduceMotion ? undefined : { y: [0, -15, 0], rotate: [0, 5, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute top-[25%] left-[10%] -z-10 hidden lg:block"
-      >
-        <PawPrint className="size-16 rotate-[-15deg] text-violet-200/60" />
-      </motion.div>
-      <motion.div
-        animate={shouldReduceMotion ? undefined : { y: [0, 20, 0], rotate: [0, -10, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-        className="absolute top-[15%] right-[15%] -z-10 hidden lg:block"
-      >
-        <PawPrint className="size-24 rotate-[25deg] text-teal-200/50" />
-      </motion.div>
-
-      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-2">
-        {/* Left Content */}
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 py-20 lg:px-8 lg:py-28">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
-          className="max-w-2xl text-center lg:text-left"
+          className="max-w-3xl"
         >
-          <div className="mb-6 inline-flex items-center rounded-full border border-violet-100 bg-white/80 px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm backdrop-blur-sm">
-            <Heart className="mr-2 size-4 fill-violet-500 text-violet-500" />
-            Phòng khám thú y cao cấp
+          <div className="mb-6 inline-flex items-center rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-bold text-white shadow-lg backdrop-blur-md">
+            <ShieldCheck className="mr-2 size-4 text-teal-300" />
+            Bệnh viện thú y hiện đại · Chăm sóc 24/7
           </div>
 
-          <h1 className="text-5xl leading-[1.1] font-black tracking-tight text-slate-900 sm:text-6xl lg:text-[4rem]">
-            Chăm sóc thú cưng
-            <br />
-            <span className="bg-gradient-to-r from-violet-600 to-teal-500 bg-clip-text text-transparent">
-              như người thân
-            </span>
+          <h1 className="max-w-3xl text-5xl leading-[1.05] font-black tracking-[-0.04em] text-white sm:text-6xl lg:text-7xl">
+            Chăm sóc chuyên sâu,
+            <span className="block text-teal-300">tận tâm như người nhà</span>
           </h1>
 
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-slate-600 lg:mx-0">
-            Đặt lịch khám nhanh, bác sĩ tận tâm, chăm sóc toàn diện cho chó mèo và thú
-            cưng của bạn. Mang đến những điều tốt nhất cho những người bạn nhỏ.
+          <p className="mt-7 max-w-2xl text-lg leading-relaxed font-medium text-slate-200 sm:text-xl">
+            MSS301 Petclinic kết hợp đội ngũ bác sĩ giàu kinh nghiệm, quy trình minh bạch
+            và hệ thống chẩn đoán hiện đại để đồng hành cùng thú cưng ở mọi giai đoạn.
           </p>
 
-          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
+          <div className="mt-9 flex flex-col gap-4 sm:flex-row">
             <Button
               asChild
               size="xl"
-              className="w-full rounded-full bg-violet-600 px-8 py-6 text-base font-bold shadow-xl shadow-violet-600/25 transition-transform duration-300 hover:scale-105 hover:bg-violet-700 sm:w-auto"
+              className="w-full rounded-full bg-violet-600 px-8 py-6 text-base font-bold shadow-xl shadow-violet-950/30 hover:bg-violet-500 sm:w-auto"
             >
               <Link to={ctaHref}>
                 <CalendarCheck className="mr-2 size-5" /> Đặt lịch khám ngay
@@ -270,118 +121,32 @@ function Hero({ ctaHref }: { ctaHref: string }) {
               asChild
               variant="outline"
               size="xl"
-              className="w-full rounded-full border-slate-300 bg-white/50 px-8 py-6 text-base font-bold text-slate-700 backdrop-blur-sm transition-all duration-300 hover:border-violet-300 hover:bg-white sm:w-auto"
+              className="w-full rounded-full border-white/35 bg-white/10 px-8 py-6 text-base font-bold text-white backdrop-blur-md hover:bg-white hover:text-slate-950 sm:w-auto"
             >
               <a href="#services">
-                Xem dịch vụ <ChevronDown className="ml-2 size-5" />
+                Khám phá dịch vụ <ChevronDown className="ml-2 size-5" />
               </a>
             </Button>
           </div>
 
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 lg:justify-start">
-            <Badge
-              icon={Smile}
-              text="10.000+"
-              subtext="Tin tưởng"
-              color="text-teal-600"
-              bg="bg-teal-100"
-            />
-            <Badge
-              icon={Clock}
-              text="24/7"
-              subtext="Hỗ trợ"
-              color="text-amber-600"
-              bg="bg-amber-100"
-            />
-            <Badge
-              icon={Stethoscope}
-              text="15+"
-              subtext="Bác sĩ"
-              color="text-violet-600"
-              bg="bg-violet-100"
-            />
+          <div className="mt-12 grid max-w-2xl gap-3 text-sm font-bold text-white sm:grid-cols-3">
+            {[
+              { icon: Stethoscope, label: '15+ bác sĩ chuyên khoa' },
+              { icon: Clock, label: 'Tiếp nhận cấp cứu 24/7' },
+              { icon: ShieldCheck, label: 'Quy trình an toàn' },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-3 rounded-2xl border border-white/15 bg-slate-950/30 px-4 py-3 backdrop-blur-md"
+              >
+                <item.icon className="size-5 shrink-0 text-teal-300" />
+                <span>{item.label}</span>
+              </div>
+            ))}
           </div>
         </motion.div>
-
-        {/* Right Image */}
-        <div className="relative z-10 mt-10 lg:mt-0 lg:pl-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.15 }}
-            style={{ y: smoothHeroImageY, willChange: 'transform' }}
-            className="group relative mx-auto max-w-[500px]"
-          >
-            {/* Main Image */}
-            <div className="relative aspect-[4/5] overflow-hidden rounded-[40px] border-8 border-white bg-white shadow-2xl">
-              <img
-                src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&q=80&auto=format&fit=crop"
-                alt="Chó và mèo đáng yêu"
-                className="h-full w-full object-cover"
-                decoding="async"
-                fetchPriority="high"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-            </div>
-
-            {/* Floating Elements */}
-            <motion.div
-              style={{ y: smoothHeroCardY, willChange: 'transform' }}
-              className="absolute -bottom-6 -left-10 hidden items-center gap-4 rounded-3xl border border-slate-100 bg-white px-6 py-5 shadow-xl md:flex"
-            >
-              <div className="flex -space-x-3">
-                <img
-                  className="h-10 w-10 rounded-full border-2 border-white object-cover"
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80"
-                  alt="Customer"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <img
-                  className="h-10 w-10 rounded-full border-2 border-white object-cover"
-                  src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&q=80"
-                  alt="Customer"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-violet-100 text-xs font-bold text-violet-700">
-                  +2k
-                </div>
-              </div>
-              <div className="text-sm font-semibold text-slate-700">
-                Khách hàng
-                <br />
-                hài lòng <Heart className="inline size-4 fill-rose-500 text-rose-500" />
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
       </div>
     </section>
-  );
-}
-
-interface BadgeProps {
-  icon: React.ElementType;
-  text: string;
-  subtext: string;
-  color: string;
-  bg: string;
-}
-
-function Badge({ icon: Icon, text, subtext, color, bg }: BadgeProps) {
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        className={cn('flex size-12 items-center justify-center rounded-2xl', bg, color)}
-      >
-        <Icon className="size-6" />
-      </div>
-      <div>
-        <p className="text-lg leading-none font-bold text-slate-900">{text}</p>
-        <p className="mt-1 text-sm font-medium text-slate-500">{subtext}</p>
-      </div>
-    </div>
   );
 }
 
@@ -430,93 +195,101 @@ function TrustStats() {
 /* ─────────────────────────── Why Choose Us ─────────────────────────── */
 
 function WhyChooseUs() {
-  const features = [
+  const reasons = [
     {
       title: 'Bác sĩ giàu kinh nghiệm',
-      desc: 'Đội ngũ bác sĩ thú y chuyên môn cao, nhiều năm kinh nghiệm.',
-      icon: Stethoscope,
-      color: 'text-violet-600',
-      bg: 'bg-violet-50',
+      desc: 'Hồ sơ chuyên môn rõ ràng, phối hợp hội chẩn khi ca bệnh cần nhiều chuyên khoa.',
     },
     {
       title: 'Thiết bị hiện đại',
-      desc: 'Trang thiết bị tiên tiến, phòng khám đạt chuẩn an toàn.',
-      icon: Sparkles,
-      color: 'text-teal-600',
-      bg: 'bg-teal-50',
+      desc: 'Xét nghiệm, chẩn đoán hình ảnh và phòng phẫu thuật được tổ chức ngay tại clinic.',
     },
     {
       title: 'Quy trình rõ ràng',
-      desc: 'Quy trình khám chữa bệnh khoa học, minh bạch và hiệu quả.',
-      icon: Activity,
-      color: 'text-sky-600',
-      bg: 'bg-sky-50',
-    },
-    {
-      title: 'Chăm sóc tận tâm',
-      desc: 'Luôn đặt sức khỏe và sự an toàn của thú cưng lên hàng đầu.',
-      icon: Heart,
-      color: 'text-rose-600',
-      bg: 'bg-rose-50',
-    },
-    {
-      title: 'Đặt lịch online',
-      desc: 'Đặt lịch nhanh chóng, dễ dàng mọi lúc mọi nơi.',
-      icon: CalendarCheck,
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50',
-    },
-    {
-      title: 'Nhắc lịch tự động',
-      desc: 'Hệ thống nhắc lịch tự động qua SMS & Email.',
-      icon: Clock,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      desc: 'Tình trạng, lựa chọn điều trị và chi phí dự kiến được trao đổi trước khi thực hiện.',
     },
   ];
 
   return (
-    <section className="bg-[#FAFAFF] px-6 py-24">
-      <div className="mx-auto max-w-7xl">
+    <section className="bg-[#F7F7FC] px-6 py-28">
+      <div className="mx-auto grid max-w-7xl items-stretch gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:gap-20">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: -24 }}
+          whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: false, amount: 0.22 }}
-          className="mx-auto mb-16 max-w-2xl text-center"
+          className="relative min-h-[480px] overflow-hidden rounded-[36px] bg-slate-200"
         >
-          <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
-            Vì sao chọn chúng tôi?
-          </p>
-          <h2 className="text-3xl leading-tight font-black text-slate-900 md:text-4xl">
-            Mang đến điều tốt nhất cho thú cưng
-          </h2>
+          <LandingImage
+            src="/images/landing/why-care-v2.jpg"
+            alt="Bác sĩ trao đổi kế hoạch chăm sóc với chủ thú cưng"
+            className="absolute inset-0 h-full w-full object-cover"
+            width={1365}
+            height={1024}
+            loading="lazy"
+            decoding="async"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+          <div className="absolute right-6 bottom-6 left-6 flex items-end justify-between gap-6 text-white">
+            <div>
+              <p className="text-sm font-bold tracking-widest text-teal-300 uppercase">
+                Đồng hành lâu dài
+              </p>
+              <p className="mt-2 max-w-sm text-2xl font-black">
+                Mọi quyết định đều được giải thích rõ ràng
+              </p>
+            </div>
+            <div className="shrink-0 rounded-2xl border border-white/20 bg-white/15 px-4 py-3 text-center backdrop-blur-md">
+              <p className="text-2xl font-black">4.9/5</p>
+              <p className="text-xs font-semibold text-slate-200">mức hài lòng</p>
+            </div>
+          </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.22 }}
-              transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -5 }}
-              className="group rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-violet-100/50"
-            >
+        <motion.div
+          initial={{ opacity: 0, x: 24 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: false, amount: 0.22 }}
+          className="flex flex-col justify-center"
+        >
+          <p className="mb-4 text-sm font-bold tracking-widest text-violet-600 uppercase">
+            Vì sao chọn MSS301 Petclinic?
+          </p>
+          <h2 className="max-w-2xl text-4xl leading-tight font-black tracking-tight text-slate-950 md:text-5xl">
+            Chăm sóc có cơ sở, không chỉ bằng cảm tính
+          </h2>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600">
+            Mỗi lần thăm khám là một cuộc trao đổi minh bạch giữa bác sĩ và gia đình, với
+            dữ liệu sức khỏe được theo dõi xuyên suốt.
+          </p>
+
+          <div className="mt-10 border-y border-slate-300/80">
+            {reasons.map((reason, index) => (
               <div
-                className={cn(
-                  'mb-6 inline-flex size-16 items-center justify-center rounded-2xl transition-transform group-hover:scale-110',
-                  f.bg,
-                  f.color,
-                )}
+                key={reason.title}
+                className="grid gap-3 border-b border-slate-300/80 py-6 last:border-b-0 sm:grid-cols-[52px_1fr]"
               >
-                <f.icon className="size-8" />
+                <span className="font-black text-violet-600">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <div>
+                  <h3 className="text-xl font-black text-slate-950">{reason.title}</h3>
+                  <p className="mt-2 leading-relaxed text-slate-600">{reason.desc}</p>
+                </div>
               </div>
-              <h3 className="mb-3 text-xl font-bold text-slate-900">{f.title}</h3>
-              <p className="leading-relaxed text-slate-600">{f.desc}</p>
-            </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          <div className="mt-7 flex flex-wrap gap-2 text-sm font-bold text-slate-700">
+            {['Đặt lịch online', 'Nhắc lịch tự động', 'Theo dõi sau khám'].map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-slate-300 bg-white px-4 py-2"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -525,125 +298,114 @@ function WhyChooseUs() {
 /* ─────────────────────────── Services ─────────────────────────── */
 
 function Services() {
-  const services = [
+  const serviceGroups = [
     {
-      title: 'Khám tổng quát',
-      desc: 'Kiểm tra sức khỏe định kỳ, tư vấn phác đồ điều trị.',
-      img: 'https://images.unsplash.com/photo-1544568100-847a948585b9?w=400&q=80',
-      icon: Stethoscope,
-      color: 'text-violet-500',
+      title: 'Khám & phòng bệnh',
+      desc: 'Chủ động theo dõi sức khỏe và xây nền tảng phòng bệnh phù hợp theo độ tuổi.',
+      services: ['Khám tổng quát', 'Tiêm phòng', 'Nha khoa'],
+      image: '/images/landing/service-wellness-v2.jpg',
+      imageAlt: 'Bác sĩ khám sức khỏe tổng quát cho chó',
     },
     {
-      title: 'Tiêm phòng',
-      desc: 'Vắc-xin an toàn, nhập khẩu, bảo vệ bé yêu.',
-      img: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&q=80',
-      icon: Syringe,
-      color: 'text-teal-500',
+      title: 'Chẩn đoán & điều trị',
+      desc: 'Kết quả hình ảnh và xét nghiệm hỗ trợ bác sĩ đưa ra hướng điều trị có cơ sở.',
+      services: ['Siêu âm / X-Quang', 'Phẫu thuật'],
+      image: '/images/landing/service-diagnostics-v2.jpg',
+      imageAlt: 'Bác sĩ thực hiện siêu âm cho chó',
     },
     {
-      title: 'Nha khoa',
-      desc: 'Cạo vôi răng, điều trị nướu, giữ răng chắc khỏe.',
-      img: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400&q=80',
-      icon: Smile,
-      color: 'text-sky-500',
+      title: 'Grooming & chăm sóc',
+      desc: 'Quy trình tắm, sấy và cắt tỉa nhẹ nhàng, phù hợp với da lông của từng bé.',
+      services: ['Grooming & Spa', 'Chăm sóc da lông'],
+      image: '/images/landing/service-grooming-v2.jpg',
+      imageAlt: 'Nhân viên grooming chăm sóc lông cho chó',
     },
     {
-      title: 'Grooming & Spa',
-      desc: 'Tắm gội, cắt tỉa lông, làm đẹp toàn diện.',
-      img: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=400&q=80',
-      icon: Scissors,
-      color: 'text-pink-500',
-    },
-    {
-      title: 'Siêu âm / X-Quang',
-      desc: 'Chẩn đoán hình ảnh với máy móc hiện đại.',
-      img: 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?w=400&q=80',
-      icon: Activity,
-      color: 'text-indigo-500',
-    },
-    {
-      title: 'Phẫu thuật',
-      desc: 'Phẫu thuật an toàn, gây mê hồi sức chuyên sâu.',
-      img: 'https://images.unsplash.com/photo-1584432810601-6c7f27d2362b?w=400&q=80',
-      icon: ShieldCheck,
-      color: 'text-rose-500',
-    },
-    {
-      title: 'Pet Shop',
-      desc: 'Thức ăn cao cấp, phụ kiện chính hãng.',
-      img: 'https://images.unsplash.com/photo-1596492784531-6e6eb5ea9993?w=400&q=80',
-      icon: ShoppingBag,
-      color: 'text-amber-500',
-    },
-    {
-      title: 'Lưu trú',
-      desc: 'Khách sạn thú cưng tiện nghi, chăm sóc tận tình.',
-      img: 'https://images.unsplash.com/photo-1541364983171-a8ba01e95cfc?w=400&q=80',
-      icon: PawPrint,
-      color: 'text-emerald-500',
+      title: 'Tiện ích tại clinic',
+      desc: 'Dinh dưỡng, phụ kiện và không gian lưu trú được tư vấn ngay tại một địa điểm.',
+      services: ['Pet Shop', 'Lưu trú'],
+      image: '/images/landing/service-convenience-v2.jpg',
+      imageAlt: 'Nhân viên tư vấn sản phẩm dinh dưỡng cho chủ thú cưng',
+      storeLink: true,
     },
   ];
 
   return (
-    <section id="services" className="bg-white px-6 py-24">
+    <section id="services" className="bg-white px-6 py-28">
       <div className="mx-auto max-w-7xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.22 }}
-          className="mx-auto mb-16 max-w-2xl text-center"
-        >
-          <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
-            Dịch vụ đa dạng
+        <div className="mb-14 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.22 }}
+            className="max-w-3xl"
+          >
+            <p className="mb-4 text-sm font-bold tracking-widest text-violet-600 uppercase">
+              Chuyên môn & dịch vụ
+            </p>
+            <h2 className="text-4xl leading-tight font-black tracking-tight text-slate-950 md:text-5xl">
+              Một hệ sinh thái chăm sóc liền mạch
+            </h2>
+          </motion.div>
+          <p className="max-w-md text-base leading-relaxed text-slate-600 lg:text-right">
+            Từ phòng bệnh, điều trị đến grooming và lưu trú — mỗi dịch vụ đều có quy trình
+            riêng, nhân sự phụ trách và thông tin rõ ràng.
           </p>
-          <h2 className="text-3xl leading-tight font-black text-slate-900 md:text-4xl">
-            Chăm sóc toàn diện cho bé
-          </h2>
-        </motion.div>
+        </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {services.map((s, i) => (
-            <motion.div
-              key={s.title}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {serviceGroups.map((group, index) => (
+            <motion.article
+              key={group.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: false, amount: 0.22 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ y: -5 }}
-              className="group relative overflow-hidden rounded-[32px] border border-slate-100 bg-[#FAFAFF] transition-all duration-300 hover:border-violet-100 hover:shadow-xl"
+              transition={{ delay: index * 0.08 }}
+              className="group overflow-hidden rounded-[32px] border border-slate-200 bg-[#FAFAFF] transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-violet-100/60"
             >
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={s.img}
-                  alt={s.title}
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+              <div className="relative aspect-[16/9] overflow-hidden">
+                <LandingImage
+                  src={group.image}
+                  alt={group.imageAlt}
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  width={1365}
+                  height={1024}
+                  loading="lazy"
+                  decoding="async"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                <div
-                  className={cn(
-                    'absolute top-4 right-4 rounded-xl bg-white p-2 shadow-sm',
-                    s.color,
-                  )}
-                >
-                  <s.icon className="size-5" />
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
+                <span className="absolute bottom-5 left-6 text-sm font-black tracking-widest text-white/80 uppercase">
+                  0{index + 1}
+                </span>
               </div>
-              <div className="p-6">
-                <h3 className="mb-2 text-lg font-bold text-slate-900">{s.title}</h3>
-                <p className="text-sm leading-relaxed text-slate-600">{s.desc}</p>
-                {s.title === 'Pet Shop' ? (
+              <div className="p-7 sm:p-8">
+                <h3 className="text-2xl font-black text-slate-950">{group.title}</h3>
+                <p className="mt-3 max-w-xl leading-relaxed text-slate-600">
+                  {group.desc}
+                </p>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {group.services.map((service) => (
+                    <span
+                      key={service}
+                      className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-bold text-slate-700"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
+                {group.storeLink && (
                   <Button
                     asChild
                     variant="link"
-                    className="mt-4 h-auto p-0 font-bold text-violet-600"
+                    className="mt-5 h-auto p-0 font-bold text-violet-600"
                   >
                     <Link to="/store">
-                      Vào cửa hàng <ChevronRight className="size-4" />
+                      Xem catalog tại cửa hàng <ChevronRight className="size-4" />
                     </Link>
                   </Button>
-                ) : null}
+                )}
               </div>
-            </motion.div>
+            </motion.article>
           ))}
         </div>
       </div>
@@ -655,67 +417,69 @@ function Services() {
 
 function Process() {
   const steps = [
-    { icon: PawPrint, title: 'Chọn thú cưng', desc: 'Chọn bé cưng cần chăm sóc.' },
-    { icon: Calendar, title: 'Chọn thời gian', desc: 'Chọn bác sĩ và giờ thuận tiện.' },
-    { icon: CheckCircle2, title: 'Xác nhận', desc: 'Nhận SMS/Email xác nhận lịch.' },
-    { icon: Heart, title: 'Đến khám', desc: 'Đưa bé đến và trải nghiệm dịch vụ.' },
+    { title: 'Chọn thú cưng', desc: 'Chọn hồ sơ bé cần được chăm sóc.' },
+    { title: 'Chọn lịch phù hợp', desc: 'Chọn bác sĩ, ngày và khung giờ thuận tiện.' },
+    { title: 'Nhận xác nhận', desc: 'Thông tin lịch hẹn được gửi qua SMS và email.' },
+    { title: 'Đến khám', desc: 'Nhân viên tiếp nhận đã có sẵn thông tin của bé.' },
   ];
 
   return (
-    <section
-      id="process"
-      className="relative overflow-hidden bg-gradient-to-b from-[#FAFAFF] to-white px-6 py-24"
-    >
-      <div className="relative z-10 mx-auto max-w-7xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, amount: 0.22 }}
-          className="mx-auto mb-20 max-w-2xl text-center"
-        >
-          <p className="mb-3 text-sm font-bold tracking-widest text-violet-600 uppercase">
-            Quy trình đơn giản
-          </p>
-          <h2 className="text-3xl leading-tight font-black text-slate-900 md:text-4xl">
-            Đặt lịch chỉ với 4 bước
-          </h2>
-        </motion.div>
-
-        <div className="relative">
-          {/* Connector Line */}
-          <div className="absolute top-[calc(50%-2px)] right-[10%] left-[10%] hidden h-[2px] -translate-y-1/2 bg-slate-200 md:block">
-            <motion.div
-              initial={{ width: 0 }}
-              whileInView={{ width: '100%' }}
-              viewport={{ once: false, amount: 0.22 }}
-              transition={{ duration: 1.5, ease: 'easeInOut' }}
-              className="h-full bg-violet-400"
-            />
+    <section id="process" className="bg-[#F7F7FC] px-6 py-28">
+      <motion.div
+        initial={{ opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false, amount: 0.16 }}
+        className="mx-auto grid max-w-7xl overflow-hidden rounded-[44px] bg-slate-950 shadow-2xl shadow-slate-300/50 lg:grid-cols-[0.9fr_1.1fr]"
+      >
+        <div className="relative min-h-[440px] lg:min-h-[620px]">
+          <LandingImage
+            src="/images/landing/process-reception-v2.jpg"
+            alt="Nhân viên MSS301 Petclinic xác nhận lịch hẹn với khách hàng"
+            className="absolute inset-0 h-full w-full object-cover"
+            width={1365}
+            height={1024}
+            loading="lazy"
+            decoding="async"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent" />
+          <div className="absolute right-7 bottom-7 left-7 rounded-2xl border border-white/15 bg-slate-950/45 p-5 text-white backdrop-blur-md">
+            <p className="text-sm font-bold tracking-widest text-teal-300 uppercase">
+              Tiếp nhận chủ động
+            </p>
+            <p className="mt-2 text-xl font-black">
+              Ít chờ đợi, nhiều thời gian cho bác sĩ
+            </p>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-4 md:gap-8">
-            {steps.map((s, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: false, amount: 0.22 }}
-                transition={{ delay: i * 0.2 }}
-                className="group relative flex flex-col items-center text-center"
+        <div className="flex flex-col justify-center p-8 text-white sm:p-12 lg:p-16">
+          <p className="text-sm font-bold tracking-widest text-violet-300 uppercase">
+            Quy trình đặt lịch
+          </p>
+          <h2 className="mt-4 text-4xl leading-tight font-black tracking-tight md:text-5xl">
+            Bốn bước, một lịch hẹn rõ ràng
+          </h2>
+          <p className="mt-5 max-w-xl leading-relaxed text-slate-300">
+            Thông tin được chuẩn bị trước giúp đội ngũ tiếp nhận đúng nhu cầu và dành thời
+            gian khám cho những điều thực sự quan trọng.
+          </p>
+
+          <div className="mt-10 grid border-t border-white/15 sm:grid-cols-2">
+            {steps.map((step, index) => (
+              <div
+                key={step.title}
+                className="border-b border-white/15 py-6 sm:odd:pr-7 sm:even:border-l sm:even:pl-7"
               >
-                <div className="relative z-10 mb-6 flex size-20 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 group-hover:-translate-y-2 group-hover:border-violet-400 group-hover:shadow-violet-200/50">
-                  <s.icon className="size-8 text-violet-600" />
-                  <div className="absolute -top-3 -right-3 flex size-8 items-center justify-center rounded-full border-4 border-[#FAFAFF] bg-violet-600 font-bold text-white">
-                    {i + 1}
-                  </div>
-                </div>
-                <h3 className="mb-2 text-lg font-bold text-slate-900">{s.title}</h3>
-                <p className="text-sm text-slate-600">{s.desc}</p>
-              </motion.div>
+                <span className="text-sm font-black text-teal-300">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <h3 className="mt-3 text-xl font-black">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-400">{step.desc}</p>
+              </div>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }
@@ -729,28 +493,28 @@ function FeaturedDoctors() {
       role: 'Ngoại khoa thú y',
       exp: '7 năm kinh nghiệm',
       rating: '4.9',
-      img: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&q=80',
+      img: '/images/landing/doctor-minh-v2.jpg',
     },
     {
       name: 'BS. Hương Trần',
       role: 'Nội khoa',
       exp: '6 năm kinh nghiệm',
       rating: '4.8',
-      img: 'https://images.unsplash.com/photo-1594824432258-2900a3d463ba?w=400&q=80',
+      img: '/images/landing/doctor-lan-v2.jpg',
     },
     {
       name: 'BS. Quân Lê',
       role: 'Chẩn đoán hình ảnh',
       exp: '5 năm kinh nghiệm',
       rating: '4.9',
-      img: 'https://images.unsplash.com/photo-1537368910025-7028a4ce1010?w=400&q=80',
+      img: '/images/landing/doctor-khoa-v2.jpg',
     },
     {
       name: 'BS. Mai Phạm',
       role: 'Da liễu thú cưng',
       exp: '8 năm kinh nghiệm',
       rating: '4.8',
-      img: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80',
+      img: '/images/landing/doctor-thao-v2.jpg',
     },
   ];
 
@@ -787,10 +551,14 @@ function FeaturedDoctors() {
               className="group overflow-hidden rounded-[32px] border border-slate-100 bg-[#FAFAFF] transition-all duration-300 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-100/50"
             >
               <div className="relative h-64 w-full overflow-hidden bg-slate-100">
-                <img
+                <LandingImage
                   src={t.img}
                   alt={t.name}
                   className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                  width={1024}
+                  height={1536}
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
               <div className="p-6">
@@ -822,7 +590,7 @@ function FeaturedDoctors() {
 
 /* ─────────────────────────── Pet Care Journey ─────────────────────────── */
 
-function PetCareJourney() {
+function CareJourney() {
   return (
     <section className="relative overflow-hidden bg-violet-900 py-24 text-white">
       {/* Background Decor */}
@@ -877,25 +645,31 @@ function PetCareJourney() {
           viewport={{ once: false, amount: 0.22 }}
           className="relative lg:w-1/2"
         >
-          <div className="grid grid-cols-2 gap-4">
-            <img
-              src="https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=400&q=80"
-              className="h-64 w-full rounded-[32px] rounded-tl-[64px] object-cover shadow-2xl"
-              alt="Vet examining dog"
+          <div className="relative mx-auto max-w-lg overflow-hidden rounded-[40px] border border-white/15 bg-white/10 p-2 shadow-2xl">
+            <LandingImage
+              src="/images/landing/care-journey-v2.jpg"
+              className="aspect-[4/5] w-full rounded-[32px] object-cover"
+              alt="Bác sĩ MSS301 Petclinic đồng hành cùng chó và mèo"
+              width={1024}
+              height={1536}
+              loading="lazy"
+              decoding="async"
             />
-            <img
-              src="https://images.unsplash.com/photo-1527362950785-f487a7c1fe48?w=400&q=80"
-              className="mt-8 h-64 w-full rounded-[32px] rounded-br-[64px] object-cover shadow-2xl"
-              alt="Happy dog"
-            />
-          </div>
-
-          {/* Floating badge */}
-          <div className="absolute top-1/2 left-1/2 flex size-32 -translate-x-1/2 -translate-y-1/2 rotate-12 flex-col items-center justify-center rounded-full border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-xl">
-            <span className="text-3xl font-black text-white">100%</span>
-            <span className="mt-1 text-xs font-bold tracking-widest text-violet-200 uppercase">
-              Yêu thương
-            </span>
+            <div className="absolute inset-x-2 bottom-2 rounded-b-[32px] bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent px-7 pt-24 pb-7">
+              <div className="flex items-end justify-between gap-5">
+                <div>
+                  <p className="text-sm font-bold tracking-widest text-teal-300 uppercase">
+                    Cam kết chăm sóc
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    Một bác sĩ, một hành trình rõ ràng
+                  </p>
+                </div>
+                <div className="grid size-16 shrink-0 place-items-center rounded-full border border-white/30 bg-white/15 text-lg font-black backdrop-blur-md">
+                  100%
+                </div>
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -912,7 +686,7 @@ function Facilities() {
       desc: 'Quy trình vô khuẩn, theo dõi gây mê và hồi sức sát sao.',
       stat: 'ISO care',
       icon: ShieldCheck,
-      img: 'https://images.unsplash.com/photo-1584432810601-6c7f27d2362b?w=900&q=80',
+      img: '/images/landing/facility-surgery-v2.jpg',
       className: 'md:col-span-2',
     },
     {
@@ -920,7 +694,7 @@ function Facilities() {
       desc: 'Trả kết quả nhanh cho các chỉ số máu, sinh hóa và ký sinh.',
       stat: '30 phút',
       icon: Activity,
-      img: 'https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?w=600&q=80',
+      img: '/images/landing/facility-lab-v2.jpg',
       className: '',
     },
     {
@@ -928,7 +702,7 @@ function Facilities() {
       desc: 'Tắm, sấy, cắt tỉa và chăm da lông theo từng giống pet.',
       stat: 'Gentle',
       icon: Scissors,
-      img: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=600&q=80',
+      img: '/images/landing/facility-grooming-v2.jpg',
       className: '',
     },
     {
@@ -936,7 +710,7 @@ function Facilities() {
       desc: 'Không gian nghỉ riêng, camera theo dõi và lịch chăm sóc rõ ràng.',
       stat: '24/7',
       icon: PawPrint,
-      img: 'https://images.unsplash.com/photo-1541364983171-a8ba01e95cfc?w=900&q=80',
+      img: '/images/landing/facility-boarding-v2.jpg',
       className: 'md:col-span-2',
     },
   ];
@@ -968,10 +742,12 @@ function Facilities() {
                 facility.className,
               )}
             >
-              <img
+              <LandingImage
                 src={facility.img}
                 className="h-56 w-full rounded-[22px] object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                 alt={facility.title}
+                width={1365}
+                height={1024}
                 loading="lazy"
                 decoding="async"
               />
@@ -993,53 +769,6 @@ function Facilities() {
               </div>
             </motion.article>
           ))}
-        </div>
-
-        <div className="hidden grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="group relative h-64 overflow-hidden rounded-[32px] md:col-span-2">
-            <img
-              src="https://images.unsplash.com/photo-1584432810601-6c7f27d2362b?w=800&q=80"
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              alt="Phòng phẫu thuật"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-6 left-6 text-white">
-              <h3 className="text-xl font-bold">Phòng phẫu thuật vô trùng</h3>
-            </div>
-          </div>
-          <div className="group relative h-64 overflow-hidden rounded-[32px]">
-            <img
-              src="https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?w=400&q=80"
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              alt="Phòng xét nghiệm"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-6 left-6 text-white">
-              <h3 className="text-xl font-bold">Lab xét nghiệm</h3>
-            </div>
-          </div>
-          <div className="group relative h-64 overflow-hidden rounded-[32px]">
-            <img
-              src="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=400&q=80"
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              alt="Khu Grooming"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-6 left-6 text-white">
-              <h3 className="text-xl font-bold">Khu Grooming & Spa</h3>
-            </div>
-          </div>
-          <div className="group relative h-64 overflow-hidden rounded-[32px] md:col-span-2">
-            <img
-              src="https://images.unsplash.com/photo-1541364983171-a8ba01e95cfc?w=800&q=80"
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              alt="Khu lưu trú"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-6 left-6 text-white">
-              <h3 className="text-xl font-bold">Khu lưu trú tiện nghi</h3>
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -1166,19 +895,22 @@ function Pricing({ ctaHref }: { ctaHref: string }) {
 function Testimonials() {
   const items = [
     {
-      img: 'https://images.unsplash.com/photo-1561948955-570b270e7c36?w=400&q=80',
       body: 'Phòng khám sạch sẽ, bác sĩ siêu nhẹ nhàng. Bé Miu nhà mình không hề sợ hãi khi đi tiêm.',
       author: 'Thu Hà & Miu Miu',
+      initials: 'MM',
+      accent: 'bg-violet-100 text-violet-700',
     },
     {
-      img: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&q=80',
-      body: 'Dịch vụ grooming đỉnh cao, bé Oreo được cắt tỉa siêu đáng yêu. Sẽ ủng hộ MS501 lâu dài!',
+      body: 'Dịch vụ grooming chỉn chu, bé Oreo được cắt tỉa rất đáng yêu. Gia đình sẽ tiếp tục tin tưởng MSS301 Petclinic!',
       author: 'Minh Đức & Oreo',
+      initials: 'OR',
+      accent: 'bg-teal-100 text-teal-700',
     },
     {
-      img: 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=400&q=80',
       body: 'Bé cún bị ốm lúc nửa đêm, may có phòng khám cấp cứu kịp thời. Cảm ơn các bác sĩ rất nhiều.',
       author: 'Quỳnh Anh & Đốm',
+      initials: 'ĐM',
+      accent: 'bg-amber-100 text-amber-700',
     },
   ];
 
@@ -1200,7 +932,7 @@ function Testimonials() {
         >
           {items.map((t, i) => (
             <motion.div
-              key={i}
+              key={t.author}
               initial={{ opacity: 0, x: 50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: false, amount: 0.22 }}
@@ -1216,12 +948,21 @@ function Testimonials() {
                 "{t.body}"
               </p>
               <div className="mt-auto flex items-center gap-4">
-                <img
-                  src={t.img}
-                  alt={t.author}
-                  className="size-14 rounded-full border-2 border-white object-cover shadow-sm"
-                />
-                <p className="font-bold text-slate-900">{t.author}</p>
+                <div
+                  className={cn(
+                    'relative grid size-14 shrink-0 place-items-center rounded-full border-2 border-white text-sm font-black shadow-sm',
+                    t.accent,
+                  )}
+                >
+                  {t.initials}
+                  <PawPrint className="absolute -right-1 -bottom-1 size-5 rounded-full bg-white p-1 text-violet-500 shadow-sm" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900">{t.author}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-500">
+                    Khách hàng đã xác minh
+                  </p>
+                </div>
               </div>
             </motion.div>
           ))}
@@ -1293,7 +1034,7 @@ function CtaBanner({ ctaHref }: { ctaHref: string }) {
         viewport={{ once: false, amount: 0.22 }}
         className="relative mx-auto max-w-6xl overflow-hidden rounded-[48px] bg-gradient-to-br from-violet-600 via-violet-600 to-teal-500 p-10 shadow-2xl shadow-violet-600/20 lg:p-20"
       >
-        <div className="pointer-events-none absolute top-0 right-0 h-full w-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.18),transparent_24%),linear-gradient(120deg,transparent_35%,rgba(255,255,255,0.08)_35%,rgba(255,255,255,0.08)_36%,transparent_36%)]" />
         <PawPrint className="absolute -right-10 -bottom-10 size-64 rotate-12 text-white/10" />
 
         <div className="relative z-10 mx-auto max-w-2xl text-center text-white">
@@ -1341,7 +1082,7 @@ function SiteFooter() {
             <div className="rounded-xl bg-violet-600 p-2">
               <PawPrint className="size-6 text-white" />
             </div>
-            <span className="text-2xl font-black tracking-tight">MS501 PetCare</span>
+            <span className="text-2xl font-black tracking-tight">MSS301 Petclinic</span>
           </div>
           <p className="mb-6 text-sm leading-relaxed font-medium text-slate-400">
             Phòng khám thú y uy tín, chuyên nghiệp. Mang đến dịch vụ chăm sóc tốt nhất cho
@@ -1438,14 +1179,14 @@ function SiteFooter() {
               <Phone className="size-5 shrink-0 text-violet-400" /> 1800 2424
             </li>
             <li className="flex items-center gap-3">
-              <Mail className="size-5 shrink-0 text-violet-400" /> hi@ms501.vn
+              <Mail className="size-5 shrink-0 text-violet-400" /> hi@mss301.vn
             </li>
           </ul>
         </div>
       </div>
 
       <div className="flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-center text-sm font-medium text-slate-500 md:flex-row">
-        <p>© 2026 MS501 PetCare. All rights reserved.</p>
+        <p>© 2026 MSS301 Petclinic. All rights reserved.</p>
         <p>
           Made with <Heart className="inline size-4 fill-rose-500 text-rose-500" /> for
           pets.

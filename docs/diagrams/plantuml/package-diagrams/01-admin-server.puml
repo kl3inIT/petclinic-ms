@@ -1,0 +1,18 @@
+@startuml
+title PCMS - Admin Server Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "admin-server" <<Spring Boot service>> {
+  package "com.mss301.petclinic.admin" {
+    package "config"
+  }
+}
+
+"com.mss301.petclinic.admin" ..> config : configures monitoring UI
+
+@enduml

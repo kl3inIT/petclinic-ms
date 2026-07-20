@@ -1,0 +1,195 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-inventory-ledger
+      author: codex
+      changes:
+        - createTable:
+            schemaName: products
+            tableName: inventory_operations
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: idempotency_key
+                  type: VARCHAR(160)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: operation_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_type
+                  type: VARCHAR(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_id
+                  type: VARCHAR(120)
+              - column:
+                  name: reason
+                  type: VARCHAR(255)
+              - column:
+                  name: request_fingerprint
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+
+        - addUniqueConstraint:
+            schemaName: products
+            tableName: inventory_operations
+            columnNames: idempotency_key
+            constraintName: uk_inventory_operations_idempotency_key
+
+        - createTable:
+            schemaName: products
+            tableName: stock_movements
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: operation_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity_delta
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity_before
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity_after
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_date
+                  type: TIMESTAMP WITH TIME ZONE
+
+        - addForeignKeyConstraint:
+            baseTableSchemaName: products
+            baseTableName: stock_movements
+            baseColumnNames: operation_id
+            referencedTableSchemaName: products
+            referencedTableName: inventory_operations
+            referencedColumnNames: id
+            constraintName: fk_stock_movements_operation
+
+        - addForeignKeyConstraint:
+            baseTableSchemaName: products
+            baseTableName: stock_movements
+            baseColumnNames: product_id
+            referencedTableSchemaName: products
+            referencedTableName: products
+            referencedColumnNames: id
+            constraintName: fk_stock_movements_product
+
+        - sql:
+            dbms: postgresql
+            sql: >-
+              ALTER TABLE products.inventory_operations
+              ADD CONSTRAINT inventory_operations_type_check
+              CHECK (operation_type IN ('INITIAL', 'CONSUME', 'RESTOCK', 'ADJUSTMENT'))
+        - sql:
+            dbms: postgresql
+            sql: >-
+              ALTER TABLE products.stock_movements
+              ADD CONSTRAINT stock_movements_delta_check CHECK (quantity_delta <> 0),
+              ADD CONSTRAINT stock_movements_before_check CHECK (quantity_before >= 0),
+              ADD CONSTRAINT stock_movements_after_check CHECK (quantity_after >= 0)
+        - sql:
+            dbms: postgresql
+            sql: >-
+              ALTER TABLE products.products
+              ADD CONSTRAINT products_reorder_level_check CHECK (reorder_level >= 0)
+
+        - createIndex:
+            schemaName: products
+            tableName: stock_movements
+            indexName: idx_stock_movements_product_created
+            columns:
+              - column:
+                  name: product_id
+              - column:
+                  name: created_date
+
+  - changeSet:
+      id: 004-backfill-initial-stock-ledger
+      author: codex
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              INSERT INTO products.inventory_operations
+                (idempotency_key, operation_type, source_type, source_id, reason,
+                 request_fingerprint, created_by, created_date)
+              SELECT 'migration:initial-balance:' || id, 'INITIAL', 'MIGRATION', id::text,
+                     'Initial balance captured when inventory ledger was introduced',
+                     'migration', 'liquibase', CURRENT_TIMESTAMP
+              FROM products.products
+              WHERE stock_quantity IS NOT NULL AND stock_quantity > 0
+        - sql:
+            dbms: postgresql
+            sql: >-
+              INSERT INTO products.stock_movements
+                (operation_id, product_id, quantity_delta, quantity_before,
+                 quantity_after, created_by, created_date)
+              SELECT o.id, p.id, p.stock_quantity, 0, p.stock_quantity,
+                     'liquibase', CURRENT_TIMESTAMP
+              FROM products.products p
+              JOIN products.inventory_operations o
+                ON o.idempotency_key = 'migration:initial-balance:' || p.id
+              WHERE p.stock_quantity IS NOT NULL AND p.stock_quantity > 0
+
+  - changeSet:
+      id: 005-add-inventory-ledger-last-modified-audit
+      author: codex
+      changes:
+        - addColumn:
+            schemaName: products
+            tableName: inventory_operations
+            columns:
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE
+        - addColumn:
+            schemaName: products
+            tableName: stock_movements
+            columns:
+              - column:
+                  name: last_modified_by
+                  type: VARCHAR(50)
+              - column:
+                  name: last_modified_date
+                  type: TIMESTAMP WITH TIME ZONE

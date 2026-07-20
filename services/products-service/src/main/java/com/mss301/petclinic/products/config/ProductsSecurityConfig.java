@@ -14,7 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
  * role-based access tại MỘT NƠI.
  *
  * <ul>
- *   <li>GET (tra cứu catalog) → mọi user đã đăng nhập (vet/quầy chọn khi kê đơn/lập hoá đơn).</li>
+ *   <li>GET catalog → public để storefront đọc danh mục; lịch sử tồn kho vẫn bị giới hạn role.</li>
  *   <li>{@code POST /{id}/consume} (trừ kho khi kê đơn) → STAFF/ADMIN/VET. visits-service
  *       forward JWT của vet khi gọi.</li>
  *   <li>CRUD + {@code /restock} (quản trị catalog + nhập kho) → ADMIN/INVENTORY_MANAGER.</li>
@@ -40,8 +40,16 @@ public class ProductsSecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
+                        // ── Nghiệp vụ kho thủ công — ADMIN hoặc INVENTORY_MANAGER ──
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/stock/documents")
+                            .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/stock/movements")
+                            .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
+
                         // ── Trừ kho (cấp phát) — vet kê đơn cũng được ──
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/*/consume")
+                            .hasAnyRole("STAFF", "ADMIN", "VET")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/stock/consume")
                             .hasAnyRole("STAFF", "ADMIN", "VET")
 
                         // ── Quản trị catalog + nhập kho — ADMIN hoặc INVENTORY_MANAGER ──
@@ -49,13 +57,15 @@ public class ProductsSecurityConfig {
                             .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/products")
                             .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/stock/*/movements")
+                            .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**")
                             .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**")
                             .hasAnyRole("ADMIN", "INVENTORY_MANAGER")
 
                         // ── Đọc catalog — mọi user đã đăng nhập ──
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
 
                         .anyRequest().authenticated()
                 )

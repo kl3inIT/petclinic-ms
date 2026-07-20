@@ -3,7 +3,7 @@
   "info": {
     "title": "Petclinic MSS301 — Aggregated API",
     "version": "1.0.0",
-    "description": "Aggregated from: auth, customers, vets, visits, billing, products"
+    "description": "Aggregated from: auth, customers, vets, visits, workflow, billing, products, reviews"
   },
   "servers": [
     {
@@ -19,6 +19,10 @@
     {
       "name": "Users",
       "description": "Internal user lookup for service-to-service calls"
+    },
+    {
+      "name": "Admin Users",
+      "description": "Admin user account, role, and enablement management"
     },
     {
       "name": "Pets",
@@ -41,10 +45,6 @@
       "description": "Veterinarian specialties (read-only, seeded via Liquibase)"
     },
     {
-      "name": "Vet Album",
-      "description": "Gallery 1-N của veterinarian (binary ở MinIO)"
-    },
-    {
       "name": "Vet Work Schedule",
       "description": "Weekly availability template (Workday × WorkHour)"
     },
@@ -53,12 +53,12 @@
       "description": "Customer ratings (1-5 stars) of a veterinarian"
     },
     {
-      "name": "Vet Photo",
-      "description": "Avatar 1-1 của veterinarian (binary ở MinIO)"
-    },
-    {
       "name": "Vet Me (self-service)",
       "description": "Bác sĩ thú y tự xem/sửa data của chính mình. vetId từ JWT claim."
+    },
+    {
+      "name": "Vet Photo",
+      "description": "Avatar 1-1 của veterinarian (binary qua files-service)"
     },
     {
       "name": "Vet Educations",
@@ -67,6 +67,10 @@
     {
       "name": "Vet Reviews",
       "description": "Queue duyệt thay đổi từ vet (staff/admin only)"
+    },
+    {
+      "name": "Vet Album",
+      "description": "Gallery 1-N của veterinarian (binary qua files-service)"
     },
     {
       "name": "Vets",
@@ -81,6 +85,18 @@
       "description": "Visit booking + lifecycle (schedule → in-progress → complete)"
     },
     {
+      "name": "Workflow Designer",
+      "description": "BPMN modeling support endpoints"
+    },
+    {
+      "name": "Workflows",
+      "description": "Camunda BPM orchestration — start, inspect, and action process instances"
+    },
+    {
+      "name": "Visit Workflows",
+      "description": "Domain actions for visit booking workflow — staff/vet click buttons, no JSON variables needed"
+    },
+    {
       "name": "Diseases",
       "description": "Danh mục bệnh + chi phí điều trị"
     },
@@ -89,8 +105,20 @@
       "description": "Hoá đơn gộp (phí khám + bệnh + đồ shop) + thanh toán quầy"
     },
     {
+      "name": "Inventory",
+      "description": "Atomic and idempotent stock operations"
+    },
+    {
       "name": "Products",
       "description": "Catalog thuốc / dịch vụ / vật tư + tồn kho"
+    },
+    {
+      "name": "Reviews Moderation",
+      "description": "STAFF/ADMIN moderate review queue"
+    },
+    {
+      "name": "Reviews",
+      "description": "Polymorphic review (VET/PRODUCT/VISIT) + vote + moderation queue"
     }
   ],
   "paths": {
@@ -298,6 +326,74 @@
         }
       }
     },
+    "/api/v1/admin/users/{id}": {
+      "get": {
+        "tags": ["Admin Users"],
+        "summary": "Get one user — ADMIN only",
+        "operationId": "getAdminUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Admin Users"],
+        "summary": "Patch user roles, enabled flag, and domain links — ADMIN only",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUpdateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users/{id}": {
       "get": {
         "tags": ["Users"],
@@ -347,6 +443,43 @@
         }
       }
     },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": ["Admin Users"],
+        "summary": "List/search users — ADMIN only",
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageUserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/.well-known/jwks.json": {
       "get": {
         "tags": ["jwks-controller"],
@@ -359,6 +492,81 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pets/{id}/photo": {
+      "put": {
+        "tags": ["Pets"],
+        "summary": "Admin upload/replace ảnh pet bất kỳ",
+        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp. Idempotent overwrite.",
+        "operationId": "uploadPetPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Pets"],
+        "summary": "Admin xoá ảnh pet bất kỳ",
+        "operationId": "deletePetPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PetResponse"
                 }
               }
             }
@@ -591,6 +799,134 @@
         "responses": {
           "204": {
             "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/owners/me/pets/{petId}/photo": {
+      "put": {
+        "tags": ["Owners"],
+        "summary": "Upload/replace ảnh pet của current customer",
+        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp. Idempotent overwrite.",
+        "operationId": "uploadMyPetPhoto",
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Owners"],
+        "summary": "Xoá ảnh pet của current customer",
+        "operationId": "deleteMyPetPhoto",
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/owners/me/avatar": {
+      "put": {
+        "tags": ["Owners"],
+        "summary": "Upload/replace avatar của current customer",
+        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp. Idempotent overwrite.",
+        "operationId": "uploadMyOwnerAvatar",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Owners"],
+        "summary": "Xoá avatar của current customer",
+        "operationId": "deleteMyOwnerAvatar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -913,176 +1249,6 @@
         }
       }
     },
-    "/api/v1/owners/me/avatar": {
-      "put": {
-        "tags": ["Owners"],
-        "summary": "Upload/replace avatar của current customer",
-        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp.",
-        "operationId": "uploadMyOwnerAvatar",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "file": { "type": "string", "format": "binary" }
-                },
-                "required": ["file"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/OwnerResponse" }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["Owners"],
-        "summary": "Xoá avatar của current customer",
-        "operationId": "deleteMyOwnerAvatar",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/OwnerResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/owners/me/pets/{petId}/photo": {
-      "put": {
-        "tags": ["Owners"],
-        "summary": "Upload/replace ảnh pet của current customer",
-        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp.",
-        "operationId": "uploadMyPetPhoto",
-        "parameters": [
-          {
-            "name": "petId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer", "format": "int64" }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "file": { "type": "string", "format": "binary" }
-                },
-                "required": ["file"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/OwnerResponse" }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["Owners"],
-        "summary": "Xoá ảnh pet của current customer",
-        "operationId": "deleteMyPetPhoto",
-        "parameters": [
-          {
-            "name": "petId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer", "format": "int64" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/OwnerResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/pets/{id}/photo": {
-      "put": {
-        "tags": ["Pets"],
-        "summary": "Admin upload/replace ảnh pet bất kỳ",
-        "description": "Multipart field 'file'. Max 10MB, image/jpeg|png|webp.",
-        "operationId": "uploadPetPhoto",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer", "format": "int64" }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "file": { "type": "string", "format": "binary" }
-                },
-                "required": ["file"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PetResponse" }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": ["Pets"],
-        "summary": "Admin xoá ảnh pet bất kỳ",
-        "operationId": "deletePetPhoto",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer", "format": "int64" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PetResponse" }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/pets": {
       "get": {
         "tags": ["Pets"],
@@ -1270,7 +1436,7 @@
       "get": {
         "tags": ["Vet Photo"],
         "summary": "Get photo metadata + presigned URL",
-        "description": "Trả 404 nếu vet chưa upload photo. Presigned URL TTL config qua petclinic.storage.minio.presigned-ttl (default 1h).",
+        "description": "Trả 404 nếu vet chưa upload photo. Presigned URL TTL config qua petclinic.files.presigned-ttl (default 1h).",
         "operationId": "getVetPhoto",
         "parameters": [
           {
@@ -1299,7 +1465,7 @@
       "put": {
         "tags": ["Vet Photo"],
         "summary": "Upload or replace vet photo (idempotent)",
-        "description": "Multipart field 'file'. Max 10MB (config). Content-type: image/jpeg|png|webp. File quá lớn → 400 error.file-too-large. Type khác → 400 error.unsupported-media. Re-upload overwrite cùng key MinIO + upsert DB row.",
+        "description": "Multipart field 'file'. Max 10MB (config). Content-type: image/jpeg|png|webp. File quá lớn → 400 error.file-too-large. Type khác → 400 error.unsupported-media. Re-upload overwrite cùng object key qua files-service + upsert DB row.",
         "operationId": "uploadVetPhoto",
         "parameters": [
           {
@@ -1343,7 +1509,7 @@
       },
       "delete": {
         "tags": ["Vet Photo"],
-        "summary": "Delete vet photo (xoá MinIO object trước, DB row sau)",
+        "summary": "Delete vet photo (xoá object qua files-service trước, DB row sau)",
         "operationId": "deleteVetPhoto",
         "parameters": [
           {
@@ -1356,6 +1522,70 @@
             }
           }
         ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/vets/me/photo": {
+      "get": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Avatar của vet đang login (metadata + presigned URL)",
+        "description": "Trả 404 nếu vet chưa upload photo. vetId resolve từ JWT claim.",
+        "operationId": "getMyVetPhoto",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Upload/replace avatar của vet đang login (idempotent)",
+        "description": "Multipart field 'file'. Max 10MB. Content-type: image/jpeg|png|webp. Mỗi lần đổi ảnh reset status PENDING — chờ STAFF/ADMIN duyệt mới hiển thị public.",
+        "operationId": "uploadMyVetPhoto",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VetPhotoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Vet Me (self-service)"],
+        "summary": "Xóa avatar của vet đang login",
+        "operationId": "deleteMyVetPhoto",
         "responses": {
           "204": {
             "description": "No Content"
@@ -2932,6 +3162,540 @@
         }
       }
     },
+    "/api/v1/workflows/visits/{visitId}/start": {
+      "post": {
+        "tags": ["Visit Workflows"],
+        "summary": "startVisitExam",
+        "description": "Bắt đầu khám — bác sĩ xác nhận bắt đầu. Visit chuyển sang IN_PROGRESS.",
+        "operationId": "startVisitExam",
+        "parameters": [
+          {
+            "name": "visitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/visits/{visitId}/reject": {
+      "post": {
+        "tags": ["Visit Workflows"],
+        "summary": "rejectVisit",
+        "description": "Từ chối lịch hẹn — staff/manager từ chối. Tự set approved=false → visit sẽ CANCELLED.",
+        "operationId": "rejectVisit",
+        "parameters": [
+          {
+            "name": "visitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/visits/{visitId}/complete": {
+      "post": {
+        "tags": ["Visit Workflows"],
+        "summary": "completeVisitExam",
+        "description": "Hoàn thành khám — bác sĩ nhập kết quả. Visit chuyển sang COMPLETED.",
+        "operationId": "completeVisitExam",
+        "parameters": [
+          {
+            "name": "visitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteExamRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/visits/{visitId}/approve": {
+      "post": {
+        "tags": ["Visit Workflows"],
+        "summary": "approveVisit",
+        "description": "Duyệt lịch hẹn — staff/manager xác nhận. Tự set approved=true trong Camunda.",
+        "operationId": "approveVisit",
+        "parameters": [
+          {
+            "name": "visitId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/tasks/{userTaskKey}/complete": {
+      "post": {
+        "tags": ["Workflows"],
+        "summary": "completeUserTask",
+        "description": "Complete a user task with output variables.",
+        "operationId": "completeUserTask",
+        "parameters": [
+          {
+            "name": "userTaskKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteUserTaskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/instances": {
+      "get": {
+        "tags": ["Workflows"],
+        "summary": "listWorkflowInstances",
+        "description": "Search process instances with optional filter.",
+        "operationId": "listWorkflowInstances",
+        "parameters": [
+          {
+            "name": "processDefinitionId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessInstanceSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Workflows"],
+        "summary": "startWorkflow",
+        "description": "Start a Camunda process by definition key.",
+        "operationId": "startWorkflow",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartWorkflowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowInstanceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/instances/{processInstanceId}/terminate": {
+      "post": {
+        "tags": ["Workflows"],
+        "summary": "terminateWorkflowInstance",
+        "description": "Terminates an active Camunda 8 process instance.",
+        "operationId": "terminateWorkflowInstance",
+        "parameters": [
+          {
+            "name": "processInstanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/designer/definitions/deploy": {
+      "post": {
+        "tags": ["Workflow Designer"],
+        "summary": "Deploy BPMN XML",
+        "description": "Deploys a BPMN diagram into the Camunda repository at runtime.",
+        "operationId": "deployDefinition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeployWorkflowDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDefinitionDeploymentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/tasks": {
+      "get": {
+        "tags": ["Workflows"],
+        "summary": "listUserTasks",
+        "description": "List Zeebe user tasks. Default state=CREATED (pending).",
+        "operationId": "listUserTasks",
+        "parameters": [
+          {
+            "name": "processInstanceKey",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserTaskResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/tasks/{userTaskKey}": {
+      "get": {
+        "tags": ["Workflows"],
+        "summary": "getUserTask",
+        "description": "Get a specific user task by key.",
+        "operationId": "getUserTask",
+        "parameters": [
+          {
+            "name": "userTaskKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserTaskResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/instances/{processInstanceId}": {
+      "get": {
+        "tags": ["Workflows"],
+        "summary": "getWorkflowInstance",
+        "description": "Returns runtime state + flow nodes + variables for a process instance.",
+        "operationId": "getWorkflowInstance",
+        "parameters": [
+          {
+            "name": "processInstanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowInstanceResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Workflows"],
+        "summary": "deleteWorkflowInstance",
+        "description": "Deletes historic data for a completed or terminated Camunda 8 process instance.",
+        "operationId": "deleteWorkflowInstance",
+        "parameters": [
+          {
+            "name": "processInstanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/instances/{processInstanceId}/diagram-xml": {
+      "get": {
+        "tags": ["Workflows"],
+        "summary": "getWorkflowInstanceDiagramXml",
+        "description": "Returns deployed BPMN XML for the process definition backing this instance (Camunda 8 Orchestration REST).",
+        "operationId": "getWorkflowInstanceDiagramXml",
+        "parameters": [
+          {
+            "name": "processInstanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDefinitionXmlResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/designer/service-tasks": {
+      "get": {
+        "tags": ["Workflow Designer"],
+        "summary": "List workflow service tasks",
+        "description": "Returns BPMN service task templates available in this service.",
+        "operationId": "listServiceTasks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceTaskCatalogItemResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/designer/deployments": {
+      "get": {
+        "tags": ["Workflow Designer"],
+        "summary": "List workflow deployments",
+        "description": "Returns recent Camunda deployments.",
+        "operationId": "listDeployments",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowDeploymentSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/designer/definitions": {
+      "get": {
+        "tags": ["Workflow Designer"],
+        "summary": "List workflow definitions",
+        "description": "Returns deployed BPMN process definitions from Camunda.",
+        "operationId": "listDefinitions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowDefinitionSummaryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/designer/definitions/{processDefinitionKey}/xml": {
+      "get": {
+        "tags": ["Workflow Designer"],
+        "summary": "Get BPMN XML",
+        "description": "Returns latest deployed BPMN XML, or a starter diagram if the key does not exist.",
+        "operationId": "getDefinitionXml",
+        "parameters": [
+          {
+            "name": "processDefinitionKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowDefinitionXmlResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/designer/definitions/{processDefinitionKey}": {
+      "delete": {
+        "tags": ["Workflow Designer"],
+        "summary": "Delete BPMN process definition",
+        "description": "Deletes one deployed Camunda 8 process definition version by numeric process definition key.",
+        "operationId": "deleteDefinition",
+        "parameters": [
+          {
+            "name": "processDefinitionKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/invoices": {
       "get": {
         "tags": ["Invoices"],
@@ -3371,6 +4135,45 @@
         }
       }
     },
+    "/api/v1/invoices/eligibility/products/{productId}/purchase": {
+      "get": {
+        "tags": ["Invoices"],
+        "summary": "Check whether a customer has a PAID invoice containing a product",
+        "operationId": "checkProductPurchaseEligibility",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "customerUserId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductPurchaseEligibilityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/invoices/{id}/items/{itemId}": {
       "delete": {
         "tags": ["Invoices"],
@@ -3430,7 +4233,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": ["MEDICATION", "SERVICE", "SUPPLY", "MERCHANDISE"]
+              "enum": ["MEDICATION", "VACCINE", "SERVICE", "SUPPLY", "MERCHANDISE"]
             }
           },
           {
@@ -3473,7 +4276,7 @@
       },
       "post": {
         "tags": ["Products"],
-        "summary": "Tạo sản phẩm mới (ADMIN)",
+        "summary": "Tạo sản phẩm mới (ADMIN/INVENTORY_MANAGER)",
         "operationId": "createProduct",
         "requestBody": {
           "content": {
@@ -3502,7 +4305,7 @@
     "/api/v1/products/{id}/restock": {
       "post": {
         "tags": ["Products"],
-        "summary": "Nhập thêm tồn kho (ADMIN)",
+        "summary": "Nhập thêm tồn kho (ADMIN/INVENTORY_MANAGER)",
         "operationId": "restockProduct",
         "parameters": [
           {
@@ -3512,6 +4315,14 @@
             "schema": {
               "type": "integer",
               "format": "int64"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -3553,6 +4364,14 @@
               "type": "integer",
               "format": "int64"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -3572,6 +4391,64 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/stock/documents": {
+      "post": {
+        "tags": ["Inventory"],
+        "summary": "Record an audited multi-line stock receipt or issue document",
+        "operationId": "recordManualInventoryDocument",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualStockDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryOperationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/stock/consume": {
+      "post": {
+        "tags": ["Inventory"],
+        "summary": "Atomically consume stock for one or more products",
+        "operationId": "consume",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchStockConsumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryOperationResponse"
                 }
               }
             }
@@ -3610,7 +4487,7 @@
       },
       "delete": {
         "tags": ["Products"],
-        "summary": "Xoá sản phẩm (ADMIN)",
+        "summary": "Ngừng kinh doanh sản phẩm, giữ lịch sử (ADMIN/INVENTORY_MANAGER)",
         "operationId": "deleteProduct",
         "parameters": [
           {
@@ -3631,7 +4508,7 @@
       },
       "patch": {
         "tags": ["Products"],
-        "summary": "Cập nhật sản phẩm (ADMIN)",
+        "summary": "Cập nhật sản phẩm (ADMIN/INVENTORY_MANAGER)",
         "operationId": "updateProduct",
         "parameters": [
           {
@@ -3668,45 +4545,151 @@
         }
       }
     },
-    "/api/v1/vets/me/photo": {
+    "/api/v1/products/stock/{productId}/movements": {
       "get": {
-        "tags": ["Vet Me (self-service)"],
-        "summary": "Avatar của vet đang login (metadata + presigned URL)",
-        "description": "Trả 404 nếu vet chưa upload photo. vetId resolve từ JWT claim.",
-        "operationId": "getMyVetPhoto",
+        "tags": ["Inventory"],
+        "summary": "List append-only stock movements for a product",
+        "operationId": "listMovements",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VetPhotoResponse"
+                  "$ref": "#/components/schemas/PageStockMovementResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/stock/movements": {
+      "get": {
+        "tags": ["Inventory"],
+        "summary": "List append-only stock movements across all products",
+        "operationId": "listInventoryMovements",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageStockMovementResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews": {
+      "get": {
+        "tags": ["Reviews"],
+        "summary": "List reviews — public, default status=PUBLISHED nếu không filter",
+        "operationId": "searchReviews",
+        "parameters": [
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["VET", "PRODUCT", "VISIT"]
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "PUBLISHED",
+              "enum": ["PUBLISHED", "PENDING_MODERATION", "FLAGGED", "HIDDEN", "DELETED"]
+            }
+          },
+          {
+            "name": "minRating",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageReviewResponse"
                 }
               }
             }
           }
         }
       },
-      "put": {
-        "tags": ["Vet Me (self-service)"],
-        "summary": "Upload/replace avatar của vet đang login (idempotent)",
-        "description": "Multipart field 'file'. Max 10MB. Content-type: image/jpeg|png|webp. Mỗi lần đổi ảnh reset status PENDING — chờ STAFF/ADMIN duyệt mới hiển thị public.",
-        "operationId": "uploadMyVetPhoto",
+      "post": {
+        "tags": ["Reviews"],
+        "summary": "USER tạo review — eligibility check qua visits-service (VET/VISIT)",
+        "operationId": "createReview",
         "requestBody": {
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                },
-                "required": ["file"]
+                "$ref": "#/components/schemas/CreateReviewRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -3714,7 +4697,77 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VetPhotoResponse"
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/{id}/vote": {
+      "post": {
+        "tags": ["Reviews"],
+        "summary": "Vote HELPFUL / NOT_HELPFUL — author không vote chính review của mình",
+        "operationId": "voteReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/{id}": {
+      "get": {
+        "tags": ["Reviews"],
+        "summary": "Get review detail",
+        "operationId": "getReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
                 }
               }
             }
@@ -3722,9 +4775,315 @@
         }
       },
       "delete": {
-        "tags": ["Vet Me (self-service)"],
-        "summary": "Xóa avatar của vet đang login",
-        "operationId": "deleteMyVetPhoto",
+        "tags": ["Reviews"],
+        "summary": "USER soft-delete review của mình — status → DELETED",
+        "operationId": "deleteReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Reviews"],
+        "summary": "USER chỉnh sửa review của mình — trong 7 ngày kể từ tạo",
+        "operationId": "updateReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reviews/{id}/unhide": {
+      "patch": {
+        "tags": ["Reviews Moderation"],
+        "summary": "Khôi phục HIDDEN → PUBLISHED (ADMIN only)",
+        "operationId": "unhideReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reviews/{id}/hide": {
+      "patch": {
+        "tags": ["Reviews Moderation"],
+        "summary": "Ẩn review (kèm reason audit) — status → HIDDEN",
+        "operationId": "hideReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reviews/{id}/approve": {
+      "patch": {
+        "tags": ["Reviews Moderation"],
+        "summary": "Duyệt PENDING_MODERATION hoặc HIDDEN → PUBLISHED",
+        "operationId": "approveReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/summary": {
+      "get": {
+        "tags": ["Reviews"],
+        "summary": "Aggregate stats cho 1 target — count + avg + distribution 1..5",
+        "operationId": "getReviewsSummary",
+        "parameters": [
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["VET", "PRODUCT", "VISIT"]
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/me": {
+      "get": {
+        "tags": ["Reviews"],
+        "summary": "List review của chính user — mọi status (PUBLISHED, PENDING, HIDDEN)",
+        "operationId": "listMyReviews",
+        "parameters": [
+          {
+            "name": "targetType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["VET", "PRODUCT", "VISIT"]
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["PUBLISHED", "PENDING_MODERATION", "FLAGGED", "HIDDEN", "DELETED"]
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reviews": {
+      "get": {
+        "tags": ["Reviews Moderation"],
+        "summary": "List queue moderation — default status=PENDING_MODERATION",
+        "operationId": "listPendingReviews",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "PENDING_MODERATION",
+              "enum": ["PUBLISHED", "PENDING_MODERATION", "FLAGGED", "HIDDEN", "DELETED"]
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Pageable"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reviews/{id}": {
+      "delete": {
+        "tags": ["Reviews Moderation"],
+        "summary": "Hard moderate — soft-delete row (ADMIN only)",
+        "operationId": "adminDeleteReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "No Content"
@@ -3884,6 +5243,175 @@
           }
         },
         "required": ["customerId"]
+      },
+      "AdminUpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "vetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "customerId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "Pageable": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PageUserResponse": {
+        "type": "object",
+        "properties": {
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserResponse"
+            }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PageableObject": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unpaged": {
+            "type": "boolean"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "paged": {
+            "type": "boolean"
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SortObject": {
+        "type": "object",
+        "properties": {
+          "empty": {
+            "type": "boolean"
+          },
+          "unsorted": {
+            "type": "boolean"
+          },
+          "sorted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PetResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "type": {
+            "type": "string"
+          },
+          "petTypeId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "photoId": {
+            "type": "string"
+          },
+          "photoUrl": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       },
       "PetTypeRequest": {
         "type": "object",
@@ -4069,27 +5597,6 @@
           }
         }
       },
-      "Pageable": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 0
-          },
-          "size": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 1
-          },
-          "sort": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
       "PagePetResponse": {
         "type": "object",
         "properties": {
@@ -4115,6 +5622,12 @@
             "type": "integer",
             "format": "int32"
           },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
           "first": {
             "type": "boolean"
           },
@@ -4125,92 +5638,7 @@
             "type": "integer",
             "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
           "empty": {
-            "type": "boolean"
-          }
-        }
-      },
-      "PageableObject": {
-        "type": "object",
-        "properties": {
-          "offset": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "paged": {
-            "type": "boolean"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
-          "pageNumber": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "pageSize": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "unpaged": {
-            "type": "boolean"
-          }
-        }
-      },
-      "PetResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "name": {
-            "type": "string"
-          },
-          "birthDate": {
-            "type": "string",
-            "format": "date"
-          },
-          "type": {
-            "type": "string"
-          },
-          "petTypeId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "isActive": {
-            "type": "boolean"
-          },
-          "weight": {
-            "type": "number"
-          },
-          "photoId": {
-            "type": "string"
-          },
-          "photoUrl": {
-            "type": "string"
-          },
-          "ownerId": {
-            "type": "integer",
-            "format": "int64"
-          }
-        }
-      },
-      "SortObject": {
-        "type": "object",
-        "properties": {
-          "empty": {
-            "type": "boolean"
-          },
-          "sorted": {
-            "type": "boolean"
-          },
-          "unsorted": {
             "type": "boolean"
           }
         }
@@ -4240,6 +5668,12 @@
             "type": "integer",
             "format": "int32"
           },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
           "first": {
             "type": "boolean"
           },
@@ -4249,12 +5683,6 @@
           "numberOfElements": {
             "type": "integer",
             "format": "int32"
-          },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
-          },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
           },
           "empty": {
             "type": "boolean"
@@ -4722,8 +6150,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "first": {
             "type": "boolean"
@@ -4731,12 +6159,12 @@
           "last": {
             "type": "boolean"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
           "numberOfElements": {
             "type": "integer",
             "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
           "empty": {
             "type": "boolean"
@@ -4776,8 +6204,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "first": {
             "type": "boolean"
@@ -4785,12 +6213,12 @@
           "last": {
             "type": "boolean"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
           "numberOfElements": {
             "type": "integer",
             "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
           "empty": {
             "type": "boolean"
@@ -4842,8 +6270,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "first": {
             "type": "boolean"
@@ -4851,12 +6279,12 @@
           "last": {
             "type": "boolean"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
           "numberOfElements": {
             "type": "integer",
             "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
           "empty": {
             "type": "boolean"
@@ -4888,8 +6316,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "first": {
             "type": "boolean"
@@ -4897,12 +6325,12 @@
           "last": {
             "type": "boolean"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
           "numberOfElements": {
             "type": "integer",
             "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
           "empty": {
             "type": "boolean"
@@ -4934,8 +6362,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "pageable": {
-            "$ref": "#/components/schemas/PageableObject"
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "first": {
             "type": "boolean"
@@ -4943,12 +6371,12 @@
           "last": {
             "type": "boolean"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
           "numberOfElements": {
             "type": "integer",
             "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
           },
           "empty": {
             "type": "boolean"
@@ -5076,6 +6504,11 @@
               "$ref": "#/components/schemas/Item"
             },
             "minItems": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
           }
         },
         "required": ["items"]
@@ -5271,6 +6704,287 @@
           }
         }
       },
+      "CompleteExamRequest": {
+        "type": "object",
+        "properties": {
+          "diagnosis": {
+            "type": "string",
+            "minLength": 1
+          },
+          "treatment": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fee": {
+            "type": "number"
+          }
+        },
+        "required": ["diagnosis", "fee", "treatment"]
+      },
+      "CompleteUserTaskRequest": {
+        "type": "object",
+        "properties": {
+          "variables": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        }
+      },
+      "StartWorkflowRequest": {
+        "type": "object",
+        "properties": {
+          "processDefinitionKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": ["processDefinitionKey"]
+      },
+      "FlowNodeRecord": {
+        "type": "object",
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "elementName": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowInstanceResponse": {
+        "type": "object",
+        "properties": {
+          "processInstanceKey": {
+            "type": "string"
+          },
+          "processDefinitionKey": {
+            "type": "string"
+          },
+          "bpmnProcessId": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "flowNodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowNodeRecord"
+            }
+          }
+        }
+      },
+      "DeployWorkflowDefinitionRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bpmnXml": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["bpmnXml", "name"]
+      },
+      "WorkflowDefinitionDeploymentResponse": {
+        "type": "object",
+        "properties": {
+          "deploymentId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "deployedDefinitions": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "UserTaskResponse": {
+        "type": "object",
+        "properties": {
+          "userTaskKey": {
+            "type": "string"
+          },
+          "elementId": {
+            "type": "string"
+          },
+          "elementInstanceKey": {
+            "type": "string"
+          },
+          "processDefinitionKey": {
+            "type": "string"
+          },
+          "processDefinitionId": {
+            "type": "string"
+          },
+          "processInstanceKey": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "assignee": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "creationDate": {
+            "type": "string"
+          },
+          "completionDate": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "formKey": {
+            "type": "string"
+          }
+        }
+      },
+      "ProcessInstanceSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "processInstanceKey": {
+            "type": "string"
+          },
+          "processDefinitionKey": {
+            "type": "string"
+          },
+          "processDefinitionId": {
+            "type": "string"
+          },
+          "processDefinitionVersion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "state": {
+            "type": "string"
+          },
+          "hasIncident": {
+            "type": "boolean"
+          },
+          "startDate": {
+            "type": "string"
+          },
+          "endDate": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowDefinitionXmlResponse": {
+        "type": "object",
+        "properties": {
+          "processDefinitionKey": {
+            "type": "string"
+          },
+          "bpmnXml": {
+            "type": "string"
+          },
+          "deployed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ServiceTaskCatalogItemResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "inputParameters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "WorkflowDeploymentSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "deployedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowDefinitionSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deploymentId": {
+            "type": "string"
+          },
+          "resourceName": {
+            "type": "string"
+          },
+          "suspended": {
+            "type": "boolean"
+          }
+        }
+      },
       "CreateInvoiceRequest": {
         "type": "object",
         "properties": {
@@ -5281,6 +6995,11 @@
           "customerName": {
             "type": "string",
             "maxLength": 150,
+            "minLength": 0
+          },
+          "customerEmail": {
+            "type": "string",
+            "maxLength": 100,
             "minLength": 0
           },
           "notes": {
@@ -5332,6 +7051,9 @@
           "customerName": {
             "type": "string"
           },
+          "customerEmail": {
+            "type": "string"
+          },
           "status": {
             "type": "string",
             "enum": ["OPEN", "PAID", "CANCELLED"]
@@ -5359,6 +7081,9 @@
           "paymentMethod": {
             "type": "string",
             "enum": ["CASH", "CARD", "TRANSFER"]
+          },
+          "paymentReference": {
+            "type": "string"
           },
           "items": {
             "type": "array",
@@ -5401,6 +7126,11 @@
           "paymentMethod": {
             "type": "string",
             "enum": ["CASH", "CARD", "TRANSFER"]
+          },
+          "paymentReference": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
           }
         },
         "required": ["paymentMethod"]
@@ -5520,13 +7250,29 @@
             "type": "integer",
             "format": "int32"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
           "pageable": {
             "$ref": "#/components/schemas/PageableObject"
           },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
           "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ProductPurchaseEligibilityResponse": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "customerUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eligible": {
             "type": "boolean"
           }
         }
@@ -5566,11 +7312,11 @@
             "type": "integer",
             "format": "int32"
           },
-          "sort": {
-            "$ref": "#/components/schemas/SortObject"
-          },
           "pageable": {
             "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
           },
           "empty": {
             "type": "boolean"
@@ -5583,7 +7329,8 @@
           "code": {
             "type": "string",
             "maxLength": 50,
-            "minLength": 0
+            "minLength": 0,
+            "pattern": "[A-Za-z0-9_]+"
           },
           "name": {
             "type": "string",
@@ -5596,11 +7343,13 @@
             "minLength": 0
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
           },
           "type": {
             "type": "string",
-            "enum": ["MEDICATION", "SERVICE", "SUPPLY", "MERCHANDISE"]
+            "enum": ["MEDICATION", "VACCINE", "SERVICE", "SUPPLY", "MERCHANDISE"]
           },
           "unitPrice": {
             "type": "number",
@@ -5643,7 +7392,7 @@
           },
           "type": {
             "type": "string",
-            "enum": ["MEDICATION", "SERVICE", "SUPPLY", "MERCHANDISE"]
+            "enum": ["MEDICATION", "VACCINE", "SERVICE", "SUPPLY", "MERCHANDISE"]
           },
           "unitPrice": {
             "type": "number"
@@ -5681,13 +7430,181 @@
         },
         "required": ["quantity"]
       },
+      "Line": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": ["productId", "quantity"]
+      },
+      "ManualStockDocumentRequest": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["IN", "OUT"]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "maxItems": 100,
+            "minItems": 0
+          }
+        },
+        "required": ["direction", "idempotencyKey", "items", "reason"]
+      },
+      "InventoryOperationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "operationType": {
+            "type": "string",
+            "enum": ["INITIAL", "CONSUME", "RESTOCK", "ADJUSTMENT"]
+          },
+          "sourceType": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "movements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockMovementResponse"
+            }
+          }
+        }
+      },
+      "StockMovementResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "operationId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "operationType": {
+            "type": "string",
+            "enum": ["INITIAL", "CONSUME", "RESTOCK", "ADJUSTMENT"]
+          },
+          "sourceType": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "productCode": {
+            "type": "string"
+          },
+          "quantityDelta": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantityBefore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantityAfter": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BatchStockConsumeRequest": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "sourceType": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 0
+          },
+          "sourceId": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "maxItems": 100,
+            "minItems": 0
+          }
+        },
+        "required": ["idempotencyKey", "items", "sourceType"]
+      },
       "UpdateProductRequest": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
             "maxLength": 150,
-            "minLength": 0
+            "minLength": 0,
+            "pattern": ".*\\S.*"
           },
           "category": {
             "type": "string",
@@ -5695,7 +7612,9 @@
             "minLength": 0
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
           },
           "unitPrice": {
             "type": "number",
@@ -5754,6 +7673,223 @@
             "type": "integer",
             "format": "int32"
           },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PageStockMovementResponse": {
+        "type": "object",
+        "properties": {
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockMovementResponse"
+            }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageable": {
+            "$ref": "#/components/schemas/PageableObject"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/SortObject"
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateReviewRequest": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": ["VET", "PRODUCT", "VISIT"]
+          },
+          "targetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
+          }
+        },
+        "required": ["comment", "rating", "targetId", "targetType", "title"]
+      },
+      "ReviewResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "targetType": {
+            "type": "string",
+            "enum": ["VET", "PRODUCT", "VISIT"]
+          },
+          "targetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorName": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PUBLISHED", "PENDING_MODERATION", "FLAGGED", "HIDDEN", "DELETED"]
+          },
+          "helpfulCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastModifiedDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VoteRequest": {
+        "type": "object",
+        "properties": {
+          "voteType": {
+            "type": "string",
+            "enum": ["HELPFUL", "NOT_HELPFUL"]
+          }
+        },
+        "required": ["voteType"]
+      },
+      "UpdateReviewRequest": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HideReviewRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": ["reason"]
+      },
+      "PageReviewResponse": {
+        "type": "object",
+        "properties": {
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewResponse"
+            }
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "first": {
+            "type": "boolean"
+          },
+          "last": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
           "sort": {
             "$ref": "#/components/schemas/SortObject"
           },
@@ -5762,6 +7898,33 @@
           },
           "empty": {
             "type": "boolean"
+          }
+        }
+      },
+      "ReviewSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": ["VET", "PRODUCT", "VISIT"]
+          },
+          "targetId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "average": {
+            "type": "number"
+          },
+          "distribution": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int64"
+            }
           }
         }
       }

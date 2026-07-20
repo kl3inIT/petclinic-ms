@@ -157,34 +157,29 @@ class RatingControllerIT {
     }
 
     @Test
-    void addVetRating_sameCustomerTwice_upsertsInPlaceAndCountIsOne() throws Exception {
+    void addVetRating_sameCustomerTwice_rejectsDuplicateAndPreservesOriginal() throws Exception {
         Long vetId = firstVetId();
 
-        // Lần 1: rate 5 sao
-        String first = mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
+        mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"score\": 5, \"description\": \"first\"}")
                         .with(staff("alice")))
                 .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        long firstId = om.readTree(first).path("id").asLong();
+                .andExpect(jsonPath("$.score").value(5));
 
-        // Lần 2: cùng alice rate lại vet đó với 2 sao → UPSERT, KHÔNG tạo row mới
-        String second = mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
+        mvc.perform(post("/api/v1/vets/{vetId}/ratings", vetId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"score\": 2, \"description\": \"changed my mind\"}")
                         .with(staff("alice")))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value((int) firstId))   // cùng id → update không insert
-                .andExpect(jsonPath("$.score").value(2))
-                .andExpect(jsonPath("$.description").value("changed my mind"))
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(status().isBadRequest())
+                .andExpect(header().string("X-PetClinic-Alert", "error.already-rated"))
+                .andExpect(jsonPath("$.errorKey").value("already-rated"));
 
-        // Summary chỉ count 1 — không bị spam
+        // The rejected request cannot change either the count or original score.
         mvc.perform(get("/api/v1/vets/{vetId}/ratings/summary", vetId).with(staff()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.count").value(1))
-                .andExpect(jsonPath("$.average").value(2.0));
+                .andExpect(jsonPath("$.average").value(5.0));
     }
 
     // ---------- predefinedDescription (Item 1) ----------

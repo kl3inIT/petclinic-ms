@@ -1,0 +1,29 @@
+flowchart TB
+  subgraph genai_module["genai-service"]
+    direction TB
+    subgraph genai_base["com.mss301.petclinic.genai"]
+      direction TB
+      subgraph admin_pkg["admin"]
+        admin_dto["dto"]
+      end
+      chat["chat"]
+      config["config"]
+      rag["rag"]
+    end
+  end
+
+  subgraph shared_deps["shared libraries"]
+    direction LR
+    common_web["common-web"]
+    common_jpa["common-jpa"]
+    common_security["common-security"]
+  end
+  spring_ai["Spring AI APIs"]
+  mcp_contract["mcp-server contract"]
+
+  admin_pkg -.-> config
+  chat -.-> config
+  genai_base -.->|Gradle| shared_deps
+  chat -.-> spring_ai
+  rag -.-> spring_ai
+  config -.->|MCP| mcp_contract

@@ -1,0 +1,86 @@
+@startuml
+title Layered Application
+
+top to bottom direction
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+skinparam ArrowColor #4B5563
+skinparam PackageBorderColor #111827
+skinparam PackageFontColor #111827
+skinparam BackgroundColor #FFF2CC
+
+package "Users" as Users #D9D2E9
+package "External Systems" as ExternalSystems #D9D2E9
+
+package "Layered Application" as App #FFF2CC {
+  package "Presentation Layer" as Presentation #D9EAD3 {
+    package "User Interface\napps/web" as UserInterface #B6D7A8
+    package "Presentation Logic\nroutes, features" as PresentationLogic #B6D7A8
+  }
+
+  package "Services Layer" as Services #F4CCCC {
+    package "Service Interface\napi-gateway, controller" as ServiceInterface #B6D7A8
+    package "Presentation Logic\ndto/req, dto/res" as ServiceLogic #B6D7A8
+  }
+
+  package "Business Layer" as Business #F9CB9C {
+    package "Application Facade\nservice interfaces" as ApplicationFacade #B6D7A8
+    package "Business Workflow\nevents, saga, workflow" as BusinessWorkflow #B6D7A8
+    package "Business Components\nservice/impl" as BusinessComponents #B6D7A8
+    package "Business Entities\nmodel, exception" as BusinessEntities #B6D7A8
+  }
+
+  package "Data Layer" as Data #C9DAF8 {
+    package "Data Access\nrepository, Liquibase" as DataAccess #B6D7A8
+    package "Service Agents\nclient, consumer" as ServiceAgents #B6D7A8
+  }
+
+  package "Cross Cutting" as CrossCutting #9FC5E8 {
+    package "Security\ncommon-security" as Security #B6D7A8
+    package "Operational Management\nconfig-repo, build-logic" as OperationalManagement #B6D7A8
+    package "Communication\ncommon-web, common-clients, common-events" as Communication #B6D7A8
+  }
+}
+
+package "Data Sources\nPostgreSQL, RabbitMQ, Redis" as DataSources #B6D7A8
+package "External Services\nEureka, MinIO, Mailpit" as ExternalServices #B6D7A8
+
+Users ..> Presentation
+Presentation ..> Business
+Services ..> Business
+Business --> Data
+Data ..> DataSources
+Data ..> ExternalServices
+
+Services ..> ExternalSystems
+Presentation ..> CrossCutting
+Services ..> CrossCutting
+Business ..> CrossCutting
+Data ..> CrossCutting
+
+ApplicationFacade --> BusinessWorkflow
+ApplicationFacade --> BusinessComponents
+ApplicationFacade --> BusinessEntities
+
+UserInterface -[hidden]right-> PresentationLogic
+ServiceInterface -[hidden]right-> ServiceLogic
+BusinessWorkflow -[hidden]right-> BusinessComponents
+BusinessComponents -[hidden]right-> BusinessEntities
+DataAccess -[hidden]right-> ServiceAgents
+Security -[hidden]down-> OperationalManagement
+OperationalManagement -[hidden]down-> Communication
+
+Users -[hidden]right-> Presentation
+Presentation -[hidden]right-> Services
+Services -[hidden]right-> ExternalSystems
+Business -[hidden]right-> CrossCutting
+Presentation -[hidden]down-> Business
+Business -[hidden]down-> Data
+DataAccess -[hidden]down-> DataSources
+ServiceAgents -[hidden]down-> ExternalServices
+
+@enduml

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { toast } from 'sonner';
 
@@ -24,6 +25,11 @@ interface Props {
 
 export function RestockDialog({ product, onOpenChange }: Props) {
   const restockMutation = useRestockProduct();
+  const idempotencyKey = useRef(crypto.randomUUID());
+
+  useEffect(() => {
+    idempotencyKey.current = crypto.randomUUID();
+  }, [product?.id]);
 
   const form = useForm({
     defaultValues: { quantity: 0 },
@@ -31,14 +37,19 @@ export function RestockDialog({ product, onOpenChange }: Props) {
     onSubmit: ({ value }) => {
       if (product?.id == null) return;
       restockMutation.mutate(
-        { id: product.id, data: { quantity: value.quantity } },
+        {
+          id: product.id,
+          data: { quantity: value.quantity },
+          idempotencyKey: idempotencyKey.current,
+        },
         {
           onSuccess: () => {
+            idempotencyKey.current = crypto.randomUUID();
             toast.success('Đã nhập thêm tồn kho');
             form.reset();
             onOpenChange(false);
           },
-          onError: (err) => toast.error((err as Error).message || 'Nhập kho thất bại'),
+          onError: (err) => toast.error(err.message || 'Nhập kho thất bại'),
         },
       );
     },
@@ -48,7 +59,10 @@ export function RestockDialog({ product, onOpenChange }: Props) {
     <Dialog
       open={!!product}
       onOpenChange={(o) => {
-        if (!o) form.reset();
+        if (!o) {
+          form.reset();
+          idempotencyKey.current = crypto.randomUUID();
+        }
         onOpenChange(o);
       }}
     >

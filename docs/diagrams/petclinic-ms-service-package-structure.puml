@@ -1,0 +1,67 @@
+@startuml
+title PCMS - Common Java Service Package Structure
+
+top to bottom direction
+
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam defaultFontName Arial
+skinparam defaultTextAlignment center
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 45
+skinparam ArrowColor #374151
+skinparam ArrowThickness 1
+skinparam PackageBorderColor #111827
+skinparam PackageFontColor #111827
+skinparam BackgroundColor #FFFFFF
+
+package "services/<name>/src/main/java" as SrcRoot #FFFFFF {
+  package "com.mss301.petclinic.<service>" as BasePackage #FFFFFF {
+    package "config" as Config {
+    }
+
+    package "controller" as Controller {
+    }
+
+    package "dto" as Dto {
+      package "req" as ReqDto {
+      }
+      package "res" as ResDto {
+      }
+
+      ReqDto -[hidden]right-> ResDto
+    }
+
+    package "exception" as Exception {
+    }
+
+    package "service" as Service {
+      package "impl" as ServiceImpl {
+      }
+    }
+
+    package "repository" as Repository {
+    }
+
+    package "model" as Model {
+    }
+
+    Config -[hidden]right-> Controller
+    Controller -[hidden]right-> Dto
+    Dto -[hidden]right-> Exception
+    Controller -[hidden]down-> Service
+    Service -[hidden]down-> Repository
+    Repository -[hidden]right-> Model
+
+    Controller -down-> Service
+    Controller ..> Dto
+    Service -down-> Repository
+    Repository -down-> Model
+    Dto ..> Model
+    Exception ..> Controller
+    Config ..> Controller
+  }
+}
+
+@enduml

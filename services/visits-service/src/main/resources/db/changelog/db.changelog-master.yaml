@@ -23,3 +23,5 @@ databaseChangeLog:
       file: db/changelog/changes/012-relax-prescription-unique.yaml
   - include:
       file: db/changelog/changes/013-create-saga-step-state.yaml
+  - include:
+      file: db/changelog/changes/014-prescription-idempotency.yaml

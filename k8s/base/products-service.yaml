@@ -12,7 +12,7 @@ spec:
       labels: { app: products-service }
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "9191"
+        prometheus.io/port: "9192"
         prometheus.io/path: /actuator/prometheus
     spec:
       terminationGracePeriodSeconds: 30
@@ -28,22 +28,22 @@ spec:
             allowPrivilegeEscalation: false
             capabilities: { drop: ["ALL"] }
           ports:
-            - { name: http, containerPort: 8191 }
-            - { name: mgmt, containerPort: 9191 }
+            - { name: http, containerPort: 8192 }
+            - { name: mgmt, containerPort: 9192 }
           envFrom:
             - configMapRef: { name: petclinic-common }
           resources:
             requests: { cpu: 200m, memory: 384Mi }
             limits: { cpu: "1", memory: 768Mi }
           startupProbe:
-            httpGet: { path: /actuator/health/readiness, port: 9191 }
+            httpGet: { path: /actuator/health/readiness, port: 9192 }
             periodSeconds: 10
             failureThreshold: 30
           readinessProbe:
-            httpGet: { path: /actuator/health/readiness, port: 9191 }
+            httpGet: { path: /actuator/health/readiness, port: 9192 }
             periodSeconds: 10
           livenessProbe:
-            httpGet: { path: /actuator/health/liveness, port: 9191 }
+            httpGet: { path: /actuator/health/liveness, port: 9192 }
             periodSeconds: 15
             failureThreshold: 5
 ---
@@ -55,5 +55,5 @@ metadata:
 spec:
   selector: { app: products-service }
   ports:
-    - { name: http, port: 8191, targetPort: 8191 }
-    - { name: mgmt, port: 9191, targetPort: 9191 }
+    - { name: http, port: 8192, targetPort: 8192 }
+    - { name: mgmt, port: 9192, targetPort: 9192 }

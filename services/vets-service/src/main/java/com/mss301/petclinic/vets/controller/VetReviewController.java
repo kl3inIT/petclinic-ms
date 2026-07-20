@@ -13,16 +13,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * Endpoints review queue cho staff/admin — list các thay đổi PENDING từ vet.
+ * Endpoints review queue cho admin — list các thay đổi PENDING từ vet.
  * Hiện chỉ còn photo (education đã chuyển sang CRUD trần, không qua duyệt).
  * Approve/reject từng item nằm ở VetPhotoController (sub-resource theo vetId).
  *
- * <p>Security: chỉ STAFF + ADMIN, khai báo ở {@code vets-service.yml}
- * petclinic.security.endpoints.staff với path {@code /api/v1/vets/reviews/**}.</p>
+ * <p>Security: chỉ ADMIN, khai báo ở {@code vets-service.yml}
+ * petclinic.security.endpoints.admin với path {@code /api/v1/vets/reviews/**}.</p>
  */
 @RestController
 @RequestMapping("/api/v1/vets/reviews")
-@Tag(name = "Vet Reviews", description = "Queue duyệt thay đổi từ vet (staff/admin only)")
+@Tag(name = "Vet Reviews", description = "Queue duyệt ảnh bác sĩ (admin only)")
 public class VetReviewController {
 
     private final VetPhotoService photoService;

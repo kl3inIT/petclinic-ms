@@ -1,5 +1,7 @@
 package com.mss301.petclinic.visits.client;
 
+import java.util.List;
+
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.service.annotation.GetExchange;
@@ -19,10 +21,18 @@ public interface ProductsClient {
     @GetExchange("/api/v1/products/{id}")
     ProductSummary getProduct(@PathVariable Long id);
 
-    /** Trừ tồn kho khi cấp phát thuốc/vật tư. Trả về sản phẩm sau khi trừ. */
-    @PostExchange("/api/v1/products/{id}/consume")
-    ProductSummary consume(@PathVariable Long id, @RequestBody StockAdjust body);
+    @PostExchange("/api/v1/products/stock/consume")
+    InventoryOperationSummary consumeBatch(@RequestBody BatchStockConsume body);
 
-    /** Body cho consume — khớp {@code StockAdjustRequest} ở products-service. */
-    record StockAdjust(Integer quantity) {}
+    record BatchStockConsume(
+            String idempotencyKey,
+            String sourceType,
+            String sourceId,
+            String reason,
+            List<Line> items
+    ) {
+        public record Line(Long productId, Integer quantity) {}
+    }
+
+    record InventoryOperationSummary(Long id, String idempotencyKey) {}
 }

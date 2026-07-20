@@ -23,9 +23,8 @@ petclinic:
           - { method: PATCH, path: /api/v1/visits/*/complete }
           # Kê đơn thuốc — chỉ VET (+ADMIN). GET/GET pdf reach hardcode trong VisitsSecurityConfig.
           - { method: POST,  path: /api/v1/visits/*/prescription }
-      # Staff vận hành (admin + cancel cho người khác — fallback support cho USER)
-      staff:
-        - { method: PATCH, path: /api/v1/visits/*/start }       # staff cũng start được
+      # STAFF dùng bucket user để đặt, xem và huỷ lịch tại quầy. Bắt đầu/hoàn tất
+      # khám và kê đơn là nghiệp vụ lâm sàng, chỉ VET (+ ADMIN override) thực hiện.
 
   # Đơn thuốc — PDF binary đi qua Go files-service; visits giữ metadata lâm sàng.
   files:

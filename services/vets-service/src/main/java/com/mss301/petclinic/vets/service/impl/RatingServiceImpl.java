@@ -9,6 +9,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +37,7 @@ import com.mss301.petclinic.vets.service.RatingService;
 public class RatingServiceImpl implements RatingService {
 
     private static final Logger log = LoggerFactory.getLogger(RatingServiceImpl.class);
+    private static final String RATING_UNIQUE_CONSTRAINT = "uk_ratings_vet_customer";
 
     private final RatingRepository ratingRepository;
     private final VetRepository vetRepository;
@@ -70,21 +72,23 @@ public class RatingServiceImpl implements RatingService {
     @Transactional
     public RatingResponse create(Long vetId, RatingRequest request, String customerName) {
         ensureVetExists(vetId);
-        // UPSERT: 1 customer chỉ có 1 rating per vet. POST trùng → update rating cũ.
-        // Unique constraint uk_ratings_vet_customer ở DB (changelog 010) là defense-in-depth.
-        var existing = ratingRepository.findByVetIdAndCustomerName(vetId, customerName);
-        boolean isUpdate = existing.isPresent();
-        Rating entity = existing
-                .map(e -> {
-                    e.setScore(request.score());
-                    e.setPredefinedDescription(request.predefinedDescription());
-                    e.setDescription(request.resolveDescription());
-                    e.setRateDate(OffsetDateTime.now());
-                    return e;
-                })
-                .orElseGet(() -> request.toEntity(vetId, customerName));
-        Rating saved = ratingRepository.save(entity);
-        publishRatingAddedAfterCommit(saved, isUpdate);
+        // A rating is immutable and can be submitted once per customer and vet.
+        // The database unique constraint remains the concurrency-safe final guard.
+        if (ratingRepository.findByVetIdAndCustomerName(vetId, customerName).isPresent()) {
+            throw alreadyRated();
+        }
+        Rating entity = request.toEntity(vetId, customerName);
+        Rating saved;
+        try {
+            saved = ratingRepository.saveAndFlush(entity);
+        } catch (DataIntegrityViolationException ex) {
+            String detail = ex.getMostSpecificCause().getMessage();
+            if (detail != null && detail.contains(RATING_UNIQUE_CONSTRAINT)) {
+                throw alreadyRated();
+            }
+            throw ex;
+        }
+        publishRatingAddedAfterCommit(saved);
         return RatingResponse.from(saved);
     }
 
@@ -94,7 +98,7 @@ public class RatingServiceImpl implements RatingService {
      * concurrent update fail), event không được fire. Best-effort — broker down chỉ log
      * warning, KHÔNG rollback rating đã saved (rating-add KHÔNG cần guarantee event).
      */
-    private void publishRatingAddedAfterCommit(Rating saved, boolean isUpdate) {
+    private void publishRatingAddedAfterCommit(Rating saved) {
         EventPublisher publisher = events.getIfAvailable();
         if (publisher == null) {
             return; // common-events tắt (test profile) → skip
@@ -112,7 +116,7 @@ public class RatingServiceImpl implements RatingService {
                 saved.getDescription(),
                 saved.getCustomerName(),
                 saved.getRateDate(),
-                isUpdate);
+                false);
 
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             log.warn("Publish vet.rating.added OUTSIDE transaction (rating={}). "
@@ -198,5 +202,10 @@ public class RatingServiceImpl implements RatingService {
         if (!vetRepository.existsById(vetId)) {
             throw new VetNotFoundException(vetId.toString());
         }
+    }
+
+    private static BadRequestAlertException alreadyRated() {
+        return new BadRequestAlertException(
+                "Bạn đã đánh giá bác sĩ này", "rating", "already-rated");
     }
 }

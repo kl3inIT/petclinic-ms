@@ -17,7 +17,7 @@ export const Route = createFileRoute('/admin/owners')({
   component: OwnersPage,
 });
 
-function OwnersPage() {
+export function OwnersPage() {
   const [lastNameFilter, setLastNameFilter] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editingOwner, setEditingOwner] = useState<OwnerResponse | null>(null);

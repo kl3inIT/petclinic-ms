@@ -3,3 +3,7 @@ databaseChangeLog:
       file: db/changelog/changes/001-init-products.yaml
   - include:
       file: db/changelog/changes/002-add-merchandise-type.yaml
+  - include:
+      file: db/changelog/changes/004-add-vaccine-type.yaml
+  - include:
+      file: db/changelog/changes/003-inventory-ledger.yaml

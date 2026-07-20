@@ -43,26 +43,24 @@ petclinic:
   #
   # Thứ tự apply trong customizer: public → admin → staff → user (specific trước, broad sau).
   #
-  # NOTE: Phase K /me endpoints (multi-role VET+STAFF+ADMIN) + sub-resource DELETE
-  # (STAFF, override pattern broad /vets/** admin-only) phải HARDCODE trong
-  # VetsSecurityConfig.java vì không fit YAML pattern. Xem javadoc class đó.
+  # NOTE: /me endpoints dành cho VET (+ ADMIN override) được hardcode trong
+  # VetsSecurityConfig.java vì custom role VET cần đứng trước rule GET /vets/**.
   security:
     endpoints:
       # Mọi user authenticated đều xem được catalog vet + specialty
       user:
         - { method: GET, path: /api/v1/vets/** }
         - { method: GET, path: /api/v1/specialties/** }
-      # Staff (+ ADMIN qua role hierarchy implicit) tạo/sửa vet
-      staff:
+      # Quản trị hồ sơ, lịch trực và ảnh bác sĩ chỉ dành cho ADMIN. STAFF là
+      # lễ tân/thu ngân: vẫn đọc catalog bác sĩ qua bucket user nhưng không sửa.
+      admin:
         - { method: POST,  path: /api/v1/vets }
         - { method: PATCH, path: /api/v1/vets/** }
         - { method: PUT,   path: /api/v1/vets/** }
-        # Review queue + approve/reject ảnh — STAFF/ADMIN only
+        # Review queue + approve/reject ảnh — ADMIN only
         # (education đã chuyển sang CRUD trần, không còn approve/reject)
         - { method: GET,   path: /api/v1/vets/reviews/** }
         - { method: POST,  path: /api/v1/vets/*/photo/approve }
         - { method: POST,  path: /api/v1/vets/*/photo/reject }
-      # Admin only — hard delete + catalog management
-      admin:
         - { method: DELETE, path: /api/v1/vets/** }
         - { path: /api/v1/specialties/** }   # mọi non-GET trên specialties

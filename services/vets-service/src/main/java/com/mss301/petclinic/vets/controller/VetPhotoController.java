@@ -73,7 +73,7 @@ public class VetPhotoController {
 
     @PostMapping("/approve")
     @Operation(
-            summary = "Approve vet photo — STAFF/ADMIN only",
+            summary = "Approve vet photo — ADMIN only",
             description = "Đổi status PENDING/REJECTED → APPROVED. Photo hiển thị public."
     )
     public VetPhotoResponse approveVetPhoto(@PathVariable Long vetId,
@@ -83,7 +83,7 @@ public class VetPhotoController {
 
     @PostMapping("/reject")
     @Operation(
-            summary = "Reject vet photo — STAFF/ADMIN only",
+            summary = "Reject vet photo — ADMIN only",
             description = "Body: { reason: '...' }. Đổi status → REJECTED. Photo ẩn khỏi public."
     )
     public VetPhotoResponse rejectVetPhoto(@PathVariable Long vetId,

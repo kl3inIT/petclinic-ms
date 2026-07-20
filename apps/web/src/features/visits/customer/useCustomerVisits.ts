@@ -9,6 +9,7 @@ import { VisitResponseStatus } from '@/lib/api/generated/model/visitResponseStat
 import { type SearchVisitsParams } from '@/lib/api/generated/model';
 
 import { useVetMap } from '@/features/vets/useVetMap';
+import { useCustomerVetRatingStates } from '@/features/vets/customer-rating-state';
 import {
   ALL,
   PAGE_SIZE,
@@ -35,7 +36,11 @@ export function useCustomerVisits() {
   const [page, setPage] = useState(0);
 
   const params: SearchVisitsParams = {
-    pageable: { page: 0, size: FETCH_SIZE, sort: [`scheduledAt,${sortOrder}`] },
+    pageable: {
+      page: 0,
+      size: FETCH_SIZE,
+      sort: [`scheduledAt,${sortOrder}`, `id,${sortOrder}`],
+    },
     ...(statusFilter !== ALL ? { status: statusFilter } : {}),
   };
 
@@ -46,6 +51,17 @@ export function useCustomerVisits() {
   const visitsLoading = listQuery.isLoading || listQuery.isError;
   const ownerPets = useMemo(() => ownerQuery.data?.pets ?? [], [ownerQuery.data]);
   const visits = useMemo(() => listQuery.data?.content ?? [], [listQuery.data?.content]);
+  const completedVetIds = useMemo(
+    () =>
+      visits
+        .filter(
+          (visit) =>
+            visit.status === VisitResponseStatus.COMPLETED && visit.vetId !== undefined,
+        )
+        .map((visit) => visit.vetId as number),
+    [visits],
+  );
+  const ratingStates = useCustomerVetRatingStates(completedVetIds);
 
   // Danh sách bác sĩ xuất hiện trong các visit hiện có — dùng cho dropdown lọc.
   const vetOptions = useMemo(() => {
@@ -150,6 +166,7 @@ export function useCustomerVisits() {
     focusPet,
     vetMap,
     vetOptions,
+    ratingStates,
     filteredVisits,
     visibleVisits,
     counts,

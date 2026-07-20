@@ -40,7 +40,7 @@ const faqs: FaqItem[] = [
   },
   {
     q: 'Tại sao tôi không xem được trang Bác sĩ?',
-    a: 'Trang /vet chỉ dành cho tài khoản có vai trò VET hoặc STAFF. Tài khoản khách hàng (USER) sẽ thấy trang 403.',
+    a: 'Trang /vet chỉ dành cho bác sĩ có vai trò VET. Lễ tân dùng /staff; tài khoản khách hàng (USER) sẽ thấy trang 403.',
   },
   {
     q: 'Dữ liệu của tôi được bảo vệ thế nào?',

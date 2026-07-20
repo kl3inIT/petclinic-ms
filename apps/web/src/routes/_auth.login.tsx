@@ -1,5 +1,7 @@
 import { Link, createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
+import { Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -24,6 +26,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: '/_auth/login' });
   const setSession = useAuthStore((s) => s.setSession);
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const loginMutation = useLogin({
     mutation: {
@@ -34,17 +37,19 @@ function LoginPage() {
           user: { id: data.userId!, username: data.username!, roles: data.roles ?? [] },
         });
         toast.success(`Xin chào ${data.username}`);
-        // Redirect theo role (Phase K). VET → /vet, ADMIN|STAFF → /admin,
-        // INVENTORY_MANAGER → /admin/products, fallback /.
+        // Mỗi role có portal riêng; ADMIN được ưu tiên vì tài khoản admin seed
+        // đồng thời mang USER. URL redirect vẫn được giữ cho deep link hợp lệ.
         // URL search.redirect override role-based default (deep-link login).
         const roles = data.roles ?? [];
-        const roleHome = roles.includes('VET')
-          ? '/vet'
-          : roles.includes('ADMIN') || roles.includes('STAFF')
-            ? '/admin'
-            : roles.includes('INVENTORY_MANAGER')
-              ? '/admin/products'
-              : '/';
+        const roleHome = roles.includes('ADMIN')
+          ? '/admin'
+          : roles.includes('INVENTORY_MANAGER')
+            ? '/inventory'
+            : roles.includes('STAFF')
+              ? '/staff'
+              : roles.includes('VET')
+                ? '/vet'
+                : '/';
         void navigate({ to: search.redirect ?? roleHome });
       },
       onError: () => {
@@ -94,14 +99,30 @@ function LoginPage() {
         children={(field) => (
           <div className="space-y-2">
             <Label htmlFor={field.name}>Password</Label>
-            <Input
-              id={field.name}
-              type="password"
-              autoComplete="current-password"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-            />
+            <div className="relative">
+              <Input
+                id={field.name}
+                type={passwordVisible ? 'text' : 'password'}
+                autoComplete="current-password"
+                className="pr-10"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              />
+              <button
+                type="button"
+                aria-label={passwordVisible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                aria-pressed={passwordVisible}
+                onClick={() => setPasswordVisible((visible) => !visible)}
+                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
+                {passwordVisible ? (
+                  <EyeOff aria-hidden="true" className="size-4" />
+                ) : (
+                  <Eye aria-hidden="true" className="size-4" />
+                )}
+              </button>
+            </div>
             <FieldError field={field} />
           </div>
         )}

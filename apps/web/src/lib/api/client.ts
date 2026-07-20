@@ -12,9 +12,62 @@ import { useAuthStore } from '@/features/auth/store';
  */
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
+function appendQueryValue(
+  searchParams: URLSearchParams,
+  key: string,
+  value: unknown,
+): void {
+  if (value === null || value === undefined) return;
+  if (Array.isArray(value)) {
+    value.forEach((item) => appendQueryValue(searchParams, key, item));
+    return;
+  }
+  if (value instanceof Date) {
+    searchParams.append(key, value.toISOString());
+    return;
+  }
+  if (typeof value === 'string') {
+    searchParams.append(key, value);
+    return;
+  }
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    searchParams.append(key, value.toString());
+    return;
+  }
+  throw new TypeError(`Unsupported query parameter value for "${key}"`);
+}
+
+export function serializeApiParams(params: Record<string, unknown>): string {
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    // OpenAPI represents Spring's Pageable as a nested object, but Spring MVC
+    // binds it from top-level page, size and repeated sort query parameters.
+    if (
+      key === 'pageable' &&
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value)
+    ) {
+      Object.entries(value).forEach(([pageableKey, pageableValue]) =>
+        appendQueryValue(searchParams, pageableKey, pageableValue),
+      );
+      continue;
+    }
+    appendQueryValue(searchParams, key, value);
+  }
+
+  return searchParams.toString();
+}
+
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  paramsSerializer: { serialize: serializeApiParams },
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -92,8 +145,7 @@ apiClient.interceptors.response.use(
     applyProblemDetailMessage(error);
 
     const original = error.config as
-      | (InternalAxiosRequestConfig & { _retry?: boolean })
-      | undefined;
+      (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
     if (!original || error.response?.status !== 401 || original._retry) {
       return Promise.reject(error);

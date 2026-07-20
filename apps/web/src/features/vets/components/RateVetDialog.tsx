@@ -16,6 +16,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { FieldError } from '@/lib/form/FieldError';
+import { useAuthStore } from '@/features/auth/store';
 
 import {
   getGetVetRatingsSummaryQueryKey,
@@ -23,6 +24,7 @@ import {
   useAddVetRating,
 } from '@/lib/api/generated/vet-ratings/vet-ratings';
 import { cn } from '@/lib/utils';
+import { getCustomerVetRatingQueryKey } from '../customer-rating-state';
 import { ratingSchema } from '../schemas';
 
 interface Props {
@@ -34,20 +36,24 @@ interface Props {
 /**
  * Customer rate vet sau visit COMPLETED.
  *
- * BE Phase F.1 — UPSERT semantic: cùng customer + cùng vet POST trùng → update
- * điểm cũ, KHÔNG tạo bản ghi mới. customerName lấy từ JWT (Phase F).
- * FE chỉ cần gọi mutation; không cần check existed.
+ * A customer can rate each veterinarian once. The persisted rating query owns
+ * eligibility; this dialog also writes the successful response to that cache
+ * so the action becomes unavailable immediately, before a background refetch.
  */
 export function RateVetDialog({ vetId, vetLabel, onOpenChange }: Props) {
   const qc = useQueryClient();
+  const username = useAuthStore((state) => state.user?.username);
   const [score, setScore] = useState<number>(5);
   const [hovered, setHovered] = useState<number | null>(null);
 
   const addMutation = useAddVetRating({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (rating) => {
         toast.success('Cảm ơn bạn đã đánh giá!');
         if (vetId) {
+          if (username) {
+            qc.setQueryData(getCustomerVetRatingQueryKey(vetId, username), rating);
+          }
           void qc.invalidateQueries({ queryKey: getListVetRatingsQueryKey(vetId) });
           void qc.invalidateQueries({ queryKey: getGetVetRatingsSummaryQueryKey(vetId) });
         }
@@ -94,7 +100,7 @@ export function RateVetDialog({ vetId, vetLabel, onOpenChange }: Props) {
               : 'Bạn cảm thấy thế nào về buổi khám?'}
             <br />
             <span className="text-xs">
-              Bạn có thể gửi lại đánh giá bất cứ lúc nào — điểm mới sẽ ghi đè điểm cũ.
+              Mỗi khách hàng chỉ đánh giá một lần cho mỗi bác sĩ.
             </span>
           </DialogDescription>
         </DialogHeader>

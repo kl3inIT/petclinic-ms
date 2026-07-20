@@ -1,0 +1,44 @@
+@startuml
+title PCMS - MCP Server Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "mcp-server" <<Spring Boot microservice>> {
+  package "com.mss301.petclinic.mcp" {
+    package "client" {
+      package "dto"
+    }
+    package "config"
+    package "prompts"
+    package "resources"
+  }
+}
+
+package "shared" {
+  package "common-web" <<library>>
+  package "common-security" <<library>>
+  package "common-clients" <<library>>
+}
+
+package "remote API contracts" {
+  package "customers-service API" <<remote API>>
+  package "vets-service API" <<remote API>>
+  package "visits-service API" <<remote API>>
+}
+
+client ..> dto
+resources ..> client
+resources ..> dto
+
+config ..> "common-security"
+config ..> "common-web"
+client ..> "common-clients"
+client ..> "customers-service API" : HTTP
+client ..> "vets-service API" : HTTP
+client ..> "visits-service API" : HTTP
+
+@enduml

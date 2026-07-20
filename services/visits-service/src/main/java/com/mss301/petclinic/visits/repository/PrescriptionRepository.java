@@ -14,4 +14,6 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
 
     /** Tất cả đơn của visit, mới nhất trước. */
     List<Prescription> findByVisitIdOrderByIssuedAtDescIdDesc(Long visitId);
+
+    Optional<Prescription> findByIdempotencyKey(String idempotencyKey);
 }

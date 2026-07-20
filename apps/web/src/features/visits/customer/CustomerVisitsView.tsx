@@ -86,6 +86,11 @@ export function CustomerVisitsView() {
                 onReschedule={() => setRescheduleTarget(visit)}
                 onCancel={() => setCancelTarget(visit)}
                 onRate={() => setRateTarget(visit)}
+                ratingState={
+                  visit.vetId !== undefined
+                    ? (vm.ratingStates.get(visit.vetId) ?? 'checking')
+                    : 'unavailable'
+                }
               />
             ))
           )}
@@ -139,6 +144,11 @@ export function CustomerVisitsView() {
         onReschedule={(visit) => setRescheduleTarget(visit)}
         onCancel={(visit) => setCancelTarget(visit)}
         onRate={(visit) => setRateTarget(visit)}
+        ratingState={
+          detailTarget?.vetId !== undefined
+            ? (vm.ratingStates.get(detailTarget.vetId) ?? 'checking')
+            : 'unavailable'
+        }
       />
 
       <RateVetDialog

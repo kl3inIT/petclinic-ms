@@ -33,10 +33,10 @@ import { cn } from '@/lib/utils';
 interface Props {
   data: VisitResponse[];
   isLoading?: boolean;
-  onStart: (id: number) => void;
-  onComplete: (visit: VisitResponse) => void;
-  onCancel: (id: number) => void;
-  onPrescribe: (visit: VisitResponse) => void;
+  onStart?: (id: number) => void;
+  onComplete?: (visit: VisitResponse) => void;
+  onCancel?: (id: number) => void;
+  onPrescribe?: (visit: VisitResponse) => void;
 }
 
 const timeFmt = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -173,25 +173,36 @@ export function VisitsDataTable({
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Hành động</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={!canStart} onSelect={() => onStart(id)}>
-                  <Play className="size-4" /> Bắt đầu khám
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled={!canComplete} onSelect={() => onComplete(v)}>
-                  <CheckCircle2 className="size-4" /> Hoàn thành &amp; lập hoá đơn
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={!canPrescribe}
-                  onSelect={() => onPrescribe(v)}
-                >
-                  <Pill className="size-4" /> Kê đơn thuốc
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={!canCancel}
-                  variant="destructive"
-                  onSelect={() => onCancel(id)}
-                >
-                  <XCircle className="size-4" /> Hủy
-                </DropdownMenuItem>
+                {onStart ? (
+                  <DropdownMenuItem disabled={!canStart} onSelect={() => onStart(id)}>
+                    <Play className="size-4" /> Bắt đầu khám
+                  </DropdownMenuItem>
+                ) : null}
+                {onComplete ? (
+                  <DropdownMenuItem
+                    disabled={!canComplete}
+                    onSelect={() => onComplete(v)}
+                  >
+                    <CheckCircle2 className="size-4" /> Hoàn thành &amp; lập hoá đơn
+                  </DropdownMenuItem>
+                ) : null}
+                {onPrescribe ? (
+                  <DropdownMenuItem
+                    disabled={!canPrescribe}
+                    onSelect={() => onPrescribe(v)}
+                  >
+                    <Pill className="size-4" /> Kê đơn thuốc
+                  </DropdownMenuItem>
+                ) : null}
+                {onCancel ? (
+                  <DropdownMenuItem
+                    disabled={!canCancel}
+                    variant="destructive"
+                    onSelect={() => onCancel(id)}
+                  >
+                    <XCircle className="size-4" /> Hủy lịch
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           );

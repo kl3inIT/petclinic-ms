@@ -88,6 +88,14 @@ public class PrescriptionBillingSaga {
         attempts++;
     }
 
+    public void recordPublishAttempt(String error) {
+        if (status != SagaStatus.PENDING) {
+            return;
+        }
+        attempts++;
+        lastError = error;
+    }
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();

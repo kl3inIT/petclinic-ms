@@ -45,14 +45,9 @@ public class ReviewsSecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // Admin moderation queue — STAFF/ADMIN.
-                        // DELETE /admin/reviews/* + PATCH unhide chỉ ADMIN.
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/reviews/**")
-                            .hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/reviews/*/unhide")
-                            .hasRole("ADMIN")
+                        // Moderation là chức năng quản trị, không thuộc nghiệp vụ lễ tân.
                         .requestMatchers("/api/v1/admin/reviews/**")
-                            .hasAnyRole("STAFF", "ADMIN")
+                            .hasRole("ADMIN")
 
                         // USER endpoints — phải đăng nhập.
                         .requestMatchers("/api/v1/reviews/me").authenticated()

@@ -29,6 +29,7 @@ interface Props {
 
 const TYPE_OPTIONS = [
   { value: 'MEDICATION', label: 'Thuốc (có tồn kho)' },
+  { value: 'VACCINE', label: 'Vaccine (có tồn kho)' },
   { value: 'SERVICE', label: 'Dịch vụ (không tồn kho)' },
   { value: 'SUPPLY', label: 'Vật tư (có tồn kho)' },
   { value: 'MERCHANDISE', label: 'Hàng bán lẻ (đồ chơi, thức ăn…)' },
@@ -68,7 +69,6 @@ export function ProductFormDialog({ open, onOpenChange, product }: Props) {
               description,
               unitPrice: value.unitPrice,
               unit,
-              stockQuantity: stockTracked ? value.stockQuantity : undefined,
               reorderLevel: value.reorderLevel,
               active: value.active,
             },
@@ -172,10 +172,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: Props) {
                   onChange={(e) =>
                     field.handleChange(
                       e.target.value as
-                        | 'MEDICATION'
-                        | 'SERVICE'
-                        | 'SUPPLY'
-                        | 'MERCHANDISE',
+                        'MEDICATION' | 'VACCINE' | 'SERVICE' | 'SUPPLY' | 'MERCHANDISE',
                     )
                   }
                 >
@@ -251,11 +248,14 @@ export function ProductFormDialog({ open, onOpenChange, product }: Props) {
                     name="stockQuantity"
                     children={(field) => (
                       <div className="space-y-2">
-                        <Label htmlFor={field.name}>Tồn kho</Label>
+                        <Label htmlFor={field.name}>
+                          {isEdit ? 'Tồn kho (điều chỉnh qua nhập kho)' : 'Tồn kho'}
+                        </Label>
                         <Input
                           id={field.name}
                           type="number"
                           min="0"
+                          disabled={isEdit}
                           value={field.state.value}
                           onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(Number(e.target.value))}

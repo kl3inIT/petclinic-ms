@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   getListProductsQueryKey,
@@ -6,13 +6,14 @@ import {
   useCreateProduct as useCreateProductGenerated,
   useUpdateProduct as useUpdateProductGenerated,
   useDeleteProduct as useDeleteProductGenerated,
-  useRestockProduct as useRestockProductGenerated,
 } from '@/lib/api/generated/products/products';
 import type {
   CreateProductRequest,
   ProductResponse,
   ListProductsParams,
+  StockAdjustRequest,
 } from '@/lib/api/generated/model';
+import { apiMutator } from '@/lib/api/mutator';
 
 export type { ProductResponse, CreateProductRequest };
 
@@ -42,5 +43,20 @@ export function useDeleteProduct() {
 
 export function useRestockProduct() {
   const invalidate = useInvalidateProducts();
-  return useRestockProductGenerated({ mutation: { onSuccess: invalidate } });
+  return useMutation({
+    mutationFn: ({ id, data, idempotencyKey }: RestockProductVariables) =>
+      apiMutator<ProductResponse>({
+        url: `/api/v1/products/${id}/restock`,
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        data,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+interface RestockProductVariables {
+  id: number;
+  data: StockAdjustRequest;
+  idempotencyKey: string;
 }

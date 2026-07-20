@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
 import { VisitResponseStatus } from '@/lib/api/generated/model/visitResponseStatus';
+import type { CustomerRatingState } from '@/features/vets/customer-rating-state';
 import { cn } from '@/lib/utils';
 
 import { petEmoji } from '../labels';
@@ -44,6 +45,7 @@ export function CustomerVisitRow({
   onReschedule,
   onCancel,
   onRate,
+  ratingState,
 }: {
   visit: VisitResponse;
   vetMap: Map<number, VetInfo>;
@@ -53,13 +55,16 @@ export function CustomerVisitRow({
   onReschedule: () => void;
   onCancel: () => void;
   onRate: () => void;
+  ratingState: CustomerRatingState;
 }) {
   const date = visit.scheduledAt ? new Date(visit.scheduledAt) : null;
   const status = visit.status ?? VisitResponseStatus.SCHEDULED;
   const canCancel =
     status === VisitResponseStatus.SCHEDULED ||
     status === VisitResponseStatus.IN_PROGRESS;
-  const canRate = status === VisitResponseStatus.COMPLETED && visit.vetId !== undefined;
+  const isRateableVisit =
+    status === VisitResponseStatus.COMPLETED && visit.vetId !== undefined;
+  const canRate = isRateableVisit && ratingState === 'eligible';
   const title = titleForVisit(visit);
   const vet = visit.vetId !== undefined ? vetMap.get(visit.vetId) : undefined;
   const doctorName =
@@ -168,6 +173,17 @@ export function CustomerVisitRow({
                 Đánh giá
               </Button>
             ) : null}
+            {isRateableVisit && ratingState === 'rated' ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-emerald-300 px-3 text-xs font-bold text-emerald-700"
+                disabled
+              >
+                <Star className="size-3.5 fill-emerald-500 text-emerald-500" />
+                Đã đánh giá
+              </Button>
+            ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon-sm" className="text-slate-500">
@@ -188,7 +204,7 @@ export function CustomerVisitRow({
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onRate} disabled={!canRate}>
                   <Star className="size-4" />
-                  Đánh giá bác sĩ
+                  {ratingState === 'rated' ? 'Đã đánh giá' : 'Đánh giá bác sĩ'}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {

@@ -7,22 +7,27 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.mss301.petclinic.common.events.EventPublisher;
 import com.mss301.petclinic.common.web.exception.BadRequestAlertException;
 import com.mss301.petclinic.visits.client.FilesClient;
+import com.mss301.petclinic.visits.client.ProductSummary;
 import com.mss301.petclinic.visits.client.RemoteClientsFacade;
 import com.mss301.petclinic.visits.dto.req.CreatePrescriptionRequest;
 import com.mss301.petclinic.visits.dto.res.PrescriptionResponse;
@@ -80,7 +85,8 @@ class PrescriptionServiceImplTest {
         return new CreatePrescriptionRequest(
                 "uống sau ăn",
                 List.of(new CreatePrescriptionRequest.Item(
-                        "Amoxicillin", "250mg", "2 lần/ngày", 7, "sau bữa ăn", null, null)));
+                        "Amoxicillin", "250mg", "2 lần/ngày", 7, "sau bữa ăn", null, null)),
+                null);
     }
 
     @Test
@@ -147,5 +153,62 @@ class PrescriptionServiceImplTest {
 
         assertThat(pdf.content()).hasSize(4);
         assertThat(pdf.filename()).isEqualTo("prescription-visit-10.pdf");
+    }
+
+    @Test
+    void createRollsBackBeforePdfWhenInventoryConsumeFails() {
+        when(visitRepository.findById(VISIT_ID)).thenReturn(Optional.of(clinicalVisit()));
+        when(prescriptionRepository.save(any(Prescription.class))).thenAnswer(invocation -> {
+            Prescription prescription = invocation.getArgument(0);
+            ReflectionTestUtils.setField(prescription, "id", 77L);
+            return prescription;
+        });
+        when(remoteClients.fetchProduct(55L)).thenReturn(new ProductSummary(
+                55L, "MED_AMOX", "Amoxicillin", "MEDICATION", BigDecimal.TEN,
+                "viên", 10, true));
+        when(remoteClients.consumeProducts(eq("prescription-command:rx-test-77"), eq("77"), any()))
+                .thenThrow(new RuntimeException("inventory unavailable"));
+        CreatePrescriptionRequest request = new CreatePrescriptionRequest(
+                "notes", List.of(new CreatePrescriptionRequest.Item(
+                        "Amoxicillin", "250mg", "2 lần/ngày", 7, "sau ăn", 55L, 2)),
+                "rx-test-77");
+
+        assertThatThrownBy(() -> service.create(VISIT_ID, request, VET_ID, false))
+                .hasMessageContaining("inventory unavailable");
+
+        verify(files, never()).upload(anyString(), anyString(), any(byte[].class));
+        verify(pdfGenerator, never()).render(any(Prescription.class), any());
+    }
+
+    @Test
+    void retryWithSameIdempotencyKeyReturnsExistingPrescriptionWithoutConsumingAgain() {
+        AtomicReference<Prescription> persisted = new AtomicReference<>();
+        when(visitRepository.findById(VISIT_ID)).thenReturn(Optional.of(clinicalVisit()));
+        when(prescriptionRepository.findByIdempotencyKey("rx-retry-1"))
+                .thenAnswer(invocation -> Optional.ofNullable(persisted.get()));
+        when(prescriptionRepository.save(any(Prescription.class))).thenAnswer(invocation -> {
+            Prescription prescription = invocation.getArgument(0);
+            ReflectionTestUtils.setField(prescription, "id", 78L);
+            persisted.set(prescription);
+            return prescription;
+        });
+        when(remoteClients.fetchProduct(55L)).thenReturn(new ProductSummary(
+                55L, "MED_AMOX", "Amoxicillin", "MEDICATION", BigDecimal.TEN,
+                "viên", 10, true));
+        when(pdfGenerator.render(any(Prescription.class), any())).thenReturn(new byte[]{'%', 'P'});
+        CreatePrescriptionRequest request = new CreatePrescriptionRequest(
+                "notes", List.of(new CreatePrescriptionRequest.Item(
+                        "Amoxicillin", "250mg", "2 lần/ngày", 7, "sau ăn", 55L, 2)),
+                "rx-retry-1");
+
+        PrescriptionResponse first = service.create(VISIT_ID, request, VET_ID, false);
+        PrescriptionResponse replay = service.create(VISIT_ID, request, VET_ID, false);
+
+        assertThat(replay.id()).isEqualTo(first.id());
+        verify(remoteClients, times(1)).consumeProducts(
+                eq("prescription-command:rx-retry-1"), eq("78"), any());
+        verify(prescriptionRepository, times(1)).save(any(Prescription.class));
+        verify(files, times(1)).upload(anyString(), eq("application/pdf"), any(byte[].class));
+        verify(sagaRepository, times(1)).save(any());
     }
 }

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
 import { VisitResponseStatus } from '@/lib/api/generated/model/visitResponseStatus';
+import type { CustomerRatingState } from '@/features/vets/customer-rating-state';
 
 import { petEmoji } from '../labels';
 import { InfoTile, ResultBlock, StatusPill } from './parts';
@@ -32,6 +33,7 @@ export function CustomerVisitDetailDialog({
   onReschedule,
   onCancel,
   onRate,
+  ratingState,
 }: {
   visit: VisitResponse | null;
   vetMap: Map<number, VetInfo>;
@@ -39,13 +41,16 @@ export function CustomerVisitDetailDialog({
   onReschedule: (visit: VisitResponse) => void;
   onCancel: (visit: VisitResponse) => void;
   onRate: (visit: VisitResponse) => void;
+  ratingState: CustomerRatingState;
 }) {
   const date = visit?.scheduledAt ? new Date(visit.scheduledAt) : null;
   const status = visit?.status ?? VisitResponseStatus.SCHEDULED;
   const canCancel =
     status === VisitResponseStatus.SCHEDULED ||
     status === VisitResponseStatus.IN_PROGRESS;
-  const canRate = status === VisitResponseStatus.COMPLETED && visit?.vetId !== undefined;
+  const isRateableVisit =
+    status === VisitResponseStatus.COMPLETED && visit?.vetId !== undefined;
+  const canRate = isRateableVisit && ratingState === 'eligible';
   const vet = visit?.vetId !== undefined ? vetMap.get(visit.vetId) : undefined;
   const doctorName =
     visit?.vetId !== undefined ? (vet?.fullName ?? `BS #${visit.vetId}`) : null;
@@ -159,6 +164,12 @@ export function CustomerVisitDetailDialog({
             >
               <Star className="size-4 fill-white text-white" />
               Đánh giá bác sĩ
+            </Button>
+          ) : null}
+          {visit && isRateableVisit && ratingState === 'rated' ? (
+            <Button variant="outline" disabled>
+              <Star className="size-4 fill-emerald-500 text-emerald-500" />
+              Đã đánh giá
             </Button>
           ) : null}
         </DialogFooter>

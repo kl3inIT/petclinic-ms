@@ -1,0 +1,50 @@
+flowchart TB
+  subgraph workflow_module["workflow-service"]
+    direction TB
+    subgraph workflow_base["com.mss301.petclinic.workflow"]
+      direction TB
+      camel["camel"]
+      client["client"]
+      config["config"]
+      controller["controller"]
+      delegate["delegate"]
+      subgraph dto_pkg["dto"]
+        direction LR
+        req["req"]
+        res["res"]
+      end
+      exception["exception"]
+      subgraph service_pkg["service"]
+        impl["impl"]
+      end
+    end
+  end
+
+  subgraph shared_deps["shared libraries"]
+    direction LR
+    common_web["common-web"]
+    common_security["common-security"]
+    common_clients["common-clients"]
+  end
+  subgraph remote_apis["remote API contracts"]
+    direction LR
+    visits_api["visits-service"]
+    vets_api["vets-service"]
+  end
+  subgraph framework_apis["framework packages"]
+    direction LR
+    camunda_api["Camunda APIs"]
+    camel_api["Apache Camel APIs"]
+  end
+
+  controller -.-> service_pkg
+  controller -.-> dto_pkg
+  impl -.-> client
+  impl -.-> config
+  delegate -.-> camel
+  delegate -.-> config
+  workflow_base -.->|Gradle| shared_deps
+  client -.->|HTTP| remote_apis
+  delegate -.->|HTTP| remote_apis
+  impl -.-> camunda_api
+  camel -.-> camel_api

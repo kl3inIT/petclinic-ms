@@ -24,7 +24,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * Reviews moderation API (STAFF/ADMIN). Tách path prefix {@code /admin/reviews} để
+ * Reviews moderation API (ADMIN). Tách path prefix {@code /admin/reviews} để
  * SecurityConfig route role-based dễ hơn.
  *
  * <p>Method name UNIQUE cross-service (gotcha #23):
@@ -32,7 +32,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  */
 @RestController
 @RequestMapping("/api/v1/admin/reviews")
-@Tag(name = "Reviews Moderation", description = "STAFF/ADMIN moderate review queue")
+@Tag(name = "Reviews Moderation", description = "ADMIN moderate review queue")
 public class ReviewModerationController {
 
     private final ReviewService service;

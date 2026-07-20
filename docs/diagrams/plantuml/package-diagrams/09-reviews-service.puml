@@ -1,0 +1,64 @@
+@startuml
+title PCMS - Reviews Service Package Diagram
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle folder
+skinparam linetype ortho
+skinparam defaultFontName Arial
+
+package "reviews-service" <<Spring Boot microservice>> {
+  package "com.mss301.petclinic.reviews" {
+    package "client"
+    package "config"
+    package "controller"
+    package "dto" {
+      package "req"
+      package "res"
+    }
+    package "events"
+    package "exception"
+    package "model"
+    package "repository"
+    package "service" {
+      package "impl"
+      package "moderation"
+    }
+  }
+}
+
+package "shared" {
+  package "common-web" <<library>>
+  package "common-jpa" <<library>>
+  package "common-security" <<library>>
+  package "common-clients" <<library>>
+  package "common-events" <<library>>
+}
+
+package "visits-service API contract" <<remote API>>
+package "billing-service API contract" <<remote API>>
+
+controller ..> service
+controller ..> req
+controller ..> res
+service ..> req
+service ..> res
+impl ..> service : implements
+impl ..> repository
+impl ..> model
+impl ..> client
+impl ..> events
+impl ..> moderation
+repository ..> model
+req ..> model : maps to
+res ..> model : maps from
+
+exception ..> "common-web"
+model ..> "common-jpa"
+config ..> "common-security"
+client ..> "common-clients"
+events ..> "common-events"
+client ..> "visits-service API contract" : eligibility check
+client ..> "billing-service API contract" : eligibility check
+
+@enduml
