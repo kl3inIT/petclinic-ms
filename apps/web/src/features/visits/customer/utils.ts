@@ -1,5 +1,5 @@
 import type { VisitResponse } from '@/lib/api/generated/model/visitResponse';
-import type { VisitResponseStatus } from '@/lib/api/generated/model/visitResponseStatus';
+import type { DisplayVisitStatus } from '../labels';
 import type { SearchVisitsStatus } from '@/lib/api/generated/model';
 
 /** Sentinel cho lựa chọn "tất cả" trong các Select lọc. */
@@ -75,8 +75,9 @@ export function matchesMonthFilter(visit: VisitResponse, filter: MonthFilter): b
   return date.getTime() < now.getTime();
 }
 
-export function timelineDot(status: VisitResponseStatus): string {
-  const styles: Record<VisitResponseStatus, string> = {
+export function timelineDot(status: DisplayVisitStatus): string {
+  const styles: Record<DisplayVisitStatus, string> = {
+    PENDING: 'bg-amber-400',
     SCHEDULED: 'bg-violet-500',
     IN_PROGRESS: 'bg-orange-400',
     COMPLETED: 'bg-emerald-500',

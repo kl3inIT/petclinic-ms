@@ -24,6 +24,7 @@ import { VisitsDataTable } from '@/features/visits/components/VisitsDataTable';
 import { BookVisitDialog } from '@/features/visits/components/BookVisitDialog';
 import { CompleteVisitDialog } from '@/features/visits/components/CompleteVisitDialog';
 import { PrescriptionDialog } from '@/features/visits/components/PrescriptionDialog';
+import { BookingWorkflowInbox } from '@/features/workflows/components/BookingWorkflowInbox';
 import { SearchVisitsStatus, type SearchVisitsParams } from '@/lib/api/generated/model';
 
 export const Route = createFileRoute('/admin/visits')({
@@ -91,6 +92,8 @@ function VisitsPage() {
           Đặt lịch mới
         </Button>
       </div>
+
+      <BookingWorkflowInbox role="reception" />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">

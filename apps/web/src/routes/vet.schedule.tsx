@@ -1307,6 +1307,10 @@ function MiniRow({
 function VisitStatusChip({ status }: { status?: VisitResponse['status'] }) {
   if (!status) return null;
   const map = {
+    PENDING: {
+      label: 'Chờ xác nhận',
+      cls: 'border-amber-200 bg-amber-50 text-amber-700',
+    },
     SCHEDULED: { label: 'Đã đặt', cls: 'border-violet-200 bg-violet-50 text-violet-700' },
     IN_PROGRESS: {
       label: 'Đang khám',
@@ -1315,7 +1319,7 @@ function VisitStatusChip({ status }: { status?: VisitResponse['status'] }) {
     COMPLETED: { label: 'Hoàn tất', cls: 'border-slate-200 bg-slate-50 text-slate-600' },
     CANCELLED: { label: 'Đã huỷ', cls: 'border-rose-200 bg-rose-50 text-rose-600' },
   } as const;
-  const cfg = map[status];
+  const cfg = map[status as keyof typeof map] ?? map.PENDING;
   return (
     <span
       className={cn(

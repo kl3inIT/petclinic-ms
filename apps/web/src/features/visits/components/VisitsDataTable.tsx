@@ -156,6 +156,7 @@ export function VisitsDataTable({
             v.status === VisitResponseStatus.IN_PROGRESS ||
             v.status === VisitResponseStatus.COMPLETED;
           const canCancel =
+            String(v.status) === 'PENDING' ||
             v.status === VisitResponseStatus.SCHEDULED ||
             v.status === VisitResponseStatus.IN_PROGRESS;
           const isOpen = actionRowId === id;

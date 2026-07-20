@@ -102,7 +102,9 @@ export function useCustomerVisits() {
   );
 
   const counts = {
-    scheduled: visits.filter((v) => v.status === VisitResponseStatus.SCHEDULED).length,
+    scheduled: visits.filter(
+      (v) => v.status === VisitResponseStatus.SCHEDULED || String(v.status) === 'PENDING',
+    ).length,
     completed: visits.filter((v) => v.status === VisitResponseStatus.COMPLETED).length,
     inProgress: visits.filter((v) => v.status === VisitResponseStatus.IN_PROGRESS).length,
     cancelled: visits.filter((v) => v.status === VisitResponseStatus.CANCELLED).length,

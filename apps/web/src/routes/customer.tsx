@@ -1,6 +1,5 @@
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
 import {
-  Bell,
   CalendarCheck,
   Home,
   LogOut,
@@ -18,6 +17,7 @@ import { useLogout } from '@/lib/api/generated/authentication/authentication';
 import { useGetMyOwnerProfile } from '@/lib/api/generated/owners/owners';
 import { avatarColor, initials } from '@/features/visits/labels';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 
 export const Route = createFileRoute('/customer')({
   beforeLoad: ({ location }) => {
@@ -101,15 +101,7 @@ function CustomerLayout() {
               </Link>
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="relative hidden rounded-full text-slate-500 hover:bg-violet-50 hover:text-violet-700 md:inline-flex"
-              title="Thông báo"
-            >
-              <Bell className="size-5" />
-              <span className="absolute top-1 right-1 size-2 rounded-full bg-red-500 ring-2 ring-white" />
-            </Button>
+            <NotificationBell />
 
             <Link
               to="/customer/profile"

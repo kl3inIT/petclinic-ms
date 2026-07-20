@@ -4,8 +4,7 @@ import { CalendarCheck, PawPrint, Plus, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { VisitResponseStatus } from '@/lib/api/generated/model/visitResponseStatus';
-import { VISIT_STATUS_LABEL } from '../labels';
+import { VISIT_STATUS_LABEL, type DisplayVisitStatus } from '../labels';
 
 export function MetricCard({
   icon: Icon,
@@ -72,8 +71,9 @@ export function MetricCard({
   );
 }
 
-export function StatusPill({ status }: { status: VisitResponseStatus }) {
-  const styles: Record<VisitResponseStatus, string> = {
+export function StatusPill({ status }: { status: DisplayVisitStatus }) {
+  const styles: Record<DisplayVisitStatus, string> = {
+    PENDING: 'bg-amber-50 text-amber-700',
     SCHEDULED: 'bg-violet-50 text-violet-700',
     IN_PROGRESS: 'bg-orange-50 text-orange-600',
     COMPLETED: 'bg-emerald-100 text-emerald-700',

@@ -22,7 +22,7 @@ import { useSearchVisits } from '@/lib/api/generated/visits/visits';
 import { useVetMap, type VetInfo } from '@/features/vets/useVetMap';
 import { VetAvatar } from '@/features/vet-me/components/VetAvatar';
 import { VisitStatusBadge } from '@/features/visits/components/VisitStatusBadge';
-import { petEmoji } from '@/features/visits/labels';
+import { petEmoji, type DisplayVisitStatus } from '@/features/visits/labels';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/customer/')({
@@ -52,14 +52,16 @@ function CustomerDashboard() {
 
   const upcomingQuery = useSearchVisits({
     pageable: { page: 0, size: 5, sort: ['scheduledAt,asc'] },
-    status: SearchVisitsStatus.SCHEDULED,
   });
   const recentQuery = useSearchVisits({
     pageable: { page: 0, size: 5, sort: ['scheduledAt,desc'] },
   });
   const ownerQuery = useGetMyOwnerProfile();
 
-  const upcoming = upcomingQuery.data?.content ?? [];
+  const upcoming = (upcomingQuery.data?.content ?? []).filter(
+    (visit) =>
+      visit.status === SearchVisitsStatus.SCHEDULED || String(visit.status) === 'PENDING',
+  );
   const recent = recentQuery.data?.content ?? [];
   const pets = ownerQuery.data?.pets ?? [];
   const upcomingLoading = upcomingQuery.isLoading || upcomingQuery.isError;
@@ -448,13 +450,18 @@ function VisitMini({
 }
 
 const ACTIVITY_META: Record<
-  SearchVisitsStatus,
+  DisplayVisitStatus,
   { label: string; icon: typeof CalendarCheck; color: string }
 > = {
   SCHEDULED: {
     label: 'Đặt lịch khám',
     icon: CalendarCheck,
     color: 'text-blue-600 bg-blue-50',
+  },
+  PENDING: {
+    icon: Clock3,
+    label: 'Chờ xác nhận',
+    color: 'text-amber-600 bg-amber-50',
   },
   IN_PROGRESS: {
     label: 'Đang khám',
@@ -471,7 +478,8 @@ const ACTIVITY_META: Record<
 
 function ActivityItem({ visit, petName }: { visit: VisitResponse; petName: string }) {
   const date = visit.scheduledAt ? new Date(visit.scheduledAt) : undefined;
-  const meta = ACTIVITY_META[visit.status ?? SearchVisitsStatus.SCHEDULED];
+  const meta =
+    ACTIVITY_META[(visit.status ?? SearchVisitsStatus.SCHEDULED) as DisplayVisitStatus];
   const Icon = meta.icon;
 
   return (

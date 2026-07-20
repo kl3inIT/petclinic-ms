@@ -57,6 +57,7 @@ export function CustomerVisitRow({
   const date = visit.scheduledAt ? new Date(visit.scheduledAt) : null;
   const status = visit.status ?? VisitResponseStatus.SCHEDULED;
   const canCancel =
+    String(status) === 'PENDING' ||
     status === VisitResponseStatus.SCHEDULED ||
     status === VisitResponseStatus.IN_PROGRESS;
   const canRate = status === VisitResponseStatus.COMPLETED && visit.vetId !== undefined;

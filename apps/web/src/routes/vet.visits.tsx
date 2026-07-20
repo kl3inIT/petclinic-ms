@@ -24,6 +24,7 @@ import { VisitsDataTable } from '@/features/visits/components/VisitsDataTable';
 import { CompleteAndInvoiceDialog } from '@/features/visits/components/CompleteAndInvoiceDialog';
 import { PrescriptionDialog } from '@/features/visits/components/PrescriptionDialog';
 import { useMyProfile } from '@/features/vet-me/api';
+import { BookingWorkflowInbox } from '@/features/workflows/components/BookingWorkflowInbox';
 
 export const Route = createFileRoute('/vet/visits')({
   component: VetVisitsPage,
@@ -92,6 +93,8 @@ function VetVisitsPage() {
           </p>
         </div>
       </div>
+
+      <BookingWorkflowInbox role="doctor" />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
