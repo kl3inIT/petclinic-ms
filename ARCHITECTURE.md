@@ -48,7 +48,7 @@ Spring Boot Gradle modules:
 | `billing-service` | 8191 | 9191 | Diseases, invoices, invoice items, checkout. |
 | `products-service` | 8192 | 9192 | Products, stock consume/restock. |
 | `genai-service` | 8188 | 9188 | Chat, streaming chat, admin LLM configuration. |
-| `mcp-server` | 8187 | 9187 | MCP tool server and well-known OAuth metadata. |
+| `mcp-server` | 8187 | 9187 | Open, read-only MCP tool adapter; tools consume the domain services' internal AI read models. |
 
 Go services:
 
@@ -88,6 +88,9 @@ services stay in the owning service.
   from the merged spec in `apps/web/openapi/petclinic-api.json`.
 - Runtime service-to-service calls use `@HttpExchange` interfaces defined in
   the consumer service, not shared DTO packages.
+- `mcp-server` accepts no end-user credentials and exposes no mutations. Its
+  eight tools call `/internal/ai/**` read models which are intentionally kept
+  out of the API gateway; do not publish the MCP port unchanged in production.
 - Async integration uses RabbitMQ topic exchange `petclinic.events` and
   per-consumer queues with DLQs.
 - PostgreSQL uses schema-per-service with Liquibase owning schema migration and

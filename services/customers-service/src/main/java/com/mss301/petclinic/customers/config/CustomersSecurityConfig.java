@@ -40,7 +40,8 @@ public class CustomersSecurityConfig {
                                     "/actuator/info",
                                     "/v3/api-docs/**",
                                     "/swagger-ui/**",
-                                    "/swagger-ui.html")
+                                    "/swagger-ui.html",
+                                    "/internal/ai/**")
                             .permitAll();
                     EndpointSecurityCustomizer.apply(auth, endpoints);
                     auth.anyRequest().authenticated();

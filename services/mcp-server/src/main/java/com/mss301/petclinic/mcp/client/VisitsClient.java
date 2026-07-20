@@ -11,7 +11,7 @@ import com.mss301.petclinic.mcp.client.dto.VisitSummary;
 @HttpExchange(accept = "application/json")
 public interface VisitsClient {
 
-    @GetExchange("/api/v1/visits")
+    @GetExchange("/internal/ai/visits")
     PageResult<VisitSummary> searchVisits(
             @RequestParam(required = false) Long petId,
             @RequestParam(required = false) Long vetId,
@@ -20,6 +20,6 @@ public interface VisitsClient {
             @RequestParam int size
     );
 
-    @GetExchange("/api/v1/visits/{id}")
+    @GetExchange("/internal/ai/visits/{id}")
     VisitSummary getVisit(@PathVariable Long id);
 }

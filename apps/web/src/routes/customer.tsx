@@ -12,6 +12,7 @@ import {
 
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
+import { ChatWidget } from '@/features/ai/components/ChatWidget';
 import { useAuthStore } from '@/features/auth/store';
 import { requireAnyRole } from '@/features/auth/guards';
 import { useLogout } from '@/lib/api/generated/authentication/authentication';
@@ -164,6 +165,7 @@ function CustomerLayout() {
       <main className="mx-auto max-w-7xl px-6 py-8">
         <Outlet />
       </main>
+      <ChatWidget />
     </div>
   );
 }

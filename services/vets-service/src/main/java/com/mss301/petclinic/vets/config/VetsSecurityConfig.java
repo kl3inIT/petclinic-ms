@@ -49,7 +49,8 @@ public class VetsSecurityConfig {
                                     "/actuator/info",
                                     "/v3/api-docs/**",
                                     "/swagger-ui/**",
-                                    "/swagger-ui.html")
+                                    "/swagger-ui.html",
+                                    "/internal/ai/**")
                             .permitAll();
 
                     // Phase K — /me endpoints (VET+ADMIN). Phải khai báo TRƯỚC YAML

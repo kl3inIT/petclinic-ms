@@ -1,16 +1,15 @@
 /**
  * Chat widget — Vercel AI SDK v5 useChat + AI Elements components.
  *
- * Streaming: BE POST /api/v1/ai/chat/stream trả Flux<String> (Spring AI ChatClient
- * .stream().content()) → Spring MVC chunked HTTP → TextStreamChatTransport accumulate
- * text chunks → render real-time.
+ * Streaming: BE POST /api/v1/ai/chat/stream trả AI SDK UI Message Stream v1 qua SSE,
+ * nên text và MCP tool progress cùng đi qua DefaultChatTransport.
  *
- * JWT: TextStreamChatTransport.fetch wrapper inject Bearer token. Base path '/api/v1/...'
+ * JWT: transport.fetch wrapper inject Bearer token. Base path '/api/v1/...'
  * resolve qua Vite dev proxy → gateway :8180.
  */
 import { useChat } from '@ai-sdk/react';
-import { TextStreamChatTransport, type UIMessage } from 'ai';
-import { Bot, RotateCcw, Sparkles, X } from 'lucide-react';
+import { DefaultChatTransport, type UIMessage } from 'ai';
+import { Bot, LoaderCircle, RotateCcw, Sparkles, Wrench, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,7 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation';
-import { Message, MessageContent } from '@/components/ai-elements/message';
+import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
 import {
   PromptInput,
   PromptInputBody,
@@ -35,6 +34,20 @@ import { useAuthStore } from '@/features/auth/store';
 const THREAD_KEY = 'petclinic.ai.threadId';
 const MESSAGES_KEY = 'petclinic.ai.messages';
 const MAX_PERSISTED = 50;
+
+type ToolPart = Extract<UIMessage['parts'][number], { type: `tool-${string}` }>;
+
+function isToolPart(part: UIMessage['parts'][number]): part is ToolPart {
+  return typeof part.type === 'string' && part.type.startsWith('tool-');
+}
+
+function toolStatus(part: ToolPart): string {
+  if (part.state === 'output-error') {
+    return ('errorText' in part && part.errorText) || 'Không thể hoàn tất tra cứu';
+  }
+  if (part.state === 'output-available') return 'Đã nhận kết quả tra cứu';
+  return 'Đang tra cứu dữ liệu clinic…';
+}
 
 function loadOrCreateThread(): string {
   let id = localStorage.getItem(THREAD_KEY);
@@ -69,9 +82,11 @@ export function ChatWidget() {
 
   const transport = useMemo(
     () =>
-      new TextStreamChatTransport({
+      new DefaultChatTransport({
         api: '/api/v1/ai/chat/stream',
-        body: { threadId },
+        prepareSendMessagesRequest: ({ messages }) => ({
+          body: { messages, threadId },
+        }),
         fetch: async (url, init) => {
           const headers = new Headers(init?.headers);
           if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
@@ -101,6 +116,11 @@ export function ChatWidget() {
   if (!user) return null;
 
   const isStreaming = status === 'streaming' || status === 'submitted';
+  const lastMessage = messages.at(-1);
+  const isWaitingForAssistant =
+    isStreaming &&
+    (lastMessage?.role !== 'assistant' ||
+      !lastMessage.parts.some((part) => part.type === 'text' || isToolPart(part)));
 
   const resetConversation = () => {
     setMessages([]);
@@ -172,13 +192,35 @@ export function ChatWidget() {
                     <MessageContent>
                       {message.parts.map((part, i) => {
                         if (part.type === 'text') {
-                          return <span key={i}>{part.text}</span>;
+                          return <MessageResponse key={i}>{part.text}</MessageResponse>;
+                        }
+                        if (isToolPart(part)) {
+                          const name = part.type.slice('tool-'.length);
+                          const failed = part.state === 'output-error';
+                          return (
+                            <div
+                              key={part.toolCallId || i}
+                              className="flex items-center gap-2 rounded-md border bg-muted/40 px-2.5 py-2 text-xs text-muted-foreground"
+                            >
+                              <Wrench className={failed ? 'size-3.5 text-destructive' : 'size-3.5 text-primary'} />
+                              <span className="font-medium text-foreground">{name}</span>
+                              <span className={failed ? 'text-destructive' : undefined}>{toolStatus(part)}</span>
+                            </div>
+                          );
                         }
                         return null;
                       })}
                     </MessageContent>
                   </Message>
                 ))
+              )}
+              {isWaitingForAssistant && (
+                <Message from="assistant">
+                  <MessageContent className="flex-row items-center text-muted-foreground">
+                    <LoaderCircle className="size-4 animate-spin" />
+                    <span>Đang suy nghĩ…</span>
+                  </MessageContent>
+                </Message>
               )}
               {error && (
                 <div className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">

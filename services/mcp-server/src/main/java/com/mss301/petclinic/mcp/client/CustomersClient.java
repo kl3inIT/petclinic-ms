@@ -16,16 +16,16 @@ import com.mss301.petclinic.mcp.client.dto.PetSummary;
 @HttpExchange(accept = "application/json")
 public interface CustomersClient {
 
-    @GetExchange("/api/v1/owners")
+    @GetExchange("/internal/ai/customers/owners")
     PageResult<OwnerSummary> listOwners(
             @RequestParam(required = false) String lastName,
             @RequestParam int page,
             @RequestParam int size
     );
 
-    @GetExchange("/api/v1/owners/{id}")
+    @GetExchange("/internal/ai/customers/owners/{id}")
     OwnerSummary getOwner(@PathVariable Long id);
 
-    @GetExchange("/api/v1/pets/{id}")
+    @GetExchange("/internal/ai/customers/pets/{id}")
     PetSummary getPet(@PathVariable Long id);
 }

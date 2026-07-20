@@ -2,9 +2,13 @@ package com.mss301.petclinic.genai.config;
 
 import jakarta.annotation.PostConstruct;
 
+import io.micrometer.observation.ObservationRegistry;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.ToolCallingAdvisor;
+import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
@@ -38,20 +42,21 @@ public class LlmClientHolder {
     private static final Logger log = LoggerFactory.getLogger(LlmClientHolder.class);
 
     private final ToolCallbackProvider mcpToolProvider;
+    private final ToolCallingManager toolCallingManager;
     private final PetclinicAiProperties bootstrapProperties;
     private final VectorStore vectorStore;  // null nếu Phase 12d skip RAG (no embedding key)
 
     private volatile ChatClient currentChatClient;
-    // Exposed cho streaming endpoint — bypass Spring AI 2.0-M6 OpenAiChatModel.internalStream()
-    // bug: nó .collectList().flatMapMany() để detect tool calls, biến stream thành Flux.just(aggregated)
-    // → mất per-token streaming. Manual stream path dùng OpenAI SDK trực tiếp.
+    // Retained with the model snapshot so a rebuild remains atomic with the OpenAI model.
     private volatile OpenAIClient currentSyncClient;
     private volatile String currentChatModelName;
 
     public LlmClientHolder(ToolCallbackProvider mcpToolProvider,
                             PetclinicAiProperties bootstrapProperties,
-                            ObjectProvider<VectorStore> vectorStoreProvider) {
+                            ObjectProvider<VectorStore> vectorStoreProvider,
+                            ToolCallingManager toolCallingManager) {
         this.mcpToolProvider = mcpToolProvider;
+        this.toolCallingManager = toolCallingManager;
         this.bootstrapProperties = bootstrapProperties;
         this.vectorStore = vectorStoreProvider.getIfAvailable();
         if (this.vectorStore == null) {
@@ -85,7 +90,7 @@ public class LlmClientHolder {
         return currentChatClient != null;
     }
 
-    /** Sync OpenAI SDK client cho streaming endpoint (bypass Spring AI aggregation bug). */
+    /** Current OpenAI SDK client, available for provider-specific diagnostics. */
     public OpenAIClient syncClient() {
         return currentSyncClient;
     }
@@ -120,7 +125,8 @@ public class LlmClientHolder {
                         .build())
                 .build();
 
-        ChatClient.Builder builder = ChatClient.builder(chatModel)
+        ChatClient.Builder builder = ChatClient.builder(chatModel, ObservationRegistry.NOOP, null, null,
+                ToolCallingAdvisor.builder().toolCallingManager(toolCallingManager))
                 .defaultTools(mcpToolProvider);
 
         if (vectorStore != null) {

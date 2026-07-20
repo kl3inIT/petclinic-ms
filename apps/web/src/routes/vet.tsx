@@ -13,6 +13,7 @@ import {
 
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
+import { ChatWidget } from '@/features/ai/components/ChatWidget';
 import { useAuthStore } from '@/features/auth/store';
 import { requireAnyRole } from '@/features/auth/guards';
 import { DemoBanner } from '@/features/vet-me/components/DemoBanner';
@@ -164,6 +165,7 @@ function VetLayout() {
           <Outlet />
         </div>
       </main>
+      <ChatWidget />
     </div>
   );
 }

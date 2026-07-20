@@ -5,10 +5,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.context.annotation.Primary;
 
 import com.openai.client.OpenAIClient;
@@ -31,7 +34,7 @@ import com.openai.client.okhttp.OpenAIOkHttpClient;
 // @ConditionalOnProperty với name=api-key fire kể cả khi value="" (Spring Boot match-if-set).
 // Cần ExpressionLanguage để loại trừ chuỗi rỗng — tránh tạo OpenAIClient với apiKey=null,
 // PgVectorStore autoconfig nuốt rồi RAG advisor crash khi query embedding.
-@ConditionalOnExpression("!'${petclinic.ai.embedding.api-key:}'.isEmpty()")
+@ConditionalOnExpression("!'${petclinic.ai.embedding.api-key:}'.isEmpty() && !'${petclinic.ai.embedding.base-url:}'.contains('openrouter.ai')")
 public class EmbeddingConfig {
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingConfig.class);
@@ -62,6 +65,26 @@ public class EmbeddingConfig {
                 .options(OpenAiEmbeddingOptions.builder()
                         .model(embed.modelOrDefault())
                         .build())
+                .build();
+    }
+
+    /**
+     * The Spring AI auto-configuration is intentionally excluded: it creates a PgVector store
+     * even when this conditional embedding configuration is absent. Keeping both beans under the
+     * same condition lets chat run without RAG when no valid embedding provider is configured.
+     */
+    @Bean
+    public VectorStore petclinicVectorStore(JdbcTemplate jdbcTemplate,
+                                             EmbeddingModel embeddingModel,
+                                             PetclinicAiProperties properties) {
+        PetclinicAiProperties.Embedding embed = properties.embedding();
+        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
+                .schemaName("genai")
+                .vectorTableName("vector_store")
+                .dimensions(embed.dimensionsOrDefault())
+                .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
+                .indexType(PgVectorStore.PgIndexType.HNSW)
+                .initializeSchema(false)
                 .build();
     }
 }

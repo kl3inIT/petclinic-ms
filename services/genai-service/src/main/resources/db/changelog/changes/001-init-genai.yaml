@@ -1,5 +1,5 @@
 # Spring AI 2.0.0-M6 JdbcChatMemoryRepository (Postgres dialect) yêu cầu bảng
-# `spring_ai_chat_memory` với columns: conversation_id, content, type, timestamp.
+# `spring_ai_chat_memory` với columns: conversation_id, content, type, timestamp, sequence_id.
 #
 # Mặc định conversation_id VARCHAR(36) (UUID) — mở rộng lên 128 để chứa pattern
 # `u:<uuid>:t:<threadId>` (1+36+3+64 = ~104 chars).
@@ -64,3 +64,36 @@ databaseChangeLog:
                   name: conversation_id
               - column:
                   name: timestamp
+
+  # Spring AI 2.0 orders a conversation by an explicit sequence id, rather than timestamp.
+  # Keep this additive so databases created by the pre-GA schema can migrate safely.
+  - changeSet:
+      id: 004-add-spring-ai-chat-memory-sequence-id
+      author: mss301
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                schemaName: genai
+                tableName: spring_ai_chat_memory
+                columnName: sequence_id
+      changes:
+        - addColumn:
+            schemaName: genai
+            tableName: spring_ai_chat_memory
+            columns:
+              - column:
+                  name: sequence_id
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - createIndex:
+            schemaName: genai
+            tableName: spring_ai_chat_memory
+            indexName: spring_ai_chat_memory_conv_sequence_idx
+            columns:
+              - column:
+                  name: conversation_id
+              - column:
+                  name: sequence_id

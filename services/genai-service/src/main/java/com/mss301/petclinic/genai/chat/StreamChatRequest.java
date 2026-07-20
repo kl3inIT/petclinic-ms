@@ -5,7 +5,7 @@ import java.util.List;
 import jakarta.validation.constraints.NotEmpty;
 
 /**
- * Body Vercel AI SDK {@code useChat} POST khi dùng {@code TextStreamChatTransport}.
+ * Body Vercel AI SDK {@code useChat} POST khi dùng {@code DefaultChatTransport}.
  *
  * <p>Shape khớp với {@code UIMessage[]} của AI SDK v5:
  * <pre>

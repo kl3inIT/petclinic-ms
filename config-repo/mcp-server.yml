@@ -34,18 +34,11 @@ spring:
         annotation-scanner:
           enabled: true
         instructions: |
-          Petclinic MCP server (read-only). 3 component categories:
+          Petclinic MCP server (read-only, no authentication). 3 component categories:
           - TOOLS (model-controlled): listOwners, getOwner, getPet, listVets, getVet,
             findVetsBySpecialty, searchVisits, getVisit
           - RESOURCES (application-controlled): pet-care FAQ, vet specialty catalog
           - PROMPTS (user-controlled): visit-summary template, owner-contact template
-
-# MCP-specific properties
-petclinic:
-  mcp:
-    # URI public của MCP server — dùng trong /.well-known/oauth-protected-resource metadata.
-    # Override env override khi prod public hostname khác.
-    resource-uri: ${MCP_RESOURCE_URI:http://localhost:8187/mcp}
 
 management:
   endpoints:

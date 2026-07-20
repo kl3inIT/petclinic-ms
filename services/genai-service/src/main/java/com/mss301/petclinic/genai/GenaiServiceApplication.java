@@ -7,6 +7,8 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 import com.mss301.petclinic.genai.config.PetclinicAiProperties;
 
+import org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration;
+
 /**
  * petclinic-ms chatbot service. Spring AI 2.0.0-M6.
  *
@@ -23,7 +25,7 @@ import com.mss301.petclinic.genai.config.PetclinicAiProperties;
  * <p>Endpoint: {@code POST /api/v1/ai/chat} (qua gateway: {@code /api/v1/ai/**}).
  * JWT-protected. Log mọi prompt + tool call + response (learning project).
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = PgVectorStoreAutoConfiguration.class)
 @EnableDiscoveryClient
 @EnableConfigurationProperties(PetclinicAiProperties.class)
 public class GenaiServiceApplication {

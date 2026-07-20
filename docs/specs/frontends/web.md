@@ -29,7 +29,11 @@ The web frontend lives in `apps/web`.
   non-interactive `Đã đánh giá` state immediately and after reload; the rating
   dialog cannot be reopened for that veterinarian.
 - Vet routes: dashboard, visits, schedule, profile, ratings, badges, settings.
-- AI chat components and workflow designer/monitoring UI.
+- AI chat uses AI SDK UI Message Stream v1 over SSE. Its shared widget renders
+  streamed Markdown, visible waiting state, and generic MCP tool progress; it
+  is mounted in the admin/staff/inventory shell and the authenticated customer
+  and vet portals. The browser only persists the local conversation view;
+  server-side memory remains the conversation authority.
 - Invoice editing is scoped by the operational screen: the vet dialog can add
   treatment lines but hides retail merchandise, while the cashier invoice
   screen can add retail/manual charges and checkout but hides treatment-by-disease.

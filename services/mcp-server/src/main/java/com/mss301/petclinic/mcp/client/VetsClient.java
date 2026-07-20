@@ -11,12 +11,12 @@ import com.mss301.petclinic.mcp.client.dto.VetSummary;
 @HttpExchange(accept = "application/json")
 public interface VetsClient {
 
-    @GetExchange("/api/v1/vets")
+    @GetExchange("/internal/ai/vets")
     PageResult<VetSummary> listVets(
             @RequestParam int page,
             @RequestParam int size
     );
 
-    @GetExchange("/api/v1/vets/{id}")
+    @GetExchange("/internal/ai/vets/{id}")
     VetSummary getVet(@PathVariable Long id);
 }

@@ -10,15 +10,15 @@ when a service is next changed.
 | `api-gateway` | Public gateway, fallback route, OpenAPI aggregation, route-level security/rate-limiting. |
 | `admin-server` | Spring Boot Admin dashboard. |
 | `auth-service` | Registration, login, refresh/logout, current user, admin users, customer/vet links, JWKS, and a dev customer account linked to owner seed #1. |
-| `customers-service` | Owners, pets, pet types, owner/pet events, and Files service media-reference validation. |
-| [`vets-service`](vets.md) | Vets, specialties, work schedules, one-time customer ratings, badges, vet media metadata, and Files service media-reference validation. |
-| `visits-service` | Visit booking/search/lifecycle, prescriptions, PDF generation, workflow callbacks, notification/billing sagas. Completion events always reach the billing saga; remote customer/pet/vet enrichment is best-effort so shared-token workflow callbacks can fall back to visit snapshots. |
+| `customers-service` | Owners, pets, pet types, owner/pet events, Files service media-reference validation, and a narrow token-free AI read model for the local MCP adapter. |
+| [`vets-service`](vets.md) | Vets, specialties, work schedules, one-time customer ratings, badges, vet media metadata, Files service media-reference validation, and a narrow token-free AI read model for the local MCP adapter. |
+| `visits-service` | Visit booking/search/lifecycle, prescriptions, PDF generation, workflow callbacks, notification/billing sagas, and a narrow token-free AI read model for the local MCP adapter. Completion events always reach the billing saga; remote customer/pet/vet enrichment is best-effort so shared-token workflow callbacks can fall back to visit snapshots. |
 | `reviews-service` | Review creation/listing, moderation, votes, purchase/visit eligibility checks. |
 | `workflow-service` | Camunda workflows, process definitions, instances, user tasks, designer support. |
 | `billing-service` | Diseases, invoices, invoice items, checkout, prescription/visit billing consumers. |
 | `products-service` | Product catalog, stock consume/restock. |
-| `genai-service` | Chat, streaming chat, LLM config encryption/validation/test. |
-| `mcp-server` | MCP tool exposure and well-known OAuth protected-resource metadata. |
+| `genai-service` | Chat, AI SDK UI Message Stream SSE chat (including MCP tool progress), server-side memory/RAG, and LLM config encryption/validation/test. |
+| `mcp-server` | Open, read-only MCP transport exposing 8 tools, 2 resources and 2 prompts. It does not accept or propagate user JWTs; its clients use only the internal AI read models of Customers, Vets and Visits. |
 | `mailer-service` | Email event consumer, template renderer, Redis idempotency, SBA registration. |
 | `files-service` | MinIO object operations for binary files. |
 

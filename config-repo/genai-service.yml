@@ -61,11 +61,9 @@ spring:
       client:
         type: SYNC
         request-timeout: 30s
-        # Lazy init — KHÔNG khởi tạo MCP client lúc boot. Lý do: mcp-server siết
-        # /mcp/** authenticated (MCP spec 2025-11-25 = OAuth 2.1 RS). Init lúc boot
-        # KHÔNG có SecurityContext của user → 401.
-        # Defer đến lần đầu user chat → McpClientAuthConfig customizer forward JWT thật.
-        initialized: false
+        # MCP is an internal, read-only demo adapter with no user authentication.
+        # Discover its tool catalog eagerly so the first chat does not pay the discovery cost.
+        initialized: true
         toolcallback:
           enabled: true                      # ChatClient auto-expose MCP tools làm tool callback
         streamable-http:
@@ -87,7 +85,8 @@ petclinic:
       temperature: 0.7
       memory-max-messages: 10
 
-    # Phase 12d — RAG embedding. Empty api-key → skip RAG, chat vẫn chạy.
+    # Phase 12d — RAG embedding. Empty key or an OpenRouter URL (chat-only) → skip RAG;
+    # chat and MCP tools still run. Use OpenAI direct or Ollama for real embeddings.
     # OpenRouter KHÔNG hỗ trợ /embeddings; phải OpenAI direct hoặc Ollama local:
     #   - OpenAI:  base-url=https://api.openai.com/v1,  api-key=sk-...,    model=text-embedding-3-small (dim 1536)
     #   - Ollama:  base-url=http://localhost:11434/v1, api-key=ollama,    model=nomic-embed-text (dim 768)
@@ -97,14 +96,6 @@ petclinic:
       model: ${PETCLINIC_EMBEDDING_MODEL:text-embedding-3-small}
       dimensions: ${PETCLINIC_EMBEDDING_DIMENSIONS:1536}
 
-# Crypto config — AES-GCM key dùng encrypt apiKey lưu DB. Set qua env (`PETCLINIC_CRYPTO_KEY`).
-# Trống → AesGcmEncryptor auto-generate ephemeral key (cảnh báo log) — OK cho dev local,
-# KHÔNG ok cho prod (restart sẽ làm DB row unreadable).
-petclinic.crypto.key: ${PETCLINIC_CRYPTO_KEY:}
-
-# RBAC — Least Privilege (slide MSS301 #70). Reactive variant ở
-# ReactiveEndpointSecurityCustomizer (genai-service dùng WebFlux stack).
-petclinic:
   security:
     endpoints:
       # USER+ — chat endpoints (USER nói chuyện với pet care AI)
@@ -113,6 +104,11 @@ petclinic:
       # Admin only — LLM config (BYOK API key, model selection, validate)
       admin:
         - { path: /api/v1/admin/llm/** }
+
+# Crypto config — AES-GCM key dùng encrypt apiKey lưu DB. Set qua env (`PETCLINIC_CRYPTO_KEY`).
+# Trống → AesGcmEncryptor auto-generate ephemeral key (cảnh báo log) — OK cho dev local,
+# KHÔNG ok cho prod (restart sẽ làm DB row unreadable).
+petclinic.crypto.key: ${PETCLINIC_CRYPTO_KEY:}
 
 management:
   endpoints:

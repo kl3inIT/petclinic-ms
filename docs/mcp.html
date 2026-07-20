@@ -56,14 +56,14 @@
 <body>
 
 <h1>petclinic-ms — MCP Server</h1>
-<p class="lede">Implementation aligned with Spring IO 2026 keynote: "Beyond local tools — Deep dive into MCP with Spring AI" (Maximilian Schellhorn & James Ward, AWS). OAuth 2.1 Resource Server + Stateless mode + 3 component categories.</p>
+<p class="lede">Local course-demo implementation: stateless Streamable HTTP plus three MCP component categories. The MCP transport deliberately has no authentication and exposes read-only demo data only.</p>
 
 <div class="toc">
   <h3>Mục lục</h3>
   <ol>
     <li><a href="#overview">Overview + 3 MCP component categories</a></li>
     <li><a href="#transport">Transport — Streamable HTTP + Stateless mode (SEP-1442)</a></li>
-    <li><a href="#auth">Authorization (spec 2025-11-25)</a></li>
+    <li><a href="#boundary">Demo boundary (no authentication)</a></li>
     <li><a href="#tools">Tools (model-controlled)</a></li>
     <li><a href="#resources">Resources (application-controlled)</a></li>
     <li><a href="#prompts">Prompts (user-controlled)</a></li>
@@ -74,7 +74,7 @@
 </div>
 
 <div class="tldr">
-  petclinic-ms <code>mcp-server</code> expose <b>8 Tools</b> (Customers/Vets/Visits domain), <b>2 Resources</b> (FAQ + Specialty catalog), <b>2 Prompts</b> (visit-summary + owner-contact-script) qua Spring AI 2.0.0-M6 + STATELESS Streamable HTTP transport. OAuth 2.1 Resource Server (JWT JWKS từ auth-service) + <code>/.well-known/oauth-protected-resource</code> metadata per RFC 9728. Annotation-driven: <code>@McpTool</code> / <code>@McpResource</code> / <code>@McpPrompt</code> auto-scan, không cần ToolCallbackProvider thủ công.
+  petclinic-ms <code>mcp-server</code> expose <b>8 read-only Tools</b> (Customers/Vets/Visits domain), <b>2 Resources</b> (FAQ + Specialty catalog), <b>2 Prompts</b> (visit-summary + owner-contact-script) qua Spring AI 2.0.0-M6 + STATELESS Streamable HTTP transport. Endpoint <code>/mcp</code> không yêu cầu hoặc forward JWT. Tool chỉ gọi <code>/internal/ai/**</code> read model, không đi qua API public/gateway và không có mutation.
 </div>
 
 <h2 id="overview">1. Overview + 3 MCP component categories</h2>
@@ -146,54 +146,20 @@
   </tbody>
 </table>
 
-<h2 id="auth">3. Authorization — MCP spec 2025-11-25 (slide #11-12)</h2>
-
-<div class="card accent">
-  <p>Spring IO 2026 keynote dành 2 trang nguyên cho phần này. Spec mới (2025-11-25) định nghĩa MCP server = <b>OAuth 2.1 Resource Server</b>.</p>
-</div>
-
-<h3>3.1. Flow</h3>
-<table>
-  <tbody>
-    <tr><td>1. Client gọi <code>/mcp</code> không token</td><td>MCP server trả <code>401 Unauthorized</code> + header <code>WWW-Authenticate: Bearer ...</code></td></tr>
-    <tr><td>2. Client fetch <code>/.well-known/oauth-protected-resource</code></td><td>MCP server trả metadata: authorization_servers, scopes, bearer_methods</td></tr>
-    <tr><td>3. Client redirect user → authorization server OAuth flow</td><td>(petclinic: auth-service JWT issue)</td></tr>
-    <tr><td>4. Client lấy access token</td><td>Bearer JWT signed bằng RSA, JWKS publish ở auth-service</td></tr>
-    <tr><td>5. Client gọi <code>/mcp</code> với <code>Authorization: Bearer &lt;jwt&gt;</code></td><td>MCP server verify qua JwtDecoder (JWKS) → OK / 401</td></tr>
-  </tbody>
-</table>
-
-<h3>3.2. Implementation</h3>
-<div class="file-label">mcp-server/.../config/McpSecurityConfig.java</div>
-<pre><code>@Bean
-public SecurityFilterChain mcpSecurityFilterChain(HttpSecurity http, JwtAuthenticationConverter conv) throws Exception {
-    http
-        .csrf(AbstractHttpConfigurer::disable)
-        .sessionManagement(s -> s.sessionCreationPolicy(STATELESS))
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/.well-known/**", "/actuator/health/**", ...).permitAll()
-            .requestMatchers("/mcp/**").authenticated()
-            .anyRequest().authenticated())
-        .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(conv)));
-    return http.build();
-}
-</code></pre>
-
-<div class="file-label">mcp-server/.../config/WellKnownController.java</div>
-<pre><code>@GetMapping("/.well-known/oauth-protected-resource")  // RFC 9728
-Map&lt;String, Object&gt; protectedResourceMetadata() {
-    return Map.of(
-        "resource", "http://localhost:8187/mcp",
-        "authorization_servers", List.of("petclinic-ms"),   // issuer claim
-        "bearer_methods_supported", List.of("header"),
-        "scopes_supported", List.of("openid", "profile"),
-        "resource_documentation", "...");
-}
-</code></pre>
+<h2 id="boundary">3. Demo boundary — no authentication</h2>
 
 <div class="card warn">
-  <p><b>Lý do KHÔNG dùng <code>spring-ai-community/mcp-security</code> library:</b> Version 0.1.11 advertise "Spring AI 2.0.x branch" nhưng chưa verify với 2.0.0-M6 milestone hiện tại (churn risk). Manual config = 0 dep mới, full control, pattern consistent với 4 service khác đã dùng <code>common-security</code>.</p>
+  <p><b><code>/mcp</code> is intentionally open for the local course demo.</b> The server does not verify, store or forward a user JWT. It exposes only eight read tools; there are no booking, update, delete, payment or inventory mutations.</p>
 </div>
+
+<table>
+  <tbody>
+    <tr><td>Client → MCP</td><td>No <code>Authorization</code> header is required.</td></tr>
+    <tr><td>MCP → domain services</td><td>Calls token-free <code>/internal/ai/customers/**</code>, <code>/internal/ai/vets/**</code>, and <code>/internal/ai/visits/**</code> read models.</td></tr>
+    <tr><td>Public API</td><td>Business APIs remain JWT/role protected and the internal AI paths are not gateway routes.</td></tr>
+    <tr><td>Production</td><td>Keep port 8187 private or restore an explicit transport and network boundary before publishing it.</td></tr>
+  </tbody>
+</table>
 
 <h2 id="tools">4. Tools — model-controlled <span class="pill tool">8 tools</span></h2>
 

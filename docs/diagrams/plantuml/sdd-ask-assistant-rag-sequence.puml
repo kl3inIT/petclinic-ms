@@ -16,8 +16,8 @@ Owner -> Web: Ask care question
 Web -> Gateway: POST /api/v1/ai/chat/stream
 Gateway -> Chat: route with USER JWT
 Chat -> RAG: retrieve clinic knowledge chunks
-Chat -> MCP: fetch permitted owner/pet/visit context
-MCP --> Chat: scoped tool results
+Chat -> MCP: fetch read-only owner/pet/visit demo context (no user JWT)
+MCP --> Chat: internal AI read-model results
 Chat -> Holder: get active provider config
 Holder --> Chat: ChatClient
 Chat -> LLM: prompt + context + safety instructions
