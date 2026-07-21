@@ -25,7 +25,7 @@ springBootAdmin    = "4.1.1"
 springAi           = "2.0.0"
 
 # Test
-junit              = "6.1.1"
+junit              = "6.1.2"
 
 openaiJava         = "4.39.1"
 
