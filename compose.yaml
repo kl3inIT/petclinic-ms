@@ -238,7 +238,7 @@ services:
 
   # Camunda 8 secondary storage for Operate/Tasklist/Flowset UI.
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.4
     container_name: petclinic-camunda-elasticsearch
     profiles: ["workflow", "all"]
     environment:
