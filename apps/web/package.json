@@ -56,7 +56,7 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "use-stick-to-bottom": "^1.1.6",
-    "zeebe-bpmn-moddle": "^1.16.0",
+    "zeebe-bpmn-moddle": "^1.17.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
