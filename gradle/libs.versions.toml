@@ -13,7 +13,7 @@ testcontainers     = "2.0.5"            # 2.x đổi artifactId pattern `testcon
 # Liquibase version managed by spring-boot-dependencies BOM — không pin tại đây.
 
 # API docs
-springdoc          = "3.0.3"            # OpenAPI/Swagger UI — version riêng cho Spring Boot 4
+springdoc          = "3.1.0"            # OpenAPI/Swagger UI — version riêng cho Spring Boot 4
 
 # Spring Boot Admin (codecentric) — UI quản trị + monitoring cho 5 Spring services.
 # 4.0.4 fix variables.css template — expose colors trực tiếp thay vì T(...)/bean method
