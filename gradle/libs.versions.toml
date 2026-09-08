@@ -36,7 +36,7 @@ openpdf            = "3.0.5"
 # BPM / integration (workflow-service)
 camunda            = "8.9.11"
 camel              = "4.21.0"            # Spring Boot 4.1 compatible line
-spotless           = "8.8.0"
+spotless           = "8.10.2"
 
 [libraries]
 # --- Spring Boot starters (Spring MVC stack, blocking) ---
