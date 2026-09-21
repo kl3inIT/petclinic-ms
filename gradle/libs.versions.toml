@@ -4,7 +4,7 @@
 [versions]
 # Core (verified July 2026)
 java               = "25"
-springBoot         = "4.1.0"            # latest stable
+springBoot         = "4.1.1"            # latest stable
 springCloud        = "2025.1.2"         # Oakwood — compatible with Boot 4.1.x
 
 # DB / Migration
@@ -13,7 +13,7 @@ testcontainers     = "2.0.5"            # 2.x đổi artifactId pattern `testcon
 # Liquibase version managed by spring-boot-dependencies BOM — không pin tại đây.
 
 # API docs
-springdoc          = "3.0.3"            # OpenAPI/Swagger UI — version riêng cho Spring Boot 4
+springdoc          = "3.1.1"            # OpenAPI/Swagger UI — version riêng cho Spring Boot 4
 
 # Spring Boot Admin (codecentric) — UI quản trị + monitoring cho 5 Spring services.
 # 4.0.4 fix variables.css template — expose colors trực tiếp thay vì T(...)/bean method
@@ -22,7 +22,7 @@ springBootAdmin    = "4.1.1"
 
 # Spring AI GA. Chỉ dùng trong 2 service: mcp-server (expose tools) + genai-service (chat).
 # OpenRouter routing dùng OpenAI adapter với base-url override → 1 SDK đa-provider.
-springAi           = "2.0.0"
+springAi           = "2.0.1"
 
 # Test
 junit              = "6.1.1"
