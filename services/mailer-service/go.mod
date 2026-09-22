@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
-	github.com/rabbitmq/amqp091-go v1.12.0
+	github.com/rabbitmq/amqp091-go v1.15.0
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/wneessen/go-mail v0.8.0
 )
